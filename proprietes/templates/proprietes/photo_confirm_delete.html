@@ -1,0 +1,307 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Supprimer la photo - {{ object.titre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .delete-container {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    
+    .delete-warning {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        border: 2px solid #ffc107;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    
+    .warning-icon {
+        font-size: 3em;
+        color: #ffc107;
+        margin-bottom: 15px;
+    }
+    
+    .delete-warning h4 {
+        color: #856404;
+        margin-bottom: 15px;
+    }
+    
+    .delete-warning p {
+        color: #856404;
+        margin-bottom: 0;
+    }
+    
+    .photo-preview {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 25px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    
+    .photo-preview img {
+        max-width: 100%;
+        max-height: 300px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .photo-info {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+    }
+    
+    .info-item {
+        padding: 10px;
+        background: white;
+        border-radius: 6px;
+        border-left: 4px solid #007bff;
+    }
+    
+    .info-label {
+        font-weight: bold;
+        color: #495057;
+        font-size: 0.9em;
+        margin-bottom: 5px;
+    }
+    
+    .info-value {
+        color: #6c757d;
+    }
+    
+    .delete-actions {
+        text-align: center;
+        margin-top: 30px;
+    }
+    
+    .btn-delete {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        font-size: 1.1em;
+        font-weight: 500;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-delete:hover {
+        background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+    }
+    
+    .btn-cancel {
+        background: #6c757d;
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        font-size: 1.1em;
+        font-weight: 500;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        margin-left: 15px;
+    }
+    
+    .btn-cancel:hover {
+        background: #5a6268;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+    }
+    
+    .consequences {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .consequences h5 {
+        color: #721c24;
+        margin-bottom: 15px;
+    }
+    
+    .consequences ul {
+        color: #721c24;
+        margin-bottom: 0;
+    }
+    
+    .consequences li {
+        margin-bottom: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="fas fa-trash text-danger"></i>
+                Supprimer la photo
+            </h1>
+            <p class="text-muted mb-0">{{ propriete.adresse }}</p>
+        </div>
+        <div>
+            <a href="{% url 'proprietes:photo_list' propriete.id %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Retour à la galerie
+            </a>
+        </div>
+    </div>
+
+    <div class="delete-container">
+        <!-- Avertissement de suppression -->
+        <div class="delete-warning">
+            <div class="warning-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h4>Attention ! Action irréversible</h4>
+            <p>Vous êtes sur le point de supprimer définitivement cette photo. Cette action ne peut pas être annulée.</p>
+        </div>
+
+        <!-- Aperçu de la photo -->
+        <div class="photo-preview">
+            <h5 class="mb-3">
+                <i class="fas fa-image"></i> Photo à supprimer
+            </h5>
+            
+            {% if object.image %}
+                <img src="{{ object.image.url }}" alt="{{ object.titre }}">
+            {% else %}
+                <div class="text-muted">
+                    <i class="fas fa-image fa-3x mb-3"></i>
+                    <p>Aucune image disponible</p>
+                </div>
+            {% endif %}
+            
+            <h6 class="text-primary">{{ object.titre }}</h6>
+            {% if object.description %}
+                <p class="text-muted">{{ object.description }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Informations sur la photo -->
+        <div class="photo-info">
+            <h5 class="mb-3">
+                <i class="fas fa-info-circle"></i> Détails de la photo
+            </h5>
+            
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Titre</div>
+                    <div class="info-value">{{ object.titre }}</div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-label">Ordre d'affichage</div>
+                    <div class="info-value">{{ object.ordre }}</div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-label">Photo principale</div>
+                    <div class="info-value">
+                        {% if object.est_principale %}
+                            <span class="text-success">
+                                <i class="fas fa-star"></i> Oui
+                            </span>
+                        {% else %}
+                            <span class="text-muted">Non</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-label">Date de création</div>
+                    <div class="info-value">{{ object.date_creation|date:"d/m/Y H:i" }}</div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-label">Dernière modification</div>
+                    <div class="info-value">{{ object.date_modification|date:"d/m/Y H:i" }}</div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-label">Propriété</div>
+                    <div class="info-value">{{ object.propriete.adresse }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conséquences de la suppression -->
+        <div class="consequences">
+            <h5>
+                <i class="fas fa-exclamation-circle"></i> Conséquences de la suppression
+            </h5>
+            <ul>
+                <li>La photo sera définitivement supprimée de la base de données</li>
+                <li>Le fichier image sera supprimé du serveur</li>
+                {% if object.est_principale %}
+                    <li><strong>Attention :</strong> Cette photo est actuellement la photo principale de la propriété</li>
+                    <li>Si c'est la seule photo, la propriété n'aura plus de photo principale</li>
+                {% endif %}
+                <li>L'ordre des autres photos sera automatiquement réajusté</li>
+                <li>Cette action ne peut pas être annulée</li>
+            </ul>
+        </div>
+
+        <!-- Actions de suppression -->
+        <div class="delete-actions">
+            <form method="post" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-delete" onclick="return confirmDelete()">
+                    <i class="fas fa-trash"></i> Confirmer la suppression
+                </button>
+            </form>
+            
+            <a href="{% url 'proprietes:photo_list' propriete.id %}" class="btn btn-cancel">
+                <i class="fas fa-times"></i> Annuler
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete() {
+    const photoTitle = "{{ object.titre }}";
+    const isMainPhoto = {% if object.est_principale %}true{% else %}false{% endif %};
+    
+    let message = `Êtes-vous absolument sûr de vouloir supprimer la photo "${photoTitle}" ?\n\n`;
+    message += "Cette action est irréversible et ne peut pas être annulée.";
+    
+    if (isMainPhoto) {
+        message += "\n\n⚠️ ATTENTION : Cette photo est actuellement la photo principale de la propriété !";
+    }
+    
+    return confirm(message);
+}
+
+// Empêcher la soumission multiple
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    
+    form.addEventListener('submit', function(e) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Suppression en cours...';
+    });
+});
+</script>
+{% endblock %}

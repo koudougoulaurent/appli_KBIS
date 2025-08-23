@@ -1,0 +1,763 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block extra_css %}
+<style>
+    .intelligent-list-container {
+        position: relative;
+    }
+    
+    .intelligent-search-box {
+        position: relative;
+        margin-bottom: 1rem;
+    }
+    
+    .intelligent-search-box .form-control {
+        padding-right: 40px;
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+    
+    .intelligent-search-box .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    
+    .intelligent-search-box .search-icon {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        pointer-events: none;
+    }
+    
+    .intelligent-filters {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid #dee2e6;
+    }
+    
+    .intelligent-filters .filter-group {
+        margin-bottom: 0.5rem;
+    }
+    
+    .intelligent-filters .filter-group:last-child {
+        margin-bottom: 0;
+    }
+    
+    .intelligent-filters label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.25rem;
+        font-size: 0.875rem;
+    }
+    
+    .intelligent-filters .form-select,
+    .intelligent-filters .form-control {
+        border-radius: 6px;
+        border: 1px solid #ced4da;
+        font-size: 0.875rem;
+    }
+    
+    .intelligent-filters .form-select:focus,
+    .intelligent-filters .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    
+    .intelligent-stats {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .intelligent-stats .stat-item {
+        text-align: center;
+        padding: 0.5rem;
+    }
+    
+    .intelligent-stats .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+    
+    .intelligent-stats .stat-label {
+        font-size: 0.875rem;
+        opacity: 0.9;
+    }
+    
+    .intelligent-table {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    
+    .intelligent-table .table {
+        margin-bottom: 0;
+    }
+    
+    .intelligent-table .table thead th {
+        background: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+        font-weight: 600;
+        color: #495057;
+        padding: 1rem 0.75rem;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .intelligent-table .table thead th:hover {
+        background: #e9ecef;
+    }
+    
+    .intelligent-table .table thead th.sortable::after {
+        content: '↕';
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        font-size: 0.75rem;
+    }
+    
+    .intelligent-table .table thead th.sort-asc::after {
+        content: '↑';
+        color: #007bff;
+    }
+    
+    .intelligent-table .table thead th.sort-desc::after {
+        content: '↓';
+        color: #007bff;
+    }
+    
+    .intelligent-table .table tbody tr {
+        transition: all 0.3s ease;
+    }
+    
+    .intelligent-table .table tbody tr:hover {
+        background: #f8f9fa;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .intelligent-table .table tbody td {
+        padding: 1rem 0.75rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #f1f3f4;
+    }
+    
+    .intelligent-pagination {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .intelligent-pagination .pagination {
+        margin-bottom: 0;
+    }
+    
+    .intelligent-pagination .page-link {
+        border-radius: 6px;
+        margin: 0 2px;
+        border: 1px solid #dee2e6;
+        color: #007bff;
+        transition: all 0.3s ease;
+    }
+    
+    .intelligent-pagination .page-link:hover {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+    
+    .intelligent-pagination .page-item.active .page-link {
+        background: #007bff;
+        border-color: #007bff;
+    }
+    
+    .intelligent-actions {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 1000;
+        padding: 1rem 0;
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 1rem;
+    }
+    
+    .intelligent-actions .btn {
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .intelligent-actions .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .intelligent-empty {
+        text-align: center;
+        padding: 3rem 1rem;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .intelligent-empty .empty-icon {
+        font-size: 4rem;
+        color: #6c757d;
+        margin-bottom: 1rem;
+    }
+    
+    .intelligent-empty .empty-title {
+        font-size: 1.5rem;
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+    
+    .intelligent-empty .empty-message {
+        color: #6c757d;
+        margin-bottom: 1.5rem;
+    }
+    
+    .intelligent-loading {
+        text-align: center;
+        padding: 2rem;
+        color: #6c757d;
+    }
+    
+    .intelligent-loading .spinner-border {
+        margin-bottom: 1rem;
+    }
+    
+    .intelligent-suggestions {
+        background: #e3f2fd;
+        border: 1px solid #bbdefb;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .intelligent-suggestions .suggestion-title {
+        font-weight: 600;
+        color: #1976d2;
+        margin-bottom: 0.5rem;
+    }
+    
+    .intelligent-suggestions .suggestion-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .intelligent-suggestions .suggestion-list li {
+        padding: 0.25rem 0;
+        color: #424242;
+    }
+    
+    .intelligent-suggestions .suggestion-list li::before {
+        content: '💡';
+        margin-right: 0.5rem;
+    }
+    
+    @media (max-width: 768px) {
+        .intelligent-stats .stat-item {
+            margin-bottom: 1rem;
+        }
+        
+        .intelligent-table .table-responsive {
+            border-radius: 8px;
+        }
+        
+        .intelligent-filters .row > div {
+            margin-bottom: 1rem;
+        }
+    }
+    
+    /* Styles pour la colonne des actions PRIVILEGE */
+    .privilege-actions-column {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.9rem;
+        padding: 0.75rem 0.5rem;
+        border: none;
+        position: relative;
+    }
+    
+    .privilege-actions-column::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, #28a745, #20c997);
+        opacity: 0.9;
+        z-index: -1;
+    }
+    
+    .privilege-actions-cell {
+        background: #f8f9fa;
+        border-left: 3px solid #28a745;
+        padding: 0.5rem;
+        text-align: center;
+        vertical-align: middle;
+    }
+    
+    .privilege-actions-cell:hover {
+        background: #e9ecef;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Actions principales -->
+    <div class="intelligent-actions">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-0">
+                <i class="bi bi-{{ page_icon|default:'list' }}"></i> {{ page_title|default:'Liste Intelligente' }}
+            </h1>
+            <div class="d-flex gap-2">
+                {% if add_url %}
+                <a href="{{ add_url }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> {{ add_text|default:'Ajouter' }}
+                </a>
+                {% endif %}
+                {% if export_url %}
+                <a href="{{ export_url }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-download"></i> Exporter
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    {% if stats %}
+    <div class="intelligent-stats">
+        <div class="row">
+            {% for stat in stats %}
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-item">
+                    <span class="stat-number">{{ stat.value }}</span>
+                    <span class="stat-label">{{ stat.label }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Suggestions intelligentes -->
+    {% if suggestions %}
+    <div class="intelligent-suggestions">
+        <div class="suggestion-title">
+            <i class="bi bi-lightbulb"></i> Suggestions intelligentes
+        </div>
+        <ul class="suggestion-list">
+            {% for suggestion in suggestions %}
+            <li>{{ suggestion }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Filtres intelligents -->
+    <div class="intelligent-filters">
+        <div class="row">
+            <!-- Recherche -->
+            <div class="col-md-4">
+                <div class="intelligent-search-box">
+                    <input type="text" 
+                           class="form-control" 
+                           id="searchInput" 
+                           placeholder="Rechercher..."
+                           value="{{ request.GET.search|default:'' }}">
+                    <i class="bi bi-search search-icon"></i>
+                </div>
+            </div>
+            
+            <!-- Filtres dynamiques -->
+            {% for filter in filters %}
+            <div class="col-md-2">
+                <div class="filter-group">
+                    <label for="{{ filter.name }}">{{ filter.label }}</label>
+                    <select class="form-select" id="{{ filter.name }}" name="{{ filter.name }}">
+                        <option value="">Tous</option>
+                        {% for option in filter.options %}
+                        <option value="{{ option.value }}" 
+                                {% if request.GET|get_item:filter.name == option.value %}selected{% endif %}>
+                            {{ option.label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Tri -->
+            <div class="col-md-2">
+                <div class="filter-group">
+                    <label for="sortSelect">Trier par</label>
+                    <select class="form-select" id="sortSelect" name="sort">
+                        {% for sort_option in sort_options %}
+                        <option value="{{ sort_option.value }}" 
+                                {% if request.GET.sort == sort_option.value %}selected{% endif %}>
+                            {{ sort_option.label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau intelligent -->
+    <div class="intelligent-table">
+        {% if object_list %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        {% for column in columns %}
+                        <th class="{% if column.sortable %}sortable{% endif %} {% if request.GET.sort == column.field %}sort-{{ request.GET.order|default:'asc' }}{% endif %}"
+                            data-field="{{ column.field }}"
+                            data-order="{{ request.GET.order|default:'asc' }}">
+                            {{ column.label }}
+                        </th>
+                        {% endfor %}
+                        <th>Actions</th>
+                        {% if is_privilege_user %}
+                        <th class="privilege-actions-column">Actions PRIVILEGE</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for object in object_list %}
+                    <tr data-id="{{ object.id }}">
+                        {% for column in columns %}
+                        <td>
+                            {% if column.template %}
+                                {% include column.template with object=object column=column %}
+                            {% else %}
+                                {{ object|get_attribute:column.field }}
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                        <td>
+                            <div class="btn-group" role="group">
+                                {% for action in actions %}
+                                <a href="{% url action.url_name object.id %}" 
+                                   class="btn btn-sm btn-{{ action.style|default:'outline-primary' }}"
+                                   title="{{ action.title }}">
+                                    <i class="bi bi-{{ action.icon }}"></i>
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        {% if is_privilege_user %}
+                        <td class="privilege-actions-cell">
+                            {% include 'includes/privilege_buttons.html' with object=object %}
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="intelligent-pagination">
+            <nav aria-label="Pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{{ request.GET.urlencode|remove_page_param }}">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{{ request.GET.urlencode|remove_page_param }}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{{ request.GET.urlencode|remove_page_param }}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{{ request.GET.urlencode|remove_page_param }}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{{ request.GET.urlencode|remove_page_param }}">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="intelligent-empty">
+            <div class="empty-icon">
+                <i class="bi bi-{{ empty_icon|default:'inbox' }}"></i>
+            </div>
+            <h4 class="empty-title">{{ empty_title|default:'Aucun élément trouvé' }}</h4>
+            <p class="empty-message">{{ empty_message|default:'Aucun élément ne correspond aux critères de recherche.' }}</p>
+            {% if add_url %}
+            <a href="{{ add_url }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> {{ add_text|default:'Ajouter le premier' }}
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Configuration de la liste intelligente
+const IntelligentList = {
+    // Configuration
+    config: {
+        searchDelay: 300,
+        debounceTimer: null,
+        currentSort: '{{ request.GET.sort|default:"" }}',
+        currentOrder: '{{ request.GET.order|default:"asc" }}'
+    },
+    
+    // Initialisation
+    init() {
+        this.bindEvents();
+        this.updateURL();
+    },
+    
+    // Liaison des événements
+    bindEvents() {
+        // Recherche en temps réel
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(this.config.debounceTimer);
+                this.config.debounceTimer = setTimeout(() => {
+                    this.performSearch(e.target.value);
+                }, this.config.searchDelay);
+            });
+        }
+        
+        // Filtres
+        const filterSelects = document.querySelectorAll('.intelligent-filters select');
+        filterSelects.forEach(select => {
+            select.addEventListener('change', () => {
+                this.applyFilters();
+            });
+        });
+        
+        // Tri des colonnes
+        const sortableHeaders = document.querySelectorAll('.intelligent-table th.sortable');
+        sortableHeaders.forEach(header => {
+            header.addEventListener('click', () => {
+                this.sortColumn(header.dataset.field);
+            });
+        });
+    },
+    
+    // Recherche
+    performSearch(query) {
+        const url = new URL(window.location);
+        if (query.trim()) {
+            url.searchParams.set('search', query.trim());
+        } else {
+            url.searchParams.delete('search');
+        }
+        url.searchParams.delete('page'); // Retour à la première page
+        window.location.href = url.toString();
+    },
+    
+    // Application des filtres
+    applyFilters() {
+        const url = new URL(window.location);
+        const filterSelects = document.querySelectorAll('.intelligent-filters select');
+        
+        filterSelects.forEach(select => {
+            if (select.value) {
+                url.searchParams.set(select.name, select.value);
+            } else {
+                url.searchParams.delete(select.name);
+            }
+        });
+        
+        url.searchParams.delete('page'); // Retour à la première page
+        window.location.href = url.toString();
+    },
+    
+    // Tri des colonnes
+    sortColumn(field) {
+        const url = new URL(window.location);
+        
+        if (this.config.currentSort === field) {
+            // Inverser l'ordre
+            this.config.currentOrder = this.config.currentOrder === 'asc' ? 'desc' : 'asc';
+        } else {
+            // Nouveau tri
+            this.config.currentSort = field;
+            this.config.currentOrder = 'asc';
+        }
+        
+        url.searchParams.set('sort', this.config.currentSort);
+        url.searchParams.set('order', this.config.currentOrder);
+        url.searchParams.delete('page'); // Retour à la première page
+        
+        window.location.href = url.toString();
+    },
+    
+    // Mise à jour de l'URL
+    updateURL() {
+        // Mettre à jour les paramètres dans l'URL sans recharger la page
+        const url = new URL(window.location);
+        const currentParams = new URLSearchParams(window.location.search);
+        
+        // Synchroniser les champs avec l'URL
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.value = currentParams.get('search') || '';
+        }
+        
+        const filterSelects = document.querySelectorAll('.intelligent-filters select');
+        filterSelects.forEach(select => {
+            select.value = currentParams.get(select.name) || '';
+        });
+    }
+};
+
+// Initialisation au chargement de la page
+document.addEventListener('DOMContentLoaded', () => {
+    IntelligentList.init();
+    
+    // Initialiser les fonctionnalités de privilège si l'utilisateur est PRIVILEGE
+    {% if is_privilege_user %}
+    initializePrivilegeFeatures();
+    {% endif %}
+});
+
+// Fonctions utilitaires
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Animation de chargement
+function showLoading() {
+    const container = document.querySelector('.intelligent-table');
+    if (container) {
+        container.innerHTML = `
+            <div class="intelligent-loading">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                </div>
+                <p>Chargement des données...</p>
+            </div>
+        `;
+    }
+}
+
+// Mise à jour en temps réel (optionnel)
+function enableRealTimeUpdates() {
+    // Polling pour les mises à jour en temps réel
+    setInterval(() => {
+        // Vérifier les nouvelles données
+        fetch(window.location.href)
+            .then(response => response.text())
+            .then(html => {
+                // Mettre à jour les statistiques si nécessaire
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newStats = doc.querySelector('.intelligent-stats');
+                const currentStats = document.querySelector('.intelligent-stats');
+                
+                if (newStats && currentStats && newStats.innerHTML !== currentStats.innerHTML) {
+                    currentStats.innerHTML = newStats.innerHTML;
+                }
+            })
+            .catch(error => console.log('Erreur lors de la mise à jour:', error));
+    }, 30000); // Mise à jour toutes les 30 secondes
+}
+
+// Activer les mises à jour en temps réel si configuré
+{% if enable_realtime %}
+enableRealTimeUpdates();
+{% endif %}
+
+// Fonction d'initialisation des fonctionnalités de privilège
+function initializePrivilegeFeatures() {
+    console.log('Initialisation des fonctionnalités de privilège...');
+    
+    // Initialiser les tooltips pour les boutons de privilège
+    const privilegeButtons = document.querySelectorAll('.privilege-actions-container [data-bs-toggle="tooltip"]');
+    privilegeButtons.forEach(button => {
+        if (typeof bootstrap !== 'undefined') {
+            new bootstrap.Tooltip(button);
+        }
+    });
+    
+    // Ajouter des écouteurs d'événements pour les actions de privilège
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.privilege-actions-container')) {
+            // Les actions sont gérées par le template privilege_buttons.html
+            console.log('Action de privilège détectée');
+        }
+    });
+    
+    // Mettre à jour l'interface après les actions de privilège
+    window.addEventListener('privilegeActionCompleted', function(e) {
+        console.log('Action de privilège terminée:', e.detail);
+        // Rafraîchir la liste si nécessaire
+        if (e.detail.refresh) {
+            location.reload();
+        }
+    });
+}
+</script>
+{% endblock %} 

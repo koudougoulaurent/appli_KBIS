@@ -1,0 +1,349 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Détail Retrait Bailleur - Gestion Immobilière{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="bi bi-cash-stack text-primary"></i>
+        Détail du Retrait Bailleur
+    </h1>
+    <div class="d-flex gap-2">
+        <a href="{% url 'paiements:imprimer_recu_retrait' retrait.id %}" 
+           class="btn btn-outline-secondary" target="_blank">
+            <i class="bi bi-printer"></i> Imprimer Reçu
+        </a>
+        <a href="{% url 'paiements:liste_retraits_bailleur' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Retour à la liste
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Informations principales -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle"></i> Informations du Retrait
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Bailleur :</strong></td>
+                                <td>{{ retrait.bailleur.get_nom_complet }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Mois :</strong></td>
+                                <td>{{ retrait.mois_retrait|date:"F Y" }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Type :</strong></td>
+                                <td>
+                                    <span class="badge bg-info">{{ retrait.get_type_retrait_display }}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Mode :</strong></td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ retrait.get_mode_retrait_display }}</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Statut :</strong></td>
+                                <td>
+                                    {% if retrait.statut == 'en_cours' %}
+                                        <span class="badge bg-warning">En cours</span>
+                                    {% elif retrait.statut == 'valide' %}
+                                        <span class="badge bg-info">Validé</span>
+                                    {% elif retrait.statut == 'paye' %}
+                                        <span class="badge bg-success">Payé</span>
+                                    {% elif retrait.statut == 'annule' %}
+                                        <span class="badge bg-danger">Annulé</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Date de demande :</strong></td>
+                                <td>{{ retrait.date_demande|date:"d/m/Y" }}</td>
+                            </tr>
+                            {% if retrait.date_versement %}
+                            <tr>
+                                <td><strong>Date de versement :</strong></td>
+                                <td>{{ retrait.date_versement|date:"d/m/Y" }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <td><strong>Créé par :</strong></td>
+                                <td>{{ retrait.cree_par.get_full_name|default:retrait.cree_par.username }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Informations de paiement -->
+                {% if retrait.numero_cheque or retrait.reference_virement %}
+                <hr>
+                <h6>Informations de Paiement</h6>
+                <div class="row">
+                    {% if retrait.numero_cheque %}
+                    <div class="col-md-6">
+                        <strong>Numéro de chèque :</strong> {{ retrait.numero_cheque }}
+                    </div>
+                    {% endif %}
+                    {% if retrait.reference_virement %}
+                    <div class="col-md-6">
+                        <strong>Référence de virement :</strong> {{ retrait.reference_virement }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Montants -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-calculator"></i> Calcul des Montants
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <div class="stat-card success">
+                            <div class="stat-number">{{ retrait.get_montant_loyers_bruts_formatted }}</div>
+                            <div class="stat-label">Loyers Bruts</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card warning">
+                            <div class="stat-number">{{ retrait.get_montant_charges_deductibles_formatted }}</div>
+                            <div class="stat-label">Charges Déductibles</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card info">
+                            <div class="stat-number">{{ retrait.get_montant_net_formatted }}</div>
+                            <div class="stat-label">Montant Net à Payer</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charges déductibles -->
+        {% if charges_deductibles %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-list-check"></i> Charges Déductibles
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Montant</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for charge in charges_deductibles %}
+                            <tr>
+                                <td>{{ charge.description }}</td>
+                                <td class="text-end">{{ charge.montant_formatted }}</td>
+                                <td>{{ charge.date_charge|date:"d/m/Y" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Paiements concernés -->
+        {% if paiements_concernes %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-cash"></i> Paiements Concernés
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Contrat</th>
+                                <th>Locataire</th>
+                                <th>Montant</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for paiement in paiements_concernes %}
+                            <tr>
+                                <td>{{ paiement.contrat.numero_contrat }}</td>
+                                <td>{{ paiement.contrat.locataire.get_nom_complet }}</td>
+                                <td class="text-end">{{ paiement.montant_formatted }}</td>
+                                <td>{{ paiement.date_paiement|date:"d/m/Y" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-gear"></i> Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if retrait.statut == 'en_cours' %}
+                        <a href="{% url 'paiements:valider_retrait_bailleur' retrait.id %}" 
+                           class="btn btn-success">
+                            <i class="bi bi-check-circle"></i> Valider le Retrait
+                        </a>
+                    {% endif %}
+                    
+                    {% if retrait.statut == 'valide' %}
+                        <a href="{% url 'paiements:marquer_retrait_paye' retrait.id %}" 
+                           class="btn btn-info">
+                            <i class="bi bi-cash"></i> Marquer comme Payé
+                        </a>
+                    {% endif %}
+                    
+                    <a href="{% url 'paiements:imprimer_recu_retrait' retrait.id %}" 
+                       class="btn btn-outline-secondary" target="_blank">
+                        <i class="bi bi-printer"></i> Imprimer Reçu A5
+                    </a>
+                    
+                    {% if retrait.statut == 'en_cours' %}
+                        <button type="button" class="btn btn-outline-danger" 
+                                data-bs-toggle="modal" data-bs-target="#annulerModal">
+                            <i class="bi bi-x-circle"></i> Annuler le Retrait
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Historique -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-clock-history"></i> Historique
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-primary"></div>
+                        <div class="timeline-content">
+                            <h6>Retrait créé</h6>
+                            <small class="text-muted">{{ retrait.date_demande|date:"d/m/Y H:i" }}</small>
+                            <p class="mb-0">Par {{ retrait.cree_par.get_full_name|default:retrait.cree_par.username }}</p>
+                        </div>
+                    </div>
+                    
+                    {% if retrait.valide_par %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <h6>Retrait validé</h6>
+                            <small class="text-muted">{{ retrait.date_validation|date:"d/m/Y H:i" }}</small>
+                            <p class="mb-0">Par {{ retrait.valide_par.get_full_name|default:retrait.valide_par.username }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if retrait.date_versement %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-info"></div>
+                        <div class="timeline-content">
+                            <h6>Retrait payé</h6>
+                            <small class="text-muted">{{ retrait.date_versement|date:"d/m/Y H:i" }}</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'annulation -->
+{% if retrait.statut == 'en_cours' %}
+<div class="modal fade" id="annulerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Annuler le Retrait</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir annuler ce retrait ?</p>
+                <p class="text-muted">Cette action est irréversible.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Non, garder</button>
+                <a href="#" class="btn btn-danger">Oui, annuler</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -35px;
+    top: 5px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.timeline-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: -29px;
+    top: 17px;
+    height: calc(100% + 3px);
+    width: 1px;
+    background-color: #dee2e6;
+}
+</style>
+{% endblock %}

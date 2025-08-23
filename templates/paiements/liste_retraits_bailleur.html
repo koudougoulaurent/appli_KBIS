@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Retraits Bailleur - Gestion Immobilière{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="bi bi-cash-stack text-primary"></i>
+        Retraits Bailleur
+    </h1>
+    <a href="{% url 'paiements:creer_retrait_bailleur' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Nouveau Retrait
+    </a>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="bailleur" class="form-label">Bailleur</label>
+                <select name="bailleur" id="bailleur" class="form-select">
+                    <option value="">Tous les bailleurs</option>
+                    {% for bailleur in bailleurs %}
+                        <option value="{{ bailleur.id }}" {% if request.GET.bailleur == bailleur.id|stringformat:"s" %}selected{% endif %}>
+                            {{ bailleur.get_nom_complet }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="statut" class="form-label">Statut</label>
+                <select name="statut" id="statut" class="form-select">
+                    <option value="">Tous les statuts</option>
+                    <option value="en_cours" {% if request.GET.statut == 'en_cours' %}selected{% endif %}>En cours</option>
+                    <option value="valide" {% if request.GET.statut == 'valide' %}selected{% endif %}>Validé</option>
+                    <option value="paye" {% if request.GET.statut == 'paye' %}selected{% endif %}>Payé</option>
+                    <option value="annule" {% if request.GET.statut == 'annule' %}selected{% endif %}>Annulé</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="mois" class="form-label">Mois</label>
+                <input type="month" name="mois" id="mois" class="form-control" value="{{ request.GET.mois }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-funnel"></i> Filtrer
+                    </button>
+                    <a href="{% url 'paiements:liste_retraits_bailleur' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> Reset
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Liste des retraits -->
+<div class="card">
+    <div class="card-body">
+        {% if retraits %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Bailleur</th>
+                            <th>Mois</th>
+                            <th>Loyers Bruts</th>
+                            <th>Charges</th>
+                            <th>Montant Net</th>
+                            <th>Statut</th>
+                            <th>Date Demande</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for retrait in retraits %}
+                        <tr>
+                            <td>
+                                <strong>{{ retrait.bailleur.get_nom_complet }}</strong>
+                            </td>
+                            <td>
+                                {{ retrait.mois_retrait|date:"F Y" }}
+                            </td>
+                            <td class="text-end">
+                                <span class="fw-bold text-success">
+                                    {{ retrait.get_montant_loyers_bruts_formatted }}
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <span class="text-warning">
+                                    {{ retrait.get_montant_charges_deductibles_formatted }}
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <span class="fw-bold text-primary">
+                                    {{ retrait.get_montant_net_formatted }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if retrait.statut == 'en_cours' %}
+                                    <span class="badge bg-warning">En cours</span>
+                                {% elif retrait.statut == 'valide' %}
+                                    <span class="badge bg-info">Validé</span>
+                                {% elif retrait.statut == 'paye' %}
+                                    <span class="badge bg-success">Payé</span>
+                                {% elif retrait.statut == 'annule' %}
+                                    <span class="badge bg-danger">Annulé</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ retrait.date_demande|date:"d/m/Y" }}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'paiements:detail_retrait_bailleur' retrait.id %}" 
+                                       class="btn btn-outline-primary" title="Voir les détails">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if retrait.statut == 'en_cours' %}
+                                        <a href="{% url 'paiements:valider_retrait_bailleur' retrait.id %}" 
+                                           class="btn btn-outline-success" title="Valider">
+                                            <i class="bi bi-check-circle"></i>
+                                        </a>
+                                    {% endif %}
+                                    {% if retrait.statut == 'valide' %}
+                                        <a href="{% url 'paiements:marquer_retrait_paye' retrait.id %}" 
+                                           class="btn btn-outline-info" title="Marquer comme payé">
+                                            <i class="bi bi-cash"></i>
+                                        </a>
+                                    {% endif %}
+                                    <a href="{% url 'paiements:imprimer_recu_retrait' retrait.id %}" 
+                                       class="btn btn-outline-secondary" title="Imprimer reçu" target="_blank">
+                                        <i class="bi bi-printer"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Navigation des pages">
+                <ul class="pagination justify-content-center mt-4">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.mois %}&mois={{ request.GET.mois }}{% endif %}">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.mois %}&mois={{ request.GET.mois }}{% endif %}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.mois %}&mois={{ request.GET.mois }}{% endif %}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.mois %}&mois={{ request.GET.mois }}{% endif %}">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-cash-stack text-muted" style="font-size: 4rem;"></i>
+                <h4 class="text-muted mt-3">Aucun retrait trouvé</h4>
+                <p class="text-muted">Commencez par créer un nouveau retrait bailleur.</p>
+                <a href="{% url 'paiements:creer_retrait_bailleur' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Créer un retrait
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

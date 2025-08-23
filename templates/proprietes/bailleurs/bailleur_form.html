@@ -1,0 +1,325 @@
+{% extends 'base_dashboard.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}
+    {% if form.instance.pk %}
+        Modifier le bailleur - {{ form.instance.nom }} {{ form.instance.prenom }}
+    {% else %}
+        Ajouter un nouveau bailleur
+    {% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/phone_input_widget.css' %}">
+<style>
+    .document-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 2px dashed #007bff;
+        border-radius: 15px;
+        padding: 25px;
+        margin: 20px 0;
+        transition: all 0.3s ease;
+    }
+    .document-section:hover {
+        border-color: #0056b3;
+        box-shadow: 0 4px 15px rgba(0, 123, 255, 0.1);
+    }
+    .document-section h4 {
+        color: #007bff;
+        font-weight: 600;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .document-required {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        border-color: #ffc107;
+    }
+    .document-optional {
+        background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+        border-color: #17a2b8;
+    }
+    .file-input-wrapper {
+        position: relative;
+        margin-bottom: 15px;
+    }
+    .file-input-wrapper input[type="file"] {
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px;
+        transition: border-color 0.3s ease;
+    }
+    .file-input-wrapper input[type="file"]:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    .help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+    .form-section {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    .form-section h3 {
+        color: #495057;
+        font-weight: 600;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 10px;
+    }
+    .btn-custom {
+        border-radius: 25px;
+        padding: 12px 30px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s ease;
+    }
+    .btn-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    .alert-info {
+        background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+        border: none;
+        border-radius: 15px;
+        color: #0c5460;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- En-tête -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-0">
+                        <i class="bi bi-person-plus-fill me-2"></i>
+                        {% if form.instance.pk %}
+                            Modifier le bailleur
+                        {% else %}
+                            Nouveau bailleur
+                        {% endif %}
+                    </h2>
+                    <p class="text-muted mb-0">Gestion documentaire intégrée - Tous les documents seront automatiquement stockés</p>
+                </div>
+                <a href="{% url 'proprietes:bailleurs_liste' %}" class="btn btn-outline-secondary btn-custom">
+                    <i class="bi bi-arrow-left me-2"></i>Retour à la liste
+                </a>
+            </div>
+
+            <!-- Alerte d'information -->
+            <div class="alert alert-info" role="alert">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Gestion documentaire professionnelle :</strong> 
+                Tous les documents fournis seront automatiquement stockés et sécurisés dans le système documentaire. 
+                Les documents personnels seront marqués comme confidentiels.
+            </div>
+
+            <!-- Formulaire -->
+            <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                {% csrf_token %}
+
+                <!-- Section 1: Informations personnelles -->
+                <div class="form-section">
+                    <h3><i class="bi bi-person me-2"></i>Informations personnelles</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.numero_bailleur|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.civilite|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.nom|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.prenom|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.date_naissance|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.email|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Contact -->
+                <div class="form-section">
+                    <h3><i class="bi bi-telephone me-2"></i>Informations de contact</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {% include 'includes/phone_input_widget.html' with field=form.telephone %}
+                        </div>
+                        <div class="col-md-6">
+                            {% include 'includes/phone_input_widget.html' with field=form.telephone_mobile %}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            {{ form.adresse|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            {{ form.code_postal|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.ville|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.pays|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Informations bancaires -->
+                <div class="form-section">
+                    <h3><i class="bi bi-bank me-2"></i>Informations bancaires</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.iban|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.bic|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            {{ form.banque|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Documents requis -->
+                <div class="document-section document-required">
+                    <h4><i class="bi bi-file-earmark-check"></i>Documents obligatoires</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="file-input-wrapper">
+                                {{ form.piece_identite|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="file-input-wrapper">
+                                {{ form.justificatif_domicile|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="file-input-wrapper">
+                                {{ form.attestation_bancaire|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 5: Documents optionnels -->
+                <div class="document-section document-optional">
+                    <h4><i class="bi bi-file-earmark-plus"></i>Documents optionnels</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="file-input-wrapper">
+                                {{ form.declaration_revenus|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="file-input-wrapper">
+                                {{ form.documents_propriete|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Boutons d'action -->
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'proprietes:bailleurs_liste' %}" class="btn btn-outline-secondary btn-custom">
+                        <i class="bi bi-x-circle me-2"></i>Annuler
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-custom">
+                        <i class="bi bi-check-circle me-2"></i>
+                        {% if form.instance.pk %}
+                            Modifier le bailleur
+                        {% else %}
+                            Créer le bailleur
+                        {% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/africa_phone_codes.js' %}"></script>
+<script src="{% static 'js/phone_input_widget.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validation des formulaires Bootstrap
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        });
+    });
+
+    // Prévisualisation des fichiers
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    fileInputs.forEach(input => {
+        input.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const fileName = file.name;
+                const fileSize = (file.size / 1024 / 1024).toFixed(2);
+                
+                // Créer un élément d'info
+                let infoElement = e.target.parentNode.querySelector('.file-info');
+                if (!infoElement) {
+                    infoElement = document.createElement('div');
+                    infoElement.className = 'file-info mt-2 p-2 bg-light rounded';
+                    e.target.parentNode.appendChild(infoElement);
+                }
+                
+                infoElement.innerHTML = `
+                    <small class="text-success">
+                        <i class="bi bi-check-circle me-1"></i>
+                        Fichier sélectionné : <strong>${fileName}</strong> (${fileSize} MB)
+                    </small>
+                `;
+            }
+        });
+    });
+
+    // Animation des sections
+    const documentSections = document.querySelectorAll('.document-section');
+    documentSections.forEach(section => {
+        section.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+        });
+        section.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+});
+</script>
+{% endblock %}

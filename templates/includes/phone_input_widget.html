@@ -1,0 +1,53 @@
+{% comment %}
+Composant de sélection de pays et numéro de téléphone pour l'Afrique de l'Ouest
+Usage: {% include 'includes/phone_input_widget.html' with field=form.telephone %}
+{% endcomment %}
+
+<div class="phone-input-widget">
+    <div class="row mb-2">
+        <div class="col-md-4">
+            <label for="country_code_{{ field.id_for_label }}" class="form-label">
+                <i class="bi bi-flag"></i> Code pays
+            </label>
+            <select id="country_code_{{ field.id_for_label }}" name="country_code_{{ field.name }}" class="form-select country-selector" data-target="{{ field.id_for_label }}">
+                <option value="">Sélectionner un pays</option>
+                <option value="229" data-flag="🇧🇯" data-format="+229 XX XX XX XX" data-placeholder="90 12 34 56">🇧🇯 Bénin (+229)</option>
+                <option value="226" data-flag="🇧🇫" data-format="+226 XX XX XX XX" data-placeholder="70 12 34 56">🇧🇫 Burkina Faso (+226)</option>
+                <option value="238" data-flag="🇨🇻" data-format="+238 XXX XX XX" data-placeholder="991 23 45">🇨🇻 Cap-Vert (+238)</option>
+                <option value="225" data-flag="🇨🇮" data-format="+225 XX XX XX XX" data-placeholder="07 12 34 56">🇨🇮 Côte d'Ivoire (+225)</option>
+                <option value="220" data-flag="🇬🇲" data-format="+220 XXX XX XX" data-placeholder="777 12 34">🇬🇲 Gambie (+220)</option>
+                <option value="233" data-flag="🇬🇭" data-format="+233 XX XXX XXXX" data-placeholder="20 123 4567">🇬🇭 Ghana (+233)</option>
+                <option value="224" data-flag="🇬🇳" data-format="+224 XXX XXX XXX" data-placeholder="623 123 456">🇬🇳 Guinée (+224)</option>
+                <option value="245" data-flag="🇬🇼" data-format="+245 XXX XX XX" data-placeholder="955 12 34">🇬🇼 Guinée-Bissau (+245)</option>
+                <option value="231" data-flag="🇱🇷" data-format="+231 XX XXX XXXX" data-placeholder="77 123 4567">🇱🇷 Libéria (+231)</option>
+                <option value="223" data-flag="🇲🇱" data-format="+223 XX XX XX XX" data-placeholder="76 12 34 56">🇲🇱 Mali (+223)</option>
+                <option value="222" data-flag="🇲🇷" data-format="+222 XX XX XX XX" data-placeholder="22 12 34 56">🇲🇷 Mauritanie (+222)</option>
+                <option value="227" data-flag="🇳🇪" data-format="+227 XX XX XX XX" data-placeholder="90 12 34 56">🇳🇪 Niger (+227)</option>
+                <option value="234" data-flag="🇳🇬" data-format="+234 XXX XXX XXXX" data-placeholder="801 123 4567">🇳🇬 Nigeria (+234)</option>
+                <option value="221" data-flag="🇸🇳" data-format="+221 XX XXX XXXX" data-placeholder="77 123 4567">🇸🇳 Sénégal (+221)</option>
+                <option value="232" data-flag="🇸🇱" data-format="+232 XX XXX XXX" data-placeholder="77 123 456">🇸🇱 Sierra Leone (+232)</option>
+                <option value="228" data-flag="🇹🇬" data-format="+228 XX XX XX XX" data-placeholder="90 12 34 56">🇹🇬 Togo (+228)</option>
+            </select>
+        </div>
+        <div class="col-md-8">
+            <label for="{{ field.id_for_label }}" class="form-label">
+                <i class="bi bi-telephone"></i> {{ field.label }}
+            </label>
+            <div class="input-group">
+                <span class="input-group-text country-flag" id="flag_{{ field.id_for_label }}">🌍</span>
+                <input type="tel" id="{{ field.id_for_label }}" name="{{ field.name }}" class="form-control phone-number-input" placeholder="Sélectionnez d'abord un pays" maxlength="15" {% if field.value %}value="{{ field.value }}"{% endif %} {% if field.required %}required{% endif %}>
+                <span class="input-group-text format-info" id="format_{{ field.id_for_label }}">Format</span>
+            </div>
+            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+            {% if field.errors %}<div class="invalid-feedback d-block">{% for error in field.errors %}{{ error }}{% endfor %}</div>{% endif %}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info country-info" id="info_{{ field.id_for_label }}" style="display: none;">
+                <small><i class="bi bi-info-circle"></i> <strong id="country_name_{{ field.id_for_label }}"></strong> - Format: <span id="country_format_{{ field.id_for_label }}"></span></small>
+            </div>
+        </div>
+    </div>
+</div>

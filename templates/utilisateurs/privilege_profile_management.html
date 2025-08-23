@@ -1,0 +1,463 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load utilisateur_extras %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-card {
+        background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    
+    .profile-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .profile-header {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+        padding: 15px;
+        border-radius: 10px 10px 0 0;
+    }
+    
+    .stats-card {
+        background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        margin-bottom: 15px;
+    }
+    
+    .stats-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #dc3545;
+    }
+    
+    .stats-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .action-btn {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        border: none;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 5px;
+        text-decoration: none;
+        display: inline-block;
+        margin: 2px;
+        transition: all 0.3s ease;
+        font-size: 0.8rem;
+    }
+    
+    .action-btn:hover {
+        background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+        color: white;
+        text-decoration: none;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+    }
+    
+    .action-btn-secondary {
+        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        border: none;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 5px;
+        text-decoration: none;
+        display: inline-block;
+        margin: 2px;
+        transition: all 0.3s ease;
+        font-size: 0.8rem;
+    }
+    
+    .action-btn-secondary:hover {
+        background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+        color: white;
+        text-decoration: none;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+    }
+    
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: bold;
+    }
+    
+    .status-active {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .status-inactive {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .status-deleted {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .back-btn {
+        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s ease;
+    }
+    
+    .back-btn:hover {
+        background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+        color: white;
+        text-decoration: none;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+    }
+    
+    .group-badge {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="mb-0">
+                        <i class="bi bi-people-fill text-danger"></i>
+                        Gestion des Profils - PRIVILEGE
+                    </h1>
+                    <p class="text-muted mb-0">Création, modification et suppression d'utilisateurs</p>
+                </div>
+                <div>
+                    <a href="{% url 'utilisateurs:privilege_dashboard_advanced' %}" class="back-btn">
+                        <i class="bi bi-arrow-left"></i>
+                        Retour au Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number">{{ stats.total }}</div>
+                <div class="stats-label">Total Utilisateurs</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number">{{ stats.actifs }}</div>
+                <div class="stats-label">Utilisateurs Actifs</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number">{{ stats.inactifs }}</div>
+                <div class="stats-label">Utilisateurs Inactifs</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number">{{ stats.supprimes }}</div>
+                <div class="stats-label">Utilisateurs Supprimés</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions principales -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gear-fill"></i>
+                        Actions PRIVILEGE
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <a href="{% url 'utilisateurs:privilege_utilisateur_create' %}" class="action-btn w-100 text-center">
+                                <i class="bi bi-person-plus"></i><br>
+                                Créer un Utilisateur
+                            </a>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <a href="{% url 'utilisateurs:privilege_audit_log' %}" class="action-btn-secondary w-100 text-center">
+                                <i class="bi bi-journal-text"></i><br>
+                                Journal d'Audit
+                            </a>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <a href="{% url 'utilisateurs:privilege_dashboard_advanced' %}" class="action-btn-secondary w-100 text-center">
+                                <i class="bi bi-arrow-left"></i><br>
+                                Dashboard Avancé
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques par groupe -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pie-chart"></i>
+                        Répartition par Groupe
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for groupe in groupes %}
+                        <div class="col-md-3 mb-3">
+                            <div class="stats-card">
+                                <div class="stats-number">{{ stats.par_groupe|get_item:groupe.nom|default:0 }}</div>
+                                <div class="stats-label">{{ groupe.nom }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des utilisateurs -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-list-ul"></i>
+                        Liste des Utilisateurs
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if utilisateurs %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Utilisateur</th>
+                                        <th>Groupe</th>
+                                        <th>Statut</th>
+                                        <th>Dernière Connexion</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for utilisateur in utilisateurs %}
+                                    <tr class="profile-card">
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                {% if utilisateur.photo %}
+                                                    <img src="{{ utilisateur.photo.url }}" alt="Photo" class="rounded-circle me-2" style="width: 40px; height: 40px;">
+                                                {% else %}
+                                                    <div class="bg-secondary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                        <i class="bi bi-person text-white"></i>
+                                                    </div>
+                                                {% endif %}
+                                                <div>
+                                                    <strong>{{ utilisateur.username }}</strong><br>
+                                                    <small class="text-muted">{{ utilisateur.email }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if utilisateur.groupe_travail %}
+                                                <span class="group-badge">{{ utilisateur.groupe_travail.nom }}</span>
+                                            {% else %}
+                                                <span class="text-muted">Aucun groupe</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if utilisateur.is_deleted %}
+                                                <span class="status-badge status-deleted">Supprimé</span>
+                                            {% elif utilisateur.actif %}
+                                                <span class="status-badge status-active">Actif</span>
+                                            {% else %}
+                                                <span class="status-badge status-inactive">Inactif</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if utilisateur.derniere_connexion %}
+                                                <small>{{ utilisateur.derniere_connexion|date:"d/m/Y H:i" }}</small>
+                                            {% else %}
+                                                <small class="text-muted">Jamais connecté</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if utilisateur != user %}
+                                                <a href="{% url 'utilisateurs:privilege_utilisateur_update' pk=utilisateur.pk %}" class="action-btn-secondary">
+                                                    <i class="bi bi-pencil"></i> Modifier
+                                                </a>
+                                                <button class="action-btn" onclick="confirmDeleteUser({{ utilisateur.id }}, '{{ utilisateur.username }}')" title="Supprimer l'utilisateur {{ utilisateur.username }}">
+                                                    <i class="bi bi-trash"></i> Supprimer
+                                                </button>
+                                            {% else %}
+                                                <small class="text-muted">Utilisateur actuel</small>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-people text-muted" style="font-size: 3rem;"></i>
+                            <h4 class="text-muted mt-3">Aucun utilisateur trouvé</h4>
+                            <p class="text-muted">Il n'y a actuellement aucun utilisateur dans le système.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmation -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Confirmation de Suppression
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" title="Fermer"></button>
+            </div>
+            <div class="modal-body">
+                <p id="modalMessage">Êtes-vous sûr de vouloir supprimer cet utilisateur ?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" id="confirmBtn">Supprimer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentUserId = 0;
+    
+    function confirmDeleteUser(userId, username) {
+        currentUserId = userId;
+        
+        const modal = document.getElementById('confirmModal');
+        const modalMessage = document.getElementById('modalMessage');
+        
+        modalMessage.textContent = `Êtes-vous sûr de vouloir supprimer l'utilisateur "${username}" ? Cette action est irréversible.`;
+        
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+    }
+    
+    document.getElementById('confirmBtn').addEventListener('click', function() {
+        // Afficher un indicateur de chargement
+        this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Suppression...';
+        this.disabled = true;
+        
+        // Effectuer la requête AJAX
+        fetch(`/utilisateurs/privilege/profiles/${currentUserId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Afficher le message de succès
+                showAlert('success', data.message);
+                
+                // Recharger la page après un délai
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            } else {
+                // Afficher le message d'erreur
+                showAlert('danger', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showAlert('danger', 'Une erreur est survenue lors de la suppression.');
+        })
+        .finally(() => {
+            // Fermer le modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
+            modal.hide();
+            
+            // Réinitialiser le bouton
+            this.innerHTML = 'Supprimer';
+            this.disabled = false;
+        });
+    });
+    
+    function showAlert(type, message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.row'));
+        
+        // Auto-fermer après 5 secondes
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+    
+    // Ajouter le token CSRF
+    document.addEventListener('DOMContentLoaded', function() {
+        const csrfToken = document.querySelector('meta[name=csrf-token]');
+        if (!csrfToken) {
+            const meta = document.createElement('meta');
+            meta.name = 'csrf-token';
+            meta.content = '{{ csrf_token }}';
+            document.head.appendChild(meta);
+        }
+    });
+</script>
+{% endblock %} 

@@ -1,0 +1,142 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reçu de Retrait - {{ recu.retrait_bailleur.bailleur.get_nom_complet }}</title>
+    <style>
+        @page { size: A4 landscape; margin: 1cm; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: white; color: #333; }
+        .header { text-align: center; border-bottom: 3px solid {{ config.couleur_principale|default:"#2c3e50" }}; padding-bottom: 20px; margin-bottom: 30px; }
+        .company-logo { max-width: 120px; max-height: 80px; margin-bottom: 10px; }
+        .company-name { font-size: 28px; font-weight: bold; color: {{ config.couleur_principale|default:"#2c3e50" }}; margin-bottom: 5px; }
+        .company-subtitle { font-size: 16px; color: #7f8c8d; margin-bottom: 5px; }
+        .company-info { font-size: 14px; color: #34495e; }
+        .receipt-title { text-align: center; font-size: 32px; font-weight: bold; color: {{ config.couleur_principale|default:"#2c3e50" }}; margin: 30px 0; text-transform: uppercase; letter-spacing: 2px; }
+        .receipt-number { text-align: right; font-size: 18px; color: #7f8c8d; margin-bottom: 30px; }
+        .main-content { display: flex; justify-content: space-between; margin-bottom: 40px; }
+        .left-section, .right-section { width: 48%; }
+        .section-title { font-size: 18px; font-weight: bold; color: {{ config.couleur_principale|default:"#2c3e50" }}; border-bottom: 2px solid {{ config.couleur_secondaire|default:"#3498db" }}; padding-bottom: 8px; margin-bottom: 20px; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 12px; padding: 8px 0; border-bottom: 1px solid #ecf0f1; }
+        .info-label { font-weight: bold; color: #34495e; min-width: 150px; }
+        .info-value { color: #2c3e50; text-align: right; flex: 1; }
+        .amounts-section { background-color: #f8f9fa; padding: 25px; border-radius: 8px; border: 2px solid #e9ecef; margin-bottom: 30px; }
+        .amount-row { display: flex; justify-content: space-between; margin-bottom: 15px; padding: 10px 0; border-bottom: 1px solid #dee2e6; }
+        .amount-row:last-child { border-bottom: 2px solid #2c3e50; font-weight: bold; font-size: 18px; }
+        .amount-label { font-weight: bold; color: #34495e; }
+        .amount-value { font-weight: bold; color: #2c3e50; }
+        .total-amount { font-size: 20px; color: #27ae60; }
+        .details-section { margin-bottom: 30px; }
+        .details-title { font-size: 18px; font-weight: bold; color: #2c3e50; margin-bottom: 15px; border-bottom: 2px solid #3498db; padding-bottom: 8px; }
+        .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .detail-item { background-color: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #3498db; }
+        .detail-label { font-weight: bold; color: #34495e; margin-bottom: 5px; }
+        .detail-value { color: #2c3e50; }
+        .footer { margin-top: 50px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .signature-section { text-align: center; width: 200px; }
+        .signature-line { border-top: 1px solid #333; margin-top: 50px; margin-bottom: 10px; }
+        .signature-label { font-size: 14px; color: #7f8c8d; }
+        .stamp-section { text-align: center; width: 200px; }
+        .stamp { width: 100px; height: 100px; border: 3px solid #e74c3c; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; color: #e74c3c; font-weight: bold; font-size: 12px; text-align: center; }
+        .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 120px; color: rgba(52, 73, 94, 0.1); z-index: -1; font-weight: bold; }
+        .print-button { position: fixed; top: 20px; right: 20px; background-color: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        .print-button:hover { background-color: #2980b9; }
+        @media print { .print-button { display: none; } body { margin: 0; padding: 10px; } }
+    </style>
+</head>
+<body>
+    <button class="print-button" onclick="window.print()"> Imprimer</button>
+    <div class="watermark">{{ config.nom_entreprise|default:"RENTILA" }}</div>
+    
+    <!-- En-tête de l'entreprise -->
+    <div class="header">
+        {% if config.logo_url %}<img src="{{ config.logo_url }}" alt="Logo {{ config.nom_entreprise }}" class="company-logo">{% endif %}
+        <div class="company-name">{{ config.nom_entreprise|default:"RENTILA" }}</div>
+        {% if config.slogan %}<div class="company-subtitle">{{ config.slogan }}</div>{% else %}<div class="company-subtitle">Gestion Immobilière Professionnelle</div>{% endif %}
+        <div class="company-info">{{ config.get_adresse_complete|default:"Siège social: Abidjan, Côte d'Ivoire" }}{% if config.telephone %} | Tél: {{ config.telephone }}{% endif %}{% if config.email %} | Email: {{ config.email }}{% endif %}{% if config.site_web %} | Web: {{ config.site_web }}{% endif %}</div>
+        {% if config.get_informations_legales %}<div class="company-info" style="margin-top: 10px; font-size: 12px;">{{ config.get_informations_legales }}</div>{% endif %}
+    </div>
+    
+    <!-- Titre du reçu -->
+    <div class="receipt-title">Reçu de Retrait</div>
+    <div class="receipt-number"><strong>N {{ recu.numero_recu }}</strong></div>
+    
+    <!-- Informations principales -->
+    <div class="main-content">
+        <div class="left-section">
+            <div class="section-title">Informations du Bailleur</div>
+            <div class="info-row"><span class="info-label">Nom complet:</span><span class="info-value">{{ recu.retrait_bailleur.bailleur.get_nom_complet }}</span></div>
+            <div class="info-row"><span class="info-label">Code bailleur:</span><span class="info-value">{{ recu.retrait_bailleur.bailleur.code_bailleur }}</span></div>
+            <div class="info-row"><span class="info-label">Téléphone:</span><span class="info-value">{{ recu.retrait_bailleur.bailleur.telephone|default:"Non renseigné" }}</span></div>
+            <div class="info-row"><span class="info-label">Email:</span><span class="info-value">{{ recu.retrait_bailleur.bailleur.email|default:"Non renseigné" }}</span></div>
+        </div>
+        <div class="right-section">
+            <div class="section-title">Informations du Retrait</div>
+            <div class="info-row"><span class="info-label">Date de demande:</span><span class="info-value">{{ recu.retrait_bailleur.date_demande|date:"d/m/Y" }}</span></div>
+            <div class="info-row"><span class="info-label">Mois concerné:</span><span class="info-value">{{ recu.retrait_bailleur.mois_retrait|date:"F Y" }}</span></div>
+            <div class="info-row"><span class="info-label">Type de retrait:</span><span class="info-value">{{ recu.retrait_bailleur.get_type_retrait_display }}</span></div>
+            <div class="info-row"><span class="info-label">Mode de retrait:</span><span class="info-value">{{ recu.retrait_bailleur.get_mode_retrait_display }}</span></div>
+        </div>
+    </div>
+    
+    <!-- Section des montants -->
+    <div class="amounts-section">
+        <div class="section-title">Détail des Montants</div>
+        <div class="amount-row"><span class="amount-label">Total des loyers bruts:</span><span class="amount-value">{{ recu.retrait_bailleur.montant_loyers_bruts|floatformat:2 }} XOF</span></div>
+        <div class="amount-row"><span class="amount-label">Charges déductibles:</span><span class="amount-value">- {{ recu.retrait_bailleur.montant_charges_deductibles|floatformat:2 }} XOF</span></div>
+        <div class="amount-row"><span class="amount-label">Montant net à payer:</span><span class="amount-value total-amount">{{ recu.retrait_bailleur.montant_net_a_payer|floatformat:2 }} XOF</span></div>
+    </div>
+    
+    <!-- Section des détails -->
+    <div class="details-section">
+        <div class="details-title">Détails des Propriétés</div>
+        <div class="details-grid">
+            {% for propriete in recu.retrait_bailleur.paiements_concernes.all|slice:":4" %}
+            <div class="detail-item">
+                <div class="detail-label">Propriété:</div>
+                <div class="detail-value">{{ propriete.contrat.propriete.adresse }}, {{ propriete.contrat.propriete.ville }}</div>
+                <div class="detail-label">Loyer:</div>
+                <div class="detail-value">{{ propriete.montant|floatformat:2 }} XOF</div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% if recu.retrait_bailleur.charges_deductibles.all %}
+        <div class="details-title" style="margin-top: 20px;">Charges Déductibles</div>
+        <div class="details-grid">
+            {% for charge in recu.retrait_bailleur.charges_deductibles.all|slice:":4" %}
+            <div class="detail-item">
+                <div class="detail-label">Charge:</div>
+                <div class="detail-value">{{ charge.libelle }}</div>
+                <div class="detail-label">Montant:</div>
+                <div class="detail-value">{{ charge.montant|floatformat:2 }} XOF</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Pied de page avec signatures -->
+    <div class="footer">
+        <div class="signature-section">
+            <div class="signature-line"></div>
+            <div class="signature-label">Signature du bailleur</div>
+        </div>
+        <div class="stamp-section">
+            <div class="stamp">PAYÉ</div>
+            <div class="signature-label">Cachet de l'agence</div>
+        </div>
+        <div class="signature-section">
+            <div class="signature-line"></div>
+            <div class="signature-label">Signature de l'agent</div>
+        </div>
+    </div>
+    
+    <!-- Informations de bas de page -->
+    <div style="margin-top: 40px; text-align: center; font-size: 12px; color: #7f8c8d;">
+        <p>Ce document est généré automatiquement par le système de gestion {{ config.nom_entreprise|default:"Rentila" }}</p>
+        <p>Date d'émission: {{ recu.date_emission|date:"d/m/Y à H:i" }}</p>
+        <p>Document valide sans signature pour les montants inférieurs à 100 000 XOF</p>
+    </div>
+</body>
+</html>

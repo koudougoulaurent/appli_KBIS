@@ -1,0 +1,229 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+
+{% block title %}
+    Confirmer la Suppression - Rentila
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .delete-warning {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        color: white;
+        border-radius: 10px;
+        padding: 30px;
+        text-align: center;
+        margin: 30px 0;
+    }
+    
+    .delete-warning h2 {
+        margin: 0;
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+    
+    .delete-warning small {
+        opacity: 0.9;
+        font-size: 1.1rem;
+    }
+    
+    .paiement-info {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+        border-left: 4px solid #007bff;
+    }
+    
+    .paiement-info h5 {
+        color: #007bff;
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+    }
+    
+    .info-item {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        text-align: center;
+    }
+    
+    .info-item strong {
+        color: #495057;
+        display: block;
+        margin-bottom: 5px;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .info-item span {
+        color: #212529;
+        font-size: 1.1rem;
+        font-weight: 500;
+    }
+    
+    .btn-action {
+        min-width: 150px;
+        margin: 10px;
+    }
+    
+    .consequences {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+    
+    .consequences h6 {
+        color: #856404;
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+    
+    .consequences ul {
+        margin-bottom: 0;
+        color: #856404;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-exclamation-triangle text-danger me-2"></i>
+                        Confirmer la Suppression
+                    </h1>
+                    <p class="text-muted mb-0">
+                        Êtes-vous sûr de vouloir supprimer ce paiement ?
+                    </p>
+                </div>
+                <a href="{% url 'paiements:paiement_caution_avance_detail' object.pk %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i> Retour aux détails
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Avertissement de suppression -->
+    <div class="delete-warning">
+        <h2><i class="bi bi-exclamation-triangle me-3"></i> ATTENTION !</h2>
+        <p class="mb-3">Vous êtes sur le point de supprimer définitivement ce paiement de caution/avance</p>
+        <small>Cette action est irréversible et supprimera toutes les données associées</small>
+    </div>
+
+    <!-- Informations du paiement à supprimer -->
+    <div class="paiement-info">
+        <h5><i class="bi bi-info-circle me-2"></i> Paiement à Supprimer</h5>
+        <div class="info-grid">
+            <div class="info-item">
+                <strong>Type</strong>
+                <span>{{ object.get_type_paiement_display }}</span>
+            </div>
+            <div class="info-item">
+                <strong>Montant Total</strong>
+                <span>{{ object.get_montant_total_formatted }}</span>
+            </div>
+            <div class="info-item">
+                <strong>Contrat</strong>
+                <span>{{ object.contrat.numero_contrat }}</span>
+            </div>
+            <div class="info-item">
+                <strong>Payeur</strong>
+                <span>{{ object.nom_payeur }}</span>
+            </div>
+            <div class="info-item">
+                <strong>Date</strong>
+                <span>{{ object.date_paiement|date:"d/m/Y" }}</span>
+            </div>
+            <div class="info-item">
+                <strong>Statut</strong>
+                <span>{{ object.get_statut_display }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conséquences de la suppression -->
+    <div class="consequences">
+        <h6><i class="bi bi-exclamation-triangle me-2"></i> Conséquences de la Suppression</h6>
+        <ul>
+            <li>Le paiement sera définitivement supprimé de la base de données</li>
+            <li>Toutes les informations associées (notes, justificatifs) seront perdues</li>
+            {% if object.recu_genere %}
+                <li>Le reçu généré sera également supprimé</li>
+            {% endif %}
+            {% if object.statut == 'valide' %}
+                <li>Le statut du contrat sera remis à jour (caution/avance non payée)</li>
+            {% endif %}
+            <li>Cette action ne peut pas être annulée</li>
+        </ul>
+    </div>
+
+    <!-- Actions -->
+    <div class="text-center">
+        <form method="post" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-action">
+                <i class="bi bi-trash me-2"></i> Confirmer la Suppression
+            </button>
+        </form>
+        <a href="{% url 'paiements:paiement_caution_avance_detail' object.pk %}" class="btn btn-secondary btn-action">
+            <i class="bi bi-x-circle me-2"></i> Annuler
+        </a>
+        <a href="{% url 'paiements:paiement_caution_avance_list' %}" class="btn btn-outline-secondary btn-action">
+            <i class="bi bi-arrow-left me-2"></i> Retour à la liste
+        </a>
+    </div>
+
+    <!-- Informations supplémentaires -->
+    <div class="row mt-5">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-shield-check me-2"></i> Alternatives à la Suppression
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li><strong>Annuler :</strong> Marquer le paiement comme annulé</li>
+                        <li><strong>Rejeter :</strong> Marquer le paiement comme rejeté</li>
+                        <li><strong>Modifier :</strong> Corriger les informations du paiement</li>
+                        <li><strong>Archiver :</strong> Conserver pour l'historique</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-question-circle me-2"></i> Besoin d'Aide ?
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">Si vous n'êtes pas sûr de cette action :</p>
+                    <ul class="mb-0">
+                        <li>Contactez votre administrateur système</li>
+                        <li>Consultez la documentation</li>
+                        <li>Utilisez la fonction de modification à la place</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

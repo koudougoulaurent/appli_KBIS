@@ -1,0 +1,264 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}Détail Charge Déductible - {{ charge.libelle }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-badge {
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+    }
+    .status-en_attente { background-color: #ffc107; color: #000; }
+    .status-validee { background-color: #28a745; color: #fff; }
+    .status-deduite { background-color: #17a2b8; color: #fff; }
+    .status-refusee { background-color: #dc3545; color: #fff; }
+    .status-annulee { background-color: #6c757d; color: #fff; }
+    
+    .info-section {
+        background-color: #f8f9fa;
+        border-radius: 0.375rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .section-title {
+        color: #495057;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .timeline {
+        border-left: 3px solid #007bff;
+        padding-left: 1rem;
+        margin-left: 1rem;
+    }
+    .timeline-item {
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    .timeline-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+    .timeline-date {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- En-tête -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1>
+                        <i class="bi bi-receipt"></i> {{ charge.libelle }}
+                        <span class="badge status-{{ charge.statut }} status-badge ms-3">
+                            {{ charge.get_statut_display }}
+                        </span>
+                    </h1>
+                    <p class="text-muted">Charge déductible #{{ charge.id }}</p>
+                </div>
+                <div>
+                    {% if charge.statut == 'en_attente' %}
+                        <a href="{% url 'paiements:charge_deductible_valider' charge.id %}" 
+                           class="btn btn-success me-2">
+                            <i class="bi bi-check-circle"></i> Valider
+                        </a>
+                        <a href="{% url 'paiements:charge_deductible_refuser' charge.id %}" 
+                           class="btn btn-danger me-2">
+                            <i class="bi bi-x-circle"></i> Refuser
+                        </a>
+                    {% endif %}
+                    
+                    {% if charge.statut in 'en_attente,validee' %}
+                        <a href="{% url 'paiements:charge_deductible_modifier' charge.id %}" 
+                           class="btn btn-warning me-2">
+                            <i class="bi bi-pencil"></i> Modifier
+                        </a>
+                    {% endif %}
+                    
+                    <a href="{% url 'paiements:charges_deductibles_liste' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Retour à la liste
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Informations principales -->
+        <div class="col-lg-8">
+            <!-- Détails de la charge -->
+            <div class="info-section">
+                <h5 class="section-title">
+                    <i class="bi bi-file-text"></i> Détails de la charge
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Montant :</strong> <span class="text-success fs-5">{{ charge.montant|currency_format }}</span></p>
+                        <p><strong>Type :</strong> 
+                            <span class="badge bg-secondary">{{ charge.get_type_charge_display }}</span>
+                        </p>
+                        <p><strong>Date de la charge :</strong> {{ charge.date_charge|date:"d F Y" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        {% if charge.fournisseur %}
+                            <p><strong>Fournisseur :</strong> {{ charge.fournisseur }}</p>
+                        {% endif %}
+                        {% if charge.facture_numero %}
+                            <p><strong>N° Facture :</strong> {{ charge.facture_numero }}</p>
+                        {% endif %}
+                        {% if charge.justificatif_url %}
+                            <p><strong>Justificatif :</strong> 
+                                <a href="{{ charge.justificatif_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-link-45deg"></i> Voir le justificatif
+                                </a>
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if charge.description %}
+                <div class="mt-3">
+                    <strong>Description :</strong>
+                    <div class="bg-white p-3 rounded border mt-2">
+                        {{ charge.description|linebreaks }}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if charge.notes %}
+                <div class="mt-3">
+                    <strong>Notes :</strong>
+                    <div class="bg-white p-3 rounded border mt-2">
+                        {{ charge.notes|linebreaks }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Informations du contrat -->
+            <div class="info-section">
+                <h5 class="section-title">
+                    <i class="bi bi-file-earmark-text"></i> Informations du contrat
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Contrat :</strong> 
+                            <a href="#" class="text-decoration-none">{{ charge.contrat.numero_contrat }}</a>
+                        </p>
+                        <p><strong>Locataire :</strong> {{ charge.contrat.locataire.nom }} {{ charge.contrat.locataire.prenom }}</p>
+                        <p><strong>Email :</strong> 
+                            <a href="mailto:{{ charge.contrat.locataire.email }}">{{ charge.contrat.locataire.email }}</a>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Propriété :</strong> {{ charge.contrat.propriete.adresse }}</p>
+                        <p><strong>Ville :</strong> {{ charge.contrat.propriete.ville }}</p>
+                        <p><strong>Loyer total :</strong> {{ charge.contrat.get_loyer_total|currency_format }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            {% if charge.statut == 'deduite' and charge.paiement_deduction %}
+            <!-- Informations de déduction -->
+            <div class="info-section">
+                <h5 class="section-title">
+                    <i class="bi bi-credit-card"></i> Déduction du paiement
+                </h5>
+                
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-info-circle"></i> Cette charge a été déduite</h6>
+                    <p class="mb-0">
+                        Déduite du paiement #{{ charge.paiement_deduction.id }} 
+                        le {{ charge.date_deduction|date:"d F Y à H:i" }}
+                    </p>
+                    <a href="{% url 'paiements:detail' charge.paiement_deduction.id %}" 
+                       class="btn btn-sm btn-outline-primary mt-2">
+                        <i class="bi bi-eye"></i> Voir le paiement
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Chronologie -->
+            <div class="info-section">
+                <h5 class="section-title">
+                    <i class="bi bi-clock-history"></i> Chronologie
+                </h5>
+                
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-date">{{ charge.date_creation|date:"d/m/Y H:i" }}</div>
+                        <strong>Charge créée</strong>
+                        {% if charge.cree_par %}
+                            <br><small class="text-muted">par {{ charge.cree_par.get_full_name }}</small>
+                        {% endif %}
+                    </div>
+                    
+                    {% if charge.date_validation %}
+                    <div class="timeline-item">
+                        <div class="timeline-date">{{ charge.date_validation|date:"d/m/Y H:i" }}</div>
+                        <strong>
+                            {% if charge.statut == 'validee' %}
+                                <span class="text-success">Charge validée</span>
+                            {% elif charge.statut == 'refusee' %}
+                                <span class="text-danger">Charge refusée</span>
+                            {% endif %}
+                        </strong>
+                        {% if charge.validee_par %}
+                            <br><small class="text-muted">par {{ charge.validee_par.get_full_name }}</small>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    {% if charge.date_deduction %}
+                    <div class="timeline-item">
+                        <div class="timeline-date">{{ charge.date_deduction|date:"d/m/Y H:i" }}</div>
+                        <strong><span class="text-info">Charge déduite</span></strong>
+                        <br><small class="text-muted">du paiement #{{ charge.paiement_deduction.id }}</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Actions rapides -->
+            <div class="info-section">
+                <h5 class="section-title">
+                    <i class="bi bi-lightning"></i> Actions rapides
+                </h5>
+                
+                <div class="d-grid gap-2">
+                    {% if charge.statut == 'validee' %}
+                        <a href="{% url 'paiements:ajouter' %}?contrat={{ charge.contrat.id }}" 
+                           class="btn btn-outline-success">
+                            <i class="bi bi-plus-circle"></i> Créer un paiement avec cette charge
+                        </a>
+                    {% endif %}
+                    
+                    <a href="{% url 'paiements:charge_deductible_ajouter' %}" 
+                       class="btn btn-outline-primary">
+                        <i class="bi bi-plus-circle"></i> Nouvelle charge déductible
+                    </a>
+                    
+                    <a href="{% url 'paiements:charges_deductibles_liste' %}?contrat={{ charge.contrat.id }}" 
+                       class="btn btn-outline-info">
+                        <i class="bi bi-list"></i> Autres charges de ce contrat
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

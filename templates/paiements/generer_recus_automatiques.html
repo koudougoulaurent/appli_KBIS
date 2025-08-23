@@ -1,0 +1,310 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Génération Automatique des Reçus - GESTIMMOB{% endblock %}
+
+{% block extra_css %}
+<style>
+    .generation-card {
+        border-left: 4px solid #28a745;
+        transition: all 0.3s ease;
+    }
+    .progress-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+    .stats-highlight {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 30px;
+        text-align: center;
+        margin: 20px 0;
+    }
+    .info-box {
+        background: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        padding: 15px;
+        margin: 15px 0;
+        border-radius: 5px;
+    }
+    .warning-box {
+        background: #fff3e0;
+        border-left: 4px solid #ff9800;
+        padding: 15px;
+        margin: 15px 0;
+        border-radius: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-magic text-success"></i>
+                Génération Automatique des Reçus
+            </h1>
+            <p class="text-muted">Générez automatiquement des reçus pour les paiements validés sans reçu</p>
+        </div>
+        <div>
+            <a href="{% url 'paiements:recus_liste' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Retour aux reçus
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="stats-highlight">
+        <h2 class="mb-3">
+            <i class="fas fa-chart-bar"></i>
+            État de la Génération
+        </h2>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="h4 mb-1">{{ paiements_sans_recu }}</div>
+                <div class="text-light">Paiements sans reçu</div>
+            </div>
+            <div class="col-md-4">
+                <div class="h4 mb-1">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="text-light">Prêt à générer</div>
+            </div>
+            <div class="col-md-4">
+                <div class="h4 mb-1">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="text-light">Génération automatique</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informations -->
+    <div class="info-box">
+        <h5><i class="fas fa-info-circle"></i> Comment fonctionne la génération automatique ?</h5>
+        <ul class="mb-0">
+            <li>Seuls les paiements <strong>validés</strong> sans reçu existant seront traités</li>
+            <li>Chaque reçu aura un numéro unique généré automatiquement</li>
+            <li>Les reçus seront créés avec le template standard</li>
+            <li>Vous pourrez ensuite les imprimer ou les télécharger en PDF</li>
+        </ul>
+    </div>
+
+    {% if paiements_sans_recu > 0 %}
+        <!-- Avertissement -->
+        <div class="warning-box">
+            <h5><i class="fas fa-exclamation-triangle"></i> Attention</h5>
+            <p class="mb-0">
+                Cette action va générer <strong>{{ paiements_sans_recu }} reçu(s)</strong> automatiquement. 
+                Cette opération ne peut pas être annulée une fois lancée.
+            </p>
+        </div>
+
+        <!-- Formulaire de génération -->
+        <div class="card generation-card shadow">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cogs"></i>
+                    Configuration de la Génération
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="generationForm">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="template_choice">
+                                    <strong>Template à utiliser:</strong>
+                                </label>
+                                <select name="template_choice" id="template_choice" class="form-control">
+                                    <option value="standard">Standard (Recommandé)</option>
+                                    <option value="simplified">Simplifié</option>
+                                    <option value="detailed">Détaillé</option>
+                                </select>
+                                <small class="form-text text-muted">
+                                    Choisissez le format du reçu à générer
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="auto_print">
+                                    <strong>Options d'impression:</strong>
+                                </label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="auto_print" name="auto_print">
+                                    <label class="form-check-label" for="auto_print">
+                                        Marquer automatiquement comme imprimés
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="send_email" name="send_email">
+                                    <label class="form-check-label" for="send_email">
+                                        Envoyer par email (si configuré)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-section" id="progressSection" style="display: none;">
+                        <h6>Progression de la génération:</h6>
+                        <div class="progress mb-3">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" 
+                                 style="width: 0%" 
+                                 id="progressBar">0%</div>
+                        </div>
+                        <div id="progressText">Préparation...</div>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-success btn-lg" id="generateBtn">
+                            <i class="fas fa-magic"></i>
+                            Générer {{ paiements_sans_recu }} Reçu(s)
+                        </button>
+                        <a href="{% url 'paiements:recus_liste' %}" class="btn btn-secondary btn-lg ml-2">
+                            <i class="fas fa-times"></i>
+                            Annuler
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Détails des paiements à traiter -->
+        <div class="card shadow mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-list"></i>
+                    Paiements qui seront traités
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>{{ paiements_sans_recu }} paiement(s)</strong> validé(s) sans reçu seront traités.
+                    <br>
+                    <small>Les détails complets seront affichés après la génération.</small>
+                </div>
+            </div>
+        </div>
+
+    {% else %}
+        <!-- Aucun paiement à traiter -->
+        <div class="card shadow">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                <h4 class="text-success">Aucun paiement à traiter !</h4>
+                <p class="text-muted">
+                    Tous les paiements validés ont déjà un reçu associé.
+                </p>
+                <a href="{% url 'paiements:recus_liste' %}" class="btn btn-primary">
+                    <i class="fas fa-arrow-left"></i>
+                    Retour à la liste des reçus
+                </a>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Historique des générations -->
+    <div class="card shadow mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-history"></i>
+                Historique des Générations
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Reçus générés</th>
+                            <th>Template utilisé</th>
+                            <th>Généré par</th>
+                            <th>Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{{ recu.date_emission|date:"d/m/Y H:i" }}</td>
+                            <td>1</td>
+                            <td>{{ recu.template_utilise|title }}</td>
+                            <td>Système automatique</td>
+                            <td>
+                                <span class="badge bg-success">Terminé</span>
+                            </td>
+                        </tr>
+                        <!-- Plus d'historique sera ajouté dynamiquement -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Gestion de la soumission du formulaire
+document.getElementById('generationForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    if (confirm('Êtes-vous sûr de vouloir générer {{ paiements_sans_recu }} reçu(s) ? Cette action ne peut pas être annulée.')) {
+        // Afficher la section de progression
+        document.getElementById('progressSection').style.display = 'block';
+        document.getElementById('generateBtn').disabled = true;
+        document.getElementById('generateBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération en cours...';
+        
+        // Simuler la progression
+        let progress = 0;
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        
+        const interval = setInterval(function() {
+            progress += Math.random() * 15;
+            if (progress >= 100) {
+                progress = 100;
+                clearInterval(interval);
+                progressText.innerHTML = 'Génération terminée ! Redirection...';
+                
+                // Soumettre le formulaire
+                setTimeout(function() {
+                    document.getElementById('generationForm').submit();
+                }, 1000);
+            }
+            
+            progressBar.style.width = progress + '%';
+            progressBar.textContent = Math.round(progress) + '%';
+            
+            if (progress < 30) {
+                progressText.innerHTML = 'Analyse des paiements...';
+            } else if (progress < 60) {
+                progressText.innerHTML = 'Génération des reçus...';
+            } else if (progress < 90) {
+                progressText.innerHTML = 'Finalisation...';
+            }
+        }, 200);
+    }
+});
+
+// Validation des options
+document.getElementById('send_email').addEventListener('change', function() {
+    if (this.checked) {
+        if (!confirm('L\'envoi par email nécessite une configuration SMTP. Êtes-vous sûr de vouloir activer cette option ?')) {
+            this.checked = false;
+        }
+    }
+});
+</script>
+{% endblock %} 

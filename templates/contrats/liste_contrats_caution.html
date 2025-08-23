@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gestion des Cautions - Gestion Immobilière{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="bi bi-shield-check text-primary"></i>
+        Gestion des Cautions
+    </h1>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="statut_caution" class="form-label">Statut Caution</label>
+                <select name="statut_caution" id="statut_caution" class="form-select">
+                    <option value="">Tous</option>
+                    <option value="non_payee" {% if request.GET.statut_caution == 'non_payee' %}selected{% endif %}>Non payée</option>
+                    <option value="payee" {% if request.GET.statut_caution == 'payee' %}selected{% endif %}>Payée</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="statut_avance" class="form-label">Statut Avance</label>
+                <select name="statut_avance" id="statut_avance" class="form-select">
+                    <option value="">Tous</option>
+                    <option value="non_payee" {% if request.GET.statut_avance == 'non_payee' %}selected{% endif %}>Non payée</option>
+                    <option value="payee" {% if request.GET.statut_avance == 'payee' %}selected{% endif %}>Payée</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="bailleur" class="form-label">Bailleur</label>
+                <select name="bailleur" id="bailleur" class="form-select">
+                    <option value="">Tous les bailleurs</option>
+                    {% for bailleur in bailleurs %}
+                        <option value="{{ bailleur.id }}" {% if request.GET.bailleur == bailleur.id|stringformat:"s" %}selected{% endif %}>
+                            {{ bailleur.get_nom_complet }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-funnel"></i> Filtrer
+                    </button>
+                    <a href="{% url 'contrats:liste_contrats_caution' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> Reset
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Liste des contrats -->
+<div class="card">
+    <div class="card-body">
+        {% if contrats %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Contrat</th>
+                            <th>Locataire</th>
+                            <th>Propriété</th>
+                            <th>Bailleur</th>
+                            <th>Caution</th>
+                            <th>Avance</th>
+                            <th>Total</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for contrat in contrats %}
+                        <tr>
+                            <td>
+                                <strong>{{ contrat.numero_contrat }}</strong>
+                                <br>
+                                <small class="text-muted">{{ contrat.date_signature|date:"d/m/Y" }}</small>
+                            </td>
+                            <td>
+                                <strong>{{ contrat.locataire.get_nom_complet }}</strong>
+                                <br>
+                                <small class="text-muted">{{ contrat.locataire.telephone }}</small>
+                            </td>
+                            <td>
+                                {{ contrat.propriete.titre }}
+                                <br>
+                                <small class="text-muted">{{ contrat.propriete.ville }}</small>
+                            </td>
+                            <td>
+                                {{ contrat.propriete.bailleur.get_nom_complet }}
+                            </td>
+                            <td class="text-end">
+                                <span class="fw-bold text-warning">
+                                    {{ contrat.get_depot_garantie_formatted }}
+                                </span>
+                                <br>
+                                {% if contrat.caution_payee %}
+                                    <small class="badge bg-success">Payée</small>
+                                {% else %}
+                                    <small class="badge bg-danger">Non payée</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <span class="fw-bold text-info">
+                                    {{ contrat.get_avance_loyer_formatted }}
+                                </span>
+                                <br>
+                                {% if contrat.avance_loyer_payee %}
+                                    <small class="badge bg-success">Payée</small>
+                                {% else %}
+                                    <small class="badge bg-danger">Non payée</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <span class="fw-bold text-primary">
+                                    {{ contrat.get_total_caution_avance_formatted }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if contrat.peut_commencer_location %}
+                                    <span class="badge bg-success">Complet</span>
+                                {% else %}
+                                    <span class="badge bg-warning">En attente</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'contrats:detail_contrat_caution' contrat.id %}" 
+                                       class="btn btn-outline-primary" title="Voir les détails">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if not contrat.caution_payee %}
+                                        <a href="{% url 'contrats:marquer_caution_payee' contrat.id %}" 
+                                           class="btn btn-outline-success" title="Marquer caution payée">
+                                            <i class="bi bi-shield-check"></i>
+                                        </a>
+                                    {% endif %}
+                                    {% if not contrat.avance_loyer_payee %}
+                                        <a href="{% url 'contrats:marquer_avance_payee' contrat.id %}" 
+                                           class="btn btn-outline-info" title="Marquer avance payée">
+                                            <i class="bi bi-cash-coin"></i>
+                                        </a>
+                                    {% endif %}
+                                    {% if contrat.caution_payee or contrat.avance_loyer_payee %}
+                                        <a href="{% url 'contrats:imprimer_recu_caution' contrat.id %}" 
+                                           class="btn btn-outline-secondary" title="Imprimer reçu" target="_blank">
+                                            <i class="bi bi-printer"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Navigation des pages">
+                <ul class="pagination justify-content-center mt-4">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.statut_caution %}&statut_caution={{ request.GET.statut_caution }}{% endif %}{% if request.GET.statut_avance %}&statut_avance={{ request.GET.statut_avance }}{% endif %}{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.statut_caution %}&statut_caution={{ request.GET.statut_caution }}{% endif %}{% if request.GET.statut_avance %}&statut_avance={{ request.GET.statut_avance }}{% endif %}{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.statut_caution %}&statut_caution={{ request.GET.statut_caution }}{% endif %}{% if request.GET.statut_avance %}&statut_avance={{ request.GET.statut_avance }}{% endif %}{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.statut_caution %}&statut_caution={{ request.GET.statut_caution }}{% endif %}{% if request.GET.statut_avance %}&statut_avance={{ request.GET.statut_avance }}{% endif %}{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-shield-check text-muted" style="font-size: 4rem;"></i>
+                <h4 class="text-muted mt-3">Aucun contrat trouvé</h4>
+                <p class="text-muted">Les contrats avec leurs cautions et avances apparaîtront ici.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Résumé statistique -->
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="stat-card success">
+            <div class="stat-number">{{ stats.total_complets }}</div>
+            <div class="stat-label">Contrats Complets</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card warning">
+            <div class="stat-number">{{ stats.total_en_attente }}</div>
+            <div class="stat-label">En Attente</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card info">
+            <div class="stat-number">{{ stats.total_cautions_payees }}</div>
+            <div class="stat-label">Cautions Payées</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-number">{{ stats.total_avances_payees }}</div>
+            <div class="stat-label">Avances Payées</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

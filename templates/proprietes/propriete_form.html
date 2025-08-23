@@ -1,0 +1,464 @@
+{% extends 'base_dashboard.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}
+    {% if form.instance.pk %}
+        Modifier la propriété - {{ form.instance.titre }}
+    {% else %}
+        Ajouter une nouvelle propriété
+    {% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .document-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 2px dashed #6f42c1;
+        border-radius: 15px;
+        padding: 25px;
+        margin: 20px 0;
+        transition: all 0.3s ease;
+    }
+    .document-section:hover {
+        border-color: #5a32a3;
+        box-shadow: 0 4px 15px rgba(111, 66, 193, 0.1);
+    }
+    .document-section h4 {
+        color: #6f42c1;
+        font-weight: 600;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .document-required {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        border-color: #ffc107;
+    }
+    .document-optional {
+        background: linear-gradient(135deg, #e2e3e5 0%, #d6d8db 100%);
+        border-color: #6c757d;
+    }
+    .file-input-wrapper {
+        position: relative;
+        margin-bottom: 15px;
+    }
+    .file-input-wrapper input[type="file"] {
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px;
+        transition: border-color 0.3s ease;
+    }
+    .file-input-wrapper input[type="file"]:focus {
+        border-color: #6f42c1;
+        box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
+    }
+    .form-section {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    .form-section h3 {
+        color: #495057;
+        font-weight: 600;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 10px;
+    }
+    .btn-custom {
+        border-radius: 25px;
+        padding: 12px 30px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s ease;
+    }
+    .btn-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    .alert-primary {
+        background: linear-gradient(135deg, #cce7ff 0%, #b3d9ff 100%);
+        border: none;
+        border-radius: 15px;
+        color: #004085;
+    }
+    .property-summary {
+        background: linear-gradient(135deg, #e2e3e5 0%, #d6d8db 100%);
+        border-radius: 15px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+    .property-summary h5 {
+        color: #495057;
+        font-weight: 600;
+        margin-bottom: 15px;
+    }
+    .feature-checkbox {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 10px;
+        transition: all 0.3s ease;
+    }
+    .feature-checkbox:hover {
+        background: #e9ecef;
+        transform: translateY(-1px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- En-tête -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-0">
+                        <i class="bi bi-building-fill me-2"></i>
+                        {% if form.instance.pk %}
+                            Modifier la propriété
+                        {% else %}
+                            Nouvelle propriété
+                        {% endif %}
+                    </h2>
+                    <p class="text-muted mb-0">Gestion documentaire intégrée - Dossier complet de la propriété</p>
+                </div>
+                <a href="{% url 'proprietes:liste' %}" class="btn btn-outline-secondary btn-custom">
+                    <i class="bi bi-arrow-left me-2"></i>Retour à la liste
+                </a>
+            </div>
+
+            <!-- Alerte d'information -->
+            <div class="alert alert-primary" role="alert">
+                <i class="bi bi-house-check me-2"></i>
+                <strong>Dossier propriété complet :</strong> 
+                Tous les documents légaux et diagnostics seront automatiquement archivés. 
+                Les diagnostics obligatoires sont requis pour la mise en location.
+            </div>
+
+            <!-- Formulaire -->
+            <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                {% csrf_token %}
+
+                <!-- Section 1: Informations générales -->
+                <div class="form-section">
+                    <h3><i class="bi bi-info-circle me-2"></i>Informations générales</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.numero_propriete|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.titre|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.type_bien|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.bailleur|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.etat|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Localisation -->
+                <div class="form-section">
+                    <h3><i class="bi bi-geo-alt me-2"></i>Localisation</h3>
+                    <div class="row">
+                        <div class="col-12">
+                            {{ form.adresse|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            {{ form.code_postal|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.ville|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.pays|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Caractéristiques -->
+                <div class="form-section">
+                    <h3><i class="bi bi-rulers me-2"></i>Caractéristiques</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.surface|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.nombre_pieces|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.nombre_chambres|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.nombre_salles_bain|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Équipements -->
+                <div class="form-section">
+                    <h3><i class="bi bi-gear me-2"></i>Équipements et commodités</h3>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="feature-checkbox">
+                                {{ form.ascenseur|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="feature-checkbox">
+                                {{ form.parking|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="feature-checkbox">
+                                {{ form.balcon|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="feature-checkbox">
+                                {{ form.jardin|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 5: Informations financières -->
+                <div class="form-section">
+                    <h3><i class="bi bi-currency-exchange me-2"></i>Informations financières</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.prix_achat|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.loyer_actuel|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.charges_locataire|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            <div class="feature-checkbox">
+                                {{ form.disponible|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Résumé de la propriété -->
+                <div class="property-summary">
+                    <h5><i class="bi bi-calculator me-2"></i>Résumé de la propriété</h5>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 text-primary mb-0" id="prix-m2">-</div>
+                                <small class="text-muted">Prix/m²</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 text-success mb-0" id="loyer-m2">-</div>
+                                <small class="text-muted">Loyer/m²</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 text-info mb-0" id="rendement">-</div>
+                                <small class="text-muted">Rendement brut</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 text-warning mb-0" id="total-mensuel">-</div>
+                                <small class="text-muted">Total mensuel</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 6: Documents légaux obligatoires -->
+                <div class="document-section document-required">
+                    <h4><i class="bi bi-file-earmark-check"></i>Documents légaux obligatoires</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="file-input-wrapper">
+                                {{ form.acte_propriete|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="file-input-wrapper">
+                                {{ form.diagnostic_energetique|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 7: Diagnostics optionnels -->
+                <div class="document-section document-optional">
+                    <h4><i class="bi bi-file-earmark-medical"></i>Diagnostics complémentaires</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="file-input-wrapper">
+                                {{ form.diagnostic_plomb|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="file-input-wrapper">
+                                {{ form.diagnostic_amiante|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 8: Photos -->
+                <div class="document-section document-optional">
+                    <h4><i class="bi bi-camera"></i>Photos de la propriété</h4>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="file-input-wrapper">
+                                {{ form.photos_propriete|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 9: Notes -->
+                <div class="form-section">
+                    <h3><i class="bi bi-chat-text me-2"></i>Notes additionnelles</h3>
+                    {{ form.notes|as_crispy_field }}
+                </div>
+
+                <!-- Boutons d'action -->
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'proprietes:liste' %}" class="btn btn-outline-secondary btn-custom">
+                        <i class="bi bi-x-circle me-2"></i>Annuler
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-custom" style="background: #6f42c1; border-color: #6f42c1;">
+                        <i class="bi bi-check-circle me-2"></i>
+                        {% if form.instance.pk %}
+                            Modifier la propriété
+                        {% else %}
+                            Créer la propriété
+                        {% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validation des formulaires Bootstrap
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        });
+    });
+
+    // Calculs automatiques
+    function updatePropertySummary() {
+        const surface = parseFloat(document.getElementById('id_surface')?.value) || 0;
+        const prixAchat = parseFloat(document.getElementById('id_prix_achat')?.value) || 0;
+        const loyerActuel = parseFloat(document.getElementById('id_loyer_actuel')?.value) || 0;
+        const charges = parseFloat(document.getElementById('id_charges_locataire')?.value) || 0;
+        
+        // Calculs
+        const prixM2 = surface > 0 ? prixAchat / surface : 0;
+        const loyerM2 = surface > 0 ? loyerActuel / surface : 0;
+        const rendementBrut = prixAchat > 0 ? (loyerActuel * 12 / prixAchat * 100) : 0;
+        const totalMensuel = loyerActuel + charges;
+        
+        // Mise à jour de l'affichage
+        document.getElementById('prix-m2').textContent = prixM2 > 0 ? Math.round(prixM2).toLocaleString() + ' XOF/m²' : '-';
+        document.getElementById('loyer-m2').textContent = loyerM2 > 0 ? Math.round(loyerM2).toLocaleString() + ' XOF/m²' : '-';
+        document.getElementById('rendement').textContent = rendementBrut > 0 ? rendementBrut.toFixed(2) + '%' : '-';
+        document.getElementById('total-mensuel').textContent = totalMensuel > 0 ? totalMensuel.toLocaleString() + ' XOF' : '-';
+    }
+
+    // Écouter les changements sur les champs financiers
+    const financialInputs = ['id_surface', 'id_prix_achat', 'id_loyer_actuel', 'id_charges_locataire'];
+    financialInputs.forEach(inputId => {
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.addEventListener('input', updatePropertySummary);
+            input.addEventListener('change', updatePropertySummary);
+        }
+    });
+
+    // Calcul initial
+    updatePropertySummary();
+
+    // Prévisualisation des fichiers
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    fileInputs.forEach(input => {
+        input.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const fileName = file.name;
+                const fileSize = (file.size / 1024 / 1024).toFixed(2);
+                
+                let infoElement = e.target.parentNode.querySelector('.file-info');
+                if (!infoElement) {
+                    infoElement = document.createElement('div');
+                    infoElement.className = 'file-info mt-2 p-2 bg-light rounded';
+                    e.target.parentNode.appendChild(infoElement);
+                }
+                
+                infoElement.innerHTML = `
+                    <small class="text-success">
+                        <i class="bi bi-check-circle me-1"></i>
+                        Fichier sélectionné : <strong>${fileName}</strong> (${fileSize} MB)
+                    </small>
+                `;
+            }
+        });
+    });
+
+    // Validation cohérence nombre de pièces/chambres
+    const piecesInput = document.getElementById('id_nombre_pieces');
+    const chambresInput = document.getElementById('id_nombre_chambres');
+    
+    function validateRoomNumbers() {
+        if (piecesInput && chambresInput) {
+            const pieces = parseInt(piecesInput.value) || 0;
+            const chambres = parseInt(chambresInput.value) || 0;
+            
+            if (chambres > pieces && pieces > 0) {
+                chambresInput.setCustomValidity('Le nombre de chambres ne peut pas être supérieur au nombre de pièces');
+            } else {
+                chambresInput.setCustomValidity('');
+            }
+        }
+    }
+    
+    if (piecesInput) piecesInput.addEventListener('input', validateRoomNumbers);
+    if (chambresInput) chambresInput.addEventListener('input', validateRoomNumbers);
+});
+</script>
+{% endblock %}

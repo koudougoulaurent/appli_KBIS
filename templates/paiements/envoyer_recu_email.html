@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Envoyer le reçu {{ recu.numero_recu }} par email{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-envelope me-2"></i>
+                        Envoyer le reçu {{ recu.numero_recu }} par email
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if recu.peut_etre_envoye_email %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Le reçu sera envoyé par email au locataire. Vous pouvez modifier l'adresse email si nécessaire.
+                        </div>
+                        
+                        <!-- Informations du reçu -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h5>Informations du reçu</h5>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td><strong>Numéro:</strong></td>
+                                        <td>{{ recu.numero_recu }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Date d'émission:</strong></td>
+                                        <td>{{ recu.date_emission|date:"d/m/Y H:i" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Montant:</strong></td>
+                                        <td>{{ informations.montant|floatformat:2 }} XOF</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Type:</strong></td>
+                                        <td>{{ informations.type_paiement }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Informations du destinataire</h5>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td><strong>Nom:</strong></td>
+                                        <td>{{ informations.locataire_nom }} {{ informations.locataire_prenom }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Email actuel:</strong></td>
+                                        <td>{{ email_par_defaut }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Téléphone:</strong></td>
+                                        <td>{{ informations.locataire_telephone }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Propriété:</strong></td>
+                                        <td>{{ informations.propriete_adresse }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Formulaire d'envoi -->
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="email_destinataire" class="form-label">
+                                    <strong>Adresse email du destinataire:</strong>
+                                </label>
+                                <input type="email" class="form-control" id="email_destinataire" 
+                                       name="email_destinataire" value="{{ email_par_defaut }}"
+                                       placeholder="email@exemple.com">
+                                <div class="form-text">
+                                    Laissez vide pour utiliser l'email par défaut du locataire.
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <a href="{% url 'paiements:recu_detail' recu.pk %}" class="btn btn-secondary me-md-2">
+                                    <i class="fas fa-arrow-left me-1"></i>
+                                    Annuler
+                                </a>
+                                <button type="submit" class="btn btn-info">
+                                    <i class="fas fa-paper-plane me-1"></i>
+                                    Envoyer par email
+                                </button>
+                            </div>
+                        </form>
+                    {% else %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Ce reçu ne peut pas être envoyé par email.</strong>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Raisons possibles:</h5>
+                                <ul class="list-unstyled">
+                                    {% if not recu.valide %}
+                                        <li><i class="fas fa-times text-danger me-2"></i>Le reçu n'est pas validé</li>
+                                    {% endif %}
+                                    {% if recu.paiement.statut != 'valide' %}
+                                        <li><i class="fas fa-times text-danger me-2"></i>Le paiement n'est pas validé</li>
+                                    {% endif %}
+                                    {% if not email_par_defaut %}
+                                        <li><i class="fas fa-times text-danger me-2"></i>Aucune adresse email disponible pour le locataire</li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Actions possibles:</h5>
+                                <ul class="list-unstyled">
+                                    {% if not recu.valide %}
+                                        <li><i class="fas fa-check text-success me-2"></i><a href="{% url 'paiements:valider_recu' recu.pk %}">Valider le reçu</a></li>
+                                    {% endif %}
+                                    {% if recu.paiement.statut != 'valide' %}
+                                        <li><i class="fas fa-check text-success me-2"></i><a href="{% url 'paiements:detail' recu.paiement.pk %}">Valider le paiement</a></li>
+                                    {% endif %}
+                                    {% if not email_par_defaut %}
+                                        <li><i class="fas fa-check text-success me-2"></i><a href="{% url 'utilisateurs:modifier_locataire' recu.paiement.contrat.locataire.pk %}">Ajouter un email au locataire</a></li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-3">
+                            <a href="{% url 'paiements:recu_detail' recu.pk %}" class="btn btn-primary">
+                                <i class="fas fa-arrow-left me-1"></i>
+                                Retour au reçu
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

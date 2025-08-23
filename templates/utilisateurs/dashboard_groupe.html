@@ -1,0 +1,675 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+
+{% block title %}{{ titre_page }} - {{ version_app }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-header {
+        background: linear-gradient(135deg, 
+            {% if groupe.nom == 'CAISSE' %}#28a745{% endif %}
+            {% if groupe.nom == 'CONTROLES' %}#ffc107{% endif %}
+            {% if groupe.nom == 'ADMINISTRATION' %}#17a2b8{% endif %}
+            {% if groupe.nom == 'PRIVILEGE' %}#dc3545{% endif %}, 
+            {% if groupe.nom == 'CAISSE' %}#20c997{% endif %}
+            {% if groupe.nom == 'CONTROLES' %}#fd7e14{% endif %}
+            {% if groupe.nom == 'ADMINISTRATION' %}#6f42c1{% endif %}
+            {% if groupe.nom == 'PRIVILEGE' %}#e83e8c{% endif %});
+        color: white;
+        padding: 30px 0;
+        margin-bottom: 30px;
+    }
+    
+    .groupe-info {
+        text-align: center;
+    }
+    
+    .groupe-title {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .groupe-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-bottom: 20px;
+    }
+    
+    .user-info {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 10px;
+        backdrop-filter: blur(10px);
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        transition: transform 0.3s ease;
+        border-left: 4px solid 
+            {% if groupe.nom == 'CAISSE' %}#28a745{% endif %}
+            {% if groupe.nom == 'CONTROLES' %}#ffc107{% endif %}
+            {% if groupe.nom == 'ADMINISTRATION' %}#17a2b8{% endif %}
+            {% if groupe.nom == 'PRIVILEGE' %}#dc3545{% endif %};
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .stat-icon {
+        font-size: 3rem;
+        margin-bottom: 15px;
+        color: 
+            {% if groupe.nom == 'CAISSE' %}#28a745{% endif %}
+            {% if groupe.nom == 'CONTROLES' %}#ffc107{% endif %}
+            {% if groupe.nom == 'ADMINISTRATION' %}#17a2b8{% endif %}
+            {% if groupe.nom == 'PRIVILEGE' %}#dc3545{% endif %};
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 10px;
+    }
+    
+    .stat-label {
+        color: #666;
+        font-size: 1rem;
+        font-weight: 500;
+    }
+    
+    .modules-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .module-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+    
+    .module-card:hover {
+        transform: translateY(-3px);
+        border-color: 
+            {% if groupe.nom == 'CAISSE' %}#28a745{% endif %}
+            {% if groupe.nom == 'CONTROLES' %}#ffc107{% endif %}
+            {% if groupe.nom == 'ADMINISTRATION' %}#17a2b8{% endif %}
+            {% if groupe.nom == 'PRIVILEGE' %}#dc3545{% endif %};
+    }
+    
+    .module-icon {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+        color: 
+            {% if groupe.nom == 'CAISSE' %}#28a745{% endif %}
+            {% if groupe.nom == 'CONTROLES' %}#ffc107{% endif %}
+            {% if groupe.nom == 'ADMINISTRATION' %}#17a2b8{% endif %}
+            {% if groupe.nom == 'PRIVILEGE' %}#dc3545{% endif %};
+    }
+    
+    .module-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 10px;
+    }
+    
+    .module-description {
+        color: #666;
+        margin-bottom: 20px;
+        line-height: 1.5;
+    }
+    
+    .module-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .btn-module {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .btn-primary-module {
+        background: 
+            {% if groupe.nom == 'CAISSE' %}#28a745{% endif %}
+            {% if groupe.nom == 'CONTROLES' %}#ffc107{% endif %}
+            {% if groupe.nom == 'ADMINISTRATION' %}#17a2b8{% endif %}
+            {% if groupe.nom == 'PRIVILEGE' %}#dc3545{% endif %};
+        color: white;
+    }
+    
+    .btn-primary-module:hover {
+        background: 
+            {% if groupe.nom == 'CAISSE' %}#218838{% endif %}
+            {% if groupe.nom == 'CONTROLES' %}#e0a800{% endif %}
+            {% if groupe.nom == 'ADMINISTRATION' %}#138496{% endif %}
+            {% if groupe.nom == 'PRIVILEGE' %}#c82333{% endif %};
+        color: white;
+        transform: translateY(-1px);
+    }
+    
+    .btn-secondary-module {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-secondary-module:hover {
+        background: #5a6268;
+        color: white;
+        transform: translateY(-1px);
+    }
+    
+    .quick-actions {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
+    }
+    
+    .quick-actions h3 {
+        color: #333;
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+    
+    .quick-actions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+    }
+    
+    .quick-action-btn {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 15px;
+        background: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        text-decoration: none;
+        color: #495057;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .quick-action-btn:hover {
+        background: 
+            {% if groupe.nom == 'CAISSE' %}#28a745{% endif %}
+            {% if groupe.nom == 'CONTROLES' %}#ffc107{% endif %}
+            {% if groupe.nom == 'ADMINISTRATION' %}#17a2b8{% endif %}
+            {% if groupe.nom == 'PRIVILEGE' %}#dc3545{% endif %};
+        border-color: 
+            {% if groupe.nom == 'CAISSE' %}#28a745{% endif %}
+            {% if groupe.nom == 'CONTROLES' %}#ffc107{% endif %}
+            {% if groupe.nom == 'ADMINISTRATION' %}#17a2b8{% endif %}
+            {% if groupe.nom == 'PRIVILEGE' %}#dc3545{% endif %};
+        color: white;
+        transform: translateY(-2px);
+    }
+    
+    .logout-section {
+        text-align: center;
+        margin-top: 30px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 10px;
+    }
+    
+    .btn-logout {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-logout:hover {
+        background: #c82333;
+        color: white;
+        transform: translateY(-1px);
+    }
+    
+    @media (max-width: 768px) {
+        .groupe-title {
+            font-size: 2rem;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .modules-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .quick-actions-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- En-tête du dashboard -->
+<div class="dashboard-header">
+    <div class="container">
+        <div class="groupe-info">
+            <h1 class="groupe-title">{{ groupe.nom }}</h1>
+            <p class="groupe-subtitle">
+                {% if groupe.nom == 'CAISSE' %}
+                    Gestion des paiements et retraits
+                {% elif groupe.nom == 'CONTROLES' %}
+                    Contrôle et audit des opérations
+                {% elif groupe.nom == 'ADMINISTRATION' %}
+                    Gestion administrative complète
+                {% elif groupe.nom == 'PRIVILEGE' %}
+                    Accès complet au système
+                {% endif %}
+            </p>
+            <div class="user-info">
+                <strong>Connecté en tant que :</strong> {{ utilisateur.get_full_name }} ({{ utilisateur.username }})
+                <br>
+                <small>Dernière connexion : {{ utilisateur.derniere_connexion|date:"d/m/Y H:i"|default:"Première connexion" }}</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Statistiques -->
+    <div class="stats-grid">
+        {% if groupe.nom == 'CAISSE' %}
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <div class="stat-number">{{ stats.total_paiements|default:0 }}</div>
+                <div class="stat-label">Total Paiements</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="stat-number">{{ stats.paiements_du_mois|default:0 }}</div>
+                <div class="stat-label">Paiements du Mois</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-hand-holding-usd"></i>
+                </div>
+                <div class="stat-number">{{ stats.total_retraits|default:0 }}</div>
+                <div class="stat-label">Total Retraits</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-number">{{ stats.retraits_en_attente|default:0 }}</div>
+                <div class="stat-label">Retraits en Attente</div>
+            </div>
+        {% elif groupe.nom == 'ADMINISTRATION' %}
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-building"></i>
+                </div>
+                <div class="stat-number">{{ stats.total_proprietes|default:0 }}</div>
+                <div class="stat-label">Propriétés</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-number">{{ stats.total_bailleurs|default:0 }}</div>
+                <div class="stat-label">Bailleurs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-file-contract"></i>
+                </div>
+                <div class="stat-number">{{ stats.total_contrats|default:0 }}</div>
+                <div class="stat-label">Contrats</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-number">{{ stats.contrats_actifs|default:0 }}</div>
+                <div class="stat-label">Contrats Actifs</div>
+            </div>
+        {% elif groupe.nom == 'CONTROLES' %}
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <div class="stat-number">{{ stats.paiements_a_controler|default:0 }}</div>
+                <div class="stat-label">Paiements à Contrôler</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <div class="stat-number">{{ stats.contrats_a_verifier|default:0 }}</div>
+                <div class="stat-label">Contrats à Vérifier</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-number">{{ stats.total_utilisateurs|default:0 }}</div>
+                <div class="stat-label">Utilisateurs Actifs</div>
+            </div>
+        {% elif groupe.nom == 'PRIVILEGE' %}
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-building"></i>
+                </div>
+                <div class="stat-number">{{ stats.total_proprietes|default:0 }}</div>
+                <div class="stat-label">Propriétés</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-number">{{ stats.total_utilisateurs|default:0 }}</div>
+                <div class="stat-label">Utilisateurs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <div class="stat-number">{{ stats.total_paiements|default:0 }}</div>
+                <div class="stat-label">Paiements</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-user-check"></i>
+                </div>
+                <div class="stat-number">{{ stats.utilisateurs_actifs|default:0 }}</div>
+                <div class="stat-label">Utilisateurs Actifs</div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Modules accessibles -->
+    <div class="modules-grid">
+        {% if groupe.nom == 'CAISSE' %}
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <div class="module-title">Gestion des Paiements</div>
+                <div class="module-description">
+                    Enregistrer, valider et gérer tous les paiements des locataires.
+                </div>
+                <div class="module-actions">
+                    <a href="{% url 'paiements:liste' %}" class="btn-module btn-primary-module">
+                        <i class="fas fa-list"></i> Liste
+                    </a>
+                    <a href="{% url 'paiements:ajouter' %}" class="btn-module btn-secondary-module">
+                        <i class="fas fa-plus"></i> Ajouter
+                    </a>
+                </div>
+            </div>
+            
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-hand-holding-usd"></i>
+                </div>
+                <div class="module-title">Gestion des Retraits</div>
+                <div class="module-description">
+                    Gérer les retraits vers les bailleurs et les virements bancaires.
+                </div>
+                <div class="module-actions">
+                    <a href="{% url 'paiements:retraits_liste' %}" class="btn-module btn-primary-module">
+                        <i class="fas fa-list"></i> Liste
+                    </a>
+                    <a href="{% url 'paiements:retrait_ajouter' %}" class="btn-module btn-secondary-module">
+                        <i class="fas fa-plus"></i> Ajouter
+                    </a>
+                </div>
+            </div>
+            
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <div class="module-title">Caution et Avance</div>
+                <div class="module-description">
+                    Gérer les paiements de caution et d'avance de loyer avec reçus.
+                </div>
+                <div class="module-actions">
+                    <a href="{% url 'paiements:paiement_caution_avance_list' %}" class="btn-module btn-primary-module">
+                        <i class="fas fa-list"></i> Liste
+                    </a>
+                    <a href="{% url 'paiements:paiement_caution_avance_create' %}" class="btn-module btn-secondary-module">
+                        <i class="fas fa-plus"></i> Ajouter
+                    </a>
+                </div>
+            </div>
+        {% elif groupe.nom == 'ADMINISTRATION' %}
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-building"></i>
+                </div>
+                <div class="module-title">Gestion des Propriétés</div>
+                <div class="module-description">
+                    Gérer le parc immobilier, les propriétés et les bailleurs.
+                </div>
+                <div class="module-actions">
+                    <a href="{% url 'proprietes:liste' %}" class="btn-module btn-primary-module">
+                        <i class="fas fa-list"></i> Liste
+                    </a>
+                    <a href="{% url 'proprietes:ajouter' %}" class="btn-module btn-secondary-module">
+                        <i class="fas fa-plus"></i> Ajouter
+                    </a>
+                </div>
+            </div>
+            
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-file-contract"></i>
+                </div>
+                <div class="module-title">Gestion des Contrats</div>
+                <div class="module-description">
+                    Créer et gérer les contrats de location et les renouvellements.
+                </div>
+                <div class="module-actions">
+                    <a href="{% url 'contrats:liste' %}" class="btn-module btn-primary-module">
+                        <i class="fas fa-list"></i> Liste
+                    </a>
+                    <a href="{% url 'contrats:ajouter' %}" class="btn-module btn-secondary-module">
+                        <i class="fas fa-plus"></i> Ajouter
+                    </a>
+                </div>
+            </div>
+        {% elif groupe.nom == 'CONTROLES' %}
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <div class="module-title">Contrôle des Paiements</div>
+                <div class="module-description">
+                    Vérifier et valider les paiements en attente de contrôle.
+                </div>
+                <div class="module-actions">
+                    <a href="{% url 'paiements:liste' %}?statut=En attente" class="btn-module btn-primary-module">
+                        <i class="fas fa-eye"></i> Voir
+                    </a>
+                </div>
+            </div>
+            
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <div class="module-title">Audit des Contrats</div>
+                <div class="module-description">
+                    Vérifier la conformité et la validité des contrats actifs.
+                </div>
+                <div class="module-actions">
+                    <a href="{% url 'contrats:liste' %}?actif=true" class="btn-module btn-primary-module">
+                        <i class="fas fa-eye"></i> Voir
+                    </a>
+                </div>
+            </div>
+        {% elif groupe.nom == 'PRIVILEGE' %}
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-cogs"></i>
+                </div>
+                <div class="module-title">Administration Complète</div>
+                <div class="module-description">
+                    Accès complet à tous les modules et fonctionnalités du système.
+                </div>
+                <div class="module-actions">
+                    <a href="{% url 'utilisateurs:liste_utilisateurs' %}" class="btn-module btn-primary-module">
+                        <i class="fas fa-users"></i> Utilisateurs
+                    </a>
+                    <a href="{% url 'utilisateurs:liste_groupes' %}" class="btn-module btn-secondary-module">
+                        <i class="fas fa-layer-group"></i> Groupes
+                    </a>
+                </div>
+            </div>
+            
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="module-title">Rapports et Statistiques</div>
+                <div class="module-description">
+                    Consulter les rapports détaillés et les statistiques globales.
+                </div>
+                <div class="module-actions">
+                    <a href="#" class="btn-module btn-primary-module">
+                        <i class="fas fa-chart-bar"></i> Rapports
+                    </a>
+                    <a href="#" class="btn-module btn-secondary-module">
+                        <i class="fas fa-download"></i> Exporter
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Actions rapides -->
+    <div class="quick-actions">
+        <h3><i class="fas fa-bolt me-2"></i>Actions Rapides</h3>
+        <div class="quick-actions-grid">
+            {% if groupe.nom == 'CAISSE' %}
+                <a href="{% url 'paiements:ajouter' %}" class="quick-action-btn">
+                    <i class="fas fa-plus"></i>
+                    Nouveau Paiement
+                </a>
+                <a href="{% url 'paiements:retrait_ajouter' %}" class="quick-action-btn">
+                    <i class="fas fa-hand-holding-usd"></i>
+                    Nouveau Retrait
+                </a>
+                <a href="{% url 'paiements:paiement_caution_avance_create' %}" class="quick-action-btn">
+                    <i class="fas fa-shield-alt"></i>
+                    Nouvelle Caution/Avance
+                </a>
+                <a href="{% url 'paiements:liste' %}?statut=En attente" class="quick-action-btn">
+                    <i class="fas fa-clock"></i>
+                    Paiements en Attente
+                </a>
+                <a href="{% url 'paiements:retraits_liste' %}?statut=En attente" class="quick-action-btn">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Retraits en Attente
+                </a>
+                <a href="{% url 'paiements:paiement_caution_avance_list' %}" class="quick-action-btn">
+                    <i class="fas fa-list"></i>
+                    Cautions et Avances
+                </a>
+            {% elif groupe.nom == 'ADMINISTRATION' %}
+                <a href="{% url 'proprietes:ajouter' %}" class="quick-action-btn">
+                    <i class="fas fa-plus"></i>
+                    Nouvelle Propriété
+                </a>
+                <a href="{% url 'contrats:ajouter' %}" class="quick-action-btn">
+                    <i class="fas fa-file-contract"></i>
+                    Nouveau Contrat
+                </a>
+                <a href="{% url 'proprietes:bailleur_ajouter' %}" class="quick-action-btn">
+                    <i class="fas fa-user-plus"></i>
+                    Nouveau Bailleur
+                </a>
+                <a href="{% url 'contrats:liste' %}?actif=true" class="quick-action-btn">
+                    <i class="fas fa-check-circle"></i>
+                    Contrats Actifs
+                </a>
+            {% elif groupe.nom == 'CONTROLES' %}
+                <a href="{% url 'paiements:liste' %}?statut=En attente" class="quick-action-btn">
+                    <i class="fas fa-search"></i>
+                    Contrôler Paiements
+                </a>
+                <a href="{% url 'contrats:liste' %}?actif=true" class="quick-action-btn">
+                    <i class="fas fa-clipboard-check"></i>
+                    Vérifier Contrats
+                </a>
+                <a href="{% url 'utilisateurs:liste_utilisateurs' %}" class="quick-action-btn">
+                    <i class="fas fa-users"></i>
+                    Gestion Utilisateurs
+                </a>
+            {% elif groupe.nom == 'PRIVILEGE' %}
+                <a href="{% url 'utilisateurs:ajouter_utilisateur' %}" class="quick-action-btn">
+                    <i class="fas fa-user-plus"></i>
+                    Nouvel Utilisateur
+                </a>
+                <a href="{% url 'utilisateurs:ajouter_groupe' %}" class="quick-action-btn">
+                    <i class="fas fa-layer-group"></i>
+                    Nouveau Groupe
+                </a>
+                <a href="#" class="quick-action-btn">
+                    <i class="fas fa-database"></i>
+                    Sauvegarde
+                </a>
+                <a href="#" class="quick-action-btn">
+                    <i class="fas fa-cog"></i>
+                    Configuration
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Section de déconnexion -->
+    <div class="logout-section">
+        <a href="{% url 'utilisateurs:logout_groupe' %}" class="btn-logout">
+            <i class="fas fa-sign-out-alt me-2"></i>
+            SE DÉCONNECTER
+        </a>
+    </div>
+</div>
+{% endblock %} 

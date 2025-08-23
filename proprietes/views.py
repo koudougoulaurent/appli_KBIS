@@ -1,0 +1,2070 @@
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.db.models import Count, Q, Sum, ProtectedError
+from django.http import JsonResponse
+from django.utils import timezone
+from .models import Propriete, Bailleur, Locataire, TypeBien, ChargesBailleur
+from .forms import ProprieteForm, BailleurForm, LocataireForm, TypeBienForm, ChargesBailleurForm, ChargesBailleurDeductionForm
+from core.utils import convertir_montant
+from core.models import Devise
+from contrats.models import Contrat
+from core.models import AuditLog
+from django.contrib.contenttypes.models import ContentType
+from paiements.models import Paiement
+from django.core.paginator import Paginator
+from django.db import models
+from django.urls import reverse_lazy
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, View
+from django.contrib.auth.mixins import LoginRequiredMixin
+from .models import Photo
+from .forms import PhotoForm, PhotoMultipleForm
+from proprietes.models import Document
+from proprietes.forms import DocumentSearchForm, DocumentForm
+from proprietes.specialized_forms import DiagnosticForm, AssuranceForm, EtatLieuxForm
+from django.http import HttpResponse
+
+
+from core.intelligent_views import IntelligentListView
+from .models import TypeBien
+from utilisateurs.mixins import PrivilegeButtonsMixin
+
+
+class ProprieteListView(PrivilegeButtonsMixin, IntelligentListView):
+    model = Propriete
+    template_name = 'base_liste_intelligente.html'
+    paginate_by = 20
+    page_title = 'Propriétés'
+    page_icon = 'home'
+    add_url = 'proprietes:ajouter'
+    add_text = 'Ajouter une propriété'
+    search_fields = ['titre', 'adresse', 'ville', 'bailleur__nom', 'bailleur__prenom']
+    filter_fields = ['etat', 'type_bien', 'disponible']
+    default_sort = 'ville'
+    columns = [
+        {'field': 'numero_propriete', 'label': 'N° Propriété', 'sortable': True},
+        {'field': 'titre', 'label': 'Titre', 'sortable': True},
+        {'field': 'adresse', 'label': 'Adresse', 'sortable': True},
+        {'field': 'ville', 'label': 'Ville', 'sortable': True},
+        {'field': 'bailleur', 'label': 'Bailleur', 'sortable': True},
+        {'field': 'type_bien', 'label': 'Type', 'sortable': True},
+        {'field': 'loyer_actuel', 'label': 'Loyer', 'sortable': True},
+        {'field': 'surface', 'label': 'Surface (m²)', 'sortable': True},
+        {'field': 'disponible', 'label': 'Disponible', 'sortable': True},
+    ]
+    actions = [
+        {'url_name': 'proprietes:detail', 'icon': 'eye', 'style': 'outline-primary', 'title': 'Voir'},
+        {'url_name': 'proprietes:modifier', 'icon': 'pencil', 'style': 'outline-warning', 'title': 'Modifier'},
+    ]
+    sort_options = [
+        {'value': 'ville', 'label': 'Ville'},
+        {'value': 'loyer_actuel', 'label': 'Loyer'},
+        {'value': 'surface', 'label': 'Surface'},
+        {'value': 'date_creation', 'label': 'Date'},
+    ]
+    
+    def get_queryset(self):
+        """
+        Optimisation des requêtes de base de données
+        """
+        queryset = super().get_queryset()
+        return queryset.select_related('bailleur', 'type_bien')
+    
+    def get_context_data(self, **kwargs):
+        """
+        Ajout de statistiques et d'informations supplémentaires au contexte
+        """
+        context = super().get_context_data(**kwargs)
+        
+        # Statistiques
+        context['total_proprietes'] = Propriete.objects.count()
+        context['proprietes_louees'] = Propriete.objects.filter(disponible=False).count()
+        context['proprietes_disponibles'] = Propriete.objects.filter(disponible=True).count()
+        context['proprietes_en_travaux'] = Propriete.objects.filter(etat='mauvais').count()
+        
+        # Revenus totaux (propriétés louées)
+        from django.db.models import Sum
+        revenus_totaux = Propriete.objects.filter(
+            disponible=False,
+            loyer_actuel__isnull=False
+        ).aggregate(
+            total=Sum('loyer_actuel')
+        )['total'] or 0
+        
+        # Valeur totale du patrimoine
+        valeur_patrimoine = Propriete.objects.filter(
+            prix_achat__isnull=False
+        ).aggregate(
+            total=Sum('prix_achat')
+        )['total'] or 0
+        
+        devise_active = getattr(self.request, 'devise_active', None)
+        devise_base = Devise.objects.get(code='XOF')
+        
+        # Conversion des montants/statistiques
+        context['revenus_totaux'] = convertir_montant(revenus_totaux, devise_base, devise_active)
+        context['valeur_patrimoine'] = convertir_montant(valeur_patrimoine, devise_base, devise_active)
+        
+        return context
+
+liste_proprietes = ProprieteListView.as_view()
+
+
+@login_required
+def detail_propriete(request, pk):
+    """
+    Vue de détail d'une propriété
+    """
+    # Vérification des permissions : PRIVILEGE, ADMINISTRATION, CONTROLES peuvent voir les détails
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:liste')
+    
+    propriete = get_object_or_404(Propriete, pk=pk)
+    
+    # Récupérer les contrats associés
+    contrats = Contrat.objects.filter(propriete=propriete).order_by('-date_debut')
+    
+    # Récupérer les paiements associés
+    paiements = Paiement.objects.filter(
+        contrat__propriete=propriete
+    ).order_by('-date_paiement')[:10]
+    
+    # Récupérer les charges bailleur
+    charges_bailleur = ChargesBailleur.objects.filter(
+        propriete=propriete
+    ).order_by('-date_charge')[:5]
+    
+    context = {
+        'propriete': propriete,
+        'contrats': contrats,
+        'paiements': paiements,
+        'charges_bailleur': charges_bailleur,
+    }
+    return render(request, 'proprietes/detail.html', context)
+
+
+@login_required
+def ajouter_propriete(request):
+    """
+    Vue pour ajouter une propriété avec documents
+    """
+    # Vérification des permissions : ADMINISTRATION et PRIVILEGE peuvent ajouter
+    from core.utils import check_group_permissions
+    from core.id_generator import IDGenerator
+    
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:liste')
+    
+    if request.method == 'POST':
+        form = ProprieteForm(request.POST, request.FILES)
+        if form.is_valid():
+            propriete = form.save(commit=False)
+            propriete.cree_par = request.user
+            
+            # Générer automatiquement le numéro unique de propriété
+            if not propriete.numero_propriete:
+                generator = IDGenerator()
+                propriete.numero_propriete = generator.generate_id('propriete')
+            
+            propriete.save()
+            
+            # Utiliser la méthode save du formulaire pour gérer les documents
+            form.save(user=request.user)
+            
+            messages.success(
+                request, 
+                f'Propriété "{propriete.titre}" ajoutée avec succès! '
+                f'Numéro: {propriete.numero_propriete}. '
+                f'Documents associés créés automatiquement.'
+            )
+            
+            return redirect('proprietes:detail', pk=propriete.pk)
+        else:
+            messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
+    else:
+        form = ProprieteForm()
+        # Pré-générer le numéro unique pour l'affichage
+        try:
+            generator = IDGenerator()
+            initial_numero = generator.generate_id('propriete')
+            form.fields['numero_propriete'].initial = initial_numero
+        except Exception as e:
+            print(f"Erreur lors de la génération du numéro: {e}")
+    
+    context = {
+        'form': form,
+        'bailleurs': Bailleur.objects.all(),
+        'types_bien': TypeBien.objects.all()
+    }
+    return render(request, 'proprietes/propriete_form.html', context)
+
+
+@login_required
+def modifier_propriete(request, pk):
+    """
+    Vue pour modifier une propriété
+    """
+    # Vérification des permissions : Seul PRIVILEGE peut modifier
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'modify')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:liste')
+    
+    propriete = get_object_or_404(Propriete, pk=pk)
+    
+    if request.method == 'POST':
+        form = ProprieteForm(request.POST, request.FILES, instance=propriete)
+        if form.is_valid():
+            form.save(user=request.user)
+            messages.success(request, f'Propriété "{propriete.titre}" modifiée avec succès!')
+            return redirect('proprietes:detail', pk=pk)
+        else:
+            messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
+    else:
+        form = ProprieteForm(instance=propriete)
+    
+    context = {
+        'form': form,
+        'propriete': propriete,
+        'bailleurs': Bailleur.objects.all(),
+        'types_bien': TypeBien.objects.all()
+    }
+    return render(request, 'proprietes/propriete_form.html', context)
+
+
+# Vues pour les charges bailleur
+@login_required
+def liste_charges_bailleur(request):
+    """
+    Vue de la liste des charges bailleur
+    """
+    charges = ChargesBailleur.objects.select_related('propriete', 'propriete__bailleur').all()
+    
+    # Filtres
+    statut_filter = request.GET.get('statut', '')
+    type_filter = request.GET.get('type', '')
+    propriete_filter = request.GET.get('propriete', '')
+    
+    if statut_filter:
+        charges = charges.filter(statut=statut_filter)
+    
+    if type_filter:
+        charges = charges.filter(type_charge=type_filter)
+    
+    if propriete_filter:
+        charges = charges.filter(propriete_id=propriete_filter)
+    
+    # Tri
+    tri = request.GET.get('tri', 'date')
+    if tri == 'montant':
+        charges = charges.order_by('-montant')
+    elif tri == 'priorite':
+        charges = charges.order_by('-priorite')
+    else:
+        charges = charges.order_by('-date_charge')
+    
+    # Statistiques
+    total_charges = charges.count()
+    charges_en_attente = charges.filter(statut='en_attente').count()
+    montant_total_en_attente = charges.filter(statut='en_attente').aggregate(
+        total=Sum('montant')
+    )['total'] or 0
+    
+    # Récupérer le locataire actif pour chaque charge (contrat actif au moment de la charge)
+    charges_with_locataire = []
+    for charge in charges:
+        contrat = Contrat.objects.filter(propriete=charge.propriete, est_actif=True).order_by('-date_debut').first()
+        locataire = contrat.locataire if contrat else None
+        charges_with_locataire.append({
+            'charge': charge,
+            'locataire': locataire
+        })
+    
+    context = {
+        'charges': charges,
+        'charges_with_locataire': charges_with_locataire,
+        'total_charges': total_charges,
+        'charges_en_attente': charges_en_attente,
+        'montant_total_en_attente': montant_total_en_attente,
+        'proprietes': Propriete.objects.filter(disponible=False),
+        'filtres': {
+            'statut': statut_filter,
+            'type': type_filter,
+            'propriete': propriete_filter,
+            'tri': tri
+        }
+    }
+    return render(request, 'proprietes/charges_bailleur_liste.html', context)
+
+
+@login_required
+def ajouter_charge_bailleur(request):
+    """
+    Vue pour ajouter une charge bailleur avec documents
+    """
+    # Vérification des permissions : ADMINISTRATION et PRIVILEGE peuvent ajouter
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:liste_charges_bailleur')
+    
+    if request.method == 'POST':
+        form = ChargesBailleurForm(request.POST, request.FILES)
+        if form.is_valid():
+            charge = form.save(commit=False)
+            charge.cree_par = request.user
+            charge.save()
+            
+            # Utiliser la méthode save du formulaire pour gérer les documents
+            form.save(user=request.user)
+            
+            messages.success(
+                request, 
+                f'Charge "{charge.titre}" ajoutée avec succès! '
+                f'Documents justificatifs créés automatiquement.'
+            )
+            return redirect('proprietes:liste_charges_bailleur')
+        else:
+            messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
+    else:
+        form = ChargesBailleurForm()
+    
+    context = {
+        'form': form,
+        'title': 'Ajouter une charge bailleur'
+    }
+    return render(request, 'proprietes/charge_bailleur_ajouter.html', context)
+
+
+@login_required
+def modifier_charge_bailleur(request, pk):
+    """
+    Vue pour modifier une charge bailleur
+    """
+    # Vérification des permissions : Seul PRIVILEGE peut modifier
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'modify')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:liste_charges_bailleur')
+    
+    charge = get_object_or_404(ChargesBailleur, pk=pk)
+    
+    if request.method == 'POST':
+        form = ChargesBailleurForm(request.POST, request.FILES, instance=charge)
+        if form.is_valid():
+            form.save(user=request.user)
+            messages.success(request, f'Charge "{charge.titre}" modifiée avec succès!')
+            return redirect('proprietes:liste_charges_bailleur')
+        else:
+            messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
+    else:
+        form = ChargesBailleurForm(instance=charge)
+    
+    context = {
+        'form': form,
+        'charge': charge,
+        'title': f'Modifier la charge "{charge.titre}"'
+    }
+    return render(request, 'proprietes/charge_bailleur_modifier.html', context)
+
+
+@login_required
+def detail_charge_bailleur(request, pk):
+    """
+    Vue de détail d'une charge bailleur
+    """
+    # Vérification des permissions : PRIVILEGE, ADMINISTRATION, CONTROLES peuvent voir les détails
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:charges_bailleur_liste')
+    
+    charge = get_object_or_404(ChargesBailleur, pk=pk)
+    
+    context = {
+        'charge': charge
+    }
+    return render(request, 'proprietes/charge_bailleur_detail.html', context)
+
+
+@login_required
+def deduction_charge_bailleur(request, pk):
+    """
+    Vue pour déduire une charge bailleur du loyer
+    """
+    # Vérification des permissions : Seul PRIVILEGE peut modifier
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'modify')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:charges_bailleur_liste')
+    
+    charge = get_object_or_404(ChargesBailleur, pk=pk)
+    
+    if request.method == 'POST':
+        form = ChargesBailleurDeductionForm(charge.propriete, request.POST)
+        if form.is_valid():
+            montant_deduit = form.cleaned_data['montant_deduction']
+            
+            # Appliquer la déduction
+            montant_effectivement_deduit = charge.marquer_comme_deduit(montant_deduit)
+            
+            messages.success(
+                request, 
+                f'Déduction de {montant_effectivement_deduit} XOF appliquée avec succès!'
+            )
+            return redirect('proprietes:detail_charge_bailleur', pk=pk)
+        else:
+            messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
+    else:
+        form = ChargesBailleurDeductionForm(charge.propriete)
+    
+    context = {
+        'form': form,
+        'charge': charge
+    }
+    return render(request, 'proprietes/charge_bailleur_deduction.html', context)
+
+
+@login_required
+def marquer_charge_remboursee(request, pk):
+    """
+    Vue pour marquer une charge comme entièrement remboursée
+    """
+    # Vérification des permissions : Seul PRIVILEGE peut modifier
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'modify')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:charges_bailleur_liste')
+    
+    charge = get_object_or_404(ChargesBailleur, pk=pk)
+    
+    if request.method == 'POST':
+        charge.marquer_comme_rembourse()
+        messages.success(request, f'Charge "{charge.titre}" marquée comme remboursée!')
+        return redirect('proprietes:detail_charge_bailleur', pk=pk)
+    
+    context = {
+        'charge': charge
+    }
+    return render(request, 'proprietes/charge_bailleur_remboursement.html', context)
+
+
+# Vues pour les bailleurs
+class BailleurListView(PrivilegeButtonsMixin, IntelligentListView):
+    model = Bailleur
+    template_name = 'base_liste_intelligente.html'
+    paginate_by = 20
+    page_title = 'Bailleurs'
+    page_icon = 'user-tie'
+    add_url = 'proprietes:ajouter_bailleur'
+    add_text = 'Ajouter un bailleur'
+    search_fields = ['nom', 'prenom', 'email', 'telephone', 'adresse']
+    filter_fields = []
+    default_sort = 'nom'
+    columns = [
+        {'field': 'numero_bailleur', 'label': 'N° Bailleur', 'sortable': True},
+        {'field': 'nom', 'label': 'Nom', 'sortable': True},
+        {'field': 'prenom', 'label': 'Prénom', 'sortable': True},
+        {'field': 'email', 'label': 'Email', 'sortable': True},
+        {'field': 'telephone', 'label': 'Téléphone', 'sortable': True},
+        {'field': 'adresse', 'label': 'Adresse', 'sortable': True},
+    ]
+    actions = [
+        {'url_name': 'proprietes:detail_bailleur', 'icon': 'eye', 'style': 'outline-primary', 'title': 'Voir'},
+        {'url_name': 'proprietes:modifier_bailleur', 'icon': 'pencil', 'style': 'outline-warning', 'title': 'Modifier'},
+    ]
+    sort_options = [
+        {'value': 'nom', 'label': 'Nom'},
+        {'value': 'prenom', 'label': 'Prénom'},
+        {'value': 'date_creation', 'label': 'Date'},
+    ]
+    
+    def get_context_data(self, **kwargs):
+        """
+        Ajout de statistiques et d'informations supplémentaires au contexte
+        """
+        context = super().get_context_data(**kwargs)
+        
+        # Statistiques
+        context['total_bailleurs'] = Bailleur.objects.count()
+        
+        return context
+
+liste_bailleurs = BailleurListView.as_view()
+
+
+@login_required
+def detail_bailleur(request, pk):
+    """Vue détaillée d'un bailleur avec statistiques de paiement."""
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:liste_bailleurs')
+    
+    bailleur = get_object_or_404(Bailleur, pk=pk)
+    
+    # Récupérer les statistiques
+    stats = bailleur.get_statistiques_paiements()
+    
+    # Récupérer les propriétés
+    proprietes = bailleur.proprietes.all().order_by('-date_creation')
+    
+    # Récupérer les derniers paiements
+    from paiements.models import Paiement
+    derniers_paiements = Paiement.get_paiements_bailleur(bailleur, statut='valide')[:10]
+    
+    # Récupérer les contrats actifs
+    from contrats.models import Contrat
+    contrats_actifs = Contrat.objects.filter(
+        propriete__bailleur=bailleur,
+        est_actif=True,
+        est_resilie=False
+    ).select_related('propriete', 'locataire')
+    
+    context = {
+        'bailleur': bailleur,
+        'stats': stats,
+        'proprietes': proprietes,
+        'derniers_paiements': derniers_paiements,
+        'contrats_actifs': contrats_actifs,
+        'breadcrumbs': [
+            {'url': 'core:dashboard', 'label': 'Tableau de bord'},
+            {'url': 'proprietes:liste_bailleurs', 'label': 'Bailleurs'},
+            {'label': bailleur.get_nom_complet()}
+        ],
+        'quick_actions': [
+            {'url': 'proprietes:modifier_bailleur', 'pk': bailleur.pk, 'label': 'Modifier', 'icon': 'bi-pencil'},
+            {'url': 'proprietes:ajouter_propriete', 'label': 'Ajouter Propriété', 'icon': 'bi-plus-circle'},
+            {'url': 'paiements:liste', 'label': 'Voir Paiements', 'icon': 'bi-cash-coin'},
+        ]
+    }
+    
+    return render(request, 'proprietes/detail_bailleur.html', context)
+
+
+@login_required
+def ajouter_bailleur(request):
+    """
+    Vue pour ajouter un bailleur avec identifiant unique et documents
+    """
+    # Vérification des permissions : ADMINISTRATION et PRIVILEGE peuvent ajouter
+    from core.utils import check_group_permissions
+    from core.id_generator import IDGenerator
+    
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:liste_bailleurs')
+    
+    if request.method == 'POST':
+        form = BailleurForm(request.POST, request.FILES)
+        if form.is_valid():
+            bailleur = form.save(commit=False)
+            bailleur.cree_par = request.user
+            
+            # Générer automatiquement le numéro unique de bailleur
+            if not bailleur.numero_bailleur:
+                generator = IDGenerator()
+                bailleur.numero_bailleur = generator.generate_id('bailleur')
+            
+            bailleur.save()
+            
+            # Utiliser la méthode save du formulaire pour gérer les documents
+            form.save(user=request.user)
+            
+            messages.success(
+                request, 
+                f'Bailleur "{bailleur.get_nom_complet()}" ajouté avec succès! '
+                f'Numéro: {bailleur.numero_bailleur}. '
+                f'Documents confidentiels créés automatiquement.'
+            )
+            return redirect('proprietes:detail_bailleur', pk=bailleur.pk)
+        else:
+            messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
+    else:
+        form = BailleurForm()
+        # Pré-générer le numéro unique pour l'affichage
+        try:
+            generator = IDGenerator()
+            initial_numero = generator.generate_id('bailleur')
+            form.fields['numero_bailleur'].initial = initial_numero
+        except Exception as e:
+            print(f"Erreur lors de la génération du numéro: {e}")
+    
+    context = {
+        'form': form,
+        'title': 'Ajouter un bailleur',
+        'breadcrumbs': [
+            {'url': 'core:dashboard', 'label': 'Tableau de bord'},
+            {'url': 'proprietes:liste_bailleurs', 'label': 'Bailleurs'},
+            {'label': 'Ajouter'}
+        ]
+    }
+    return render(request, 'proprietes/bailleurs/bailleur_form.html', context)
+
+
+@login_required
+def modifier_bailleur(request, pk):
+    """
+    Vue pour modifier un bailleur
+    """
+    # Vérification des permissions : Seul PRIVILEGE peut modifier
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'modify')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:bailleurs_liste')
+    
+    bailleur = get_object_or_404(Bailleur, pk=pk)
+    
+    if request.method == 'POST':
+        form = BailleurForm(request.POST, request.FILES, instance=bailleur)
+        if form.is_valid():
+            form.save(user=request.user)
+            messages.success(request, f'Bailleur "{bailleur.get_nom_complet()}" modifié avec succès!')
+            return redirect('proprietes:detail_bailleur', pk=pk)
+        else:
+            messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
+    else:
+        form = BailleurForm(instance=bailleur)
+    
+    context = {
+        'form': form,
+        'bailleur': bailleur,
+        'title': f'Modifier le bailleur "{bailleur.get_nom_complet()}"'
+    }
+    return render(request, 'proprietes/bailleurs/bailleur_form.html', context)
+
+
+@login_required
+def supprimer_bailleur(request, pk):
+    # Vérification des permissions : Seul PRIVILEGE peut supprimer
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'delete')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:bailleurs_liste')
+    
+    bailleur = get_object_or_404(Bailleur, pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            # Suppression logique
+            old_data = {f.name: getattr(bailleur, f.name) for f in bailleur._meta.fields}
+            bailleur.est_supprime = True
+            bailleur.date_suppression = timezone.now()
+            bailleur.save()
+            
+            # Log d'audit
+            AuditLog.objects.create(
+                content_type=ContentType.objects.get_for_model(Bailleur),
+                object_id=bailleur.pk,
+                action='DELETE',
+                old_data=old_data,
+                new_data={'est_supprime': True, 'date_suppression': str(timezone.now())},
+                user=request.user,
+                ip_address=request.META.get('REMOTE_ADDR'),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')
+            )
+            
+            messages.success(request, f"Bailleur {bailleur.nom} {bailleur.prenom} supprimé avec succès.")
+            return redirect('proprietes:bailleurs_liste')
+            
+        except ProtectedError as e:
+            messages.error(request, f"Impossible de supprimer ce bailleur : {str(e)}")
+            return redirect('proprietes:bailleurs_liste')
+    
+    context = {
+        'bailleur': bailleur,
+    }
+    return render(request, 'proprietes/confirm_supprimer_bailleur.html', context)
+
+
+# Vues pour les locataires
+class LocataireListView(PrivilegeButtonsMixin, IntelligentListView):
+    model = Locataire
+    template_name = 'base_liste_intelligente.html'
+    paginate_by = 20
+    page_title = 'Locataires'
+    page_icon = 'user'
+    add_url = 'proprietes:ajouter_locataire'
+    add_text = 'Ajouter un locataire'
+    search_fields = ['nom', 'prenom', 'email', 'telephone', 'adresse']
+    filter_fields = ['statut']
+    default_sort = 'nom'
+    columns = [
+        {'field': 'numero_locataire', 'label': 'N° Locataire', 'sortable': True},
+        {'field': 'nom', 'label': 'Nom', 'sortable': True},
+        {'field': 'prenom', 'label': 'Prénom', 'sortable': True},
+        {'field': 'email', 'label': 'Email', 'sortable': True},
+        {'field': 'telephone', 'label': 'Téléphone', 'sortable': True},
+        {'field': 'adresse', 'label': 'Adresse', 'sortable': True},
+        {'field': 'statut', 'label': 'Statut', 'sortable': True},
+    ]
+    actions = [
+        {'url_name': 'proprietes:detail_locataire', 'icon': 'eye', 'style': 'outline-primary', 'title': 'Voir'},
+        {'url_name': 'proprietes:modifier_locataire', 'icon': 'pencil', 'style': 'outline-warning', 'title': 'Modifier'},
+    ]
+    sort_options = [
+        {'value': 'nom', 'label': 'Nom'},
+        {'value': 'prenom', 'label': 'Prénom'},
+        {'value': 'date_creation', 'label': 'Date'},
+    ]
+    
+    def get_context_data(self, **kwargs):
+        """
+        Ajout de statistiques et d'informations supplémentaires au contexte
+        """
+        context = super().get_context_data(**kwargs)
+        
+        # Statistiques
+        context['total_locataires'] = Locataire.objects.count()
+        context['locataires_actifs'] = Locataire.objects.filter(statut='actif').count()
+        context['locataires_inactifs'] = Locataire.objects.filter(statut='inactif').count()
+        
+        return context
+
+liste_locataires = LocataireListView.as_view()
+
+
+class TypeBienListView(PrivilegeButtonsMixin, IntelligentListView):
+    model = TypeBien
+    template_name = 'base_liste_intelligente.html'
+    paginate_by = 20
+    page_title = 'Types de biens'
+    page_icon = 'building'
+    add_url = 'proprietes:ajouter_type_bien'
+    add_text = 'Ajouter un type de bien'
+    search_fields = ['nom', 'description']
+    filter_fields = []
+    default_sort = 'nom'
+    columns = [
+        {'field': 'nom', 'label': 'Nom', 'sortable': True},
+        {'field': 'description', 'label': 'Description', 'sortable': True},
+    ]
+    actions = [
+        {'url_name': 'proprietes:modifier_type_bien', 'icon': 'pencil', 'style': 'outline-warning', 'title': 'Modifier'},
+    ]
+    sort_options = [
+        {'value': 'nom', 'label': 'Nom'},
+    ]
+    
+    def get_context_data(self, **kwargs):
+        """
+        Ajout de statistiques et d'informations supplémentaires au contexte
+        """
+        context = super().get_context_data(**kwargs)
+        
+        # Statistiques
+        context['total_types_biens'] = TypeBien.objects.count()
+        
+        return context
+
+liste_types_biens = TypeBienListView.as_view()
+
+
+class ChargesBailleurListView(PrivilegeButtonsMixin, IntelligentListView):
+    model = ChargesBailleur
+    template_name = 'base_liste_intelligente.html'
+    paginate_by = 20
+    page_title = 'Charges bailleur'
+    page_icon = 'file-invoice'
+    add_url = 'proprietes:ajouter_charge_bailleur'
+    add_text = 'Ajouter une charge'
+    search_fields = ['titre', 'description', 'propriete__titre', 'propriete__bailleur__nom', 'propriete__bailleur__prenom']
+    filter_fields = ['statut', 'type_charge', 'priorite']
+    default_sort = '-date_charge'
+    columns = [
+        {'field': 'titre', 'label': 'Titre', 'sortable': True},
+        {'field': 'propriete', 'label': 'Propriété', 'sortable': True},
+        {'field': 'montant', 'label': 'Montant', 'sortable': True},
+        {'field': 'statut', 'label': 'Statut', 'sortable': True},
+        {'field': 'type_charge', 'label': 'Type', 'sortable': True},
+        {'field': 'priorite', 'label': 'Priorité', 'sortable': True},
+        {'field': 'date_charge', 'label': 'Date', 'sortable': True},
+    ]
+    actions = [
+        {'url_name': 'proprietes:detail_charge_bailleur', 'icon': 'eye', 'style': 'outline-primary', 'title': 'Voir'},
+        {'url_name': 'proprietes:modifier_charge_bailleur', 'icon': 'pencil', 'style': 'outline-warning', 'title': 'Modifier'},
+    ]
+    sort_options = [
+        {'value': 'date_charge', 'label': 'Date'},
+        {'value': 'montant', 'label': 'Montant'},
+        {'value': 'titre', 'label': 'Titre'},
+        {'value': 'statut', 'label': 'Statut'},
+        {'value': 'type_charge', 'label': 'Type'},
+        {'value': 'priorite', 'label': 'Priorité'},
+    ]
+    
+    def get_queryset(self):
+        """
+        Optimisation des requêtes de base de données
+        """
+        queryset = super().get_queryset()
+        return queryset.select_related('propriete', 'propriete__bailleur')
+    
+    def get_context_data(self, **kwargs):
+        """
+        Ajout de statistiques et d'informations supplémentaires au contexte
+        """
+        context = super().get_context_data(**kwargs)
+        
+        # Statistiques
+        context['total_charges'] = ChargesBailleur.objects.count()
+        context['charges_en_attente'] = ChargesBailleur.objects.filter(statut='en_attente').count()
+        context['charges_remboursees'] = ChargesBailleur.objects.filter(statut='rembourse').count()
+        context['charges_deduites'] = ChargesBailleur.objects.filter(statut='deduit_loyer').count()
+        
+        # Montant total
+        from django.db.models import Sum
+        context['montant_total'] = ChargesBailleur.objects.aggregate(total=Sum('montant'))['total'] or 0
+        
+        return context
+
+liste_charges_bailleur = ChargesBailleurListView.as_view()
+
+
+@login_required
+def detail_locataire(request, pk):
+    """Vue détaillée d'un locataire avec statistiques de paiement."""
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:liste_locataires')
+    
+    locataire = get_object_or_404(Locataire, pk=pk)
+    
+    # Récupérer les statistiques
+    stats = locataire.get_statistiques_paiements()
+    
+    # Récupérer les contrats
+    contrats = locataire.contrats.all().order_by('-date_debut')
+    
+    # Récupérer les derniers paiements
+    from paiements.models import Paiement
+    derniers_paiements = Paiement.get_paiements_locataire(locataire, statut='valide')[:10]
+    
+    # Récupérer le contrat actuel
+    contrat_actuel = locataire.get_contrat_actuel()
+    
+    # Récupérer les charges déductibles
+    from paiements.models import ChargeDeductible
+    charges_deductibles = ChargeDeductible.objects.filter(
+        contrat__locataire=locataire
+    ).order_by('-date_creation')[:5]
+    
+    context = {
+        'locataire': locataire,
+        'stats': stats,
+        'contrats': contrats,
+        'contrat_actuel': contrat_actuel,
+        'derniers_paiements': derniers_paiements,
+        'charges_deductibles': charges_deductibles,
+        'breadcrumbs': [
+            {'url': 'core:dashboard', 'label': 'Tableau de bord'},
+            {'url': 'proprietes:liste_locataires', 'label': 'Locataires'},
+            {'label': locataire.get_nom_complet()}
+        ],
+        'quick_actions': [
+            {'url': 'proprietes:modifier_locataire', 'pk': locataire.pk, 'label': 'Modifier', 'icon': 'bi-pencil'},
+            {'url': 'contrats:ajouter', 'label': 'Nouveau Contrat', 'icon': 'bi-plus-circle'},
+            {'url': 'paiements:liste', 'label': 'Voir Paiements', 'icon': 'bi-cash-coin'},
+        ]
+    }
+    
+    return render(request, 'proprietes/detail_locataire.html', context)
+
+
+@login_required
+def ajouter_locataire(request):
+    """
+    Vue pour ajouter un locataire avec documents
+    """
+    # Vérification des permissions : ADMINISTRATION et PRIVILEGE peuvent ajouter
+    from core.utils import check_group_permissions
+    from core.id_generator import IDGenerator
+    
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:locataires_liste')
+    
+    if request.method == 'POST':
+        form = LocataireForm(request.POST, request.FILES)
+        if form.is_valid():
+            locataire = form.save(commit=False)
+            locataire.cree_par = request.user
+            
+            # Générer automatiquement le numéro unique de locataire
+            if not locataire.numero_locataire:
+                generator = IDGenerator()
+                locataire.numero_locataire = generator.generate_id('locataire')
+            
+            locataire.save()
+            
+            # Utiliser la méthode save du formulaire pour gérer les documents
+            form.save(user=request.user)
+            
+            messages.success(
+                request, 
+                f'Locataire "{locataire.get_nom_complet()}" ajouté avec succès! '
+                f'Numéro: {locataire.numero_locataire}. '
+                f'Documents confidentiels créés automatiquement.'
+            )
+            return redirect('proprietes:detail_locataire', pk=locataire.pk)
+        else:
+            messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
+    else:
+        form = LocataireForm()
+        # Pré-générer le numéro unique pour l'affichage
+        try:
+            generator = IDGenerator()
+            initial_numero = generator.generate_id('locataire')
+            form.fields['numero_locataire'].initial = initial_numero
+        except Exception as e:
+            print(f"Erreur lors de la génération du numéro: {e}")
+    
+    context = {
+        'form': form,
+        'title': 'Ajouter un locataire'
+    }
+    return render(request, 'proprietes/locataires/locataire_form.html', context)
+
+
+@login_required
+def modifier_locataire(request, pk):
+    """
+    Vue pour modifier un locataire
+    """
+    # Vérification des permissions : Seul PRIVILEGE peut modifier
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'modify')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:locataires_liste')
+    
+    locataire = get_object_or_404(Locataire, pk=pk)
+    
+    if request.method == 'POST':
+        form = LocataireForm(request.POST, request.FILES, instance=locataire)
+        if form.is_valid():
+            form.save(user=request.user)
+            messages.success(request, f'Locataire "{locataire.get_nom_complet()}" modifié avec succès!')
+            return redirect('proprietes:detail_locataire', pk=pk)
+        else:
+            messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
+    else:
+        form = LocataireForm(instance=locataire)
+    
+    context = {
+        'form': form,
+        'locataire': locataire,
+        'title': f'Modifier le locataire "{locataire.get_nom_complet()}"'
+    }
+    return render(request, 'proprietes/locataires/locataire_form.html', context)
+
+
+@login_required
+def supprimer_locataire(request, pk):
+    """
+    Vue améliorée pour supprimer un locataire avec gestion des références
+    """
+    # Vérification des permissions : Seul PRIVILEGE peut supprimer
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'delete')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:locataires_liste')
+    
+    locataire = get_object_or_404(Locataire, pk=pk)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'logical_delete':
+            # Suppression logique
+            old_data = {f.name: getattr(locataire, f.name) for f in locataire._meta.fields}
+            locataire.est_supprime = True
+            locataire.date_suppression = timezone.now()
+            locataire.save()
+            
+            # Log d'audit
+            AuditLog.objects.create(
+                content_type=ContentType.objects.get_for_model(Locataire),
+                object_id=locataire.pk,
+                action='DELETE',
+                old_data=old_data,
+                new_data={'est_supprime': True, 'date_suppression': str(timezone.now())},
+                user=request.user,
+                ip_address=request.META.get('REMOTE_ADDR'),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')
+            )
+            
+            messages.success(request, f"Locataire {locataire.nom} {locataire.prenom} supprimé logiquement et placé dans la corbeille.")
+            return redirect('proprietes:locataires_liste')
+            
+        elif action == 'deactivate':
+            # Désactivation
+            old_data = {f.name: getattr(locataire, f.name) for f in locataire._meta.fields}
+            locataire.statut = 'inactif'
+            locataire.save()
+            
+            # Log d'audit
+            AuditLog.objects.create(
+                content_type=ContentType.objects.get_for_model(Locataire),
+                object_id=locataire.pk,
+                action='DEACTIVATE',
+                old_data=old_data,
+                new_data={'statut': 'inactif'},
+                user=request.user,
+                ip_address=request.META.get('REMOTE_ADDR'),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')
+            )
+            
+            messages.success(request, f"Locataire {locataire.nom} {locataire.prenom} désactivé avec succès.")
+            return redirect('proprietes:locataires_liste')
+            
+        elif action == 'transfer_contracts':
+            # Transfert des contrats vers un autre locataire
+            nouveau_locataire_id = request.POST.get('nouveau_locataire')
+            if nouveau_locataire_id:
+                try:
+                    nouveau_locataire = Locataire.objects.get(id=nouveau_locataire_id)
+                    contrats_transferes = Contrat.objects.filter(locataire=locataire, est_actif=True)
+                    contrats_transferes.update(locataire=nouveau_locataire)
+                    
+                    # Log d'audit
+                    AuditLog.objects.create(
+                        content_type=ContentType.objects.get_for_model(Locataire),
+                        object_id=locataire.pk,
+                        action='TRANSFER_CONTRACTS',
+                        old_data={'contrats_count': contrats_transferes.count()},
+                        new_data={'nouveau_locataire_id': nouveau_locataire_id},
+                        user=request.user,
+                        ip_address=request.META.get('REMOTE_ADDR'),
+                        user_agent=request.META.get('HTTP_USER_AGENT', '')
+                    )
+                    
+                    messages.success(request, f"Contrats transférés vers {nouveau_locataire.nom} {nouveau_locataire.prenom}")
+                    return redirect('proprietes:locataires_liste')
+                except Locataire.DoesNotExist:
+                    messages.error(request, "Nouveau locataire non trouvé.")
+            else:
+                messages.error(request, "Veuillez sélectionner un nouveau locataire.")
+    
+    # Récupérer les informations sur les références
+    contrats = Contrat.objects.filter(locataire=locataire, est_actif=True)
+    paiements = Paiement.objects.filter(contrat__locataire=locataire)
+    
+    # Récupérer tous les locataires actifs pour le transfert
+    autres_locataires = Locataire.objects.filter(statut='actif').exclude(pk=locataire.pk)
+    
+    context = {
+        'locataire': locataire,
+        'contrats_count': contrats.count(),
+        'paiements_count': paiements.count(),
+        'autres_locataires': autres_locataires,
+    }
+    
+    return render(request, 'proprietes/confirm_supprimer_locataire_avance.html', context)
+
+
+@login_required
+def corbeille_locataires(request):
+    """
+    Vue pour gérer la corbeille des locataires supprimés
+    """
+    # VÉRIFICATION CRITIQUE : Seul PRIVILEGE peut accéder à la corbeille
+    groupe = getattr(request.user, 'groupe_travail', None)
+    if not groupe or groupe.nom.upper() != 'PRIVILEGE':
+        messages.error(request, "Seuls les utilisateurs du groupe PRIVILEGE peuvent accéder à la corbeille des locataires.")
+        return redirect('proprietes:locataires_liste')
+    
+    # Récupérer les locataires supprimés logiquement
+    locataires_supprimes = Locataire.objects.filter(est_supprime=True).order_by('-date_suppression')
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        locataires_ids = request.POST.getlist('locataires')
+        
+        if action == 'restaurer' and locataires_ids:
+            # Restaurer les locataires sélectionnés
+            locataires_a_restaurer = Locataire.objects.filter(id__in=locataires_ids, est_supprime=True)
+            for locataire in locataires_a_restaurer:
+                locataire.est_supprime = False
+                locataire.date_suppression = None
+                locataire.save()
+                
+                # Log d'audit
+                AuditLog.objects.create(
+                    content_type=ContentType.objects.get_for_model(Locataire),
+                    object_id=locataire.pk,
+                    action='RESTORE',
+                    old_data={'est_supprime': True},
+                    new_data={'est_supprime': False},
+                    user=request.user,
+                    ip_address=request.META.get('REMOTE_ADDR'),
+                    user_agent=request.META.get('HTTP_USER_AGENT', '')
+                )
+            
+            messages.success(request, f"{locataires_a_restaurer.count()} locataire(s) restauré(s) avec succès.")
+            return redirect('proprietes:corbeille_locataires')
+            
+        elif action == 'supprimer_definitivement' and locataires_ids:
+            # Suppression définitive
+            locataires_a_supprimer = Locataire.objects.filter(id__in=locataires_ids, est_supprime=True)
+            for locataire in locataires_a_supprimer:
+                # Log d'audit avant suppression
+                old_data = {f.name: getattr(locataire, f.name) for f in locataire._meta.fields}
+                AuditLog.objects.create(
+                    content_type=ContentType.objects.get_for_model(Locataire),
+                    object_id=locataire.pk,
+                    action='PERMANENT_DELETE',
+                    old_data=old_data,
+                    new_data=None,
+                    user=request.user,
+                    ip_address=request.META.get('REMOTE_ADDR'),
+                    user_agent=request.META.get('HTTP_USER_AGENT', '')
+                )
+                locataire.delete()
+            
+            messages.success(request, f"{locataires_a_supprimer.count()} locataire(s) supprimé(s) définitivement.")
+            return redirect('proprietes:corbeille_locataires')
+    
+    # Pagination
+    paginator = Paginator(locataires_supprimes, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'locataires': page_obj,
+        'page_obj': page_obj,
+    }
+    
+    return render(request, 'proprietes/corbeille_locataires.html', context)
+
+
+@login_required
+def desactiver_locataire(request, pk):
+    # Vérification des permissions : Seul PRIVILEGE peut désactiver
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'modify')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:locataires_liste')
+    locataire = get_object_or_404(Locataire, pk=pk)
+    if request.method == 'POST':
+        if locataire.statut == 'actif':
+            locataire.statut = 'inactif'
+            messages.success(request, "Locataire désactivé avec succès.")
+        else:
+            locataire.statut = 'actif'
+            messages.success(request, "Locataire réactivé avec succès.")
+        locataire.save()
+        return redirect('proprietes:locataires_liste')
+    return render(request, 'proprietes/confirm_desactiver_locataire.html', {'locataire': locataire})
+
+
+# API pour les calculs en temps réel
+@login_required
+def api_calcul_loyer_net(request, propriete_id):
+    """
+    API pour calculer le loyer net après déduction des charges bailleur
+    """
+    try:
+        propriete = get_object_or_404(Propriete, pk=propriete_id)
+        
+        loyer_total = propriete.get_loyer_total()
+        charges_bailleur = propriete.get_charges_bailleur_en_cours()
+        loyer_net = propriete.get_loyer_net_apres_deduction()
+        
+        return JsonResponse({
+            'success': True,
+            'loyer_total': float(loyer_total),
+            'charges_bailleur': float(charges_bailleur),
+            'loyer_net': float(loyer_net),
+            'propriete_titre': propriete.titre
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@login_required
+def ajouter_charge_bailleur_rapide(request):
+    # Vérification des permissions : PRIVILEGE et ADMINISTRATION peuvent ajouter
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:liste')
+    
+    if request.method == 'POST':
+        propriete_id = request.POST.get('propriete_id')
+        titre = request.POST.get('titre')
+        montant = request.POST.get('montant')
+        type_charge = request.POST.get('type_charge')
+        if propriete_id and titre and montant and type_charge:
+            propriete = Propriete.objects.get(pk=propriete_id)
+            charge = ChargesBailleur.objects.create(
+                propriete=propriete,
+                titre=titre,
+                montant=montant,
+                type_charge=type_charge,
+                statut='en_attente',
+                cree_par=request.user
+            )
+            messages.success(request, f'Charge "{titre}" ajoutée avec succès !')
+            # Rediriger vers l'ajout de paiement avec le contrat lié à la propriété
+            contrat = propriete.contrats.filter(est_actif=True).first()
+            if contrat:
+                return redirect(f'/paiements/ajouter/?contrat={contrat.id}')
+            else:
+                return redirect('/paiements/ajouter/')
+        else:
+            messages.error(request, "Tous les champs sont obligatoires pour ajouter une charge.")
+            return redirect(request.META.get('HTTP_REFERER', '/paiements/ajouter/'))
+
+
+@login_required
+def supprimer_propriete(request, pk):
+    # Vérification des permissions : Seul PRIVILEGE peut supprimer
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'delete')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:liste')
+    
+    propriete = get_object_or_404(Propriete, pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            # Suppression logique
+            old_data = {f.name: getattr(propriete, f.name) for f in propriete._meta.fields}
+            propriete.est_supprime = True
+            propriete.date_suppression = timezone.now()
+            propriete.save()
+            
+            # Log d'audit
+            AuditLog.objects.create(
+                content_type=ContentType.objects.get_for_model(Propriete),
+                object_id=propriete.pk,
+                action='DELETE',
+                old_data=old_data,
+                new_data={'est_supprime': True, 'date_suppression': str(timezone.now())},
+                user=request.user,
+                ip_address=request.META.get('REMOTE_ADDR'),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')
+            )
+            
+            messages.success(request, f"Propriété {propriete.titre} supprimée avec succès.")
+            return redirect('proprietes:liste')
+            
+        except ProtectedError as e:
+            messages.error(request, f"Impossible de supprimer cette propriété : {str(e)}")
+            return redirect('proprietes:liste')
+    
+    context = {
+        'propriete': propriete,
+    }
+    return render(request, 'proprietes/confirm_supprimer_propriete.html', context)
+
+
+@login_required
+def supprimer_type_bien(request, pk):
+    # Vérification des permissions : Seul PRIVILEGE peut supprimer
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'delete')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:types_biens_liste')
+    
+    type_bien = get_object_or_404(TypeBien, pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            # Suppression logique
+            old_data = {f.name: getattr(type_bien, f.name) for f in type_bien._meta.fields}
+            type_bien.est_supprime = True
+            type_bien.date_suppression = timezone.now()
+            type_bien.save()
+            
+            # Log d'audit
+            AuditLog.objects.create(
+                content_type=ContentType.objects.get_for_model(TypeBien),
+                object_id=type_bien.pk,
+                action='DELETE',
+                old_data=old_data,
+                new_data={'est_supprime': True, 'date_suppression': str(timezone.now())},
+                user=request.user,
+                ip_address=request.META.get('REMOTE_ADDR'),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')
+            )
+            
+            messages.success(request, f"Type de bien {type_bien.nom} supprimé avec succès.")
+            return redirect('proprietes:types_biens_liste')
+            
+        except ProtectedError as e:
+            messages.error(request, f"Impossible de supprimer ce type de bien : {str(e)}")
+            return redirect('proprietes:types_biens_liste')
+    
+    context = {
+        'type_bien': type_bien,
+    }
+    return render(request, 'proprietes/confirm_supprimer_type_bien.html', context)
+
+
+@login_required
+def supprimer_charge_bailleur(request, pk):
+    # Vérification des permissions : Seul PRIVILEGE peut supprimer
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'delete')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:charges_bailleur_liste')
+    
+    charge = get_object_or_404(ChargesBailleur, pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            # Suppression logique
+            old_data = {f.name: getattr(charge, f.name) for f in charge._meta.fields}
+            charge.est_supprime = True
+            charge.date_suppression = timezone.now()
+            charge.save()
+            
+            # Log d'audit
+            AuditLog.objects.create(
+                content_type=ContentType.objects.get_for_model(ChargesBailleur),
+                object_id=charge.pk,
+                action='DELETE',
+                old_data=old_data,
+                new_data={'est_supprime': True, 'date_suppression': str(timezone.now())},
+                user=request.user,
+                ip_address=request.META.get('REMOTE_ADDR'),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')
+            )
+            
+            messages.success(request, f"Charge bailleur {charge.libelle} supprimée avec succès.")
+            return redirect('proprietes:charges_bailleur_liste')
+            
+        except ProtectedError as e:
+            messages.error(request, f"Impossible de supprimer cette charge bailleur : {str(e)}")
+            return redirect('proprietes:charges_bailleur_liste')
+    
+    context = {
+        'charge': charge,
+    }
+    return render(request, 'proprietes/confirm_supprimer_charge_bailleur.html', context)
+
+
+@login_required
+def recherche_avancee_bailleurs(request):
+    """Recherche avancée des bailleurs avec filtres."""
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:liste_bailleurs')
+    
+    # Récupérer les paramètres de recherche
+    nom = request.GET.get('nom', '')
+    ville = request.GET.get('ville', '')
+    statut_paiement = request.GET.get('statut_paiement', '')
+    annee = request.GET.get('annee', '')
+    
+    # Construire la requête
+    bailleurs = Bailleur.objects.all()
+    
+    if nom:
+        bailleurs = bailleurs.filter(
+            models.Q(nom__icontains=nom) | 
+            models.Q(prenom__icontains=nom) |
+            models.Q(code_bailleur__icontains=nom)
+        )
+    
+    if ville:
+        bailleurs = bailleurs.filter(proprietes__ville__icontains=ville).distinct()
+    
+    # Filtrer par statut de paiement
+    if statut_paiement:
+        from paiements.models import Paiement
+        if statut_paiement == 'avec_paiements':
+            bailleurs = bailleurs.filter(
+                proprietes__contrats__paiements__isnull=False
+            ).distinct()
+        elif statut_paiement == 'sans_paiements':
+            bailleurs = bailleurs.filter(
+                proprietes__contrats__paiements__isnull=True
+            ).distinct()
+    
+    # Filtrer par année
+    if annee:
+        from paiements.models import Paiement
+        bailleurs = bailleurs.filter(
+            proprietes__contrats__paiements__date_paiement__year=annee
+        ).distinct()
+    
+    # Pagination
+    paginator = Paginator(bailleurs, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Statistiques globales
+    total_revenus = sum(b.get_total_revenus_mensuels() for b in bailleurs)
+    total_proprietes = sum(b.get_proprietes_count() for b in bailleurs)
+    
+    context = {
+        'page_obj': page_obj,
+        'bailleurs': page_obj,
+        'total_revenus': total_revenus,
+        'total_proprietes': total_proprietes,
+        'filtres': {
+            'nom': nom,
+            'ville': ville,
+            'statut_paiement': statut_paiement,
+            'annee': annee,
+        },
+        'annees': range(2020, timezone.now().year + 1),
+    }
+    
+    return render(request, 'proprietes/recherche_avancee_bailleurs.html', context)
+
+
+@login_required
+def recherche_avancee_locataires(request):
+    """Recherche avancée des locataires avec filtres."""
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:liste_locataires')
+    
+    # Récupérer les paramètres de recherche
+    nom = request.GET.get('nom', '')
+    ville = request.GET.get('ville', '')
+    statut_paiement = request.GET.get('statut_paiement', '')
+    annee = request.GET.get('annee', '')
+    
+    # Construire la requête
+    locataires = Locataire.objects.all()
+    
+    if nom:
+        locataires = locataires.filter(
+            models.Q(nom__icontains=nom) | 
+            models.Q(prenom__icontains=nom) |
+            models.Q(code_locataire__icontains=nom)
+        )
+    
+    if ville:
+        locataires = locataires.filter(contrats__propriete__ville__icontains=ville).distinct()
+    
+    # Filtrer par statut de paiement
+    if statut_paiement:
+        from paiements.models import Paiement
+        if statut_paiement == 'avec_paiements':
+            locataires = locataires.filter(
+                contrats__paiements__isnull=False
+            ).distinct()
+        elif statut_paiement == 'sans_paiements':
+            locataires = locataires.filter(
+                contrats__paiements__isnull=True
+            ).distinct()
+        elif statut_paiement == 'en_retard':
+            # Filtrer les locataires en retard de paiement
+            locataires_en_retard = []
+            for locataire in locataires:
+                if locataire.get_retard_paiement() > 0:
+                    locataires_en_retard.append(locataire.pk)
+            locataires = locataires.filter(pk__in=locataires_en_retard)
+    
+    # Filtrer par année
+    if annee:
+        from paiements.models import Paiement
+        locataires = locataires.filter(
+            contrats__paiements__date_paiement__year=annee
+        ).distinct()
+    
+    # Pagination
+    paginator = Paginator(locataires, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Statistiques globales
+    total_loyers = sum(l.get_total_loyer_mensuel() for l in locataires)
+    total_contrats_actifs = sum(l.get_contrats_actifs_count() for l in locataires)
+    
+    context = {
+        'page_obj': page_obj,
+        'locataires': page_obj,
+        'total_loyers': total_loyers,
+        'total_contrats_actifs': total_contrats_actifs,
+        'filtres': {
+            'nom': nom,
+            'ville': ville,
+            'statut_paiement': statut_paiement,
+            'annee': annee,
+        },
+        'annees': range(2020, timezone.now().year + 1),
+    }
+    
+    return render(request, 'proprietes/recherche_avancee_locataires.html', context)
+
+# ========================================
+# VUES POUR LA GESTION DES PHOTOS
+# ========================================
+
+class PhotoListView(LoginRequiredMixin, ListView):
+    """Vue pour afficher la liste des photos d'une propriété"""
+    model = Photo
+    template_name = 'proprietes/photo_list.html'
+    context_object_name = 'photos'
+    
+    def get_queryset(self):
+        propriete_id = self.kwargs.get('propriete_id')
+        return Photo.objects.filter(propriete_id=propriete_id).order_by('ordre')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        propriete_id = self.kwargs.get('propriete_id')
+        context['propriete'] = get_object_or_404(Propriete, id=propriete_id)
+        return context
+
+class PhotoCreateView(LoginRequiredMixin, CreateView):
+    """Vue pour ajouter une nouvelle photo"""
+    model = Photo
+    form_class = PhotoForm
+    template_name = 'proprietes/photo_form.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        propriete_id = self.kwargs.get('propriete_id')
+        context['propriete'] = get_object_or_404(Propriete, id=propriete_id)
+        return context
+    
+    def form_valid(self, form):
+        propriete_id = self.kwargs.get('propriete_id')
+        propriete = get_object_or_404(Propriete, id=propriete_id)
+        form.instance.propriete = propriete
+        form.instance.cree_par = self.request.user
+        
+        # Si c'est la première photo, la définir comme principale
+        if not Photo.objects.filter(propriete=propriete).exists():
+            form.instance.est_principale = True
+        
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        propriete_id = self.kwargs.get('propriete_id')
+        return reverse_lazy('proprietes:photo_list', kwargs={'propriete_id': propriete_id})
+
+class PhotoUpdateView(LoginRequiredMixin, UpdateView):
+    """Vue pour modifier une photo existante"""
+    model = Photo
+    form_class = PhotoForm
+    template_name = 'proprietes/photo_form.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['propriete'] = self.object.propriete
+        return context
+    
+    def get_success_url(self):
+        return reverse_lazy('proprietes:photo_list', kwargs={'propriete_id': self.object.propriete.id})
+
+class PhotoDeleteView(LoginRequiredMixin, DeleteView):
+    """Vue pour supprimer une photo"""
+    model = Photo
+    template_name = 'proprietes/photo_confirm_delete.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['propriete'] = self.object.propriete
+        return context
+    
+    def get_success_url(self):
+        return reverse_lazy('proprietes:photo_list', kwargs={'propriete_id': self.object.propriete.id})
+
+class PhotoMultipleUploadView(LoginRequiredMixin, View):
+    """Vue pour l'upload multiple de photos"""
+    template_name = 'proprietes/photo_multiple_upload.html'
+    
+    def get(self, request, propriete_id):
+        propriete = get_object_or_404(Propriete, id=propriete_id)
+        form = PhotoMultipleForm()
+        return render(request, self.template_name, {
+            'form': form,
+            'propriete': propriete
+        })
+    
+    def post(self, request, propriete_id):
+        propriete = get_object_or_404(Propriete, id=propriete_id)
+        form = PhotoMultipleForm(request.POST, request.FILES)
+        
+        if form.is_valid():
+            images = form.cleaned_data['images']
+            photos_crees = []
+            
+            # Récupérer l'ordre maximum actuel
+            max_ordre = Photo.objects.filter(propriete=propriete).aggregate(
+                max_ordre=models.Max('ordre')
+            )['max_ordre'] or 0
+            
+            for i, image in enumerate(images):
+                # Créer un titre par défaut
+                titre = f"Photo {max_ordre + i + 1}"
+                
+                # Créer la photo
+                photo = Photo.objects.create(
+                    propriete=propriete,
+                    image=image,
+                    titre=titre,
+                    ordre=max_ordre + i + 1,
+                    est_principale=(max_ordre + i == 0)  # Première photo = principale
+                )
+                photos_crees.append(photo)
+            
+            messages.success(
+                request, 
+                f"{len(photos_crees)} photo(s) ajoutée(s) avec succès à la propriété {propriete.adresse}"
+            )
+            
+            return redirect('proprietes:photo_list', propriete_id=propriete_id)
+        
+        return render(request, self.template_name, {
+            'form': form,
+            'propriete': propriete
+        })
+
+class PhotoReorderView(LoginRequiredMixin, View):
+    """Vue pour réorganiser l'ordre des photos"""
+    
+    def post(self, request, propriete_id):
+        propriete = get_object_or_404(Propriete, id=propriete_id)
+        photo_orders = request.POST.getlist('photo_order[]')
+        
+        try:
+            for i, photo_id in enumerate(photo_orders):
+                photo = Photo.objects.get(id=photo_id, propriete=propriete)
+                photo.ordre = i
+                photo.save()
+            
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+
+class PhotoGalleryView(LoginRequiredMixin, DetailView):
+    """Vue pour afficher la galerie photos d'une propriété"""
+    model = Propriete
+    template_name = 'proprietes/photo_gallery.html'
+    context_object_name = 'propriete'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['photos'] = self.object.photos.all().order_by('ordre')
+        context['photo_principale'] = self.object.photos.filter(est_principale=True).first()
+        return context
+
+# ========================================
+# VUES AJAX POUR LA GESTION DES PHOTOS
+# ========================================
+
+class PhotoSetMainView(LoginRequiredMixin, View):
+    """Vue AJAX pour définir une photo comme principale"""
+    
+    def post(self, request, photo_id):
+        try:
+            photo = get_object_or_404(Photo, id=photo_id)
+            
+            # Vérifier que l'utilisateur a accès à cette propriété
+            if not request.user.has_perm('proprietes.view_propriete', photo.propriete):
+                return JsonResponse({'status': 'error', 'message': 'Permission refusée'})
+            
+            # Désactiver toutes les autres photos principales
+            Photo.objects.filter(
+                propriete=photo.propriete,
+                est_principale=True
+            ).update(est_principale=False)
+            
+            # Activer cette photo comme principale
+            photo.est_principale = True
+            photo.save()
+            
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+
+class PhotoDeleteAjaxView(LoginRequiredMixin, View):
+    """Vue AJAX pour supprimer une photo"""
+    
+    def post(self, request, photo_id):
+        try:
+            photo = get_object_or_404(Photo, id=photo_id)
+            
+            # Vérifier que l'utilisateur a accès à cette propriété
+            if not request.user.has_perm('proprietes.view_propriete', photo.propriete):
+                return JsonResponse({'status': 'error', 'message': 'Permission refusée'})
+            
+            propriete_id = photo.propriete.id
+            photo.delete()
+            
+            # Si c'était la photo principale, définir la première comme principale
+            if not Photo.objects.filter(propriete_id=propriete_id, est_principale=True).exists():
+                premiere_photo = Photo.objects.filter(propriete_id=propriete_id).first()
+                if premiere_photo:
+                    premiere_photo.est_principale = True
+                    premiere_photo.save()
+            
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+
+# Vues pour la gestion des documents
+@login_required
+def document_list(request):
+    """Vue pour lister tous les documents."""
+    documents = Document.objects.select_related(
+        'propriete', 'bailleur', 'locataire', 'cree_par'
+    ).all()
+    
+    # Filtres de recherche
+    form = DocumentSearchForm(request.GET)
+    if form.is_valid():
+        search = form.cleaned_data.get('search')
+        type_document = form.cleaned_data.get('type_document')
+        statut = form.cleaned_data.get('statut')
+        propriete = form.cleaned_data.get('propriete')
+        date_debut = form.cleaned_data.get('date_debut')
+        date_fin = form.cleaned_data.get('date_fin')
+        
+        if search:
+            documents = documents.filter(
+                Q(nom__icontains=search) |
+                Q(description__icontains=search) |
+                Q(tags__icontains=search)
+            )
+        
+        if type_document:
+            documents = documents.filter(type_document=type_document)
+        
+        if statut:
+            documents = documents.filter(statut=statut)
+        
+        if propriete:
+            documents = documents.filter(propriete=propriete)
+        
+        if date_debut:
+            documents = documents.filter(date_creation__date__gte=date_debut)
+        
+        if date_fin:
+            documents = documents.filter(date_creation__date__lte=date_fin)
+    
+    # Pagination
+    paginator = Paginator(documents.order_by('-date_creation'), 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'search_form': form,
+        'total_documents': documents.count(),
+        'documents_expires': documents.filter(
+            date_expiration__lt=timezone.now().date()
+        ).count(),
+    }
+    
+    return render(request, 'proprietes/documents/document_list.html', context)
+
+
+@login_required
+def document_detail(request, pk):
+    """Vue pour afficher le détail d'un document."""
+    document = get_object_or_404(Document, pk=pk)
+    
+    context = {
+        'document': document,
+    }
+    
+    return render(request, 'proprietes/documents/document_detail.html', context)
+
+
+@login_required
+def document_create(request):
+    """Vue pour créer un nouveau document."""
+    if request.method == 'POST':
+        form = DocumentForm(request.POST, request.FILES)
+        if form.is_valid():
+            document = form.save(commit=False)
+            document.cree_par = request.user
+            document.save()
+            
+            messages.success(
+                request,
+                f'Document "{document.nom}" créé avec succès!'
+            )
+            
+            return redirect('proprietes:document_detail', pk=document.pk)
+    else:
+        form = DocumentForm()
+    
+    context = {
+        'form': form,
+        'title': 'Ajouter un document',
+        'submit_text': 'Créer le document'
+    }
+    
+    return render(request, 'proprietes/documents/document_form.html', context)
+
+
+@login_required
+def document_update(request, pk):
+    """Vue pour modifier un document existant."""
+    document = get_object_or_404(Document, pk=pk)
+    
+    if request.method == 'POST':
+        form = DocumentForm(request.POST, request.FILES, instance=document)
+        if form.is_valid():
+            form.save()
+            
+            messages.success(
+                request,
+                f'Document "{document.nom}" modifié avec succès!'
+            )
+            
+            return redirect('proprietes:document_detail', pk=document.pk)
+    else:
+        form = DocumentForm(instance=document)
+    
+    context = {
+        'form': form,
+        'document': document,
+        'title': f'Modifier le document "{document.nom}"',
+        'submit_text': 'Mettre à jour'
+    }
+    
+    return render(request, 'proprietes/documents/document_form.html', context)
+
+
+@login_required
+def document_delete(request, pk):
+    """Vue pour supprimer un document."""
+    document = get_object_or_404(Document, pk=pk)
+    
+    if request.method == 'POST':
+        nom_document = document.nom
+        document.delete()
+        
+        messages.success(
+            request,
+            f'Document "{nom_document}" supprimé avec succès!'
+        )
+        
+        return redirect('proprietes:document_list')
+    
+    context = {
+        'document': document,
+    }
+    
+    return render(request, 'proprietes/documents/document_confirm_delete.html', context)
+
+
+@login_required
+def document_download(request, pk):
+    """Vue pour télécharger un document."""
+    document = get_object_or_404(Document, pk=pk)
+    
+    # Vérifier les permissions si le document est confidentiel
+    if document.confidentiel:
+        # Ici vous pouvez ajouter une logique de vérification des permissions
+        pass
+    
+    response = HttpResponse(document.fichier, content_type='application/octet-stream')
+    response['Content-Disposition'] = f'attachment; filename="{document.fichier.name}"'
+    return response
+
+
+# ========================================
+# VUES POUR LES FORMULAIRES SPÉCIALISÉS
+# ========================================
+
+@login_required
+def diagnostic_form_view(request):
+    """Vue pour le formulaire de diagnostics."""
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:liste')
+    
+    if request.method == 'POST':
+        form = DiagnosticForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save_diagnostics(user=request.user)
+            messages.success(
+                request, 
+                f'Diagnostics enregistrés avec succès pour la propriété "{form.cleaned_data["propriete"]}"!'
+            )
+            return redirect('proprietes:detail', pk=form.cleaned_data['propriete'].pk)
+    else:
+        form = DiagnosticForm()
+    
+    context = {
+        'form': form,
+        'title': 'Formulaire de Diagnostics Immobiliers'
+    }
+    return render(request, 'proprietes/formulaires_specialises/diagnostic_form.html', context)
+
+
+@login_required
+def assurance_form_view(request):
+    """Vue pour le formulaire d'assurances."""
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:liste')
+    
+    if request.method == 'POST':
+        form = AssuranceForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save_assurances(user=request.user)
+            messages.success(
+                request, 
+                f'Assurances enregistrées avec succès pour la propriété "{form.cleaned_data["propriete"]}"!'
+            )
+            return redirect('proprietes:detail', pk=form.cleaned_data['propriete'].pk)
+    else:
+        form = AssuranceForm()
+    
+    context = {
+        'form': form,
+        'title': 'Formulaire d\'Assurances Immobilières'
+    }
+    return render(request, 'proprietes/formulaires_specialises/assurance_form.html', context)
+
+
+@login_required
+def etat_lieux_form_view(request):
+    """Vue pour le formulaire d'état des lieux."""
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:liste')
+    
+    if request.method == 'POST':
+        form = EtatLieuxForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save_etat_lieux(user=request.user)
+            messages.success(
+                request, 
+                f'État des lieux enregistré avec succès pour la propriété "{form.cleaned_data["propriete"]}"!'
+            )
+            return redirect('proprietes:detail', pk=form.cleaned_data['propriete'].pk)
+    else:
+        form = EtatLieuxForm()
+    
+    context = {
+        'form': form,
+        'title': 'Formulaire d\'État des Lieux'
+    }
+    return render(request, 'proprietes/formulaires_specialises/etat_lieux_form.html', context)
+
+def proprietes_dashboard(request):
+    """
+    Dashboard principal des propriétés avec vue d'ensemble et accès contextuel aux listes
+    """
+    from django.db.models import Q, Count
+    from django.utils import timezone
+    from contrats.models import Contrat
+    
+    # Statistiques générales
+    total_proprietes = Propriete.objects.filter(is_deleted=False).count()
+    
+    # Propriétés louées (avec contrats actifs)
+    proprietes_louees = Propriete.objects.filter(
+        is_deleted=False,
+        contrats__est_actif=True,
+        contrats__est_resilie=False
+    ).distinct().count()
+    
+    # Propriétés disponibles (pas de contrats actifs et marquées comme disponibles)
+    proprietes_disponibles = Propriete.objects.filter(
+        is_deleted=False,
+        disponible=True
+    ).exclude(
+        contrats__est_actif=True,
+        contrats__est_resilie=False
+    ).count()
+    
+    # Propriétés en construction (état 'a_renover' ou similaire)
+    proprietes_en_construction = Propriete.objects.filter(
+        is_deleted=False,
+        etat='a_renover'
+    ).count()
+    
+    # Top propriétés par loyer
+    top_proprietes = Propriete.objects.filter(
+        is_deleted=False, 
+        loyer_actuel__isnull=False
+    ).order_by('-loyer_actuel')[:5]
+    
+    # Propriétés par ville
+    proprietes_par_ville = Propriete.objects.filter(
+        is_deleted=False
+    ).values('ville').annotate(
+        count=Count('id')
+    ).order_by('-count')[:10]
+    
+    # Propriétés récentes
+    proprietes_recentes = Propriete.objects.filter(
+        is_deleted=False
+    ).order_by('-date_creation')[:5]
+    
+    # Propriétés nécessitant attention
+    proprietes_attention = Propriete.objects.filter(
+        is_deleted=False
+    ).filter(
+        Q(disponible=True) | 
+        Q(contrats__isnull=True) |
+        Q(contrats__date_fin__lt=timezone.now().date())
+    )[:5]
+    
+    # Statistiques des bailleurs et locataires
+    total_bailleurs = Bailleur.objects.filter(is_deleted=False).count()
+    bailleurs_actifs = Bailleur.objects.filter(is_deleted=False, actif=True).count()
+    
+    total_locataires = Locataire.objects.filter(is_deleted=False).count()
+    locataires_actifs = Locataire.objects.filter(is_deleted=False, statut='actif').count()
+    
+    context = {
+        'total_proprietes': total_proprietes,
+        'proprietes_louees': proprietes_louees,
+        'proprietes_disponibles': proprietes_disponibles,
+        'proprietes_en_construction': proprietes_en_construction,
+        'top_proprietes': top_proprietes,
+        'proprietes_par_ville': proprietes_par_ville,
+        'proprietes_recentes': proprietes_recentes,
+        'proprietes_attention': proprietes_attention,
+        'total_bailleurs': total_bailleurs,
+        'bailleurs_actifs': bailleurs_actifs,
+        'total_locataires': total_locataires,
+        'locataires_actifs': locataires_actifs,
+    }
+    
+    return render(request, 'proprietes/dashboard.html', context)

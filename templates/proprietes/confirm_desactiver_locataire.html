@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}Désactiver le Locataire{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="card border-warning">
+        <div class="card-header bg-warning text-dark">
+            <h4 class="mb-0"><i class="bi bi-toggle-off"></i> {% if locataire.est_actif %}Désactiver{% else %}Réactiver{% endif %} le Locataire</h4>
+        </div>
+        <div class="card-body">
+            <p>{% if locataire.est_actif %}Êtes-vous sûr de vouloir désactiver{% else %}Voulez-vous réactiver{% endif %} le locataire <strong>{{ locataire.nom }} {{ locataire.prenom }}</strong> ?</p>
+            <form method="post">{% csrf_token %}
+                <button type="submit" class="btn btn-warning">{% if locataire.est_actif %}Oui, désactiver{% else %}Oui, réactiver{% endif %}</button>
+                <a href="{% url 'proprietes:locataires_liste' %}" class="btn btn-secondary">Annuler</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

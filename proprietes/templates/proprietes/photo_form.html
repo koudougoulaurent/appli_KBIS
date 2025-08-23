@@ -1,0 +1,482 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if object %}Modifier la photo{% else %}Ajouter une photo{% endif %} - {{ propriete.adresse }}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .photo-preview {
+        max-width: 300px;
+        max-height: 300px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin: 20px auto;
+        display: block;
+    }
+    
+    .upload-area {
+        border: 2px dashed #ddd;
+        border-radius: 8px;
+        padding: 40px;
+        text-align: center;
+        background: #f8f9fa;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .upload-area:hover {
+        border-color: #007bff;
+        background: #e3f2fd;
+    }
+    
+    .upload-area.dragover {
+        border-color: #007bff;
+        background: #e3f2fd;
+        transform: scale(1.02);
+    }
+    
+    .upload-icon {
+        font-size: 3em;
+        color: #6c757d;
+        margin-bottom: 15px;
+    }
+    
+    .form-section {
+        background: white;
+        padding: 25px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .form-section h5 {
+        color: #495057;
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .image-info {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+    }
+    
+    .image-info .row {
+        margin: 0;
+    }
+    
+    .image-info .col-6 {
+        padding: 5px 15px;
+    }
+    
+    .image-info .label {
+        font-weight: bold;
+        color: #495057;
+    }
+    
+    .image-info .value {
+        color: #6c757d;
+    }
+    
+    .order-preview {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    
+    .order-preview .btn {
+        padding: 5px 10px;
+        font-size: 0.9em;
+    }
+    
+    .main-photo-toggle {
+        background: #28a745;
+        border-color: #28a745;
+        color: white;
+    }
+    
+    .main-photo-toggle:hover {
+        background: #218838;
+        border-color: #1e7e34;
+    }
+    
+    .main-photo-toggle.active {
+        background: #dc3545;
+        border-color: #dc3545;
+    }
+    
+    .main-photo-toggle.active:hover {
+        background: #c82333;
+        border-color: #bd2130;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="fas fa-camera text-primary"></i>
+                {% if object %}Modifier la photo{% else %}Ajouter une photo{% endif %}
+            </h1>
+            <p class="text-muted mb-0">{{ propriete.adresse }}</p>
+        </div>
+        <div>
+            <a href="{% url 'proprietes:photo_list' propriete.id %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Retour à la galerie
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Formulaire principal -->
+            <div class="form-section">
+                <h5>
+                    <i class="fas fa-edit"></i>
+                    Informations de la photo
+                </h5>
+                
+                <form method="post" enctype="multipart/form-data" id="photoForm">
+                    {% csrf_token %}
+                    
+                    <!-- Sélection de l'image -->
+                    <div class="form-group">
+                        <label for="{{ form.image.id_for_label }}" class="form-label">
+                            {{ form.image.label }}
+                        </label>
+                        
+                        {% if object and object.image %}
+                            <!-- Image existante -->
+                            <div class="text-center mb-3">
+                                <img src="{{ object.image.url }}" alt="Photo actuelle" class="photo-preview">
+                                <div class="image-info">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <span class="label">Nom du fichier:</span>
+                                            <div class="value">{{ object.image.name|slice:"19:" }}</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <span class="label">Taille:</span>
+                                            <div class="value">{{ object.image.size|filesizeformat }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Zone d'upload -->
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-icon">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                            </div>
+                            <h5>Cliquez ou glissez-déposez une image</h5>
+                            <p class="text-muted">Formats acceptés: JPG, PNG. Taille max: 5MB</p>
+                            {{ form.image }}
+                        </div>
+                        
+                        {% if form.image.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.image.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        
+                        {% if form.image.help_text %}
+                            <small class="form-text text-muted">{{ form.image.help_text }}</small>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Titre -->
+                    <div class="form-group">
+                        <label for="{{ form.titre.id_for_label }}" class="form-label">
+                            {{ form.titre.label }}
+                        </label>
+                        {{ form.titre }}
+                        {% if form.titre.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.titre.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Description -->
+                    <div class="form-group">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                            {{ form.description.label }}
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.description.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Ordre -->
+                    <div class="form-group">
+                        <label for="{{ form.ordre.id_for_label }}" class="form-label">
+                            {{ form.ordre.label }}
+                        </label>
+                        {{ form.ordre }}
+                        
+                        <div class="order-preview">
+                            <span class="text-muted">Aperçu de l'ordre:</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="updateOrderPreview()">
+                                <i class="fas fa-eye"></i> Voir
+                            </button>
+                        </div>
+                        
+                        {% if form.ordre.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.ordre.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Photo principale -->
+                    <div class="form-group">
+                        <div class="form-check">
+                            {{ form.est_principale }}
+                            <label class="form-check-label" for="{{ form.est_principale.id_for_label }}">
+                                {{ form.est_principale.label }}
+                            </label>
+                        </div>
+                        {% if form.est_principale.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.est_principale.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Boutons d'action -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'proprietes:photo_list' propriete.id %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Annuler
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i>
+                            {% if object %}Mettre à jour{% else %}Ajouter{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <!-- Informations sur la propriété -->
+            <div class="form-section">
+                <h5>
+                    <i class="fas fa-home"></i>
+                    Propriété
+                </h5>
+                
+                <div class="mb-3">
+                    <strong>Adresse:</strong><br>
+                    <span class="text-muted">{{ propriete.adresse }}</span>
+                </div>
+                
+                {% if propriete.type_bien %}
+                <div class="mb-3">
+                    <strong>Type:</strong><br>
+                    <span class="text-muted">{{ propriete.type_bien.nom }}</span>
+                </div>
+                {% endif %}
+                
+                {% if propriete.bailleur %}
+                <div class="mb-3">
+                    <strong>Bailleur:</strong><br>
+                    <span class="text-muted">{{ propriete.bailleur.nom }}</span>
+                </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <strong>Photos actuelles:</strong><br>
+                    <span class="text-muted">{{ propriete.photos.count }} photo(s)</span>
+                </div>
+                
+                {% if propriete.photos.exists %}
+                <div class="mb-3">
+                    <strong>Photo principale:</strong><br>
+                    {% with photo_principale=propriete.photos.filter.est_principale=True.first %}
+                        {% if photo_principale %}
+                            <span class="text-success">
+                                <i class="fas fa-star"></i> {{ photo_principale.titre }}
+                            </span>
+                        {% else %}
+                            <span class="text-warning">Aucune photo principale définie</span>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Aide et conseils -->
+            <div class="form-section">
+                <h5>
+                    <i class="fas fa-lightbulb"></i>
+                    Conseils
+                </h5>
+                
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        Utilisez des images de bonne qualité (min. 800x600px)
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        Choisissez des formats JPG ou PNG
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        Une seule photo peut être définie comme principale
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        L'ordre détermine l'affichage dans la galerie
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Gestion du drag & drop
+const uploadArea = document.getElementById('uploadArea');
+const fileInput = document.querySelector('input[type="file"]');
+
+uploadArea.addEventListener('click', () => fileInput.click());
+
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+});
+
+uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('dragover');
+});
+
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        fileInput.files = files;
+        handleFileSelect(files[0]);
+    }
+});
+
+fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        handleFileSelect(e.target.files[0]);
+    }
+});
+
+function handleFileSelect(file) {
+    // Vérifier le type de fichier
+    if (!file.type.startsWith('image/')) {
+        alert('Veuillez sélectionner une image valide');
+        return;
+    }
+    
+    // Vérifier la taille (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        alert('L\'image ne doit pas dépasser 5MB');
+        return;
+    }
+    
+    // Afficher l'aperçu
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        // Créer ou mettre à jour l'aperçu
+        let preview = document.querySelector('.photo-preview');
+        if (!preview) {
+            preview = document.createElement('img');
+            preview.className = 'photo-preview';
+            uploadArea.parentNode.insertBefore(preview, uploadArea);
+        }
+        preview.src = e.target.result;
+        
+        // Masquer la zone d'upload
+        uploadArea.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+    
+    // Mettre à jour le label
+    const label = uploadArea.querySelector('h5');
+    label.textContent = 'Image sélectionnée: ' + file.name;
+}
+
+// Aperçu de l'ordre
+function updateOrderPreview() {
+    const ordreInput = document.getElementById('{{ form.ordre.id_for_label }}');
+    const ordre = parseInt(ordreInput.value) || 0;
+    
+    // Calculer la position dans la liste
+    const totalPhotos = {{ propriete.photos.count }};
+    let position = ordre;
+    
+    if (ordre === 0) {
+        position = 1;
+    } else if (ordre > totalPhotos) {
+        position = totalPhotos + 1;
+    }
+    
+    alert(`Cette photo sera affichée en position ${position} sur ${totalPhotos + 1} dans la galerie.`);
+}
+
+// Validation du formulaire
+document.getElementById('photoForm').addEventListener('submit', function(e) {
+    const fileInput = document.querySelector('input[type="file"]');
+    const titreInput = document.getElementById('{{ form.titre.id_for_label }}');
+    
+    // Vérifier qu'une image est sélectionnée (sauf pour la modification)
+    {% if not object %}
+    if (!fileInput.files.length) {
+        e.preventDefault();
+        alert('Veuillez sélectionner une image');
+        return;
+    }
+    {% endif %}
+    
+    // Vérifier que le titre est renseigné
+    if (!titreInput.value.trim()) {
+        e.preventDefault();
+        alert('Veuillez renseigner un titre pour la photo');
+        titreInput.focus();
+        return;
+    }
+});
+
+// Gestion de la photo principale
+document.getElementById('{{ form.est_principale.id_for_label }}').addEventListener('change', function(e) {
+    if (e.target.checked) {
+        if (confirm('Cette photo sera définie comme photo principale. Les autres photos de cette propriété ne seront plus principales. Continuer ?')) {
+            // OK
+        } else {
+            e.target.checked = false;
+        }
+    }
+});
+</script>
+{% endblock %}

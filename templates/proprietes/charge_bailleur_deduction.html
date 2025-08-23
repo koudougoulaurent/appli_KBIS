@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Déduire une charge bailleur{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Déduire une charge bailleur</h2>
+    <div class="card mt-3">
+        <div class="card-body">
+            <p><strong>Propriété :</strong> {{ charge.propriete.titre }}</p>
+            <p><strong>Locataire :</strong> {{ locataire.nom }} {{ locataire.prenom }}</p>
+            <p><strong>Titre de la charge :</strong> {{ charge.titre }}</p>
+            <p><strong>Montant à déduire :</strong> {{ charge.get_montant_restant }} CFA</p>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="charge_id" value="{{ charge.id }}">
+                <button type="submit" class="btn btn-primary">Déduire du loyer</button>
+                <a href="{% url 'proprietes:liste_charges_bailleur' %}" class="btn btn-secondary ms-2">Annuler</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

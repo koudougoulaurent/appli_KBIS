@@ -1,0 +1,311 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Modifier {{ bailleur.get_nom_complet }} - Gestion Immobilière{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/phone_input_widget.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête avec navigation -->
+    <div class="dashboard-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1><i class="bi bi-pencil-square"></i> Modifier {{ bailleur.get_nom_complet }}</h1>
+                <p>Modifier les informations du bailleur</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'proprietes:bailleur_detail' bailleur.pk %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Retour au détail
+                </a>
+                <a href="{% url 'proprietes:bailleurs_liste' %}" class="btn btn-primary">
+                    <i class="bi bi-people"></i> Liste des bailleurs
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulaire principal -->
+    <div class="form-container">
+        <form method="POST" class="needs-validation" novalidate>
+            {% csrf_token %}
+            
+            <!-- Section Informations personnelles -->
+            <div class="form-section">
+                <h5><i class="bi bi-person"></i> Informations Personnelles</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.nom.id_for_label }}" class="form-label required">
+                                <i class="bi bi-person-badge"></i> {{ form.nom.label }}
+                            </label>
+                            {{ form.nom }}
+                            {% if form.nom.help_text %}
+                                <div class="form-text">{{ form.nom.help_text }}</div>
+                            {% endif %}
+                            {% if form.nom.errors %}
+                                <div class="invalid-feedback">{{ form.nom.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.prenom.id_for_label }}" class="form-label required">
+                                <i class="bi bi-person"></i> {{ form.prenom.label }}
+                            </label>
+                            {{ form.prenom }}
+                            {% if form.prenom.help_text %}
+                                <div class="form-text">{{ form.prenom.help_text }}</div>
+                            {% endif %}
+                            {% if form.prenom.errors %}
+                                <div class="invalid-feedback">{{ form.prenom.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Contact -->
+            <div class="form-section">
+                <h5><i class="bi bi-envelope"></i> Informations de Contact</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.email.id_for_label }}" class="form-label required">
+                                <i class="bi bi-envelope"></i> {{ form.email.label }}
+                            </label>
+                            {{ form.email }}
+                            {% if form.email.help_text %}
+                                <div class="form-text">{{ form.email.help_text }}</div>
+                            {% endif %}
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback">{{ form.email.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            {% include 'includes/phone_input_widget.html' with field=form.telephone %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label for="{{ form.adresse.id_for_label }}" class="form-label required">
+                                <i class="bi bi-geo-alt"></i> {{ form.adresse.label }}
+                            </label>
+                            {{ form.adresse }}
+                            {% if form.adresse.help_text %}
+                                <div class="form-text">{{ form.adresse.help_text }}</div>
+                            {% endif %}
+                            {% if form.adresse.errors %}
+                                <div class="invalid-feedback">{{ form.adresse.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Professionnelle -->
+            <div class="form-section">
+                <h5><i class="bi bi-briefcase"></i> Informations Professionnelles</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.profession.id_for_label }}" class="form-label">
+                                <i class="bi bi-person-workspace"></i> {{ form.profession.label }}
+                            </label>
+                            {{ form.profession }}
+                            {% if form.profession.help_text %}
+                                <div class="form-text">{{ form.profession.help_text }}</div>
+                            {% endif %}
+                            {% if form.profession.errors %}
+                                <div class="invalid-feedback">{{ form.profession.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.entreprise.id_for_label }}" class="form-label">
+                                <i class="bi bi-building"></i> {{ form.entreprise.label }}
+                            </label>
+                            {{ form.entreprise }}
+                            {% if form.entreprise.help_text %}
+                                <div class="form-text">{{ form.entreprise.help_text }}</div>
+                            {% endif %}
+                            {% if form.entreprise.errors %}
+                                <div class="invalid-feedback">{{ form.entreprise.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Bancaire -->
+            <div class="form-section">
+                <h5><i class="bi bi-bank"></i> Informations Bancaires</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.iban.id_for_label }}" class="form-label">
+                                <i class="bi bi-credit-card"></i> {{ form.iban.label }}
+                            </label>
+                            {{ form.iban }}
+                            {% if form.iban.help_text %}
+                                <div class="form-text">{{ form.iban.help_text }}</div>
+                            {% endif %}
+                            {% if form.iban.errors %}
+                                <div class="invalid-feedback">{{ form.iban.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.bic.id_for_label }}" class="form-label">
+                                <i class="bi bi-bank2"></i> {{ form.bic.label }}
+                            </label>
+                            {{ form.bic }}
+                            {% if form.bic.help_text %}
+                                <div class="form-text">{{ form.bic.help_text }}</div>
+                            {% endif %}
+                            {% if form.bic.errors %}
+                                <div class="invalid-feedback">{{ form.bic.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Notes -->
+            <div class="form-section">
+                <h5><i class="bi bi-journal-text"></i> Notes</h5>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">
+                                <i class="bi bi-pencil"></i> {{ form.notes.label }}
+                            </label>
+                            {{ form.notes }}
+                            {% if form.notes.help_text %}
+                                <div class="form-text">{{ form.notes.help_text }}</div>
+                            {% endif %}
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback">{{ form.notes.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions du formulaire -->
+            <div class="form-actions">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <a href="{% url 'proprietes:bailleur_detail' bailleur.pk %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Annuler
+                        </a>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="reset" class="btn btn-warning">
+                            <i class="bi bi-arrow-clockwise"></i> Réinitialiser
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle"></i> Enregistrer les Modifications
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Aide contextuelle -->
+    <div class="help-section mt-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-question-circle"></i> Aide - Modification de Bailleur</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6><i class="bi bi-info-circle"></i> Informations obligatoires</h6>
+                        <p class="text-muted">Les champs marqués d'un astérisque (*) sont obligatoires.</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="bi bi-bank"></i> Informations bancaires</h6>
+                        <p class="text-muted">Les informations bancaires sont optionnelles mais recommandées.</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="bi bi-journal-text"></i> Notes</h6>
+                        <p class="text-muted">Utilisez les notes pour enregistrer des informations importantes.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Validation en temps réel
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const inputs = form.querySelectorAll('input, select, textarea');
+    
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            validateField(this);
+        });
+        
+        input.addEventListener('input', function() {
+            if (this.classList.contains('is-invalid')) {
+                validateField(this);
+            }
+        });
+    });
+    
+    function validateField(field) {
+        const value = field.value.trim();
+        const isRequired = field.hasAttribute('required') || field.classList.contains('required');
+        
+        if (isRequired && !value) {
+            field.classList.add('is-invalid');
+            field.classList.remove('is-valid');
+        } else if (value) {
+            field.classList.add('is-valid');
+            field.classList.remove('is-invalid');
+        } else {
+            field.classList.remove('is-valid', 'is-invalid');
+        }
+    }
+    
+    // Validation du formulaire avant soumission
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        inputs.forEach(input => {
+            validateField(input);
+            if (input.classList.contains('is-invalid')) {
+                isValid = false;
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Veuillez corriger les erreurs dans le formulaire avant de continuer.');
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/africa_phone_codes.js' %}"></script>
+<script src="{% static 'js/phone_input_widget.js' %}"></script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/africa_parfait ! Maintenant, testons le composant de téléphone en démarrant le serveur Django pour voir si tout fonctionne correctement. Vérifions d'abord que tous les fichiers sont bien en place :
+<｜tool▁calls▁begin｜><｜tool▁call▁begin｜>
+list_dir 

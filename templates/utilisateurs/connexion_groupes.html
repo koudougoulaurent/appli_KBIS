@@ -1,0 +1,382 @@
+{% extends 'base_groupes.html' %}
+{% load static %}
+
+{% block title %}{{ titre_page }} - {{ version_app }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .login-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    
+    .login-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        padding: 40px;
+        width: 100%;
+        max-width: 500px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .login-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+    }
+    
+    .app-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    
+    .app-title {
+        color: #d32f2f;
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .app-version {
+        color: #666;
+        font-size: 14px;
+        font-weight: 500;
+    }
+    
+    .login-title {
+        color: #333;
+        font-size: 20px;
+        font-weight: 600;
+        text-align: center;
+        margin-bottom: 30px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .groupe-selection {
+        margin-bottom: 30px;
+    }
+    
+    .groupe-label {
+        color: #555;
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 15px;
+        display: block;
+    }
+    
+    .groupe-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .groupe-btn {
+        background: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 20px 15px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 600;
+        color: #495057;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 14px;
+    }
+    
+    .groupe-btn:hover {
+        background: #007bff;
+        border-color: #007bff;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+    }
+    
+    .groupe-btn.active {
+        background: #007bff;
+        border-color: #007bff;
+        color: white;
+        box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+    }
+    
+    .groupe-btn.caisse {
+        border-left: 4px solid #28a745;
+    }
+    
+    .groupe-btn.controles {
+        border-left: 4px solid #ffc107;
+    }
+    
+    .groupe-btn.administration {
+        border-left: 4px solid #17a2b8;
+    }
+    
+    .groupe-btn.privilege {
+        border-left: 4px solid #dc3545;
+    }
+    
+    .groupe-btn.caisse:hover,
+    .groupe-btn.caisse.active {
+        background: #28a745;
+        border-color: #28a745;
+    }
+    
+    .groupe-btn.controles:hover,
+    .groupe-btn.controles.active {
+        background: #ffc107;
+        border-color: #ffc107;
+        color: #212529;
+    }
+    
+    .groupe-btn.administration:hover,
+    .groupe-btn.administration.active {
+        background: #17a2b8;
+        border-color: #17a2b8;
+    }
+    
+    .groupe-btn.privilege:hover,
+    .groupe-btn.privilege.active {
+        background: #dc3545;
+        border-color: #dc3545;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-select {
+        width: 100%;
+        padding: 12px 15px;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.3s ease;
+    }
+    
+    .form-select:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+    }
+    
+    .btn-connecter {
+        width: 100%;
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        border: none;
+        border-radius: 8px;
+        padding: 15px;
+        color: white;
+        font-size: 16px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 10px;
+    }
+    
+    .btn-connecter:hover {
+        background: linear-gradient(45deg, #0056b3, #004085);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+    }
+    
+    .btn-connecter:active {
+        transform: translateY(0);
+    }
+    
+    .close-btn {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        font-size: 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+    
+    .close-btn:hover {
+        background: #c82333;
+        transform: scale(1.1);
+    }
+    
+    .groupe-description {
+        font-size: 12px;
+        color: #6c757d;
+        text-align: center;
+        margin-top: 5px;
+        font-style: italic;
+    }
+    
+    @media (max-width: 768px) {
+        .login-card {
+            padding: 30px 20px;
+            margin: 10px;
+        }
+        
+        .groupe-buttons {
+            grid-template-columns: 1fr;
+        }
+        
+        .app-title {
+            font-size: 20px;
+        }
+        
+        .login-title {
+            font-size: 18px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card">
+        <!-- Bouton de fermeture -->
+        <button class="close-btn" onclick="window.close()">×</button>
+        
+        <!-- En-tête de l'application -->
+        <div class="app-header">
+            <div class="app-title">{{ version_app }}</div>
+            <div class="app-version">Système de Gestion Immobilière</div>
+        </div>
+        
+        <!-- Titre de la page -->
+        <h1 class="login-title">{{ titre_page }}</h1>
+        
+        <!-- Messages d'erreur/succès -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <!-- Formulaire de sélection du groupe -->
+        <form method="post" id="groupeForm">
+            {% csrf_token %}
+            
+            <div class="groupe-selection">
+                <label class="groupe-label">CHOIX DU GROUPE DE TRAVAIL :</label>
+                
+                <!-- Boutons de sélection des groupes -->
+                <div class="groupe-buttons">
+                    {% for groupe in groupes %}
+                        <div class="groupe-btn {{ groupe.nom|lower }}" 
+                             onclick="selectGroupe('{{ groupe.nom }}')"
+                             data-groupe="{{ groupe.nom }}">
+                            {{ groupe.nom }}
+                            <div class="groupe-description">
+                                {% if groupe.nom == 'CAISSE' %}
+                                    Gestion des paiements et retraits
+                                {% elif groupe.nom == 'CONTROLES' %}
+                                    Contrôle et audit
+                                {% elif groupe.nom == 'ADMINISTRATION' %}
+                                    Gestion administrative
+                                {% elif groupe.nom == 'PRIVILEGE' %}
+                                    Accès complet
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Champ caché pour le groupe sélectionné -->
+                <input type="hidden" name="groupe" id="groupeSelected" required>
+                
+                <!-- Message d'aide -->
+                <div class="text-center text-muted mt-3">
+                    <small>Sélectionnez votre groupe de travail pour continuer</small>
+                </div>
+            </div>
+            
+            <!-- Bouton de connexion -->
+            <button type="submit" class="btn-connecter" id="btnConnecter" disabled>
+                <i class="fas fa-sign-in-alt me-2"></i>
+                SE CONNECTER
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+function selectGroupe(groupeNom) {
+    // Retirer la classe active de tous les boutons
+    document.querySelectorAll('.groupe-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Ajouter la classe active au bouton sélectionné
+    const selectedBtn = document.querySelector(`[data-groupe="${groupeNom}"]`);
+    if (selectedBtn) {
+        selectedBtn.classList.add('active');
+    }
+    
+    // Mettre à jour le champ caché
+    document.getElementById('groupeSelected').value = groupeNom;
+    
+    // Activer le bouton de connexion
+    document.getElementById('btnConnecter').disabled = false;
+    
+    // Animation de focus
+    selectedBtn.style.transform = 'scale(1.05)';
+    setTimeout(() => {
+        selectedBtn.style.transform = '';
+    }, 200);
+}
+
+// Animation d'entrée
+document.addEventListener('DOMContentLoaded', function() {
+    const loginCard = document.querySelector('.login-card');
+    loginCard.style.opacity = '0';
+    loginCard.style.transform = 'translateY(20px)';
+    
+    setTimeout(() => {
+        loginCard.style.transition = 'all 0.5s ease';
+        loginCard.style.opacity = '1';
+        loginCard.style.transform = 'translateY(0)';
+    }, 100);
+});
+
+// Validation du formulaire
+document.getElementById('groupeForm').addEventListener('submit', function(e) {
+    const groupeSelected = document.getElementById('groupeSelected').value;
+    
+    if (!groupeSelected) {
+        e.preventDefault();
+        alert('Veuillez sélectionner un groupe de travail.');
+        return false;
+    }
+});
+</script>
+{% endblock %} 

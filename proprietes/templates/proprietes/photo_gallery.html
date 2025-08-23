@@ -1,0 +1,548 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Galerie Photos - {{ propriete.adresse }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/css/lightbox.min.css">
+<style>
+    .gallery-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .gallery-header {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    
+    .gallery-title {
+        color: #495057;
+        margin-bottom: 15px;
+    }
+    
+    .gallery-subtitle {
+        color: #6c757d;
+        font-size: 1.1em;
+        margin-bottom: 20px;
+    }
+    
+    .gallery-stats {
+        display: flex;
+        justify-content: center;
+        gap: 30px;
+        flex-wrap: wrap;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 15px 25px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 8px;
+        min-width: 120px;
+    }
+    
+    .stat-number {
+        font-size: 2em;
+        font-weight: bold;
+        color: #007bff;
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9em;
+    }
+    
+    .gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 25px;
+        margin-bottom: 40px;
+    }
+    
+    .gallery-item {
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        transition: all 0.3s ease;
+        background: white;
+    }
+    
+    .gallery-item:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+    }
+    
+    .gallery-item img {
+        width: 100%;
+        height: 250px;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+    
+    .gallery-item:hover img {
+        transform: scale(1.05);
+    }
+    
+    .gallery-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(transparent, rgba(0,0,0,0.9));
+        color: white;
+        padding: 25px 20px 20px;
+        transform: translateY(100%);
+        transition: transform 0.3s ease;
+    }
+    
+    .gallery-item:hover .gallery-overlay {
+        transform: translateY(0);
+    }
+    
+    .gallery-title {
+        font-size: 1.2em;
+        font-weight: bold;
+        margin-bottom: 8px;
+    }
+    
+    .gallery-description {
+        font-size: 0.9em;
+        opacity: 0.9;
+        margin-bottom: 15px;
+        line-height: 1.4;
+    }
+    
+    .gallery-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.8em;
+        opacity: 0.8;
+    }
+    
+    .gallery-badge {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        font-weight: bold;
+        box-shadow: 0 2px 10px rgba(40, 167, 69, 0.3);
+    }
+    
+    .gallery-actions {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        display: flex;
+        gap: 8px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .gallery-item:hover .gallery-actions {
+        opacity: 1;
+    }
+    
+    .gallery-btn {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        border: none;
+        color: white;
+        font-size: 0.9em;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .gallery-btn-primary {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    }
+    
+    .gallery-btn-primary:hover {
+        background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+        transform: scale(1.1);
+    }
+    
+    .gallery-btn-warning {
+        background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    }
+    
+    .gallery-btn-warning:hover {
+        background: linear-gradient(135deg, #e0a800 0%, #c69500 100%);
+        transform: scale(1.1);
+    }
+    
+    .gallery-btn-danger {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    }
+    
+    .gallery-btn-danger:hover {
+        background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%);
+        transform: scale(1.1);
+    }
+    
+    .gallery-empty {
+        text-align: center;
+        padding: 80px 20px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+    }
+    
+    .gallery-empty-icon {
+        font-size: 5em;
+        color: #dee2e6;
+        margin-bottom: 20px;
+    }
+    
+    .gallery-empty h3 {
+        color: #6c757d;
+        margin-bottom: 15px;
+    }
+    
+    .gallery-empty p {
+        color: #adb5bd;
+        margin-bottom: 30px;
+    }
+    
+    .gallery-navigation {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+        padding: 25px;
+        margin-bottom: 30px;
+    }
+    
+    .nav-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .nav-btn {
+        padding: 12px 25px;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .nav-btn:hover {
+        transform: translateY(-2px);
+        text-decoration: none;
+    }
+    
+    .lightbox-custom {
+        background: rgba(0,0,0,0.9);
+    }
+    
+    .lightbox-custom .lb-data {
+        background: rgba(0,0,0,0.8);
+        color: white;
+    }
+    
+    .lightbox-custom .lb-data .lb-caption {
+        font-size: 1.1em;
+        font-weight: bold;
+    }
+    
+    .lightbox-custom .lb-data .lb-details {
+        font-size: 0.9em;
+        opacity: 0.8;
+    }
+    
+    .lightbox-custom .lb-nav a.lb-prev,
+    .lightbox-custom .lb-nav a.lb-next {
+        opacity: 0.8;
+    }
+    
+    .lightbox-custom .lb-nav a.lb-prev:hover,
+    .lightbox-custom .lb-nav a.lb-next:hover {
+        opacity: 1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="fas fa-images text-primary"></i>
+                Galerie Photos
+            </h1>
+            <p class="text-muted mb-0">{{ propriete.adresse }}</p>
+        </div>
+        <div>
+            <a href="{% url 'proprietes:photo_list' propriete.id %}" class="btn btn-outline-secondary">
+                <i class="fas fa-cog"></i> Gérer les photos
+            </a>
+            <a href="{% url 'proprietes:detail' propriete.id %}" class="btn btn-outline-primary">
+                <i class="fas fa-home"></i> Retour à la propriété
+            </a>
+        </div>
+    </div>
+
+    <div class="gallery-container">
+        <!-- En-tête de la galerie -->
+        <div class="gallery-header">
+            <h2 class="gallery-title">
+                <i class="fas fa-camera"></i> Galerie Photos de la Propriété
+            </h2>
+            <p class="gallery-subtitle">{{ propriete.adresse }}</p>
+            
+            <div class="gallery-stats">
+                <div class="stat-item">
+                    <div class="stat-number">{{ photos.count }}</div>
+                    <div class="stat-label">Photos totales</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">
+                        {% if photo_principale %}1{% else %}0{% endif %}
+                    </div>
+                    <div class="stat-label">Photo principale</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">
+                        {% if propriete.type_bien %}{{ propriete.type_bien.nom }}{% else %}N/A{% endif %}
+                    </div>
+                    <div class="stat-label">Type de bien</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">
+                        {% if propriete.bailleur %}{{ propriete.bailleur.nom }}{% else %}N/A{% endif %}
+                    </div>
+                    <div class="stat-label">Bailleur</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation de la galerie -->
+        <div class="gallery-navigation">
+            <div class="nav-buttons">
+                <a href="{% url 'proprietes:photo_create' propriete.id %}" class="nav-btn btn btn-primary">
+                    <i class="fas fa-plus"></i> Ajouter une photo
+                </a>
+                <a href="{% url 'proprietes:photo_multiple_upload' propriete.id %}" class="nav-btn btn btn-success">
+                    <i class="fas fa-upload"></i> Upload multiple
+                </a>
+                <a href="{% url 'proprietes:photo_list' propriete.id %}" class="nav-btn btn btn-info">
+                    <i class="fas fa-list"></i> Vue liste
+                </a>
+                <a href="{% url 'proprietes:detail' propriete.id %}" class="nav-btn btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </a>
+            </div>
+        </div>
+
+        <!-- Grille des photos -->
+        {% if photos %}
+            <div class="gallery-grid">
+                {% for photo in photos %}
+                <div class="gallery-item">
+                    {% if photo.est_principale %}
+                        <div class="gallery-badge">
+                            <i class="fas fa-star"></i> Principale
+                        </div>
+                    {% endif %}
+                    
+                    <img src="{{ photo.image.url }}" 
+                         alt="{{ photo.titre }}"
+                         data-lightbox="gallery"
+                         data-title="{{ photo.titre }}"
+                         data-alt="{{ photo.description|default:photo.titre }}">
+                    
+                    <div class="gallery-overlay">
+                        <div class="gallery-title">{{ photo.titre }}</div>
+                        {% if photo.description %}
+                            <div class="gallery-description">{{ photo.description }}</div>
+                        {% endif %}
+                        <div class="gallery-meta">
+                            <span>
+                                <i class="fas fa-sort-numeric-up"></i> Ordre: {{ photo.ordre }}
+                            </span>
+                            <span>
+                                <i class="fas fa-calendar"></i> {{ photo.date_creation|date:"d/m/Y" }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="gallery-actions">
+                        <button class="gallery-btn gallery-btn-primary" 
+                                onclick="setMainPhoto({{ photo.id }})"
+                                title="Définir comme principale"
+                                {% if photo.est_principale %}disabled{% endif %}>
+                            <i class="fas fa-star"></i>
+                        </button>
+                        <a href="{% url 'proprietes:photo_update' photo.id %}" 
+                           class="gallery-btn gallery-btn-warning"
+                           title="Modifier">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button class="gallery-btn gallery-btn-danger" 
+                                onclick="deletePhoto({{ photo.id }})"
+                                title="Supprimer">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="gallery-empty">
+                <div class="gallery-empty-icon">
+                    <i class="fas fa-images"></i>
+                </div>
+                <h3>Aucune photo disponible</h3>
+                <p>Cette propriété n'a pas encore de photos. Commencez par ajouter des images pour créer une belle galerie.</p>
+                <div class="nav-buttons">
+                    <a href="{% url 'proprietes:photo_create' propriete.id %}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-plus"></i> Ajouter la première photo
+                    </a>
+                    <a href="{% url 'proprietes:photo_multiple_upload' propriete.id %}" class="btn btn-success btn-lg">
+                        <i class="fas fa-upload"></i> Upload multiple
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/js/lightbox.min.js"></script>
+<script>
+// Configuration Lightbox personnalisée
+lightbox.option({
+    'resizeDuration': 300,
+    'wrapAround': true,
+    'albumLabel': 'Photo %1 sur %2',
+    'fadeDuration': 300,
+    'imageFadeDuration': 300,
+    'positionFromTop': 50,
+    'showImageNumberLabel': true,
+    'alwaysShowNavOnTouchDevices': true,
+    'enableKeyboardNav': true,
+    'disableScrolling': true,
+    'maxWidth': 1200,
+    'maxHeight': 800
+});
+
+// Définir une photo comme principale
+function setMainPhoto(photoId) {
+    if (confirm('Définir cette photo comme photo principale ?')) {
+        fetch(`{% url 'proprietes:photo_set_main' 0 %}`.replace('0', photoId), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                location.reload();
+            } else {
+                alert(data.message || 'Erreur lors de la modification');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la modification');
+        });
+    }
+}
+
+// Supprimer une photo
+function deletePhoto(photoId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette photo ?')) {
+        fetch(`{% url 'proprietes:photo_delete_ajax' 0 %}`.replace('0', photoId), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                location.reload();
+            } else {
+                alert(data.message || 'Erreur lors de la suppression');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la suppression');
+        });
+    }
+}
+
+// Utilitaires
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Animation d'entrée des éléments
+document.addEventListener('DOMContentLoaded', function() {
+    const galleryItems = document.querySelectorAll('.gallery-item');
+    
+    galleryItems.forEach((item, index) => {
+        item.style.opacity = '0';
+        item.style.transform = 'translateY(30px)';
+        
+        setTimeout(() => {
+            item.style.transition = 'all 0.6s ease';
+            item.style.opacity = '1';
+            item.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+
+// Lazy loading des images
+if ('IntersectionObserver' in window) {
+    const imageObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                img.src = img.dataset.src || img.src;
+                img.classList.remove('lazy');
+                imageObserver.unobserve(img);
+            }
+        });
+    });
+
+    document.querySelectorAll('img[data-src]').forEach(img => {
+        imageObserver.observe(img);
+    });
+}
+</script>
+{% endblock %}

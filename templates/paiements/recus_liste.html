@@ -1,0 +1,417 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Gestion des Reçus - GESTIMMOB{% endblock %}
+
+{% block extra_css %}
+<style>
+    .receipt-card {
+        border-left: 4px solid #28a745;
+        transition: all 0.3s ease;
+    }
+    .receipt-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .receipt-card.imprime {
+        border-left-color: #6c757d;
+        opacity: 0.8;
+    }
+    .receipt-card.non-imprime {
+        border-left-color: #ffc107;
+    }
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .filter-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-receipt text-primary"></i>
+                Gestion des Reçus
+            </h1>
+            <p class="text-muted">Gérez et imprimez les reçus de paiement</p>
+        </div>
+        <div class="action-buttons">
+            <a href="{% url 'paiements:recus_generer_automatiques' %}" class="btn btn-success">
+                <i class="fas fa-magic"></i> Générer Automatiquement
+            </a>
+            <button type="button" class="btn btn-primary" onclick="marquerSelectionnesImprimes()">
+                <i class="fas fa-print"></i> Marquer Imprimés
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Reçus
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_recus }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-receipt fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Imprimés
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ recus_imprimes }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-print fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Non Imprimés
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ recus_non_imprimes }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Montant Total
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{% include 'includes/montant.html' with montant=montant_total devise_source=devise_base %}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-money-bill-wave fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="filter-section">
+        <form method="get" class="row g-3">
+            <div class="col-md-2">
+                <label for="statut_impression" class="form-label">Statut Impression</label>
+                <select name="statut_impression" id="statut_impression" class="form-select">
+                    <option value="">Tous</option>
+                    <option value="imprime" {% if filtres.statut_impression == 'imprime' %}selected{% endif %}>Imprimés</option>
+                    <option value="non_imprime" {% if filtres.statut_impression == 'non_imprime' %}selected{% endif %}>Non Imprimés</option>
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label for="date_debut" class="form-label">Date Début</label>
+                <input type="date" name="date_debut" id="date_debut" class="form-control" value="{{ filtres.date_debut }}">
+            </div>
+            
+            <div class="col-md-2">
+                <label for="date_fin" class="form-label">Date Fin</label>
+                <input type="date" name="date_fin" id="date_fin" class="form-control" value="{{ filtres.date_fin }}">
+            </div>
+            
+            <div class="col-md-2">
+                <label for="locataire" class="form-label">Locataire</label>
+                <input type="text" name="locataire" id="locataire" class="form-control" value="{{ filtres.locataire }}" placeholder="Nom locataire">
+            </div>
+            
+            <div class="col-md-2">
+                <label for="type_paiement" class="form-label">Type Paiement</label>
+                <select name="type_paiement" id="type_paiement" class="form-select">
+                    <option value="">Tous</option>
+                    <option value="loyer" {% if filtres.type_paiement == 'loyer' %}selected{% endif %}>Loyer</option>
+                    <option value="charges" {% if filtres.type_paiement == 'charges' %}selected{% endif %}>Charges</option>
+                    <option value="depot_garantie" {% if filtres.type_paiement == 'depot_garantie' %}selected{% endif %}>Dépôt de garantie</option>
+                    <option value="regularisation" {% if filtres.type_paiement == 'regularisation' %}selected{% endif %}>Régularisation</option>
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label for="tri" class="form-label">Tri</label>
+                <select name="tri" id="tri" class="form-select">
+                    <option value="date_emission" {% if filtres.tri == 'date_emission' %}selected{% endif %}>Date d'émission</option>
+                    <option value="numero" {% if filtres.tri == 'numero' %}selected{% endif %}>Numéro</option>
+                    <option value="locataire" {% if filtres.tri == 'locataire' %}selected{% endif %}>Locataire</option>
+                    <option value="montant" {% if filtres.tri == 'montant' %}selected{% endif %}>Montant</option>
+                    <option value="imprime" {% if filtres.tri == 'imprime' %}selected{% endif %}>Statut impression</option>
+                </select>
+            </div>
+            
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Filtrer
+                </button>
+                <a href="{% url 'paiements:recus_liste' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Réinitialiser
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Liste des reçus -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Liste des Reçus</h6>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="selectAll">
+                <label class="form-check-label" for="selectAll">
+                    Tout sélectionner
+                </label>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if page_obj %}
+                <div class="row">
+                    {% for recu in page_obj %}
+                    <div class="col-lg-6 col-xl-4 mb-4">
+                        <div class="card receipt-card {% if recu.imprime %}imprime{% else %}non-imprime{% endif %} h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-receipt text-primary"></i>
+                                    {{ recu.numero_recu }}
+                                </h6>
+                                <div class="form-check">
+                                    <input class="form-check-input recu-checkbox" type="checkbox" value="{{ recu.id }}">
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-2">
+                                    <div class="col-6">
+                                        <small class="text-muted">Locataire:</small>
+                                        <div class="font-weight-bold">{{ recu.paiement.contrat.locataire.nom }} {{ recu.paiement.contrat.locataire.prenom }}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Montant:</small>
+                                        <div class="font-weight-bold text-success">{% include 'includes/montant.html' with montant=recu.paiement.montant devise_source=devise_base %}</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-2">
+                                    <div class="col-6">
+                                        <small class="text-muted">Type:</small>
+                                        <div>{{ recu.paiement.get_type_paiement_display }}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Date:</small>
+                                        <div>{{ recu.date_emission|date:"d/m/Y" }}</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <small class="text-muted">Propriété:</small>
+                                        <div class="text-truncate">{{ recu.paiement.contrat.propriete.titre }}</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        {% if recu.imprime %}
+                                            <span class="badge bg-secondary status-badge">
+                                                <i class="fas fa-print"></i> Imprimé
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning status-badge">
+                                                <i class="fas fa-clock"></i> Non Imprimé
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'paiements:recu_detail' recu.pk %}" class="btn btn-outline-primary" title="Détails">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'paiements:recu_impression' recu.pk %}" class="btn btn-outline-success" title="Imprimer" target="_blank">
+                                            <i class="bi bi-printer"></i>
+                                        </a>
+                                        <a href="{% url 'paiements:recu_telecharger_pdf' recu.pk %}" class="btn btn-outline-info" title="Télécharger PDF">
+                                            <i class="fas fa-download"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Pagination -->
+                {% if page_obj.has_other_pages %}
+                <nav aria-label="Pagination des reçus">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fas fa-angle-left"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fas fa-angle-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+                
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Aucun reçu trouvé</h5>
+                    <p class="text-muted">Aucun reçu ne correspond aux critères de recherche.</p>
+                    <a href="{% url 'paiements:recus_generer_automatiques' %}" class="btn btn-primary">
+                        <i class="fas fa-magic"></i> Générer des reçus
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Sélection multiple
+document.getElementById('selectAll').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.recu-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+});
+
+// Marquer les reçus sélectionnés comme imprimés
+function marquerSelectionnesImprimes() {
+    const checkboxes = document.querySelectorAll('.recu-checkbox:checked');
+    const recusIds = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (recusIds.length === 0) {
+        alert('Veuillez sélectionner au moins un reçu.');
+        return;
+    }
+    
+    if (confirm(`Voulez-vous marquer ${recusIds.length} reçu(s) comme imprimé(s) ?`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{% url "paiements:recus_marquer_imprimes" %}';
+        
+        // Ajouter le token CSRF
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+        
+        // Ajouter les IDs des reçus
+        recusIds.forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'recus_selectionnes';
+            input.value = id;
+            form.appendChild(input);
+        });
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Mise à jour automatique des statistiques
+function updateStats() {
+    fetch('{% url "paiements:api_recus_stats" %}')
+        .then(response => response.json())
+        .then(data => {
+            // Mettre à jour les statistiques si nécessaire
+            console.log('Statistiques mises à jour:', data);
+        })
+        .catch(error => console.error('Erreur lors de la mise à jour des statistiques:', error));
+}
+
+// Mise à jour toutes les 30 secondes
+setInterval(updateStats, 30000);
+</script>
+{% endblock %} 

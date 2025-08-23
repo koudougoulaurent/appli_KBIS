@@ -1,0 +1,342 @@
+{% extends 'base_liste_intelligente.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}Retraits - Gestion Immobilière{% endblock %}
+
+{% block extra_css %}
+<style>
+    .retraits-section {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .retraits-section h3 {
+        color: #495057;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .retraits-bailleur-section {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+    
+    .retraits-bailleur-section h3 {
+        color: #6c757d;
+        margin-bottom: 1rem;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stat-card .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-card .stat-label {
+        font-size: 0.875rem;
+        opacity: 0.9;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .btn-retrait-bailleur {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-retrait-bailleur:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête de la page -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="bi bi-bank text-primary me-2"></i>
+                Gestion des Retraits
+            </h1>
+            <p class="text-muted mb-0">Gérez tous les retraits et versements</p>
+        </div>
+        <div class="action-buttons">
+            <a href="{% url 'paiements:retrait_ajouter' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>Nouveau Retrait
+            </a>
+            <a href="{% url 'paiements:creer_retrait_bailleur' %}" class="btn-retrait-bailleur">
+                <i class="bi bi-cash-stack me-2"></i>Nouveau Retrait Bailleur
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistiques générales -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <span class="stat-number">{{ total_retraits|default:0 }}</span>
+            <span class="stat-label">Retraits Totaux</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number">{{ retraits_valides|default:0 }}</span>
+            <span class="stat-label">Retraits Validés</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number">{{ retraits_en_attente|default:0 }}</span>
+            <span class="stat-label">En Attente</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number">{{ total_retraits_bailleur|default:0 }}</span>
+            <span class="stat-label">Retraits Bailleurs</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number">{{ retraits_bailleur_valides|default:0 }}</span>
+            <span class="stat-label">Bailleurs Validés</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number">{{ montant_total|floatformat:0 }} XOF</span>
+            <span class="stat-label">Montant Total</span>
+        </div>
+    </div>
+
+    <!-- Section Retraits Généraux -->
+    <div class="retraits-section">
+        <h3>
+            <i class="bi bi-bank me-2"></i>
+            Retraits Généraux
+        </h3>
+        
+        <!-- Recherche et filtres -->
+        <div class="intelligent-search-box">
+            <input type="text" class="form-control" placeholder="Rechercher dans les retraits..." id="searchInput">
+            <i class="bi bi-search search-icon"></i>
+        </div>
+        
+        <!-- Tableau des retraits -->
+        {% if page_obj %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Bailleur</th>
+                            <th>Montant</th>
+                            <th>Type</th>
+                            <th>Statut</th>
+                            <th>Mode</th>
+                            <th>Date Demande</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for retrait in page_obj %}
+                        <tr>
+                            <td>
+                                {% if retrait.bailleur %}
+                                    <strong>{{ retrait.bailleur.nom }} {{ retrait.bailleur.prenom }}</strong>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-success fs-6">{{ retrait.montant|floatformat:0 }} XOF</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ retrait.get_type_retrait_display }}</span>
+                            </td>
+                            <td>
+                                {% if retrait.statut == 'valide' %}
+                                    <span class="badge bg-success">Validé</span>
+                                {% elif retrait.statut == 'en_attente' %}
+                                    <span class="badge bg-warning">En Attente</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Annulé</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ retrait.get_mode_retrait_display }}</span>
+                            </td>
+                            <td>{{ retrait.date_demande|date:"d/m/Y" }}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'paiements:retrait_detail' retrait.pk %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'paiements:retrait_modifier' retrait.pk %}" class="btn btn-sm btn-outline-warning">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+                <nav aria-label="Pagination des retraits">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Précédent</a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Suivant</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted"></i>
+                <h4 class="mt-3">Aucun retrait trouvé</h4>
+                <p class="text-muted">Commencez par créer votre premier retrait</p>
+                <a href="{% url 'paiements:retrait_ajouter' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-2"></i>Créer un retrait
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Section Retraits Bailleurs -->
+    <div class="retraits-bailleur-section">
+        <h3>
+            <i class="bi bi-cash-stack me-2"></i>
+            Retraits Bailleurs Récents
+        </h3>
+        
+        {% if retraits_bailleurs %}
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Bailleur</th>
+                            <th>Mois</th>
+                            <th>Montant</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for retrait_bailleur in retraits_bailleurs %}
+                        <tr>
+                            <td>
+                                <strong>{{ retrait_bailleur.bailleur.nom }} {{ retrait_bailleur.bailleur.prenom }}</strong>
+                            </td>
+                            <td>{{ retrait_bailleur.mois_retrait|date:"m/Y" }}</td>
+                            <td>
+                                <span class="badge bg-success">{{ retrait_bailleur.montant|floatformat:0 }} XOF</span>
+                            </td>
+                            <td>
+                                {% if retrait_bailleur.statut == 'valide' %}
+                                    <span class="badge bg-success">Validé</span>
+                                {% elif retrait_bailleur.statut == 'en_attente' %}
+                                    <span class="badge bg-warning">En Attente</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Annulé</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'paiements:detail_retrait_bailleur' retrait_bailleur.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="text-center mt-3">
+                <a href="{% url 'paiements:creer_retrait_bailleur' %}" class="btn btn-success">
+                    <i class="bi bi-plus-circle me-2"></i>Voir tous les retraits bailleurs
+                </a>
+            </div>
+        {% else %}
+            <div class="text-center py-3">
+                <i class="bi bi-cash-stack display-4 text-muted"></i>
+                <p class="text-muted mt-2">Aucun retrait bailleur pour le moment</p>
+                <a href="{% url 'paiements:creer_retrait_bailleur' %}" class="btn btn-success">
+                    <i class="bi bi-plus-circle me-2"></i>Créer un retrait bailleur
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Recherche en temps réel
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const tableRows = document.querySelectorAll('tbody tr');
+            
+            tableRows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

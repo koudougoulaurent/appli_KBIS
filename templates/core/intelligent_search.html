@@ -1,0 +1,661 @@
+{% extends 'base.html' %}
+
+{% block title %}Recherche Intelligente - GESTIMMOB{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+    
+    .search-box {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .search-input {
+        border: none;
+        border-bottom: 3px solid #667eea;
+        font-size: 1.2rem;
+        padding: 1rem 0;
+        width: 100%;
+        outline: none;
+        transition: all 0.3s ease;
+    }
+    
+    .search-input:focus {
+        border-bottom-color: #764ba2;
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+    
+    .search-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        z-index: 1000;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .suggestion-item {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+    
+    .suggestion-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .suggestion-item:last-child {
+        border-bottom: none;
+    }
+    
+    .search-filters {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .filter-group {
+        margin-bottom: 1rem;
+    }
+    
+    .filter-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+    
+    .filter-controls {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .filter-chip {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 20px;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+    }
+    
+    .filter-chip:hover {
+        border-color: #667eea;
+        background-color: #f8f9ff;
+    }
+    
+    .filter-chip.active {
+        background-color: #667eea;
+        border-color: #667eea;
+        color: white;
+    }
+    
+    .results-container {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+    }
+    
+    .result-item {
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .result-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        border-color: #667eea;
+    }
+    
+    .result-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+    
+    .result-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .result-subtitle {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .result-score {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .result-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .detail-item {
+        text-align: center;
+        padding: 0.75rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .detail-label {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-bottom: 0.25rem;
+    }
+    
+    .detail-value {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    
+    .analytics-panel {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .analytics-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .analytics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    
+    .analytics-item {
+        text-align: center;
+        padding: 1rem;
+        background: rgba(255,255,255,0.1);
+        border-radius: 10px;
+    }
+    
+    .analytics-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+    
+    .analytics-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    
+    .insights-panel {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .insight-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .insight-icon {
+        color: #856404;
+        margin-right: 0.5rem;
+    }
+    
+    .sort-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 10px;
+    }
+    
+    .sort-select {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        background: white;
+        cursor: pointer;
+    }
+    
+    .loading-spinner {
+        display: none;
+        text-align: center;
+        padding: 2rem;
+    }
+    
+    .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .no-results {
+        text-align: center;
+        padding: 3rem;
+        color: #6c757d;
+    }
+    
+    .no-results-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="search-container">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="text-white text-center mb-4">
+                    <i class="bi bi-search"></i> Recherche Intelligente
+                </h1>
+                <p class="text-white text-center opacity-75">
+                    Trouvez rapidement ce que vous cherchez avec notre moteur de recherche avancé
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Barre de recherche principale -->
+    <div class="search-box">
+        <form method="GET" id="searchForm">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="position-relative">
+                        <input type="text" 
+                               class="search-input" 
+                               name="q" 
+                               id="searchInput"
+                               placeholder="Recherchez des propriétés, contrats, paiements... (ex: appartement 2 pièces à Paris moins de 800 XOF)"
+                               value="{{ search_query }}"
+                               autocomplete="off">
+                        <div class="search-suggestions" id="searchSuggestions" style="display: none;"></div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-search"></i> Rechercher
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Filtres intelligents -->
+    <div class="search-filters">
+        <h5><i class="bi bi-funnel"></i> Filtres Intelligents</h5>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="filter-group">
+                    <div class="filter-label">Prix</div>
+                    <div class="filter-controls">
+                        <div class="filter-chip" data-filter="prix" data-value="0-500">0-500 XOF</div>
+                        <div class="filter-chip" data-filter="prix" data-value="500-1000">500-1000 XOF</div>
+                        <div class="filter-chip" data-filter="prix" data-value="1000+">1000 XOF+</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="filter-group">
+                    <div class="filter-label">Type</div>
+                    <div class="filter-controls">
+                        <div class="filter-chip" data-filter="type" data-value="appartement">Appartement</div>
+                        <div class="filter-chip" data-filter="type" data-value="maison">Maison</div>
+                        <div class="filter-chip" data-filter="type" data-value="studio">Studio</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="filter-group">
+                    <div class="filter-label">Statut</div>
+                    <div class="filter-controls">
+                        <div class="filter-chip" data-filter="statut" data-value="disponible">Disponible</div>
+                        <div class="filter-chip" data-filter="statut" data-value="loue">Loué</div>
+                        <div class="filter-chip" data-filter="statut" data-value="urgent">Urgent</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="filter-group">
+                    <div class="filter-label">Tri</div>
+                    <div class="filter-controls">
+                        <div class="filter-chip" data-sort="relevance">Pertinence</div>
+                        <div class="filter-chip" data-sort="date">Date</div>
+                        <div class="filter-chip" data-sort="prix">Prix</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics de recherche -->
+    {% if analytics %}
+    <div class="analytics-panel">
+        <div class="analytics-title">
+            <i class="bi bi-graph-up"></i> Analyse de votre recherche
+        </div>
+        <div class="analytics-grid">
+            <div class="analytics-item">
+                <div class="analytics-value">{{ total_results }}</div>
+                <div class="analytics-label">Résultats trouvés</div>
+            </div>
+            <div class="analytics-item">
+                <div class="analytics-value">{{ search_time|floatformat:2 }}s</div>
+                <div class="analytics-label">Temps de recherche</div>
+            </div>
+            <div class="analytics-item">
+                <div class="analytics-value">{{ analytics.complexity|title }}</div>
+                <div class="analytics-label">Complexité</div>
+            </div>
+            <div class="analytics-item">
+                <div class="analytics-value">{{ analytics.word_count }}</div>
+                <div class="analytics-label">Mots-clés</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Insights intelligents -->
+    {% if stats.insights %}
+    <div class="insights-panel">
+        <h6><i class="bi bi-lightbulb"></i> Insights intelligents</h6>
+        {% for insight in stats.insights %}
+        <div class="insight-item">
+            <i class="bi bi-info-circle insight-icon"></i>
+            <span>{{ insight }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Contrôles de tri -->
+    <div class="sort-controls">
+        <div>
+            <span class="me-2">Trier par:</span>
+            <select class="sort-select" id="sortSelect">
+                <option value="relevance" {% if sort_type == 'relevance' %}selected{% endif %}>Pertinence</option>
+                <option value="date" {% if sort_type == 'date' %}selected{% endif %}>Date</option>
+                <option value="prix" {% if sort_type == 'prix' %}selected{% endif %}>Prix</option>
+                <option value="surface" {% if sort_type == 'surface' %}selected{% endif %}>Surface</option>
+            </select>
+        </div>
+        <div>
+            <span class="text-muted">{{ total_results }} résultat{{ total_results|pluralize }}</span>
+        </div>
+    </div>
+
+    <!-- Spinner de chargement -->
+    <div class="loading-spinner" id="loadingSpinner">
+        <div class="spinner"></div>
+        <p class="mt-2">Recherche en cours...</p>
+    </div>
+
+    <!-- Résultats -->
+    <div class="results-container" id="resultsContainer">
+        {% if proprietes %}
+            {% for propriete in proprietes %}
+            <div class="result-item" onclick="window.location.href='{% url 'proprietes:detail' propriete.id %}'">
+                <div class="result-header">
+                    <div>
+                        <div class="result-title">{{ propriete.titre }}</div>
+                        <div class="result-subtitle">{{ propriete.adresse }}, {{ propriete.ville }}</div>
+                    </div>
+                    <div class="result-score">
+                        {% if propriete.relevance_score %}
+                            {{ propriete.relevance_score|floatformat:1 }}
+                        {% else %}
+                            ★
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="result-details">
+                    <div class="detail-item">
+                        <div class="detail-label">Prix</div>
+                        <div class="detail-value">{{ propriete.loyer_actuel }} XOF</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Surface</div>
+                        <div class="detail-value">{{ propriete.surface }}m²</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Type</div>
+                        <div class="detail-value">{{ propriete.type_bien.nom }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Statut</div>
+                        <div class="detail-value">
+                            {% if propriete.disponible %}
+                                <span class="badge bg-success">Disponible</span>
+                            {% else %}
+                                <span class="badge bg-warning">Loué</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="no-results">
+                <div class="no-results-icon">
+                    <i class="bi bi-search"></i>
+                </div>
+                <h4>Aucun résultat trouvé</h4>
+                <p class="text-muted">
+                    Essayez de modifier vos critères de recherche ou utilisez des mots-clés différents.
+                </p>
+                {% if suggestions %}
+                <div class="mt-3">
+                    <h6>Suggestions :</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for suggestion in suggestions %}
+                        <span class="badge bg-light text-dark">{{ suggestion }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Pagination -->
+    {% if proprietes.has_other_pages %}
+    <nav aria-label="Pagination des résultats">
+        <ul class="pagination justify-content-center">
+            {% if proprietes.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?q={{ search_query }}&page={{ proprietes.previous_page_number }}&sort={{ sort_type }}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            {% endif %}
+            
+            {% for num in proprietes.paginator.page_range %}
+                {% if proprietes.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% elif num > proprietes.number|add:'-3' and num < proprietes.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?q={{ search_query }}&page={{ num }}&sort={{ sort_type }}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if proprietes.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?q={{ search_query }}&page={{ proprietes.next_page_number }}&sort={{ sort_type }}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const searchSuggestions = document.getElementById('searchSuggestions');
+    const searchForm = document.getElementById('searchForm');
+    const sortSelect = document.getElementById('sortSelect');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const resultsContainer = document.getElementById('resultsContainer');
+    
+    let searchTimeout;
+    
+    // Recherche en temps réel avec suggestions
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+        
+        if (query.length >= 2) {
+            searchTimeout = setTimeout(() => {
+                fetchSuggestions(query);
+            }, 300);
+        } else {
+            searchSuggestions.style.display = 'none';
+        }
+    });
+    
+    // Cacher les suggestions quand on clique ailleurs
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !searchSuggestions.contains(e.target)) {
+            searchSuggestions.style.display = 'none';
+        }
+    });
+    
+    // Gestion des filtres
+    document.querySelectorAll('.filter-chip').forEach(chip => {
+        chip.addEventListener('click', function() {
+            const filterType = this.dataset.filter;
+            const filterValue = this.dataset.value;
+            
+            if (filterType) {
+                // Ajouter le filtre à l'URL
+                const url = new URL(window.location);
+                url.searchParams.set(filterType, filterValue);
+                window.location.href = url.toString();
+            } else if (this.dataset.sort) {
+                // Changer le tri
+                const url = new URL(window.location);
+                url.searchParams.set('sort', this.dataset.sort);
+                window.location.href = url.toString();
+            }
+        });
+    });
+    
+    // Tri dynamique
+    sortSelect.addEventListener('change', function() {
+        const url = new URL(window.location);
+        url.searchParams.set('sort', this.value);
+        window.location.href = url.toString();
+    });
+    
+    // Soumission du formulaire avec loading
+    searchForm.addEventListener('submit', function() {
+        loadingSpinner.style.display = 'block';
+        resultsContainer.style.opacity = '0.5';
+    });
+    
+    // Fonction pour récupérer les suggestions
+    function fetchSuggestions(query) {
+        fetch(`/core/search-suggestions/?q=${encodeURIComponent(query)}&model=propriete`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.suggestions && data.suggestions.length > 0) {
+                    displaySuggestions(data.suggestions);
+                } else {
+                    searchSuggestions.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Erreur lors de la récupération des suggestions:', error);
+            });
+    }
+    
+    // Fonction pour afficher les suggestions
+    function displaySuggestions(suggestions) {
+        searchSuggestions.innerHTML = '';
+        
+        suggestions.forEach(suggestion => {
+            const item = document.createElement('div');
+            item.className = 'suggestion-item';
+            item.textContent = suggestion;
+            item.addEventListener('click', function() {
+                searchInput.value = suggestion;
+                searchSuggestions.style.display = 'none';
+                searchForm.submit();
+            });
+            searchSuggestions.appendChild(item);
+        });
+        
+        searchSuggestions.style.display = 'block';
+    }
+    
+    // Recherche automatique après 2 secondes d'inactivité
+    let autoSearchTimeout;
+    searchInput.addEventListener('input', function() {
+        clearTimeout(autoSearchTimeout);
+        autoSearchTimeout = setTimeout(() => {
+            if (this.value.trim().length >= 3) {
+                searchForm.submit();
+            }
+        }, 2000);
+    });
+});
+</script>
+{% endblock %} 

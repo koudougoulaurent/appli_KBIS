@@ -1,0 +1,501 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ recap.bailleur.get_nom_complet }} - {{ recap.mois_recap|date:"F Y" }} - Rentila{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-calendar-month text-primary me-2"></i>
+                        Récapitulatif Mensuel
+                    </h1>
+                    <p class="text-muted mb-0">
+                        {{ recap.bailleur.get_nom_complet }} - {{ recap.mois_recap|date:"F Y" }}
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'paiements:liste_recaps_mensuels' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i> Retour à la liste
+                    </a>
+                    
+                    <!-- Boutons d'action selon le statut -->
+                    {% if recap.statut == 'brouillon' %}
+                    <a href="{% url 'paiements:valider_recap_mensuel' recap.id %}" class="btn btn-success">
+                        <i class="bi bi-check-circle me-2"></i> Valider
+                    </a>
+                    {% endif %}
+                    
+                    {% if recap.statut == 'valide' %}
+                    <a href="{% url 'paiements:marquer_recap_envoye' recap.id %}" class="btn btn-info">
+                        <i class="bi bi-send me-2"></i> Marquer comme Envoyé
+                    </a>
+                    {% endif %}
+                    
+                    {% if recap.statut == 'envoye' %}
+                    <a href="{% url 'paiements:marquer_recap_paye' recap.id %}" class="btn btn-primary">
+                        <i class="bi bi-cash-coin me-2"></i> Marquer comme Payé
+                    </a>
+                    {% endif %}
+                    
+                    <a href="{% url 'paiements:imprimer_recap_mensuel' recap.id %}" 
+                       class="btn btn-outline-info" target="_blank">
+                        <i class="bi bi-printer me-2"></i> Imprimer PDF
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Informations principales -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i> Informations du Récapitulatif
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Bailleur</label>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm me-3">
+                                    <i class="bi bi-person-circle fa-2x text-primary"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">{{ recap.bailleur.get_nom_complet }}</div>
+                                    <small class="text-muted">{{ recap.bailleur.code_bailleur }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Mois du récapitulatif</label>
+                            <div>
+                                <span class="badge bg-info fs-6">
+                                    {{ recap.mois_recap|date:"F Y" }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Statut</label>
+                            <div>
+                                {% if recap.statut == 'brouillon' %}
+                                    <span class="badge bg-secondary">Brouillon</span>
+                                {% elif recap.statut == 'valide' %}
+                                    <span class="badge bg-success">Validé</span>
+                                {% elif recap.statut == 'envoye' %}
+                                    <span class="badge bg-info">Envoyé</span>
+                                {% elif recap.statut == 'paye' %}
+                                    <span class="badge bg-primary">Payé</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Date de création</label>
+                            <div>{{ recap.date_creation|date:"d/m/Y H:i" }}</div>
+                        </div>
+                        
+                        {% if recap.date_validation %}
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Date de validation</label>
+                            <div>{{ recap.date_validation|date:"d/m/Y H:i" }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if recap.valide_par %}
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Validé par</label>
+                            <div>{{ recap.valide_par.get_nom_complet }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if recap.date_envoi %}
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Date d'envoi</label>
+                            <div>{{ recap.date_envoi|date:"d/m/Y H:i" }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if recap.date_paiement %}
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Date de paiement</label>
+                            <div>{{ recap.date_paiement|date:"d/m/Y H:i" }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Montants -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-calculator me-2"></i> Détail des Montants
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="text-center p-3 border rounded">
+                                <div class="text-success fw-bold fs-4">
+                                    {{ recap.total_loyers_bruts|floatformat:0|intcomma }} XOF
+                                </div>
+                                <div class="text-muted">Loyers Bruts</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="text-center p-3 border rounded">
+                                <div class="text-danger fw-bold fs-4">
+                                    -{{ recap.total_charges_deductibles|floatformat:0|intcomma }} XOF
+                                </div>
+                                <div class="text-muted">Charges Déductibles</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="text-center p-3 border rounded bg-primary text-white">
+                                <div class="fw-bold fs-4">
+                                    {{ recap.total_net_a_payer|floatformat:0|intcomma }} XOF
+                                </div>
+                                <div>Net à Payer</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistiques -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-graph-up me-2"></i> Statistiques
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="text-center p-3 border rounded">
+                                <div class="text-info fw-bold fs-4">
+                                    {{ recap.nombre_proprietes }}
+                                </div>
+                                <div class="text-muted">Propriétés</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="text-center p-3 border rounded">
+                                <div class="text-success fw-bold fs-4">
+                                    {{ recap.nombre_contrats_actifs }}
+                                </div>
+                                <div class="text-muted">Contrats Actifs</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="text-center p-3 border rounded">
+                                <div class="text-warning fw-bold fs-4">
+                                    {{ recap.nombre_paiements_recus }}
+                                </div>
+                                <div class="text-muted">Paiements Reçus</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paiements concernés -->
+            {% if recap.paiements_concernes.all %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-receipt me-2"></i> Paiements Concernés
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Contrat</th>
+                                    <th>Locataire</th>
+                                    <th>Montant</th>
+                                    <th>Date</th>
+                                    <th>Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for paiement in recap.paiements_concernes.all %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'contrats:contrat_detail' paiement.contrat.id %}" 
+                                           class="text-decoration-none">
+                                            {{ paiement.contrat.numero_contrat }}
+                                        </a>
+                                    </td>
+                                    <td>{{ paiement.contrat.locataire.get_nom_complet }}</td>
+                                    <td class="text-end">{{ paiement.montant|floatformat:0|intcomma }} XOF</td>
+                                    <td>{{ paiement.date_paiement|date:"d/m/Y" }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ paiement.get_statut_display_color }}">
+                                            {{ paiement.get_statut_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Charges déductibles -->
+            {% if recap.charges_deductibles.all %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-tools me-2"></i> Charges Déductibles
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Libellé</th>
+                                    <th>Type</th>
+                                    <th>Montant</th>
+                                    <th>Date</th>
+                                    <th>Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for charge in recap.charges_deductibles.all %}
+                                <tr>
+                                    <td>{{ charge.libelle }}</td>
+                                    <td>{{ charge.get_type_charge_display }}</td>
+                                    <td class="text-end">{{ charge.montant|floatformat:0|intcomma }} XOF</td>
+                                    <td>{{ charge.date_charge|date:"d/m/Y" }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ charge.get_statut_display_color }}">
+                                            {{ charge.get_statut_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-gear me-2"></i> Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if recap.statut == 'brouillon' %}
+                        <a href="{% url 'paiements:valider_recap_mensuel' recap.id %}" 
+                           class="btn btn-success w-100">
+                            <i class="bi bi-check-circle me-2"></i> Valider le Récapitulatif
+                        </a>
+                        {% endif %}
+                        
+                        {% if recap.statut == 'valide' %}
+                        <button type="button" class="btn btn-info w-100" 
+                                onclick="marquerEnvoye({{ recap.id }})">
+                            <i class="bi bi-send me-2"></i> Marquer comme Envoyé
+                        </button>
+                        {% endif %}
+                        
+                        {% if recap.statut == 'envoye' %}
+                        <button type="button" class="btn btn-primary w-100" 
+                                onclick="marquerPaye({{ recap.id }})">
+                            <i class="bi bi-cash-coin me-2"></i> Marquer comme Payé
+                        </button>
+                        {% endif %}
+                        
+                        <a href="{% url 'paiements:imprimer_recap_mensuel' recap.id %}" 
+                           class="btn btn-outline-secondary w-100" target="_blank">
+                            <i class="bi bi-printer me-2"></i> Imprimer PDF
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations du bailleur -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-person-circle me-2"></i> Informations du Bailleur
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <i class="bi bi-person-circle fa-3x text-primary"></i>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <strong>Nom:</strong> {{ recap.bailleur.get_nom_complet }}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Code:</strong> {{ recap.bailleur.code_bailleur }}
+                    </div>
+                    {% if recap.bailleur.telephone %}
+                    <div class="mb-2">
+                        <strong>Téléphone:</strong> {{ recap.bailleur.telephone }}
+                    </div>
+                    {% endif %}
+                    {% if recap.bailleur.email %}
+                    <div class="mb-2">
+                        <strong>Email:</strong> {{ recap.bailleur.email }}
+                    </div>
+                    {% endif %}
+                    
+                    <hr>
+                    
+                    <div class="mb-2">
+                        <strong>Propriétés louées:</strong> 
+                        <span class="badge bg-success">{{ recap.nombre_proprietes }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historique des actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-clock-history me-2"></i> Historique
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-primary"></div>
+                            <div class="timeline-content">
+                                <div class="timeline-title">Création</div>
+                                <div class="timeline-date">{{ recap.date_creation|date:"d/m/Y H:i" }}</div>
+                                <div class="timeline-desc">Par {{ recap.cree_par.get_nom_complet }}</div>
+                            </div>
+                        </div>
+                        
+                        {% if recap.valide_par %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-success"></div>
+                            <div class="timeline-content">
+                                <div class="timeline-title">Validation</div>
+                                <div class="timeline-date">{{ recap.date_validation|date:"d/m/Y H:i" }}</div>
+                                <div class="timeline-desc">Par {{ recap.valide_par.get_nom_complet }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if recap.date_envoi %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-info"></div>
+                            <div class="timeline-content">
+                                <div class="timeline-title">Envoi</div>
+                                <div class="timeline-date">{{ recap.date_envoi|date:"d/m/Y H:i" }}</div>
+                                <div class="timeline-desc">Envoyé au bailleur</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if recap.date_paiement %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-primary"></div>
+                            <div class="timeline-content">
+                                <div class="timeline-title">Paiement</div>
+                                <div class="timeline-date">{{ recap.date_paiement|date:"d/m/Y H:i" }}</div>
+                                <div class="timeline-desc">Payé au bailleur</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -35px;
+    top: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 3px #dee2e6;
+}
+
+.timeline-content {
+    padding-left: 10px;
+}
+
+.timeline-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.timeline-date {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-bottom: 5px;
+}
+
+.timeline-desc {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function marquerEnvoye(recapId) {
+    if (confirm('Marquer ce récapitulatif comme envoyé ?')) {
+        // TODO: Implémenter l'action
+        alert('Fonctionnalité en cours de développement');
+    }
+}
+
+function marquerPaye(recapId) {
+    if (confirm('Marquer ce récapitulatif comme payé ?')) {
+        // TODO: Implémenter l'action
+        alert('Fonctionnalité en cours de développement');
+    }
+}
+</script>
+{% endblock %}

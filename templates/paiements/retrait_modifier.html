@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+
+{% block title %}Modifier le Retrait #{{ retrait.id }} - Gestion Immobilière{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête avec navigation -->
+    <div class="dashboard-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1><i class="bi bi-pencil-square"></i> Modifier le Retrait #{{ retrait.id }}</h1>
+                <p>Modifier les informations du retrait pour {{ retrait.bailleur.nom }} {{ retrait.bailleur.prenom }}</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'paiements:retrait_detail' retrait.pk %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Retour au détail
+                </a>
+                <a href="{% url 'paiements:retraits_liste' %}" class="btn btn-primary">
+                    <i class="bi bi-list"></i> Liste des retraits
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulaire principal -->
+    <div class="form-container">
+        <form method="POST" class="needs-validation" novalidate>
+            {% csrf_token %}
+            
+            <!-- Section Informations générales -->
+            <div class="form-section">
+                <h5><i class="bi bi-info-circle"></i> Informations Générales</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="bailleur" class="form-label required">
+                                <i class="bi bi-person"></i> Bailleur
+                            </label>
+                            <select name="bailleur" id="bailleur" class="form-select" required>
+                                <option value="">Sélectionner un bailleur</option>
+                                {% for bailleur in bailleurs %}
+                                <option value="{{ bailleur.id }}" {% if retrait.bailleur.id == bailleur.id %}selected{% endif %}>
+                                    {{ bailleur.nom }} {{ bailleur.prenom }} - {{ bailleur.email }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback">Veuillez sélectionner un bailleur.</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="montant" class="form-label required">
+                                <i class="bi bi-cash"></i> Montant (XOF)
+                            </label>
+                            <input type="number" name="montant" id="montant" class="form-control" 
+                                   step="0.01" min="0.01" required placeholder="0.00" 
+                                   value="{{ retrait.montant }}">
+                            <div class="invalid-feedback">Veuillez saisir un montant valide.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Type et mode -->
+            <div class="form-section">
+                <h5><i class="bi bi-gear"></i> Type et Mode</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="type_retrait" class="form-label required">
+                                <i class="bi bi-tag"></i> Type de retrait
+                            </label>
+                            <select name="type_retrait" id="type_retrait" class="form-select" required>
+                                <option value="">Sélectionner le type</option>
+                                <option value="loyers" {% if retrait.type_retrait == 'loyers' %}selected{% endif %}>Loyers</option>
+                                <option value="charges" {% if retrait.type_retrait == 'charges' %}selected{% endif %}>Charges</option>
+                                <option value="depot_garantie" {% if retrait.type_retrait == 'depot_garantie' %}selected{% endif %}>Dépôt de garantie</option>
+                                <option value="frais_agence" {% if retrait.type_retrait == 'frais_agence' %}selected{% endif %}>Frais d'agence</option>
+                                <option value="autre" {% if retrait.type_retrait == 'autre' %}selected{% endif %}>Autre</option>
+                            </select>
+                            <div class="invalid-feedback">Veuillez sélectionner le type de retrait.</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="mode_retrait" class="form-label required">
+                                <i class="bi bi-bank"></i> Mode de retrait
+                            </label>
+                            <select name="mode_retrait" id="mode_retrait" class="form-select" required>
+                                <option value="">Sélectionner le mode</option>
+                                <option value="virement" {% if retrait.mode_retrait == 'virement' %}selected{% endif %}>Virement bancaire</option>
+                                <option value="cheque" {% if retrait.mode_retrait == 'cheque' %}selected{% endif %}>Chèque</option>
+                                <option value="especes" {% if retrait.mode_retrait == 'especes' %}selected{% endif %}>Espèces</option>
+                            </select>
+                            <div class="invalid-feedback">Veuillez sélectionner le mode de retrait.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Statut -->
+            <div class="form-section">
+                <h5><i class="bi bi-check-circle"></i> Statut</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="statut" class="form-label required">
+                                <i class="bi bi-flag"></i> Statut
+                            </label>
+                            <select name="statut" id="statut" class="form-select" required>
+                                <option value="en_attente" {% if retrait.statut == 'en_attente' %}selected{% endif %}>En attente</option>
+                                <option value="valide" {% if retrait.statut == 'valide' %}selected{% endif %}>Validé</option>
+                                <option value="annule" {% if retrait.statut == 'annule' %}selected{% endif %}>Annulé</option>
+                            </select>
+                            <div class="invalid-feedback">Veuillez sélectionner le statut.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Dates -->
+            <div class="form-section">
+                <h5><i class="bi bi-calendar"></i> Dates</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="date_demande" class="form-label required">
+                                <i class="bi bi-calendar-event"></i> Date de demande
+                            </label>
+                            <input type="date" name="date_demande" id="date_demande" class="form-control" required
+                                   value="{{ retrait.date_demande|date:'Y-m-d' }}">
+                            <div class="invalid-feedback">Veuillez saisir la date de demande.</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="date_versement" class="form-label">
+                                <i class="bi bi-calendar-check"></i> Date de versement (optionnel)
+                            </label>
+                            <input type="date" name="date_versement" id="date_versement" class="form-control"
+                                   value="{% if retrait.date_versement %}{{ retrait.date_versement|date:'Y-m-d' }}{% endif %}">
+                            <div class="form-text">Laissez vide si le versement n'a pas encore été effectué.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Informations bancaires -->
+            <div class="form-section">
+                <h5><i class="bi bi-bank"></i> Informations Bancaires</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="numero_cheque" class="form-label">
+                                <i class="bi bi-receipt"></i> Numéro de chèque
+                            </label>
+                            <input type="text" name="numero_cheque" id="numero_cheque" class="form-control" 
+                                   placeholder="Numéro du chèque" value="{{ retrait.numero_cheque|default:'' }}">
+                            <div class="form-text">À remplir uniquement si le mode de retrait est "Chèque".</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="reference_virement" class="form-label">
+                                <i class="bi bi-arrow-left-right"></i> Référence virement
+                            </label>
+                            <input type="text" name="reference_virement" id="reference_virement" class="form-control" 
+                                   placeholder="Référence du virement" value="{{ retrait.reference_virement|default:'' }}">
+                            <div class="form-text">À remplir uniquement si le mode de retrait est "Virement bancaire".</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Notes -->
+            <div class="form-section">
+                <h5><i class="bi bi-journal-text"></i> Notes</h5>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label for="notes" class="form-label">
+                                <i class="bi bi-pencil"></i> Notes
+                            </label>
+                            <textarea name="notes" id="notes" class="form-control" rows="4" 
+                                      placeholder="Informations complémentaires sur ce retrait...">{{ retrait.notes|default:'' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions du formulaire -->
+            <div class="form-actions">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <a href="{% url 'paiements:retrait_detail' retrait.pk %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Annuler
+                        </a>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="reset" class="btn btn-warning">
+                            <i class="bi bi-arrow-clockwise"></i> Réinitialiser
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle"></i> Enregistrer les Modifications
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Aide contextuelle -->
+    <div class="help-section mt-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-question-circle"></i> Aide - Modification de Retrait</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6><i class="bi bi-info-circle"></i> Informations obligatoires</h6>
+                        <p class="text-muted">Les champs marqués d'un astérisque (*) sont obligatoires.</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="bi bi-cash-coin"></i> Montants</h6>
+                        <p class="text-muted">Les montants doivent être positifs et en XOF (francs CFA).</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="bi bi-calendar"></i> Dates</h6>
+                        <p class="text-muted">La date de versement peut être ajoutée ultérieurement.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Validation en temps réel
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const inputs = form.querySelectorAll('input, select, textarea');
+    
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            validateField(this);
+        });
+        
+        input.addEventListener('input', function() {
+            if (this.classList.contains('is-invalid')) {
+                validateField(this);
+            }
+        });
+    });
+    
+    function validateField(field) {
+        const value = field.value.trim();
+        const isRequired = field.hasAttribute('required');
+        
+        if (isRequired && !value) {
+            field.classList.add('is-invalid');
+            field.classList.remove('is-valid');
+        } else if (value) {
+            field.classList.add('is-valid');
+            field.classList.remove('is-invalid');
+        } else {
+            field.classList.remove('is-valid', 'is-invalid');
+        }
+    }
+    
+    // Validation du formulaire avant soumission
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        inputs.forEach(input => {
+            validateField(input);
+            if (input.classList.contains('is-invalid')) {
+                isValid = false;
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Veuillez corriger les erreurs dans le formulaire avant de continuer.');
+        }
+    });
+});
+</script>
+{% endblock %} 

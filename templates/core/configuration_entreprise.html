@@ -1,0 +1,485 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Configuration de l'Entreprise{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'core:dashboard' %}">
+                                <i class="fas fa-tachometer-alt me-1"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="breadcrumb-item active" aria-current="page">Configuration Entreprise</li>
+                    </ol>
+                </nav>
+                <a href="{% url 'core:dashboard' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Retour
+                </a>
+            </div>
+
+            {% if messages %}
+            <div class="messages mb-4">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="row">
+                <!-- Formulaire de configuration -->
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4 class="mb-0">
+                                <i class="fas fa-building me-2"></i>
+                                Configuration de l'Entreprise
+                            </h4>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                
+                                <!-- Informations de base -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h5 class="mb-3">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            Informations de base
+                                        </h5>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.nom_entreprise.id_for_label }}" class="form-label">
+                                                Nom de l'entreprise *
+                                            </label>
+                                            {{ form.nom_entreprise }}
+                                            {% if form.nom_entreprise.errors %}
+                                            <div class="text-danger">{{ form.nom_entreprise.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.slogan.id_for_label }}" class="form-label">
+                                                Slogan
+                                            </label>
+                                            {{ form.slogan }}
+                                            {% if form.slogan.errors %}
+                                            <div class="text-danger">{{ form.slogan.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Adresse -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h5 class="mb-3">
+                                            <i class="fas fa-map-marker-alt me-2"></i>
+                                            Adresse
+                                        </h5>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.adresse.id_for_label }}" class="form-label">
+                                                Adresse *
+                                            </label>
+                                            {{ form.adresse }}
+                                            {% if form.adresse.errors %}
+                                            <div class="text-danger">{{ form.adresse.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.code_postal.id_for_label }}" class="form-label">
+                                                Code postal *
+                                            </label>
+                                            {{ form.code_postal }}
+                                            {% if form.code_postal.errors %}
+                                            <div class="text-danger">{{ form.code_postal.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.ville.id_for_label }}" class="form-label">
+                                                Ville *
+                                            </label>
+                                            {{ form.ville }}
+                                            {% if form.ville.errors %}
+                                            <div class="text-danger">{{ form.ville.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.pays.id_for_label }}" class="form-label">
+                                                Pays *
+                                            </label>
+                                            {{ form.pays }}
+                                            {% if form.pays.errors %}
+                                            <div class="text-danger">{{ form.pays.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Contact -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h5 class="mb-3">
+                                            <i class="fas fa-phone me-2"></i>
+                                            Contact
+                                        </h5>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.telephone.id_for_label }}" class="form-label">
+                                                Téléphone *
+                                            </label>
+                                            {{ form.telephone }}
+                                            {% if form.telephone.errors %}
+                                            <div class="text-danger">{{ form.telephone.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.email.id_for_label }}" class="form-label">
+                                                Email *
+                                            </label>
+                                            {{ form.email }}
+                                            {% if form.email.errors %}
+                                            <div class="text-danger">{{ form.email.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.site_web.id_for_label }}" class="form-label">
+                                                Site web
+                                            </label>
+                                            {{ form.site_web }}
+                                            {% if form.site_web.errors %}
+                                            <div class="text-danger">{{ form.site_web.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Informations légales -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h5 class="mb-3">
+                                            <i class="fas fa-gavel me-2"></i>
+                                            Informations légales
+                                        </h5>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.siret.id_for_label }}" class="form-label">
+                                                SIRET *
+                                            </label>
+                                            {{ form.siret }}
+                                            {% if form.siret.errors %}
+                                            <div class="text-danger">{{ form.siret.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.numero_licence.id_for_label }}" class="form-label">
+                                                N° Licence *
+                                            </label>
+                                            {{ form.numero_licence }}
+                                            {% if form.numero_licence.errors %}
+                                            <div class="text-danger">{{ form.numero_licence.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.capital_social.id_for_label }}" class="form-label">
+                                                Capital social
+                                            </label>
+                                            {{ form.capital_social }}
+                                            {% if form.capital_social.errors %}
+                                            <div class="text-danger">{{ form.capital_social.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.forme_juridique.id_for_label }}" class="form-label">
+                                                Forme juridique *
+                                            </label>
+                                            {{ form.forme_juridique }}
+                                            {% if form.forme_juridique.errors %}
+                                            <div class="text-danger">{{ form.forme_juridique.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Personnalisation -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h5 class="mb-3">
+                                            <i class="fas fa-palette me-2"></i>
+                                            Personnalisation des reçus
+                                        </h5>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.logo_url.id_for_label }}" class="form-label">
+                                                URL du logo
+                                            </label>
+                                            {{ form.logo_url }}
+                                            {% if form.logo_url.errors %}
+                                            <div class="text-danger">{{ form.logo_url.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.couleur_principale.id_for_label }}" class="form-label">
+                                                Couleur principale
+                                            </label>
+                                            {{ form.couleur_principale }}
+                                            {% if form.couleur_principale.errors %}
+                                            <div class="text-danger">{{ form.couleur_principale.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.couleur_secondaire.id_for_label }}" class="form-label">
+                                                Couleur secondaire
+                                            </label>
+                                            {{ form.couleur_secondaire }}
+                                            {% if form.couleur_secondaire.errors %}
+                                            <div class="text-danger">{{ form.couleur_secondaire.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Informations bancaires -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h5 class="mb-3">
+                                            <i class="fas fa-university me-2"></i>
+                                            Informations bancaires (optionnel)
+                                        </h5>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.banque.id_for_label }}" class="form-label">
+                                                Banque
+                                            </label>
+                                            {{ form.banque }}
+                                            {% if form.banque.errors %}
+                                            <div class="text-danger">{{ form.banque.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.iban.id_for_label }}" class="form-label">
+                                                IBAN
+                                            </label>
+                                            {{ form.iban }}
+                                            {% if form.iban.errors %}
+                                            <div class="text-danger">{{ form.iban.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.bic.id_for_label }}" class="form-label">
+                                                BIC
+                                            </label>
+                                            {{ form.bic }}
+                                            {% if form.bic.errors %}
+                                            <div class="text-danger">{{ form.bic.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Boutons d'action -->
+                                <div class="row">
+                                    <div class="col-12">
+                                        <hr>
+                                        <div class="d-flex justify-content-between">
+                                            <button type="button" class="btn btn-outline-secondary" id="resetDefaults">
+                                                <i class="fas fa-undo me-1"></i>
+                                                Réinitialiser aux valeurs par défaut
+                                            </button>
+                                            <div>
+                                                <a href="{% url 'core:dashboard' %}" class="btn btn-outline-secondary me-2">
+                                                    Annuler
+                                                </a>
+                                                <button type="submit" class="btn btn-primary">
+                                                    <i class="fas fa-save me-1"></i>
+                                                    Enregistrer la configuration
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aperçu -->
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-eye me-2"></i>
+                                Aperçu de l'en-tête
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="preview" class="border p-3 rounded">
+                                <div class="text-center mb-3">
+                                    <h5 id="preview-nom" class="mb-1">{{ config.nom_entreprise }}</h5>
+                                    <small id="preview-slogan" class="text-muted">{{ config.slogan|default:"" }}</small>
+                                </div>
+                                <div class="text-center">
+                                    <small id="preview-adresse" class="text-muted">
+                                        {{ config.get_adresse_complete }}
+                                    </small><br>
+                                    <small id="preview-contact" class="text-muted">
+                                        {{ config.get_contact_complet }}
+                                    </small><br>
+                                    <small id="preview-legal" class="text-muted">
+                                        {{ config.get_informations_legales }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Informations -->
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Informations
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-2">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    Ces informations apparaîtront sur tous les reçus
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    Les couleurs personnalisent l'apparence des reçus
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    Le logo peut être hébergé sur un serveur externe
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    Les informations bancaires sont optionnelles
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Mise à jour de l'aperçu en temps réel
+    function updatePreview() {
+        const nom = $('#id_nom_entreprise').val() || 'GESTIMMOB';
+        const slogan = $('#id_slogan').val() || '';
+        const adresse = $('#id_adresse').val() || '123 Rue de la Paix';
+        const codePostal = $('#id_code_postal').val() || '75001';
+        const ville = $('#id_ville').val() || 'Paris';
+        const pays = $('#id_pays').val() || 'France';
+        const telephone = $('#id_telephone').val() || '01 23 45 67 89';
+        const email = $('#id_email').val() || 'contact@gestimmob.fr';
+        const siteWeb = $('#id_site_web').val() || '';
+        const siret = $('#id_siret').val() || '123 456 789 00012';
+        const licence = $('#id_numero_licence').val() || '123456789';
+        const capital = $('#id_capital_social').val() || '';
+        const forme = $('#id_forme_juridique').val() || 'SARL';
+        
+        // Mise à jour de l'aperçu
+        $('#preview-nom').text(nom);
+        $('#preview-slogan').text(slogan);
+        $('#preview-adresse').text(`${adresse}, ${codePostal} ${ville}, ${pays}`);
+        
+        let contact = `Tél: ${telephone}`;
+        if (email) contact += ` | Email: ${email}`;
+        if (siteWeb) contact += ` | Web: ${siteWeb}`;
+        $('#preview-contact').text(contact);
+        
+        let legal = `SIRET: ${siret}`;
+        if (licence) legal += ` | N° Licence: ${licence}`;
+        if (capital) legal += ` | Capital: ${capital}`;
+        if (forme) legal += ` | ${forme}`;
+        $('#preview-legal').text(legal);
+    }
+    
+    // Écouter les changements sur tous les champs
+    $('input, textarea').on('input', updatePreview);
+    
+    // Réinitialiser aux valeurs par défaut
+    $('#resetDefaults').click(function() {
+        if (confirm('Êtes-vous sûr de vouloir réinitialiser toutes les informations aux valeurs par défaut ?')) {
+            $('#id_nom_entreprise').val('GESTIMMOB');
+            $('#id_slogan').val('');
+            $('#id_adresse').val('123 Rue de la Paix');
+            $('#id_code_postal').val('75001');
+            $('#id_ville').val('Paris');
+            $('#id_pays').val('France');
+            $('#id_telephone').val('01 23 45 67 89');
+            $('#id_email').val('contact@gestimmob.fr');
+            $('#id_site_web').val('');
+            $('#id_siret').val('123 456 789 00012');
+            $('#id_numero_licence').val('123456789');
+            $('#id_capital_social').val('');
+            $('#id_forme_juridique').val('SARL');
+            $('#id_logo_url').val('');
+            $('#id_couleur_principale').val('#2c3e50');
+            $('#id_couleur_secondaire').val('#3498db');
+            $('#id_banque').val('');
+            $('#id_iban').val('');
+            $('#id_bic').val('');
+            
+            updatePreview();
+            alert('Configuration réinitialisée. Cliquez sur "Enregistrer" pour appliquer les changements.');
+        }
+    });
+    
+    // Initialiser l'aperçu
+    updatePreview();
+});
+</script>
+{% endblock %} 

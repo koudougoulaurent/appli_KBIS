@@ -1,0 +1,394 @@
+{% extends 'base_dashboard.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}Modifier l'état des lieux{% endblock %}
+
+{% block extra_css %}
+<style>
+    .etat-lieux-form {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .form-section {
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        background: #f8f9fa;
+    }
+    
+    .form-section h5 {
+        color: #495057;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .etat-choices {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .etat-choice {
+        flex: 1;
+        min-width: 120px;
+    }
+    
+    .observations-field {
+        min-height: 120px;
+    }
+    
+    .btn-submit {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        border: none;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .btn-submit:hover {
+        background: linear-gradient(135deg, #0056b3, #004085);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+    }
+    
+    .contrat-info {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .contrat-info h6 {
+        margin: 0;
+        font-weight: 600;
+    }
+    
+    .contrat-info p {
+        margin: 0.25rem 0;
+        opacity: 0.9;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête de la page -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-edit text-warning me-2"></i>
+                Modifier l'état des lieux
+            </h1>
+            <p class="text-muted">Modifiez les informations de l'état des lieux</p>
+        </div>
+        <div>
+            <a href="{% url 'contrats:etat_lieux_detail' etat_lieux.pk %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Retour au détail
+            </a>
+        </div>
+    </div>
+
+    <!-- Informations du contrat sélectionné -->
+    <div class="contrat-info">
+        <h6><i class="fas fa-file-contract me-2"></i>Contrat concerné</h6>
+        <p><strong>Numéro:</strong> {{ contrat_selectionne.numero_contrat }}</p>
+        <p><strong>Propriété:</strong> {{ contrat_selectionne.propriete.titre }}</p>
+        <p><strong>Locataire:</strong> {{ contrat_selectionne.locataire.nom }} {{ contrat_selectionne.locataire.prenom }}</p>
+    </div>
+
+    <div class="etat-lieux-form">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <!-- Sélection du contrat -->
+            <div class="form-section">
+                <h5><i class="fas fa-file-contract me-2"></i>Sélection du contrat</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="contrat" class="form-label">Contrat *</label>
+                        <select name="contrat" id="contrat" class="form-select" required>
+                            <option value="">Sélectionnez un contrat</option>
+                            {% for contrat in contrats %}
+                            <option value="{{ contrat.id }}" 
+                                    data-propriete="{{ contrat.propriete.titre }}"
+                                    data-locataire="{{ contrat.locataire.nom }} {{ contrat.locataire.prenom }}"
+                                    {% if contrat.id == contrat_selectionne.id %}selected{% endif %}>
+                                {{ contrat.numero_contrat }} - {{ contrat.propriete.titre }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="type_etat" class="form-label">Type d'état des lieux *</label>
+                        <select name="type_etat" id="type_etat" class="form-select" required>
+                            <option value="">Sélectionnez le type</option>
+                            <option value="entree" {% if etat_lieux.type_etat == 'entree' %}selected{% endif %}>Entrée</option>
+                            <option value="sortie" {% if etat_lieux.type_etat == 'sortie' %}selected{% endif %}>Sortie</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Date de l'état des lieux -->
+            <div class="form-section">
+                <h5><i class="fas fa-calendar-alt me-2"></i>Date de l'état des lieux</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="date_etat" class="form-label">Date *</label>
+                        <input type="date" name="date_etat" id="date_etat" class="form-control" 
+                               value="{{ etat_lieux.date_etat|date:'Y-m-d' }}" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Observations générales -->
+            <div class="form-section">
+                <h5><i class="fas fa-comments me-2"></i>Observations générales</h5>
+                <div class="row">
+                    <div class="col-12">
+                        <label for="observations_generales" class="form-label">Observations générales</label>
+                        <textarea name="observations_generales" id="observations_generales" 
+                                  class="form-control observations-field" rows="4"
+                                  placeholder="Décrivez l'état général de la propriété...">{{ etat_lieux.observations_generales }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- État des murs -->
+            <div class="form-section">
+                <h5><i class="fas fa-home me-2"></i>État des murs</h5>
+                <div class="etat-choices">
+                    <div class="etat-choice">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="etat_murs" id="murs_excellent" value="excellent" {% if etat_lieux.etat_murs == 'excellent' %}checked{% endif %}>
+                            <label class="form-check-label" for="murs_excellent">
+                                <span class="badge bg-success">Excellent</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="etat-choice">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="etat_murs" id="murs_bon" value="bon" {% if etat_lieux.etat_murs == 'bon' %}checked{% endif %}>
+                            <label class="form-check-label" for="murs_bon">
+                                <span class="badge bg-info">Bon</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="etat-choice">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="etat_murs" id="murs_moyen" value="moyen" {% if etat_lieux.etat_murs == 'moyen' %}checked{% endif %}>
+                            <label class="form-check-label" for="murs_moyen">
+                                <span class="badge bg-warning">Moyen</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="etat-choice">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="etat_murs" id="murs_mauvais" value="mauvais" {% if etat_lieux.etat_murs == 'mauvais' %}checked{% endif %}>
+                            <label class="form-check-label" for="murs_mauvais">
+                                <span class="badge bg-danger">Mauvais</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- État du sol -->
+            <div class="form-section">
+                <h5><i class="fas fa-square me-2"></i>État du sol</h5>
+                <div class="etat-choices">
+                    <div class="etat-choice">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="etat_sol" id="sol_excellent" value="excellent" {% if etat_lieux.etat_sol == 'excellent' %}checked{% endif %}>
+                            <label class="form-check-label" for="sol_excellent">
+                                <span class="badge bg-success">Excellent</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="etat-choice">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="etat_sol" id="sol_bon" value="bon" {% if etat_lieux.etat_sol == 'bon' %}checked{% endif %}>
+                            <label class="form-check-label" for="sol_bon">
+                                <span class="badge bg-info">Bon</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="etat-choice">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="etat_sol" id="sol_moyen" value="moyen" {% if etat_lieux.etat_sol == 'moyen' %}checked{% endif %}>
+                            <label class="form-check-label" for="sol_moyen">
+                                <span class="badge bg-warning">Moyen</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="etat-choice">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="etat_sol" id="sol_mauvais" value="mauvais" {% if etat_lieux.etat_sol == 'mauvais' %}checked{% endif %}>
+                            <label class="form-check-label" for="sol_mauvais">
+                                <span class="badge bg-danger">Mauvais</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- État de la plomberie -->
+            <div class="form-section">
+                <h5><i class="fas fa-tint me-2"></i>État de la plomberie</h5>
+                <div class="etat-choices">
+                    <div class="etat-choice">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="etat_plomberie" id="plomberie_excellent" value="excellent" {% if etat_lieux.etat_plomberie == 'excellent' %}checked{% endif %}>
+                            <label class="form-check-label" for="plomberie_excellent">
+                                <span class="badge bg-success">Excellent</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="etat-choice">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="etat_plomberie" id="plomberie_bon" value="bon" {% if etat_lieux.etat_plomberie == 'bon' %}checked{% endif %}>
+                            <label class="form-check-label" for="plomberie_bon">
+                                <span class="badge bg-info">Bon</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="etat-choice">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="etat_plomberie" id="plomberie_moyen" value="moyen" {% if etat_lieux.etat_plomberie == 'moyen' %}checked{% endif %}>
+                            <label class="form-check-label" for="plomberie_moyen">
+                                <span class="badge bg-warning">Moyen</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="etat-choice">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="etat_plomberie" id="plomberie_mauvais" value="mauvais" {% if etat_lieux.etat_plomberie == 'mauvais' %}checked{% endif %}>
+                            <label class="form-check-label" for="plomberie_mauvais">
+                                <span class="badge bg-danger">Mauvais</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- État de l'électricité -->
+            <div class="form-section">
+                <h5><i class="fas fa-bolt me-2"></i>État de l'électricité</h5>
+                <div class="etat-choices">
+                    <div class="etat-choice">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="etat_electricite" id="electricite_excellent" value="excellent" {% if etat_lieux.etat_electricite == 'excellent' %}checked{% endif %}>
+                            <label class="form-check-label" for="electricite_excellent">
+                                <span class="badge bg-success">Excellent</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="etat-choice">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="etat_electricite" id="electricite_bon" value="bon" {% if etat_lieux.etat_electricite == 'bon' %}checked{% endif %}>
+                            <label class="form-check-label" for="electricite_bon">
+                                <span class="badge bg-info">Bon</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="etat-choice">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="etat_electricite" id="electricite_moyen" value="moyen" {% if etat_lieux.etat_electricite == 'moyen' %}checked{% endif %}>
+                            <label class="form-check-label" for="electricite_moyen">
+                                <span class="badge bg-warning">Moyen</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="etat-choice">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="etat_electricite" id="electricite_mauvais" value="mauvais" {% if etat_lieux.etat_electricite == 'mauvais' %}checked{% endif %}>
+                            <label class="form-check-label" for="electricite_mauvais">
+                                <span class="badge bg-danger">Mauvais</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes supplémentaires -->
+            <div class="form-section">
+                <h5><i class="fas fa-sticky-note me-2"></i>Notes supplémentaires</h5>
+                <div class="row">
+                    <div class="col-12">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea name="notes" id="notes" 
+                                  class="form-control observations-field" rows="3"
+                                  placeholder="Ajoutez des notes supplémentaires...">{{ etat_lieux.notes }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Boutons d'action -->
+            <div class="d-flex justify-content-between align-items-center pt-3">
+                <a href="{% url 'contrats:etat_lieux_detail' etat_lieux.pk %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-2"></i>Annuler
+                </a>
+                <button type="submit" class="btn btn-warning btn-submit">
+                    <i class="fas fa-save me-2"></i>Mettre à jour l'état des lieux
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mise à jour des informations du contrat sélectionné
+    const contratSelect = document.getElementById('contrat');
+    const typeSelect = document.getElementById('type_etat');
+    
+    function updateContratInfo() {
+        const selectedOption = contratSelect.options[contratSelect.selectedIndex];
+        if (selectedOption && selectedOption.dataset.propriete) {
+            // Ici vous pourriez mettre à jour l'affichage des informations du contrat
+            console.log('Contrat sélectionné:', selectedOption.dataset.propriete);
+        }
+    }
+    
+    contratSelect.addEventListener('change', updateContratInfo);
+    typeSelect.addEventListener('change', function() {
+        const type = this.value;
+        const contrat = contratSelect.value;
+        
+        if (type && contrat) {
+            // Vérifier si un état des lieux de ce type existe déjà pour ce contrat
+            // Cette logique pourrait être implémentée côté serveur
+            console.log('Type sélectionné:', type, 'pour contrat:', contrat);
+        }
+    });
+    
+    // Validation du formulaire
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const contrat = contratSelect.value;
+        const type = typeSelect.value;
+        const date = document.getElementById('date_etat').value;
+        
+        if (!contrat || !type || !date) {
+            e.preventDefault();
+            alert('Veuillez remplir tous les champs obligatoires.');
+            return false;
+        }
+        
+        // Validation supplémentaire si nécessaire
+        return true;
+    });
+});
+</script>
+{% endblock %}

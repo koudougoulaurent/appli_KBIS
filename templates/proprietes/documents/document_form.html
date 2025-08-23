@@ -1,0 +1,235 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="fas fa-file-alt text-primary me-2"></i>
+                {{ title }}
+            </h1>
+            <p class="text-muted">Remplissez les informations du document</p>
+        </div>
+        <div>
+            <a href="{% url 'proprietes:document_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Retour
+            </a>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="{{ form.nom.id_for_label }}" class="form-label">
+                                        Nom du document <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.nom }}
+                                    {% if form.nom.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.nom.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="{{ form.type_document.id_for_label }}" class="form-label">
+                                        Type de document <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.type_document }}
+                                    {% if form.type_document.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.type_document.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">
+                                Description
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.description.errors.0 }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.fichier.id_for_label }}" class="form-label">
+                                Fichier <span class="text-danger">*</span>
+                            </label>
+                            {{ form.fichier }}
+                            {% if form.fichier.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.fichier.errors.0 }}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">
+                                Formats acceptés : PDF, DOC, DOCX, JPG, PNG. Taille maximale : 10 MB.
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="{{ form.propriete.id_for_label }}" class="form-label">
+                                        Propriété
+                                    </label>
+                                    {{ form.propriete }}
+                                    {% if form.propriete.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.propriete.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="{{ form.bailleur.id_for_label }}" class="form-label">
+                                        Bailleur
+                                    </label>
+                                    {{ form.bailleur }}
+                                    {% if form.bailleur.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.bailleur.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="{{ form.locataire.id_for_label }}" class="form-label">
+                                        Locataire
+                                    </label>
+                                    {{ form.locataire }}
+                                    {% if form.locataire.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.locataire.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="{{ form.statut.id_for_label }}" class="form-label">
+                                        Statut
+                                    </label>
+                                    {{ form.statut }}
+                                    {% if form.statut.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.statut.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="{{ form.date_expiration.id_for_label }}" class="form-label">
+                                        Date d'expiration
+                                    </label>
+                                    {{ form.date_expiration }}
+                                    {% if form.date_expiration.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.date_expiration.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="{{ form.tags.id_for_label }}" class="form-label">
+                                        Tags
+                                    </label>
+                                    {{ form.tags }}
+                                    {% if form.tags.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.tags.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Mots-clés séparés par des virgules
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form.confidentiel }}
+                                <label class="form-check-label" for="{{ form.confidentiel.id_for_label }}">
+                                    Document confidentiel
+                                </label>
+                                {% if form.confidentiel.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.confidentiel.errors.0 }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'proprietes:document_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>{{ submit_text }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validation côté client
+    const form = document.querySelector('form');
+    const fileInput = document.querySelector('#{{ form.fichier.id_for_label }}');
+    
+    form.addEventListener('submit', function(e) {
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            const maxSize = 10 * 1024 * 1024; // 10 MB
+            
+            if (file.size > maxSize) {
+                e.preventDefault();
+                alert('Le fichier est trop volumineux. Taille maximale : 10 MB.');
+                return false;
+            }
+        }
+    });
+    
+    // Prévisualisation du nom de fichier
+    fileInput.addEventListener('change', function() {
+        const fileName = this.files[0]?.name;
+        if (fileName) {
+            const label = this.nextElementSibling;
+            if (label && label.classList.contains('form-text')) {
+                label.textContent = `Fichier sélectionné : ${fileName}`;
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

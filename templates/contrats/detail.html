@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}Détail du Contrat{% endblock %}
+
+{% block content %}
+<!-- Breadcrumbs contextuels -->
+{% include 'includes/breadcrumbs.html' with breadcrumbs=breadcrumbs %}
+
+<!-- Actions rapides contextuelles -->
+{% include 'includes/quick_actions.html' with quick_actions=quick_actions %}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-file-earmark-text"></i> Détail du Contrat
+        </h1>
+        <div class="d-flex gap-2">
+            <a href="{% url 'contrats:liste' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Retour à la liste
+            </a>
+            <button class="btn btn-outline-primary" onclick="window.enhancedNavigation.goBack()">
+                <i class="bi bi-arrow-left-circle"></i> Retour
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">{{ contrat.reference }}</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Informations du contrat</h6>
+                    <p><strong>Référence:</strong> {{ contrat.reference }}</p>
+                    <p><strong>Date de début:</strong> {{ contrat.date_debut|date:"d/m/Y" }}</p>
+                    <p><strong>Date de fin:</strong> {{ contrat.date_fin|date:"d/m/Y" }}</p>
+                    <p><strong>Loyer mensuel:</strong> {{ contrat.loyer_mensuel }} XOF</p>
+                    <p><strong>Statut:</strong> 
+                        {% if contrat.est_actif and not contrat.est_resilie %}
+                            <span class="badge bg-success">Actif</span>
+                        {% elif contrat.est_resilie %}
+                            <span class="badge bg-danger">Résilié</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Expiré</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Propriété et Locataire</h6>
+                    <p><strong>Propriété:</strong> {{ contrat.propriete.adresse }}</p>
+                    <p><strong>Locataire:</strong> {{ contrat.locataire.nom }} {{ contrat.locataire.prenom }}</p>
+                    <p><strong>Email:</strong> {{ contrat.locataire.email }}</p>
+                    <p><strong>Téléphone:</strong> {{ contrat.locataire.telephone }}</p>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="mt-4">
+                <h6>Actions</h6>
+                <div class="btn-group" role="group">
+                    <a href="{% url 'contrats:modifier' contrat.pk %}" class="btn btn-warning">
+                        <i class="bi bi-pencil"></i> Modifier
+                    </a>
+                    {% if not contrat.est_resilie %}
+                        <a href="{% url 'contrats:resilier' contrat.pk %}" class="btn btn-danger">
+                            <i class="bi bi-x-circle"></i> Résilier
+                        </a>
+                        <a href="{% url 'contrats:creer_resiliation' contrat.pk %}" class="btn btn-outline-danger">
+                            <i class="bi bi-file-earmark-x"></i> Créer Résiliation
+                        </a>
+                    {% else %}
+                        <span class="badge bg-danger">Contrat résilié</span>
+                        {% if contrat.resiliation %}
+                            <a href="{% url 'contrats:detail_resiliation' contrat.resiliation.id %}" class="btn btn-info">
+                                <i class="bi bi-eye"></i> Voir Résiliation
+                            </a>
+                        {% endif %}
+                    {% endif %}
+                    <a href="{% url 'contrats:detail_contrat_caution' contrat.pk %}" class="btn btn-primary">
+                        <i class="bi bi-shield-check"></i> Gestion Caution
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Menu contextuel intelligent -->
+    <div class="row mt-4">
+        <div class="col-12">
+            {% include 'includes/context_menu.html' with context_menu=context_menu %}
+        </div>
+    </div>
+</div>
+{% endblock %}

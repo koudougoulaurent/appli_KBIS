@@ -1,0 +1,417 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ titre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border: 1px solid #e2e8f0;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .form-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .form-section h5 {
+        color: #2d3748;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        font-size: 1.1rem;
+    }
+    
+    .form-section h5 i {
+        margin-right: 0.75rem;
+        color: #667eea;
+        font-size: 1.2rem;
+    }
+    
+    .permission-group {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .permission-group:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        border-color: #667eea;
+    }
+    
+    .permission-group h6 {
+        color: #4a5568;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .permission-group h6 i {
+        margin-right: 0.5rem;
+        color: #667eea;
+    }
+    
+    .form-check {
+        margin-bottom: 0.75rem;
+    }
+    
+    .form-check-input:checked {
+        background-color: #667eea;
+        border-color: #667eea;
+    }
+    
+    .form-check-label {
+        font-weight: 500;
+        color: #4a5568;
+        cursor: pointer;
+    }
+    
+    .form-check-label:hover {
+        color: #667eea;
+    }
+    
+    .help-text {
+        font-size: 0.85rem;
+        color: #718096;
+        margin-top: 0.5rem;
+        font-style: italic;
+    }
+    
+    .btn-custom {
+        border-radius: 25px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête de la page -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-layer-group text-primary me-2"></i>
+                {{ titre }}
+            </h1>
+            <p class="text-muted mt-1">
+                {% if groupe %}
+                    Modifier le groupe de travail "{{ groupe.nom }}"
+                {% else %}
+                    Créer un nouveau groupe de travail pour organiser les utilisateurs
+                {% endif %}
+            </p>
+        </div>
+        <a href="{% url 'utilisateurs:liste_groupes' %}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i>
+            Retour à la liste
+        </a>
+    </div>
+
+    <form method="post" class="form-container">
+        {% csrf_token %}
+        
+        <!-- Informations de base -->
+        <div class="form-section">
+            <h5>
+                <i class="fas fa-info-circle"></i>
+                Informations de Base
+            </h5>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="{{ form.nom.id_for_label }}" class="form-label required">
+                            <i class="fas fa-tag me-1"></i>
+                            Nom du groupe
+                        </label>
+                        {{ form.nom }}
+                        {% if form.nom.help_text %}
+                            <div class="help-text">{{ form.nom.help_text }}</div>
+                        {% endif %}
+                        {% if form.nom.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.nom.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="{{ form.actif.id_for_label }}" class="form-label">
+                            <i class="fas fa-toggle-on me-1"></i>
+                            Statut du groupe
+                        </label>
+                        <div class="form-check form-switch">
+                            {{ form.actif }}
+                            <label class="form-check-label" for="{{ form.actif.id_for_label }}">
+                                Groupe actif
+                            </label>
+                        </div>
+                        {% if form.actif.help_text %}
+                            <div class="help-text">{{ form.actif.help_text }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.description.id_for_label }}" class="form-label">
+                    <i class="fas fa-align-left me-1"></i>
+                    Description
+                </label>
+                {{ form.description }}
+                {% if form.description.help_text %}
+                    <div class="help-text">{{ form.description.help_text }}</div>
+                {% endif %}
+                {% if form.description.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.description.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Permissions du groupe -->
+        <div class="form-section">
+            <h5>
+                <i class="fas fa-shield-alt"></i>
+                Permissions et Modules Accessibles
+            </h5>
+            
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Note :</strong> Les permissions sont stockées au format JSON. Vous pouvez définir des permissions personnalisées pour ce groupe.
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.permissions.id_for_label }}" class="form-label">
+                    <i class="fas fa-code me-1"></i>
+                    Permissions JSON
+                </label>
+                {{ form.permissions }}
+                {% if form.permissions.help_text %}
+                    <div class="help-text">{{ form.permissions.help_text }}</div>
+                {% endif %}
+                {% if form.permissions.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.permissions.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Permissions prédéfinies -->
+            <div class="permission-group">
+                <h6>
+                    <i class="fas fa-list-check"></i>
+                    Permissions Prédéfinies
+                </h6>
+                <p class="text-muted mb-3">Cochez les modules auxquels ce groupe aura accès :</p>
+                <!-- Message d'avertissement pour caisse/contrôle -->
+                <div id="restriction-warning" class="alert alert-warning d-none">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Ce groupe ne peut pas modifier les données déjà validées et ne peut que consulter la liste des utilisateurs.
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="perm_proprietes" name="permissions_modules" value="proprietes">
+                            <label class="form-check-label" for="perm_proprietes">
+                                <i class="fas fa-home me-1"></i>
+                                Gestion des propriétés
+                            </label>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="perm_contrats" name="permissions_modules" value="contrats">
+                            <label class="form-check-label" for="perm_contrats">
+                                <i class="fas fa-file-contract me-1"></i>
+                                Gestion des contrats
+                            </label>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="perm_paiements" name="permissions_modules" value="paiements">
+                            <label class="form-check-label" for="perm_paiements">
+                                <i class="fas fa-cash-register me-1"></i>
+                                Gestion des paiements
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="perm_utilisateurs" name="permissions_modules" value="utilisateurs">
+                            <label class="form-check-label" for="perm_utilisateurs">
+                                <i class="fas fa-users me-1"></i>
+                                Gestion des utilisateurs
+                            </label>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="perm_notifications" name="permissions_modules" value="notifications">
+                            <label class="form-check-label" for="perm_notifications">
+                                <i class="fas fa-bell me-1"></i>
+                                Gestion des notifications
+                            </label>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="perm_reports" name="permissions_modules" value="reports">
+                            <label class="form-check-label" for="perm_reports">
+                                <i class="fas fa-chart-bar me-1"></i>
+                                Rapports et statistiques
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="updatePermissions()">
+                        <i class="fas fa-sync-alt me-1"></i>
+                        Mettre à jour les permissions JSON
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions du formulaire -->
+        <div class="form-actions text-center">
+            <button type="submit" class="btn btn-primary btn-custom me-2">
+                <i class="fas fa-save me-1"></i>
+                {% if groupe %}Modifier{% else %}Créer{% endif %} le groupe
+            </button>
+            
+            <a href="{% url 'utilisateurs:liste_groupes' %}" class="btn btn-secondary btn-custom">
+                <i class="fas fa-times me-1"></i>
+                Annuler
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser les permissions prédéfinies si elles existent
+    const permissionsField = document.getElementById('{{ form.permissions.id_for_label }}');
+    if (permissionsField && permissionsField.value) {
+        try {
+            const permissions = JSON.parse(permissionsField.value);
+            const modules = permissions.modules || [];
+            
+            modules.forEach(module => {
+                const checkbox = document.getElementById(`perm_${module}`);
+                if (checkbox) {
+                    checkbox.checked = true;
+                }
+            });
+        } catch (e) {
+            console.log('Erreur lors du parsing des permissions:', e);
+        }
+    }
+    // Afficher le message d'avertissement si le nom du groupe est caisse ou contrôle
+    const groupNameField = document.getElementById('{{ form.nom.id_for_label }}');
+    const restrictionWarning = document.getElementById('restriction-warning');
+    function checkGroupNameRestriction() {
+        if (!groupNameField || !restrictionWarning) return;
+        const groupName = groupNameField.value.trim().toLowerCase();
+        if (groupName === 'caisse' || groupName === 'contrôle') {
+            restrictionWarning.classList.remove('d-none');
+        } else {
+            restrictionWarning.classList.add('d-none');
+        }
+    }
+    if (groupNameField) {
+        groupNameField.addEventListener('input', checkGroupNameRestriction);
+        checkGroupNameRestriction();
+    }
+    
+    // Améliorer l'apparence des champs de formulaire
+    const formControls = document.querySelectorAll('.form-control, .form-select');
+    formControls.forEach(control => {
+        control.classList.add('form-control-lg');
+        control.style.borderRadius = '10px';
+    });
+    
+    // Animation des sections
+    const sections = document.querySelectorAll('.form-section');
+    sections.forEach((section, index) => {
+        section.style.opacity = '0';
+        section.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            section.style.transition = 'all 0.5s ease';
+            section.style.opacity = '1';
+            section.style.transform = 'translateY(0)';
+        }, index * 200);
+    });
+});
+
+function updatePermissions() {
+    const checkboxes = document.querySelectorAll('input[name="permissions_modules"]:checked');
+    const modules = Array.from(checkboxes).map(cb => cb.value);
+    
+    // Récupérer le nom du groupe
+    const groupNameField = document.getElementById('{{ form.nom.id_for_label }}');
+    const groupName = groupNameField ? groupNameField.value.trim().toLowerCase() : '';
+    let permissions = {
+        modules: modules,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    };
+    if (groupName === 'caisse' || groupName === 'contrôle') {
+        permissions.can_modify_validated_data = false;
+        permissions.can_view_users = true;
+    }
+    
+    const permissionsField = document.getElementById('{{ form.permissions.id_for_label }}');
+    permissionsField.value = JSON.stringify(permissions, null, 2);
+    
+    // Afficher une notification
+    const notification = document.createElement('div');
+    notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>
+        Permissions mises à jour avec succès !
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+</script>
+{% endblock %} 

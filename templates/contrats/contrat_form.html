@@ -1,0 +1,628 @@
+{% extends 'base_dashboard.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}
+    {% if form.instance.pk %}
+        Modifier le contrat - {{ form.instance.numero_contrat }}
+    {% else %}
+        Créer un nouveau contrat
+    {% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pdf-section {
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        border: 2px solid #28a745;
+        border-radius: 15px;
+        padding: 25px;
+        margin: 20px 0;
+        transition: all 0.3s ease;
+    }
+    .pdf-section:hover {
+        border-color: #1e7e34;
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.1);
+    }
+    .pdf-section h4 {
+        color: #155724;
+        font-weight: 600;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .form-section {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    .form-section h3 {
+        color: #495057;
+        font-weight: 600;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 10px;
+    }
+    .btn-custom {
+        border-radius: 25px;
+        padding: 12px 30px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s ease;
+    }
+    .btn-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    .alert-info {
+        background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+        border: none;
+        border-radius: 15px;
+        color: #0c5460;
+    }
+    .contract-summary {
+        background: linear-gradient(135deg, #e2e3e5 0%, #d6d8db 100%);
+        border-radius: 15px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+    .contract-summary h5 {
+        color: #495057;
+        font-weight: 600;
+        margin-bottom: 15px;
+    }
+    .pdf-features {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+    }
+    .pdf-feature {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    .pdf-feature i {
+        font-size: 2rem;
+        color: #28a745;
+        margin-bottom: 10px;
+    }
+    .pdf-option {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+        border: 2px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+    .pdf-option:hover {
+        border-color: #28a745;
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- En-tête -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-0">
+                        <i class="bi bi-file-earmark-text-fill me-2"></i>
+                        {% if form.instance.pk %}
+                            Modifier le contrat
+                        {% else %}
+                            Nouveau contrat de bail
+                        {% endif %}
+                    </h2>
+                    <p class="text-muted mb-0">Génération automatique de contrat PDF professionnel</p>
+                </div>
+                <a href="{% url 'contrats:liste' %}" class="btn btn-outline-secondary btn-custom">
+                    <i class="bi bi-arrow-left me-2"></i>Retour à la liste
+                </a>
+            </div>
+
+            <!-- Section PDF -->
+            <div class="pdf-section">
+                <h4><i class="bi bi-file-pdf text-success me-2"></i>Génération automatique de contrat PDF</h4>
+                <p class="mb-3">
+                    <strong>Nouvelle approche moderne :</strong> Plus besoin de télécharger des documents signés ! 
+                    Créez votre contrat via ce formulaire et générez automatiquement un document PDF professionnel 
+                    format A4 personnalisé à votre entreprise.
+                </p>
+                
+                <div class="pdf-features">
+                    <div class="pdf-feature">
+                        <i class="bi bi-check-circle"></i>
+                        <h6>PDF automatique</h6>
+                        <small>Génération instantanée après validation</small>
+                    </div>
+                    <div class="pdf-feature">
+                        <i class="bi bi-palette"></i>
+                        <h6>Personnalisable</h6>
+                        <small>Logo, couleurs et informations de l'entreprise</small>
+                    </div>
+                    <div class="pdf-feature">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <h6>Format A4</h6>
+                        <small>Document officiel prêt à imprimer</small>
+                    </div>
+                    <div class="pdf-feature">
+                        <i class="bi bi-shield-check"></i>
+                        <h6>Conforme</h6>
+                        <small>Respect des obligations légales</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alerte d'information -->
+            <div class="alert alert-info" role="alert">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Processus simplifié :</strong> 
+                Remplissez le formulaire ci-dessous avec toutes les informations du contrat. 
+                Le système générera automatiquement un PDF professionnel que vous pourrez imprimer 
+                et faire signer par les parties concernées.
+            </div>
+
+            <!-- Formulaire -->
+            <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                {% csrf_token %}
+
+                <!-- Section 1: Informations du contrat -->
+                <div class="form-section">
+                    <h3><i class="bi bi-file-earmark me-2"></i>Informations du contrat</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.numero_contrat|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.propriete|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.locataire|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.date_signature|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Période du contrat -->
+                <div class="form-section">
+                    <h3><i class="bi bi-calendar-range me-2"></i>Période du contrat</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.date_debut|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.date_fin|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Conditions financières -->
+                <div class="form-section">
+                    <h3><i class="bi bi-currency-exchange me-2"></i>Conditions financières</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.loyer_mensuel|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.charges_mensuelles|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.depot_garantie|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.avance_loyer|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.jour_paiement|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.mode_paiement|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3.5: Gestion de la caution et avance de loyer -->
+                <div class="form-section">
+                    <h3><i class="bi bi-shield-check me-2"></i>Gestion de la caution et avance de loyer</h3>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Nouveau système intégré :</strong> 
+                        Gérez maintenant les paiements de caution et d'avance de loyer avec un système complet incluant reçus, justificatifs et suivi détaillé.
+                    </div>
+                    
+                    <!-- Informations sur les montants requis -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="card border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="bi bi-shield-check me-2"></i>Caution requise</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="fw-bold">Montant :</span>
+                                        <span class="h5 text-primary mb-0" id="montant-caution-requis">
+                                            {{ form.depot_garantie.value|default:"0"|floatformat:0 }} XOF
+                                        </span>
+                                    </div>
+                                    <small class="text-muted">Défini dans les conditions financières</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-success">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="h6 mb-0"><i class="bi bi-cash-coin me-2"></i>Avance de loyer requise</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="fw-bold">Montant :</span>
+                                        <span class="h5 text-success mb-0" id="montant-avance-requis">
+                                            {{ form.avance_loyer.value|default:"0"|floatformat:0 }} XOF
+                                        </span>
+                                    </div>
+                                    <small class="text-muted">Défini dans les conditions financières</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Statut des paiements (si contrat existant) -->
+                    {% if form.instance.pk %}
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="bi bi-list-check me-2"></i>Statut des paiements</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span>Caution :</span>
+                                                <span class="badge {% if form.instance.caution_payee %}bg-success{% else %}bg-warning{% endif %}">
+                                                    {% if form.instance.caution_payee %}Payée{% else %}En attente{% endif %}
+                                                </span>
+                                            </div>
+                                            {% if form.instance.date_paiement_caution %}
+                                            <small class="text-muted">Payée le {{ form.instance.date_paiement_caution|date:"d/m/Y" }}</small>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span>Avance de loyer :</span>
+                                                <span class="badge {% if form.instance.avance_loyer_payee %}bg-success{% else %}bg-warning{% endif %}">
+                                                    {% if form.instance.avance_loyer_payee %}Payée{% else %}En attente{% endif %}
+                                                </span>
+                                            </div>
+                                            {% if form.instance.date_paiement_avance %}
+                                            <small class="text-muted">Payée le {{ form.instance.date_paiement_avance|date:"d/m/Y" }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Actions de gestion des paiements -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Actions de gestion</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <a href="{% url 'paiements:paiement_caution_avance_create' %}?contrat={{ form.instance.pk|default:'' }}" 
+                                               class="btn btn-primary w-100 mb-2">
+                                                <i class="bi bi-plus-circle me-2"></i>Nouveau paiement
+                                            </a>
+                                            <small class="text-muted d-block">Enregistrer un paiement de caution ou d'avance</small>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <a href="{% url 'paiements:paiement_caution_avance_list' %}?contrat={{ form.instance.pk|default:'' }}" 
+                                               class="btn btn-info w-100 mb-2">
+                                                <i class="bi bi-list me-2"></i>Voir l'historique
+                                            </a>
+                                            <small class="text-muted d-block">Consulter tous les paiements</small>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <a href="{% url 'paiements:paiement_caution_avance_create' %}?contrat={{ form.instance.pk|default:'' }}&type=caution_et_avance" 
+                                               class="btn btn-success w-100 mb-2">
+                                                <i class="bi bi-shield-check me-2"></i>Paiement combiné
+                                            </a>
+                                            <small class="text-muted d-block">Caution + avance en une fois</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Historique des paiements (si contrat existant) -->
+                    {% if form.instance.pk %}
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="card border-secondary">
+                                <div class="card-header bg-secondary text-white">
+                                    <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Derniers paiements</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="historique-paiements">
+                                        <div class="text-center text-muted">
+                                            <i class="bi bi-arrow-clockwise spin"></i> Chargement de l'historique...
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Section de création des paiements -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="bi bi-credit-card me-2"></i>Création des paiements</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            {{ form.creer_paiement_caution|as_crispy_field }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            {{ form.creer_paiement_avance|as_crispy_field }}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Champs de paiement de caution -->
+                                    <div id="champs-caution" class="row mt-3" style="display: none;">
+                                        <div class="col-md-6">
+                                            {{ form.mode_paiement_caution|as_crispy_field }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            {{ form.date_paiement_caution|as_crispy_field }}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Champs de paiement d'avance -->
+                                    <div id="champs-avance" class="row mt-3" style="display: none;">
+                                        <div class="col-md-6">
+                                            {{ form.mode_paiement_avance|as_crispy_field }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            {{ form.date_paiement_avance|as_crispy_field }}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="alert alert-info mt-2">
+                                        <small>
+                                            <i class="bi bi-lightbulb me-2"></i>
+                                            <strong>Conseil :</strong> 
+                                            Cochez ces options pour créer automatiquement les paiements de caution et/ou d'avance lors de la création du contrat.
+                                            Vous pourrez également les créer plus tard depuis la page de gestion des paiements.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Section de génération PDF -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Génération du contrat</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            {{ form.telecharger_pdf|as_crispy_field }}
+                                        </div>
+                                    </div>
+                                    <div class="alert alert-warning mt-2">
+                                        <small>
+                                            <i class="bi bi-lightbulb me-2"></i>
+                                            <strong>Conseil :</strong> 
+                                            Cochez cette option pour générer automatiquement le contrat en PDF après sauvegarde.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Résumé du contrat -->
+                <div class="contract-summary">
+                    <h5><i class="bi bi-calculator me-2"></i>Résumé financier</h5>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 text-primary mb-0" id="total-mensuel">-</div>
+                                <small class="text-muted">Total mensuel</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 text-success mb-0" id="total-entree">-</div>
+                                <small class="text-muted">Total à l'entrée</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 text-info mb-0" id="duree-contrat">-</div>
+                                <small class="text-muted">Durée (mois)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 text-warning mb-0" id="total-contrat">-</div>
+                                <small class="text-muted">Total contrat</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Notes -->
+                <div class="form-section">
+                    <h3><i class="bi bi-chat-text me-2"></i>Notes additionnelles</h3>
+                    {{ form.notes|as_crispy_field }}
+                </div>
+
+
+
+                <!-- Boutons d'action -->
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'contrats:liste' %}" class="btn btn-outline-secondary btn-custom">
+                        <i class="bi bi-x-circle me-2"></i>Annuler
+                    </a>
+                    <button type="submit" class="btn btn-success btn-custom">
+                        <i class="bi bi-check-circle me-2"></i>
+                        {% if form.instance.pk %}
+                            Modifier le contrat
+                        {% else %}
+                            Créer le contrat
+                        {% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript pour la gestion conditionnelle des champs de date -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validation des formulaires Bootstrap
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        });
+    });
+
+    // Calculs automatiques
+    function updateContractSummary() {
+        const loyer = parseFloat(document.getElementById('id_loyer_mensuel')?.value) || 0;
+        const charges = parseFloat(document.getElementById('id_charges_mensuelles')?.value) || 0;
+        const depot = parseFloat(document.getElementById('id_depot_garantie')?.value) || 0;
+        const avance = parseFloat(document.getElementById('id_avance_loyer')?.value) || 0;
+        
+        const dateDebut = document.getElementById('id_date_debut')?.value;
+        const dateFin = document.getElementById('id_date_fin')?.value;
+        
+        // Calculs
+        const totalMensuel = loyer + charges;
+        const totalEntree = depot + avance + totalMensuel;
+        
+        // Durée du contrat
+        let dureeMois = 0;
+        if (dateDebut && dateFin) {
+            const debut = new Date(dateDebut);
+            const fin = new Date(dateFin);
+            dureeMois = Math.round((fin - debut) / (1000 * 60 * 60 * 24 * 30.44));
+        }
+        
+        const totalContrat = totalMensuel * dureeMois;
+        
+        // Mise à jour de l'affichage
+        document.getElementById('total-mensuel').textContent = totalMensuel.toLocaleString() + ' XOF';
+        document.getElementById('total-entree').textContent = totalEntree.toLocaleString() + ' XOF';
+        document.getElementById('duree-contrat').textContent = dureeMois + ' mois';
+        document.getElementById('total-contrat').textContent = totalContrat.toLocaleString() + ' XOF';
+    }
+
+    // Écouter les changements sur les champs financiers
+    const financialInputs = ['id_loyer_mensuel', 'id_charges_mensuelles', 'id_depot_garantie', 'id_avance_loyer', 'id_date_debut', 'id_date_fin'];
+    financialInputs.forEach(inputId => {
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.addEventListener('input', updateContractSummary);
+            input.addEventListener('change', updateContractSummary);
+        }
+    });
+
+    // Calcul initial
+    updateContractSummary();
+
+    // Mise à jour des montants affichés
+    function updateMontantsAffichés() {
+        const depotGarantie = parseFloat(document.getElementById('id_depot_garantie')?.value) || 0;
+        const avanceLoyer = parseFloat(document.getElementById('id_avance_loyer')?.value) || 0;
+        
+        document.getElementById('montant-caution-requis').textContent = depotGarantie.toLocaleString() + ' XOF';
+        document.getElementById('montant-avance-requis').textContent = avanceLoyer.toLocaleString() + ' XOF';
+    }
+
+    // Écouter les changements sur les montants
+    const montantInputs = ['id_depot_garantie', 'id_avance_loyer'];
+    montantInputs.forEach(inputId => {
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.addEventListener('input', updateMontantsAffichés);
+            input.addEventListener('change', updateMontantsAffichés);
+        }
+    });
+
+    // Mise à jour initiale des montants
+    updateMontantsAffichés();
+
+    // Gestion de l'affichage conditionnel des champs de paiement
+    function toggleChampsPaiement() {
+        const cautionChecked = document.getElementById('id_creer_paiement_caution')?.checked;
+        const avanceChecked = document.getElementById('id_creer_paiement_avance')?.checked;
+        
+        const champsCaution = document.getElementById('champs-caution');
+        const champsAvance = document.getElementById('champs-avance');
+        
+        if (champsCaution) {
+            champsCaution.style.display = cautionChecked ? 'flex' : 'none';
+        }
+        
+        if (champsAvance) {
+            champsAvance.style.display = avanceChecked ? 'flex' : 'none';
+        }
+    }
+    
+    // Écouter les changements sur les checkboxes de paiement
+    const paiementCheckboxes = ['id_creer_paiement_caution', 'id_creer_paiement_avance'];
+    paiementCheckboxes.forEach(checkboxId => {
+        const checkbox = document.getElementById(checkboxId);
+        if (checkbox) {
+            checkbox.addEventListener('change', toggleChampsPaiement);
+        }
+    });
+    
+    // Initialisation de l'affichage des champs
+    toggleChampsPaiement();
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,347 @@
+{% extends 'base.html' %}
+
+{% block title %}Liste des Retraits - Gestion Immobilière{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête avec navigation -->
+    <div class="dashboard-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1><i class="bi bi-cash-stack"></i> Liste des Retraits</h1>
+                <p>Gestion des versements aux bailleurs</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'paiements:retrait_ajouter' %}" class="btn btn-success">
+                    <i class="bi bi-plus-circle"></i> Nouveau Retrait
+                </a>
+                <a href="{% url 'paiements:liste' %}" class="btn btn-primary">
+                    <i class="bi bi-arrow-left"></i> Retour aux Paiements
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres et recherche -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="bi bi-funnel"></i> Filtres et Recherche</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label for="statut" class="form-label">Statut</label>
+                    <select name="statut" id="statut" class="form-select">
+                        <option value="">Tous les statuts</option>
+                        <option value="en_attente" {% if request.GET.statut == 'en_attente' %}selected{% endif %}>En attente</option>
+                        <option value="valide" {% if request.GET.statut == 'valide' %}selected{% endif %}>Validé</option>
+                        <option value="annule" {% if request.GET.statut == 'annule' %}selected{% endif %}>Annulé</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="type" class="form-label">Type</label>
+                    <select name="type" id="type" class="form-select">
+                        <option value="">Tous les types</option>
+                        <option value="loyers" {% if request.GET.type == 'loyers' %}selected{% endif %}>Loyers</option>
+                        <option value="charges" {% if request.GET.type == 'charges' %}selected{% endif %}>Charges</option>
+                        <option value="depot_garantie" {% if request.GET.type == 'depot_garantie' %}selected{% endif %}>Dépôt de garantie</option>
+                        <option value="frais_agence" {% if request.GET.type == 'frais_agence' %}selected{% endif %}>Frais d'agence</option>
+                        <option value="autre" {% if request.GET.type == 'autre' %}selected{% endif %}>Autre</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="bailleur" class="form-label">Bailleur</label>
+                    <select name="bailleur" id="bailleur" class="form-select">
+                        <option value="">Tous les bailleurs</option>
+                        {% for bailleur in bailleurs %}
+                        <option value="{{ bailleur.id }}" {% if request.GET.bailleur == bailleur.id|stringformat:"s" %}selected{% endif %}>
+                            {{ bailleur.nom }} {{ bailleur.prenom }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="date_debut" class="form-label">Date début</label>
+                    <input type="date" name="date_debut" id="date_debut" class="form-control" 
+                           value="{{ request.GET.date_debut }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="date_fin" class="form-label">Date fin</label>
+                    <input type="date" name="date_fin" id="date_fin" class="form-control" 
+                           value="{{ request.GET.date_fin }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="montant_min" class="form-label">Montant min (XOF)</label>
+                    <input type="number" name="montant_min" id="montant_min" class="form-control" 
+                           value="{{ request.GET.montant_min }}" step="0.01" min="0">
+                </div>
+                <div class="col-md-3">
+                    <label for="montant_max" class="form-label">Montant max (XOF)</label>
+                    <input type="number" name="montant_max" id="montant_max" class="form-control" 
+                           value="{{ request.GET.montant_max }}" step="0.01" min="0">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Filtrer
+                    </button>
+                    <a href="{% url 'paiements:retraits_liste' %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-clockwise"></i> Réinitialiser
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card primary">
+                <div class="stat-number">{{ retraits.count }}</div>
+                <div class="stat-label">Total Retraits</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card success">
+                <div class="stat-number">{{ retraits_valides.count }}</div>
+                <div class="stat-label">Validés</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card warning">
+                <div class="stat-number">{{ retraits_en_attente.count }}</div>
+                <div class="stat-label">En Attente</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card info">
+                <div class="stat-number">{{ montant_total }} XOF</div>
+                <div class="stat-label">Montant Total</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des retraits -->
+    <div class="card">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5><i class="bi bi-list-ul"></i> Retraits ({{ retraits.count }})</h5>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="bi bi-sort-down"></i> Trier
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="?tri=date_demande">Par date de demande</a></li>
+                        <li><a class="dropdown-item" href="?tri=montant">Par montant</a></li>
+                        <li><a class="dropdown-item" href="?tri=bailleur">Par bailleur</a></li>
+                        <li><a class="dropdown-item" href="?tri=statut">Par statut</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if retraits %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Bailleur</th>
+                                <th>Montant</th>
+                                <th>Type</th>
+                                <th>Statut</th>
+                                <th>Date Demande</th>
+                                <th>Mode</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for retrait in retraits %}
+                            <tr>
+                                <td>
+                                    <span class="badge bg-secondary">#{{ retrait.id }}</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm me-2">
+                                            <i class="bi bi-person-circle text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <strong>{{ retrait.bailleur.nom }} {{ retrait.bailleur.prenom }}</strong>
+                                            {% if retrait.bailleur.telephone %}
+                                            <br><small class="text-muted">{{ retrait.bailleur.telephone }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-success">{{ retrait.montant }} XOF</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ retrait.get_type_retrait_display }}</span>
+                                </td>
+                                <td>
+                                    {% if retrait.statut == 'en_attente' %}
+                                        <span class="badge bg-warning">En attente</span>
+                                    {% elif retrait.statut == 'valide' %}
+                                        <span class="badge bg-success">Validé</span>
+                                    {% elif retrait.statut == 'annule' %}
+                                        <span class="badge bg-danger">Annulé</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>{{ retrait.date_demande|date:"d/m/Y" }}</strong>
+                                        {% if retrait.date_versement %}
+                                        <br><small class="text-muted">Versé le {{ retrait.date_versement|date:"d/m/Y" }}</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ retrait.get_mode_retrait_display }}</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'paiements:retrait_detail' retrait.pk %}" 
+                                           class="btn btn-outline-primary" title="Voir détails">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="{% url 'paiements:retrait_modifier' retrait.pk %}" 
+                                           class="btn btn-outline-secondary" title="Modifier">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        {% if retrait.statut == 'en_attente' %}
+                                        <button type="button" class="btn btn-outline-success" 
+                                                title="Valider" onclick="validerRetrait({{ retrait.id }})">
+                                            <i class="bi bi-check-circle"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger" 
+                                                title="Annuler" onclick="annulerRetrait({{ retrait.id }})">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if retraits.has_other_pages %}
+                <nav aria-label="Pagination des retraits">
+                    <ul class="pagination justify-content-center">
+                        {% if retraits.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ retraits.previous_page_number }}&{{ request.GET.urlencode }}">
+                                <i class="bi bi-chevron-left"></i> Précédent
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% for num in retraits.paginator.page_range %}
+                        {% if retraits.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > retraits.number|add:'-3' and num < retraits.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}&{{ request.GET.urlencode }}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+
+                        {% if retraits.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ retraits.next_page_number }}&{{ request.GET.urlencode }}">
+                                Suivant <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-cash-stack display-1 text-muted"></i>
+                    <h4 class="mt-3">Aucun retrait trouvé</h4>
+                    <p class="text-muted">Aucun retrait ne correspond aux critères de recherche.</p>
+                                            <a href="{% url 'paiements:retrait_ajouter' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Créer le premier retrait
+                        </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Actions rapides -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-lightning"></i> Actions Rapides</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'paiements:retrait_ajouter' %}" class="btn btn-success">
+                            <i class="bi bi-plus-circle"></i> Nouveau Retrait
+                        </a>
+                        <a href="{% url 'paiements:comptes_liste' %}" class="btn btn-info">
+                            <i class="bi bi-bank"></i> Gérer les Comptes
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-graph-up"></i> Statistiques</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="stat-card primary">
+                                <div class="stat-number">{{ retraits_ce_mois.count }}</div>
+                                <div class="stat-label">Ce Mois</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-card success">
+                                <div class="stat-number">{{ montant_ce_mois }} XOF</div>
+                                <div class="stat-label">Montant Mois</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Fonctions pour valider/annuler les retraits
+function validerRetrait(retraitId) {
+    if (confirm('Êtes-vous sûr de vouloir valider ce retrait ?')) {
+        // Ici vous pouvez ajouter une requête AJAX pour valider le retrait
+        window.location.href = `/paiements/retraits/${retraitId}/valider/`;
+    }
+}
+
+function annulerRetrait(retraitId) {
+    if (confirm('Êtes-vous sûr de vouloir annuler ce retrait ?')) {
+        // Ici vous pouvez ajouter une requête AJAX pour annuler le retrait
+        window.location.href = `/paiements/retraits/${retraitId}/annuler/`;
+    }
+}
+
+// Initialisation des tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %} 

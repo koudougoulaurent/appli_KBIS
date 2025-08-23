@@ -1,0 +1,339 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Préférences de Notification{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'notifications:notification_list' %}">
+                                <i class="fas fa-bell me-1"></i>
+                                Notifications
+                            </a>
+                        </li>
+                        <li class="breadcrumb-item active" aria-current="page">Préférences</li>
+                    </ol>
+                </nav>
+                <a href="{% url 'notifications:notification_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Retour
+                </a>
+            </div>
+
+            {% if messages %}
+            <div class="messages mb-4">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>
+                        Préférences de Notification
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Méthodes de livraison -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="mb-3">
+                                    <i class="fas fa-paper-plane me-2"></i>
+                                    Méthodes de livraison
+                                </h5>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="email_notifications" name="email_notifications" 
+                                           {% if preferences.email_notifications %}checked{% endif %}>
+                                    <label class="form-check-label" for="email_notifications">
+                                        <i class="fas fa-envelope me-2"></i>
+                                        Notifications par email
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="browser_notifications" name="browser_notifications" 
+                                           {% if preferences.browser_notifications %}checked{% endif %}>
+                                    <label class="form-check-label" for="browser_notifications">
+                                        <i class="fas fa-bell me-2"></i>
+                                        Notifications navigateur
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="sms_notifications" name="sms_notifications" 
+                                           {% if preferences.sms_notifications %}checked{% endif %}>
+                                    <label class="form-check-label" for="sms_notifications">
+                                        <i class="fas fa-sms me-2"></i>
+                                        Notifications SMS
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Numéro de téléphone pour SMS -->
+                        <div class="row mb-4" id="smsPhoneSection" style="display: none;">
+                            <div class="col-12">
+                                <h5 class="mb-3">
+                                    <i class="fas fa-phone me-2"></i>
+                                    Configuration SMS
+                                </h5>
+                                <p class="text-muted">Configurez votre numéro de téléphone pour recevoir les notifications SMS.</p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="phone_number" class="form-label">Numéro de téléphone</label>
+                                    <input type="tel" class="form-control" id="phone_number" name="phone_number" 
+                                           value="{{ preferences.phone_number|default:'' }}" 
+                                           placeholder="+33 6 12 34 56 78">
+                                    <div class="form-text">
+                                        Format international recommandé (ex: +33 6 12 34 56 78)
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mt-4">
+                                    <a href="{% url 'notifications:sms_configuration' %}" class="btn btn-outline-primary">
+                                        <i class="fas fa-cog me-1"></i>
+                                        Configuration avancée SMS
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Types de notifications -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="mb-3">
+                                    <i class="fas fa-list me-2"></i>
+                                    Types de notifications par email
+                                </h5>
+                                <p class="text-muted">Choisissez quels types de notifications vous souhaitez recevoir par email.</p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="payment_due_email" name="payment_due_email" 
+                                           {% if preferences.payment_due_email %}checked{% endif %}>
+                                    <label class="form-check-label" for="payment_due_email">
+                                        <i class="fas fa-calendar-times me-2 text-warning"></i>
+                                        Échéances de paiement
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="payment_received_email" name="payment_received_email" 
+                                           {% if preferences.payment_received_email %}checked{% endif %}>
+                                    <label class="form-check-label" for="payment_received_email">
+                                        <i class="fas fa-check-circle me-2 text-success"></i>
+                                        Paiements reçus
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="contract_expiring_email" name="contract_expiring_email" 
+                                           {% if preferences.contract_expiring_email %}checked{% endif %}>
+                                    <label class="form-check-label" for="contract_expiring_email">
+                                        <i class="fas fa-file-contract me-2 text-info"></i>
+                                        Contrats expirants
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="maintenance_email" name="maintenance_email" 
+                                           {% if preferences.maintenance_email %}checked{% endif %}>
+                                    <label class="form-check-label" for="maintenance_email">
+                                        <i class="fas fa-tools me-2 text-primary"></i>
+                                        Demandes de maintenance
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="system_alerts_email" name="system_alerts_email" 
+                                           {% if preferences.system_alerts_email %}checked{% endif %}>
+                                    <label class="form-check-label" for="system_alerts_email">
+                                        <i class="fas fa-exclamation-triangle me-2 text-danger"></i>
+                                        Alertes système
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Digest -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="mb-3">
+                                    <i class="fas fa-calendar-alt me-2"></i>
+                                    Résumés périodiques
+                                </h5>
+                                <p class="text-muted">Recevez un résumé de vos notifications par email.</p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="daily_digest" name="daily_digest" 
+                                           {% if preferences.daily_digest %}checked{% endif %}>
+                                    <label class="form-check-label" for="daily_digest">
+                                        <i class="fas fa-calendar-day me-2 text-primary"></i>
+                                        Résumé quotidien
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="weekly_digest" name="weekly_digest" 
+                                           {% if preferences.weekly_digest %}checked{% endif %}>
+                                    <label class="form-check-label" for="weekly_digest">
+                                        <i class="fas fa-calendar-week me-2 text-success"></i>
+                                        Résumé hebdomadaire
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Boutons d'action -->
+                        <div class="row">
+                            <div class="col-12">
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <button type="button" class="btn btn-outline-secondary" id="resetDefaults">
+                                        <i class="fas fa-undo me-1"></i>
+                                        Réinitialiser aux valeurs par défaut
+                                    </button>
+                                    <div>
+                                        <a href="{% url 'notifications:notification_list' %}" class="btn btn-outline-secondary me-2">
+                                            Annuler
+                                        </a>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-1"></i>
+                                            Enregistrer les préférences
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Informations supplémentaires -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Informations
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-2">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    Les notifications haute priorité sont toujours envoyées
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    Vous pouvez modifier ces préférences à tout moment
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    Les résumés incluent toutes les notifications non lues
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-question-circle me-2"></i>
+                                Aide
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-2">
+                                    <strong>Notifications par email :</strong> Recevez les notifications directement dans votre boîte mail
+                                </li>
+                                <li class="mb-2">
+                                    <strong>Notifications navigateur :</strong> Affichez les notifications dans votre navigateur web
+                                </li>
+                                <li class="mb-2">
+                                    <strong>Résumés :</strong> Recevez un récapitulatif de vos notifications non lues
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Fonction pour afficher/masquer la section SMS
+    function toggleSmsSection() {
+        if ($('#sms_notifications').is(':checked')) {
+            $('#smsPhoneSection').show();
+        } else {
+            $('#smsPhoneSection').hide();
+        }
+    }
+    
+    // Initialiser l'affichage
+    toggleSmsSection();
+    
+    // Écouter les changements sur la checkbox SMS
+    $('#sms_notifications').change(function() {
+        toggleSmsSection();
+    });
+    
+    // Réinitialiser aux valeurs par défaut
+    $('#resetDefaults').click(function() {
+        if (confirm('Êtes-vous sûr de vouloir réinitialiser toutes les préférences aux valeurs par défaut ?')) {
+            // Décocher toutes les cases
+            $('input[type="checkbox"]').prop('checked', false);
+            
+            // Cocher les cases par défaut
+            $('#email_notifications').prop('checked', true);
+            $('#browser_notifications').prop('checked', true);
+            $('#sms_notifications').prop('checked', false);
+            $('#payment_due_email').prop('checked', true);
+            $('#payment_received_email').prop('checked', true);
+            $('#contract_expiring_email').prop('checked', true);
+            $('#maintenance_email').prop('checked', true);
+            $('#system_alerts_email').prop('checked', true);
+            $('#weekly_digest').prop('checked', true);
+            
+            // Masquer la section SMS
+            toggleSmsSection();
+            
+            alert('Préférences réinitialisées. Cliquez sur "Enregistrer" pour appliquer les changements.');
+        }
+    });
+});
+</script>
+{% endblock %} 

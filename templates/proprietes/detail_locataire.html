@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Détails du Locataire - {{ locataire.get_nom_complet }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête avec navigation -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="bi bi-person text-primary"></i> {{ locataire.get_nom_complet }}
+            </h1>
+            <p class="text-muted mb-0">Code: <strong>{{ locataire.code_locataire }}</strong></p>
+            {% include 'includes/breadcrumbs.html' %}
+        </div>
+        <div class="d-flex gap-2">
+            {% include 'includes/quick_actions.html' %}
+        </div>
+    </div>
+
+    <!-- Informations principales -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle"></i> Informations du Locataire
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Nom:</strong> {{ locataire.nom }}</p>
+                            <p><strong>Prénom:</strong> {{ locataire.prenom }}</p>
+                            <p><strong>Email:</strong> {{ locataire.email }}</p>
+                            <p><strong>Téléphone:</strong> {{ locataire.telephone }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Profession:</strong> {{ locataire.profession|default:"Non renseigné" }}</p>
+                            <p><strong>Employeur:</strong> {{ locataire.employeur|default:"Non renseigné" }}</p>
+                            <p><strong>Salaire mensuel:</strong> 
+                                {% if locataire.salaire_mensuel %}
+                                    {{ locataire.salaire_mensuel }} XOF
+                                {% else %}
+                                    Non renseigné
+                                {% endif %}
+                            </p>
+                            <p><strong>Statut:</strong> 
+                                {% if locataire.est_actif %}
+                                    <span class="badge bg-success">Actif</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactif</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-cash-coin"></i> Statistiques Financières
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        <h3 class="text-primary">{{ stats.total_mois|floatformat:0 }} XOF</h3>
+                        <p class="text-muted">Paiés ce mois</p>
+                        <hr>
+                        <h4 class="text-success">{{ stats.total_annee|floatformat:0 }} XOF</h4>
+                        <p class="text-muted">Paiés cette année</p>
+                        <hr>
+                        <p><strong>Paiements ce mois:</strong> {{ stats.nombre_paiements_mois }}</p>
+                        <p><strong>Paiements cette année:</strong> {{ stats.nombre_paiements_annee }}</p>
+                        {% if stats.est_en_retard %}
+                            <div class="alert alert-warning mt-2">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <strong>En retard de {{ stats.retard_jours }} jours</strong>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contrat actuel -->
+    {% if contrat_actuel %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-file-contract"></i> Contrat Actuel
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Numéro:</strong> {{ contrat_actuel.numero_contrat }}</p>
+                            <p><strong>Propriété:</strong> {{ contrat_actuel.propriete.titre }}</p>
+                            <p><strong>Adresse:</strong> {{ contrat_actuel.propriete.adresse }}, {{ contrat_actuel.propriete.ville }}</p>
+                            <p><strong>Date début:</strong> {{ contrat_actuel.date_debut|date:"d/m/Y" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Loyer mensuel:</strong> <span class="badge bg-success fs-6">{{ contrat_actuel.loyer_mensuel }} XOF</span></p>
+                            <p><strong>Charges mensuelles:</strong> <span class="badge bg-info fs-6">{{ contrat_actuel.charges_mensuelles }} XOF</span></p>
+                            <p><strong>Total mensuel:</strong> <span class="badge bg-primary fs-6">{{ contrat_actuel.get_total_mensuel }} XOF</span></p>
+                            <p><strong>Date fin:</strong> {{ contrat_actuel.date_fin|date:"d/m/Y" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Contrats et propriétés -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-file-contract"></i> Tous les Contrats ({{ contrats.count }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if contrats %}
+                        <div class="list-group list-group-flush">
+                            {% for contrat in contrats %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ contrat.numero_contrat }}</h6>
+                                    <small class="text-muted">{{ contrat.propriete.titre }}</small>
+                                    <br>
+                                    <small class="text-muted">{{ contrat.date_debut|date:"d/m/Y" }} - {{ contrat.date_fin|date:"d/m/Y" }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-{{ contrat.est_actif|yesno:'success,danger' }} rounded-pill">
+                                        {{ contrat.est_actif|yesno:'Actif,Terminé' }}
+                                    </span>
+                                    <br>
+                                    <small class="text-muted">{{ contrat.loyer_mensuel }} XOF</small>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">Aucun contrat trouvé</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-lightning"></i> Charges Déductibles ({{ charges_deductibles.count }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if charges_deductibles %}
+                        <div class="list-group list-group-flush">
+                            {% for charge in charges_deductibles %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ charge.libelle }}</h6>
+                                    <small class="text-muted">{{ charge.contrat.propriete.titre }}</small>
+                                    <br>
+                                    <small class="text-muted">{{ charge.date_charge|date:"d/m/Y" }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-{{ charge.get_statut_display_color }} rounded-pill">
+                                        {{ charge.get_statut_display }}
+                                    </span>
+                                    <br>
+                                    <small class="text-muted">{{ charge.montant }} XOF</small>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">Aucune charge déductible trouvée</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Derniers paiements -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clock-history"></i> Derniers Paiements
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if derniers_paiements %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Référence</th>
+                                        <th>Propriété</th>
+                                        <th>Type</th>
+                                        <th>Montant</th>
+                                        <th>Date</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for paiement in derniers_paiements %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ paiement.reference_paiement }}</strong>
+                                        </td>
+                                        <td>{{ paiement.get_adresse_propriete }}</td>
+                                        <td>
+                                            <span class="badge bg-info">
+                                                <i class="{{ paiement.get_type_display_icon }}"></i>
+                                                {{ paiement.get_type_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-success">{{ paiement.get_montant_formatted }}</span>
+                                        </td>
+                                        <td>{{ paiement.date_paiement|date:"d/m/Y" }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ paiement.get_statut_display_color }}">
+                                                {{ paiement.get_statut_display }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">Aucun paiement trouvé</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

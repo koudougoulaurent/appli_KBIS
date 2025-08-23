@@ -1,0 +1,395 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ title|default:"Dashboard Utilisateurs" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        transition: transform 0.2s ease-in-out;
+        border: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    }
+    
+    .stats-icon {
+        font-size: 2.5rem;
+        opacity: 0.8;
+    }
+    
+    .quick-actions {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        padding: 2rem;
+        color: white;
+        margin-bottom: 2rem;
+    }
+    
+    .quick-actions h3 {
+        color: white;
+        margin-bottom: 1.5rem;
+    }
+    
+    .quick-action-btn {
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        transition: all 0.3s ease;
+        margin: 0.5rem;
+    }
+    
+    .quick-action-btn:hover {
+        background: rgba(255,255,255,0.3);
+        border-color: rgba(255,255,255,0.5);
+        color: white;
+        transform: translateY(-2px);
+    }
+    
+    .section-card {
+        border: none;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+    
+    .section-header {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border-radius: 12px 12px 0 0;
+        padding: 1rem 1.5rem;
+    }
+    
+    .section-header h4 {
+        margin: 0;
+        color: white;
+        font-weight: 600;
+    }
+    
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
+    
+    .action-item {
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s ease;
+    }
+    
+    .action-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .action-item:last-child {
+        border-bottom: none;
+    }
+    
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    .status-active {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .status-inactive {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .status-privilege {
+        background-color: #cce5ff;
+        color: #004085;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête du dashboard -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2 mb-0">
+                        <i class="bi bi-people-fill text-primary me-3"></i>
+                        Dashboard Utilisateurs
+                    </h1>
+                    <p class="text-muted mb-0">Gestion et supervision des utilisateurs du système</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'utilisateurs:ajouter_utilisateur' %}" class="btn btn-primary">
+                        <i class="bi bi-person-plus"></i> Nouvel Utilisateur
+                    </a>
+                    <a href="{% url 'utilisateurs:ajouter_groupe' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-collection"></i> Nouveau Groupe
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions rapides -->
+    <div class="quick-actions">
+        <h3><i class="bi bi-lightning-charge me-2"></i>Actions Rapides</h3>
+        <div class="d-flex flex-wrap">
+            <a href="{% url 'utilisateurs:liste_utilisateurs' %}" class="btn quick-action-btn">
+                <i class="bi bi-people me-2"></i>Voir Tous les Utilisateurs
+            </a>
+            <a href="{% url 'utilisateurs:liste_groupes' %}" class="btn quick-action-btn">
+                <i class="bi bi-collection me-2"></i>Gérer les Groupes
+            </a>
+            <a href="{% url 'utilisateurs:privilege_dashboard_advanced' %}" class="btn quick-action-btn">
+                <i class="bi bi-shield-check me-2"></i>Dashboard PRIVILEGE
+            </a>
+            <a href="{% url 'utilisateurs:profile' %}" class="btn quick-action-btn">
+                <i class="bi bi-person-circle me-2"></i>Mon Profil
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistiques principales -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card stats-card h-100">
+                <div class="card-body text-center">
+                    <div class="stats-icon text-primary mb-3">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <h3 class="card-title text-primary">{{ total_utilisateurs|default:0 }}</h3>
+                    <p class="card-text text-muted">Total Utilisateurs</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card stats-card h-100">
+                <div class="card-body text-center">
+                    <div class="stats-icon text-success mb-3">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <h3 class="card-title text-success">{{ utilisateurs_actifs|default:0 }}</h3>
+                    <p class="card-text text-muted">Utilisateurs Actifs</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card stats-card h-100">
+                <div class="card-body text-center">
+                    <div class="stats-icon text-warning mb-3">
+                        <i class="bi bi-clock"></i>
+                    </div>
+                    <h3 class="card-title text-warning">{{ utilisateurs_inactifs|default:0 }}</h3>
+                    <p class="card-text text-muted">Utilisateurs Inactifs</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card stats-card h-100">
+                <div class="card-body text-center">
+                    <div class="stats-icon text-info mb-3">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                    <h3 class="card-title text-info">{{ utilisateurs_privilege|default:0 }}</h3>
+                    <p class="card-text text-muted">Utilisateurs PRIVILEGE</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Utilisateurs récents -->
+        <div class="col-lg-6 mb-4">
+            <div class="card section-card h-100">
+                <div class="section-header">
+                    <h4><i class="bi bi-person-lines-fill me-2"></i>Utilisateurs Récents</h4>
+                </div>
+                <div class="card-body">
+                    {% if utilisateurs_recents %}
+                        {% for user in utilisateurs_recents %}
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="user-avatar me-3">
+                                {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ user.get_full_name|default:user.username }}</h6>
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar me-1"></i>
+                                    Inscrit le {{ user.date_joined|date:"d/m/Y" }}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                {% if user.is_active %}
+                                    <span class="status-badge status-active">Actif</span>
+                                {% else %}
+                                    <span class="status-badge status-inactive">Inactif</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                        <div class="text-center mt-3">
+                            <a href="{% url 'utilisateurs:liste_utilisateurs' %}" class="btn btn-outline-primary btn-sm">
+                                Voir Tous les Utilisateurs
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">Aucun utilisateur récent</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Groupes de travail -->
+        <div class="col-lg-6 mb-4">
+            <div class="card section-card h-100">
+                <div class="section-header">
+                    <h4><i class="bi bi-collection me-2"></i>Groupes de Travail</h4>
+                </div>
+                <div class="card-body">
+                    {% if groupes %}
+                        {% for groupe in groupes %}
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-primary bg-opacity-10 p-2 rounded me-3">
+                                <i class="bi bi-collection text-primary"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ groupe.nom }}</h6>
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar me-1"></i>
+                                    Créé le {{ groupe.date_creation|date:"d/m/Y" }}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                {% if groupe.actif %}
+                                    <span class="status-badge status-active">Actif</span>
+                                {% else %}
+                                    <span class="status-badge status-inactive">Inactif</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                        <div class="text-center mt-3">
+                            <a href="{% url 'utilisateurs:liste_groupes' %}" class="btn btn-outline-primary btn-sm">
+                                Gérer les Groupes
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">Aucun groupe de travail</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions récentes -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card section-card">
+                <div class="section-header">
+                    <h4><i class="bi bi-activity me-2"></i>Actions Récentes</h4>
+                </div>
+                <div class="card-body">
+                    {% if actions_recentes %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Utilisateur</th>
+                                        <th>Action</th>
+                                        <th>Objet</th>
+                                        <th>Date</th>
+                                        <th>Détails</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for action in actions_recentes %}
+                                    <tr class="action-item">
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="user-avatar me-2" style="width: 30px; height: 30px; font-size: 0.9rem;">
+                                                    {{ action.user.first_name|first|upper }}{{ action.user.last_name|first|upper }}
+                                                </div>
+                                                <span>{{ action.user.get_full_name|default:action.user.username }}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{% if action.action == 'created' %}success{% elif action.action == 'updated' %}warning{% elif action.action == 'deleted' %}danger{% else %}secondary{% endif %}">
+                                                {{ action.get_action_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <strong>{{ action.content_type.model|title }}</strong>
+                                            {% if action.object_repr %}
+                                                <br><small class="text-muted">{{ action.object_repr }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">{{ action.timestamp|date:"d/m/Y H:i" }}</small>
+                                        </td>
+                                        <td>
+                                            {% if action.change_message %}
+                                                <small class="text-muted">{{ action.change_message|truncatechars:50 }}</small>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{% url 'utilisateurs:privilege_audit_log' %}" class="btn btn-outline-primary">
+                                Voir le Journal d'Audit Complet
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-4">Aucune action récente enregistrée</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Animation des cartes de statistiques
+    document.addEventListener('DOMContentLoaded', function() {
+        const statsCards = document.querySelectorAll('.stats-card');
+        
+        statsCards.forEach((card, index) => {
+            setTimeout(() => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = 'all 0.6s ease';
+                
+                setTimeout(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, 100);
+            }, index * 100);
+        });
+    });
+</script>
+{% endblock %}

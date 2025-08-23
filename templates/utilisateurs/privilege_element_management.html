@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load utilisateur_extras %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .element-type-card {
+        background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    
+    .element-type-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        border-color: #dc3545;
+    }
+    
+    .element-type-card .card-header {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+        border-radius: 10px 10px 0 0;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-top: 15px;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 8px;
+        background: #f8f9fa;
+        border-radius: 5px;
+        border: 1px solid #dee2e6;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #dc3545;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem;
+        color: #6c757d;
+        text-transform: uppercase;
+    }
+    
+    .manage-btn {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        display: inline-block;
+        margin-top: 15px;
+        transition: all 0.3s ease;
+        width: 100%;
+        text-align: center;
+    }
+    
+    .manage-btn:hover {
+        background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+        color: white;
+        text-decoration: none;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+    }
+    
+    .back-btn {
+        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s ease;
+    }
+    
+    .back-btn:hover {
+        background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+        color: white;
+        text-decoration: none;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="mb-0">
+                        <i class="bi bi-list-ul text-danger"></i>
+                        Gestion des Éléments - PRIVILEGE
+                    </h1>
+                    <p class="text-muted mb-0">Suppression conditionnelle et désactivation d'éléments</p>
+                </div>
+                <div>
+                    <a href="{% url 'utilisateurs:privilege_dashboard_advanced' %}" class="back-btn">
+                        <i class="bi bi-arrow-left"></i>
+                        Retour au Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Types d'éléments -->
+    <div class="row">
+        {% for element_type in element_types %}
+        <div class="col-md-4 col-lg-3 mb-4">
+            <div class="element-type-card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gear"></i>
+                        {{ element_type.verbose_name }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-number">{{ element_stats|get_item:element_type.name|get_item:'total' }}</div>
+                            <div class="stat-label">Total</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">{{ element_stats|get_item:element_type.name|get_item:'actifs' }}</div>
+                            <div class="stat-label">Actifs</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">{{ element_stats|get_item:element_type.name|get_item:'supprimes' }}</div>
+                            <div class="stat-label">Supprimés</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">{{ element_stats|get_item:element_type.name|get_item:'desactives' }}</div>
+                            <div class="stat-label">Désactivés</div>
+                        </div>
+                    </div>
+                    
+                    <a href="{% url 'utilisateurs:privilege_element_list' model_name=element_type.name|lower %}" class="manage-btn">
+                        <i class="bi bi-gear-fill"></i>
+                        Gérer les {{ element_type.verbose_name }}
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Informations sur les permissions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        Règles de Suppression PRIVILEGE
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-success">
+                                <i class="bi bi-check-circle"></i>
+                                Suppression Possible
+                            </h6>
+                            <p class="text-muted">
+                                Les éléments qui ne sont référencés par aucun autre élément peuvent être supprimés définitivement (suppression logique).
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-warning">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                Désactivation Obligatoire
+                            </h6>
+                            <p class="text-muted">
+                                Les éléments référencés par d'autres éléments ne peuvent être que désactivés pour éviter les erreurs de références.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-lightbulb"></i>
+                        <strong>Conseil :</strong> Vérifiez toujours les références avant de tenter une suppression. Le système vous informera automatiquement des actions possibles.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Animation des cartes au survol
+        $('.element-type-card').hover(
+            function() {
+                $(this).addClass('shadow-lg');
+            },
+            function() {
+                $(this).removeClass('shadow-lg');
+            }
+        );
+        
+        // Animation des statistiques
+        $('.stat-number').each(function() {
+            var $this = $(this);
+            var countTo = parseInt($this.text());
+            
+            $({ countNum: 0 }).animate({
+                countNum: countTo
+            }, {
+                duration: 1500,
+                easing: 'swing',
+                step: function() {
+                    $this.text(Math.floor(this.countNum));
+                },
+                complete: function() {
+                    $this.text(this.countNum);
+                }
+            });
+        });
+    });
+</script>
+{% endblock %} 

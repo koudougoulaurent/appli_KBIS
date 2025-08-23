@@ -1,0 +1,277 @@
+{% load static %}
+
+<!-- Navigation mobile optimisée -->
+<div class="mobile-nav-container d-lg-none">
+    <!-- Bouton hamburger -->
+    <button class="btn btn-primary mobile-nav-toggle" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-label="Ouvrir le menu mobile">
+        <i class="bi bi-list"></i>
+    </button>
+    
+    <!-- Sidebar mobile -->
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
+        <div class="offcanvas-header bg-gradient-primary text-white">
+            <h5 class="offcanvas-title" id="mobileSidebarLabel">
+                <i class="bi bi-house-door"></i> Menu Principal
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body p-0">
+            <div class="mobile-nav-content">
+                <!-- Profil utilisateur -->
+                <div class="mobile-user-profile p-3 border-bottom">
+                    <div class="d-flex align-items-center">
+                        <div class="mobile-avatar me-3">
+                            <i class="bi bi-person-circle fs-1 text-primary"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-1">{{ user.get_full_name|default:user.username }}</h6>
+                            <small class="text-muted">{{ user.groupe_travail.nom|default:"Utilisateur" }}</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Navigation mobile -->
+                <nav class="mobile-nav-menu">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link mobile-nav-link" href="{% url 'core:dashboard' %}">
+                                <i class="bi bi-speedometer2"></i> Dashboard
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link mobile-nav-link" href="{% url 'proprietes:liste' %}">
+                                <i class="bi bi-house"></i> Propriétés
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link mobile-nav-link" href="{% url 'proprietes:bailleurs_liste' %}">
+                                <i class="bi bi-person-badge"></i> Bailleurs
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link mobile-nav-link" href="{% url 'proprietes:locataires_liste' %}">
+                                <i class="bi bi-people"></i> Locataires
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link mobile-nav-link" href="{% url 'contrats:liste' %}">
+                                <i class="bi bi-file-earmark-text"></i> Contrats
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link mobile-nav-link" href="{% url 'contrats:liste_resiliations' %}">
+                                <i class="bi bi-x-circle"></i> Résiliations
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link mobile-nav-link" href="{% url 'paiements:liste' %}">
+                                <i class="bi bi-cash-coin"></i> Paiements
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link mobile-nav-link" href="{% url 'paiements:charge_deductible_list' %}">
+                                <i class="bi bi-lightning"></i> Charges Déductibles
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link mobile-nav-link" href="{% url 'contrats:quittances_liste' %}">
+                                <i class="bi bi-calendar-month"></i> Quittances
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link mobile-nav-link" href="{% url 'contrats:liste_contrats_caution' %}">
+                                <i class="bi bi-shield-check"></i> Cautions
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link mobile-nav-link" href="{% url 'contrats:etats_lieux_liste' %}">
+                                <i class="bi bi-file-text"></i> États des Lieux
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link mobile-nav-link" href="{% url 'notifications:notification_list' %}">
+                                <i class="bi bi-bell"></i> Notifications
+                            </a>
+                        </li>
+                        
+                        {% if user.groupe_travail.nom|upper != 'CAISSE' and user.groupe_travail.nom|upper != 'CONTROLES' and user.groupe_travail.nom|upper != 'CONTROLE' %}
+                        <li class="nav-item">
+                            <a class="nav-link mobile-nav-link" href="{% url 'utilisateurs:liste_utilisateurs' %}">
+                                <i class="bi bi-person-gear"></i> Utilisateurs
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        <li class="nav-item">
+                            <a class="nav-link mobile-nav-link" href="{% url 'core:intelligent_search' %}">
+                                <i class="bi bi-search"></i> Recherche
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link mobile-nav-link" href="{% url 'core:configuration_entreprise' %}">
+                                <i class="bi bi-building-gear"></i> Configuration
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                
+                <!-- Actions rapides mobile -->
+                <div class="mobile-quick-actions p-3 border-top">
+                    <h6 class="text-muted mb-2">Actions Rapides</h6>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'proprietes:ajouter' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-plus-circle"></i> Nouvelle Propriété
+                        </a>
+                        <a href="{% url 'contrats:ajouter' %}" class="btn btn-outline-success btn-sm">
+                            <i class="bi bi-plus-circle"></i> Nouveau Contrat
+                        </a>
+                        <a href="{% url 'paiements:ajouter' %}" class="btn btn-outline-warning btn-sm">
+                            <i class="bi bi-plus-circle"></i> Nouveau Paiement
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.mobile-nav-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1050;
+}
+
+.mobile-nav-toggle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: none;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    transition: all 0.3s ease;
+}
+
+.mobile-nav-toggle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+.mobile-nav-toggle i {
+    font-size: 1.5rem;
+}
+
+.offcanvas-header {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+}
+
+.mobile-user-profile {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.mobile-avatar {
+    color: #6366f1;
+}
+
+.mobile-nav-menu {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.mobile-nav-link {
+    color: #374151;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    margin: 0.25rem 0.5rem;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.mobile-nav-link:hover {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+    transform: translateX(5px);
+    border-color: transparent;
+}
+
+.mobile-nav-link i {
+    margin-right: 0.75rem;
+    width: 20px;
+    text-align: center;
+}
+
+.mobile-quick-actions {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.mobile-quick-actions .btn {
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* Scrollbar personnalisée pour mobile */
+.mobile-nav-menu::-webkit-scrollbar {
+    width: 4px;
+}
+
+.mobile-nav-menu::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 2px;
+}
+
+.mobile-nav-menu::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 2px;
+}
+
+.mobile-nav-menu::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Animation d'entrée */
+.offcanvas.show {
+    animation: slideInLeft 0.3s ease-out;
+}
+
+@keyframes slideInLeft {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .mobile-nav-container {
+        top: 15px;
+        right: 15px;
+    }
+    
+    .mobile-nav-toggle {
+        width: 45px;
+        height: 45px;
+    }
+    
+    .mobile-nav-toggle i {
+        font-size: 1.25rem;
+    }
+}
+</style>

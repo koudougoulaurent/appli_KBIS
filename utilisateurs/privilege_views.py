@@ -1,0 +1,356 @@
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.contrib import messages
+from django.utils import timezone
+from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import PermissionDenied
+import json
+
+from .models import Utilisateur
+from .mixins import PrivilegeDeleteMixin, PrivilegeRequiredMixin
+from core.models import AuditLog
+from proprietes.models import Bailleur, Locataire, Propriete, TypeBien, ChargesBailleur
+
+
+class PrivilegeActionView(PrivilegeRequiredMixin, PrivilegeDeleteMixin, View):
+    """
+    Vue de base pour les actions de privilège (suppression et désactivation).
+    """
+    
+    def post(self, request, model_name, element_id):
+        """Gère les actions POST pour la suppression et désactivation."""
+        if not request.user.is_privilege_user():
+            return JsonResponse({
+                'success': False,
+                'message': 'Permissions insuffisantes. Seuls les utilisateurs du groupe PRIVILEGE peuvent effectuer cette action.'
+            }, status=403)
+        
+        try:
+            # Récupérer le modèle approprié
+            model_class = self.get_model_class(model_name)
+            if not model_class:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Modèle {model_name} non reconnu.'
+                }, status=400)
+            
+            # Effectuer l'action
+            return self.delete_element(request, model_class, element_id)
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Erreur lors de l\'exécution de l\'action: {str(e)}'
+            }, status=500)
+    
+    def get_model_class(self, model_name):
+        """Retourne la classe du modèle basée sur le nom."""
+        model_mapping = {
+            'bailleur': Bailleur,
+            'locataire': Locataire,
+            'propriete': Propriete,
+            'typebien': TypeBien,
+            'chargesbailleur': ChargesBailleur,
+            'utilisateur': Utilisateur,
+        }
+        return model_mapping.get(model_name.lower())
+
+
+class PrivilegeDeleteView(PrivilegeActionView):
+    """
+    Vue pour la suppression d'éléments par les utilisateurs PRIVILEGE.
+    """
+    
+    def post(self, request, model_name, element_id):
+        """Gère la suppression d'un élément."""
+        return super().post(request, model_name, element_id)
+
+
+class PrivilegeDisableView(PrivilegeActionView):
+    """
+    Vue pour la désactivation d'éléments par les utilisateurs PRIVILEGE.
+    """
+    
+    def post(self, request, model_name, element_id):
+        """Gère la désactivation d'un élément."""
+        if not request.user.is_privilege_user():
+            return JsonResponse({
+                'success': False,
+                'message': 'Permissions insuffisantes'
+            }, status=403)
+        
+        try:
+            # Récupérer le modèle approprié
+            model_class = self.get_model_class(model_name)
+            if not model_class:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Modèle {model_name} non reconnu.'
+                }, status=400)
+            
+            # Récupérer l'élément
+            element = get_object_or_404(model_class, id=element_id)
+            
+            # Vérifier si l'élément peut être désactivé
+            peut_supprimer, peut_désactiver, raison = request.user.can_delete_any_element(element)
+            
+            if peut_désactiver or not peut_supprimer:
+                # Désactiver l'élément
+                success = self.disable_element(element)
+                
+                if success:
+                    # Log d'audit avec répudiation
+                    self._log_privilege_action(request.user, element, 'désactivation', request)
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'message': f'Élément "{str(element)}" désactivé avec succès. Action tracée dans l\'audit.',
+                        'action': 'désactivation',
+                        'object_name': str(element)
+                    })
+                else:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Impossible de désactiver cet élément.'
+                    }, status=400)
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Cet élément peut être supprimé directement: {raison}'
+                }, status=400)
+                
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Erreur lors de la désactivation: {str(e)}'
+            }, status=500)
+    
+    def disable_element(self, element):
+        """Désactive un élément."""
+        try:
+            # Vérifier les différents champs de statut possibles
+            if hasattr(element, 'est_actif'):
+                element.est_actif = False
+                element.save(update_fields=['est_actif'])
+                return True
+            elif hasattr(element, 'actif'):
+                element.actif = False
+                element.save(update_fields=['actif'])
+                return True
+            elif hasattr(element, 'disponible'):
+                element.disponible = False
+                element.save(update_fields=['disponible'])
+                return True
+            else:
+                # Si aucun champ de statut n'est trouvé, utiliser la suppression logique
+                if hasattr(element, 'is_deleted'):
+                    element.is_deleted = True
+                    element.deleted_at = timezone.now()
+                    element.save(update_fields=['is_deleted', 'deleted_at'])
+                    return True
+                else:
+                    return False
+        except Exception:
+            return False
+
+
+# Vues fonctionnelles pour la compatibilité avec les URLs
+@require_POST
+@login_required
+def privilege_delete_element(request, model_name, element_id):
+    """Vue fonctionnelle pour la suppression d'éléments."""
+    view = PrivilegeDeleteView()
+    return view.post(request, model_name, element_id)
+
+
+@require_POST
+@login_required
+def privilege_disable_element(request, model_name, element_id):
+    """Vue fonctionnelle pour la désactivation d'éléments."""
+    view = PrivilegeDisableView()
+    return view.post(request, model_name, element_id)
+
+
+# Vues spécialisées pour chaque type de modèle
+@require_POST
+@login_required
+def privilege_delete_bailleur(request, element_id):
+    """Suppression spécialisée pour les bailleurs."""
+    return privilege_delete_element(request, 'bailleur', element_id)
+
+
+@require_POST
+@login_required
+def privilege_delete_locataire(request, element_id):
+    """Suppression spécialisée pour les locataires."""
+    return privilege_delete_element(request, 'locataire', element_id)
+
+
+@require_POST
+@login_required
+def privilege_delete_propriete(request, element_id):
+    """Suppression spécialisée pour les propriétés."""
+    return privilege_delete_element(request, 'propriete', element_id)
+
+
+@require_POST
+@login_required
+def privilege_delete_type_bien(request, element_id):
+    """Suppression spécialisée pour les types de biens."""
+    return privilege_delete_element(request, 'typebien', element_id)
+
+
+@require_POST
+@login_required
+def privilege_delete_charges_bailleur(request, element_id):
+    """Suppression spécialisée pour les charges bailleur."""
+    return privilege_delete_element(request, 'chargesbailleur', element_id)
+
+
+@require_POST
+@login_required
+def privilege_delete_utilisateur(request, element_id):
+    """Suppression spécialisée pour les utilisateurs."""
+    return privilege_delete_element(request, 'utilisateur', element_id)
+
+
+# Vues de désactivation spécialisées
+@require_POST
+@login_required
+def privilege_disable_bailleur(request, element_id):
+    """Désactivation spécialisée pour les bailleurs."""
+    return privilege_disable_element(request, 'bailleur', element_id)
+
+
+@require_POST
+@login_required
+def privilege_disable_locataire(request, element_id):
+    """Désactivation spécialisée pour les locataires."""
+    return privilege_disable_element(request, 'locataire', element_id)
+
+
+@require_POST
+@login_required
+def privilege_disable_propriete(request, element_id):
+    """Désactivation spécialisée pour les propriétés."""
+    return privilege_disable_element(request, 'propriete', element_id)
+
+
+@require_POST
+@login_required
+def privilege_disable_type_bien(request, element_id):
+    """Désactivation spécialisée pour les types de biens."""
+    return privilege_disable_element(request, 'typebien', element_id)
+
+
+@require_POST
+@login_required
+def privilege_disable_charges_bailleur(request, element_id):
+    """Désactivation spécialisée pour les charges bailleur."""
+    return privilege_disable_element(request, 'chargesbailleur', element_id)
+
+
+@require_POST
+@login_required
+def privilege_disable_utilisateur(request, element_id):
+    """Désactivation spécialisée pour les utilisateurs."""
+    return privilege_disable_element(request, 'utilisateur', element_id)
+
+
+# Vue de gestion des actions de privilège en lot
+@require_POST
+@login_required
+def privilege_bulk_actions(request):
+    """
+    Vue pour effectuer des actions en lot sur plusieurs éléments.
+    """
+    if not request.user.is_privilege_user():
+        return JsonResponse({
+            'success': False,
+            'message': 'Permissions insuffisantes'
+        }, status=403)
+    
+    try:
+        data = json.loads(request.body)
+        action = data.get('action')
+        element_ids = data.get('element_ids', [])
+        model_name = data.get('model_name')
+        
+        if not action or not element_ids or not model_name:
+            return JsonResponse({
+                'success': False,
+                'message': 'Paramètres manquants'
+            }, status=400)
+        
+        # Récupérer le modèle approprié
+        model_class = PrivilegeActionView().get_model_class(model_name)
+        if not model_class:
+            return JsonResponse({
+                'success': False,
+                'message': f'Modèle {model_name} non reconnu.'
+            }, status=400)
+        
+        results = []
+        success_count = 0
+        
+        for element_id in element_ids:
+            try:
+                element = get_object_or_404(model_class, id=element_id)
+                
+                if action == 'delete':
+                    success, message, action_effectuee = request.user.safe_delete_element(element, request)
+                elif action == 'disable':
+                    # Utiliser la logique de désactivation
+                    view = PrivilegeDisableView()
+                    success = view.disable_element(element)
+                    message = f'Élément désactivé' if success else 'Échec de la désactivation'
+                    action_effectuee = 'désactivation' if success else None
+                else:
+                    success = False
+                    message = f'Action {action} non reconnue'
+                    action_effectuee = None
+                
+                if success:
+                    success_count += 1
+                    # Log d'audit
+                    if action_effectuee:
+                        view = PrivilegeActionView()
+                        view._log_privilege_action(request.user, element, action_effectuee, request)
+                
+                results.append({
+                    'element_id': element_id,
+                    'element_name': str(element),
+                    'success': success,
+                    'message': message
+                })
+                
+            except Exception as e:
+                results.append({
+                    'element_id': element_id,
+                    'success': False,
+                    'message': f'Erreur: {str(e)}'
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{success_count}/{len(element_ids)} éléments traités avec succès',
+            'results': results,
+            'success_count': success_count,
+            'total_count': len(element_ids)
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Données JSON invalides'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Erreur lors du traitement en lot: {str(e)}'
+        }, status=500)

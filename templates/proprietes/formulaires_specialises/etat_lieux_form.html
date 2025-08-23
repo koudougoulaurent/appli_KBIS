@@ -1,0 +1,434 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Formulaire d'État des Lieux - GESTIMMOB{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 4px solid #6f42c1;
+    }
+    
+    .form-section h4 {
+        color: #6f42c1;
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+    
+    .file-upload-area {
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    
+    .file-upload-area:hover {
+        border-color: #6f42c1;
+        background-color: #f8f9fa;
+    }
+    
+    .file-upload-area i {
+        font-size: 2rem;
+        color: #6c757d;
+        margin-bottom: 10px;
+    }
+    
+    .etat-lieux-info {
+        background: #f3f0ff;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .etat-lieux-info h5 {
+        color: #6f42c1;
+        margin-bottom: 10px;
+    }
+    
+    .etat-lieux-info ul {
+        margin: 0;
+        padding-left: 20px;
+    }
+    
+    .etat-lieux-info li {
+        margin-bottom: 5px;
+        color: #424242;
+    }
+    
+    .required-field {
+        color: #dc3545;
+    }
+    
+    .etat-type {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+    }
+    
+    .etat-type:hover {
+        border-color: #6f42c1;
+        box-shadow: 0 2px 4px rgba(111, 66, 193, 0.1);
+    }
+    
+    .etat-type h6 {
+        color: #6f42c1;
+        margin-bottom: 10px;
+    }
+    
+    .photo-upload-area {
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        padding: 30px;
+        text-align: center;
+        background: linear-gradient(45deg, #f8f9fa, #fff);
+    }
+    
+    .photo-upload-area:hover {
+        border-color: #6f42c1;
+        background: linear-gradient(45deg, #f3f0ff, #fff);
+    }
+    
+    .date-input-group {
+        position: relative;
+    }
+    
+    .date-input-group i {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        pointer-events: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="bi bi-clipboard-data me-2"></i>
+                Formulaire d'État des Lieux
+            </h1>
+            <p class="text-muted mb-0">Gestion des états des lieux d'entrée et de sortie</p>
+        </div>
+        <a href="{% url 'proprietes:liste' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Retour
+        </a>
+    </div>
+
+    <!-- Informations sur les états des lieux -->
+    <div class="etat-lieux-info">
+        <h5><i class="bi bi-info-circle me-2"></i>État des Lieux - Informations Légales</h5>
+        <div class="row">
+            <div class="col-md-6">
+                <ul>
+                    <li><strong>État des lieux d'entrée</strong> - Obligatoire au début du bail</li>
+                    <li><strong>État des lieux de sortie</strong> - Obligatoire à la fin du bail</li>
+                    <li>Document contractuel établi contradictoirement</li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <ul>
+                    <li>Présence obligatoire du bailleur et du locataire</li>
+                    <li>Photos recommandées pour chaque pièce</li>
+                    <li>Conservation obligatoire pendant toute la durée du bail</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulaire -->
+    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+        {% csrf_token %}
+        
+        <div class="row">
+            <div class="col-md-8">
+                <!-- Section Informations Générales -->
+                <div class="form-section">
+                    <h4><i class="bi bi-building me-2"></i>Informations Générales</h4>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label for="{{ form.propriete.id_for_label }}" class="form-label">
+                                Propriété Concernée <span class="required-field">*</span>
+                            </label>
+                            {{ form.propriete }}
+                            {% if form.propriete.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.propriete.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.locataire.id_for_label }}" class="form-label">
+                                Locataire <span class="required-field">*</span>
+                            </label>
+                            {{ form.locataire }}
+                            {% if form.locataire.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.locataire.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.date_etat_lieux.id_for_label }}" class="form-label">
+                                Date de l'état des lieux <span class="required-field">*</span>
+                            </label>
+                            <div class="date-input-group">
+                                {{ form.date_etat_lieux }}
+                                <i class="bi bi-calendar3"></i>
+                            </div>
+                            {% if form.date_etat_lieux.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.date_etat_lieux.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section État des Lieux d'Entrée -->
+                <div class="form-section">
+                    <h4><i class="bi bi-door-open me-2"></i>État des Lieux d'Entrée</h4>
+                    <div class="etat-type">
+                        <h6><i class="bi bi-file-earmark-plus me-2"></i>Document d'État des Lieux d'Entrée</h6>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <label for="{{ form.etat_lieux_entree.id_for_label }}" class="form-label">
+                                    Document signé de l'état des lieux d'entrée
+                                </label>
+                                <div class="file-upload-area">
+                                    <i class="bi bi-cloud-upload"></i>
+                                    <p class="mb-2"><strong>Cliquez pour sélectionner le document</strong></p>
+                                    <p class="text-muted small">Formats acceptés: PDF, JPG, PNG (max 10MB)</p>
+                                    {{ form.etat_lieux_entree }}
+                                </div>
+                                {% if form.etat_lieux_entree.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.etat_lieux_entree.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section État des Lieux de Sortie -->
+                <div class="form-section">
+                    <h4><i class="bi bi-door-closed me-2"></i>État des Lieux de Sortie</h4>
+                    <div class="etat-type">
+                        <h6><i class="bi bi-file-earmark-minus me-2"></i>Document d'État des Lieux de Sortie</h6>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <label for="{{ form.etat_lieux_sortie.id_for_label }}" class="form-label">
+                                    Document signé de l'état des lieux de sortie
+                                </label>
+                                <div class="file-upload-area">
+                                    <i class="bi bi-cloud-upload"></i>
+                                    <p class="mb-2"><strong>Cliquez pour sélectionner le document</strong></p>
+                                    <p class="text-muted small">À remplir lors de la fin du bail</p>
+                                    {{ form.etat_lieux_sortie }}
+                                </div>
+                                {% if form.etat_lieux_sortie.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.etat_lieux_sortie.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Photos -->
+                <div class="form-section">
+                    <h4><i class="bi bi-camera me-2"></i>Photos de l'État des Lieux</h4>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <label for="{{ form.photos_etat_lieux.id_for_label }}" class="form-label">
+                                Photos des pièces et éléments importants
+                            </label>
+                            <div class="photo-upload-area">
+                                <i class="bi bi-images" style="font-size: 3rem; color: #6f42c1;"></i>
+                                <p class="mb-2"><strong>Cliquez pour sélectionner les photos</strong></p>
+                                <p class="text-muted small">Formats acceptés: JPG, PNG (max 10MB par photo)</p>
+                                <p class="text-muted small">Recommandé : une photo par pièce + détails importants</p>
+                                {{ form.photos_etat_lieux }}
+                            </div>
+                            {% if form.photos_etat_lieux.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.photos_etat_lieux.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="alert alert-info">
+                            <i class="bi bi-lightbulb me-2"></i>
+                            <strong>Conseil :</strong> Prenez des photos de chaque pièce, des équipements, 
+                            des compteurs, et de tout élément pouvant faire l'objet d'une contestation 
+                            (état des murs, sols, plafonds, sanitaires, etc.).
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Notes -->
+                <div class="form-section">
+                    <h4><i class="bi bi-chat-text me-2"></i>Notes et Observations</h4>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">
+                                Observations particulières
+                            </label>
+                            {{ form.notes }}
+                            <div class="form-text">
+                                Détails sur l'état général, anomalies constatées, réparations à prévoir, 
+                                accords particuliers, etc.
+                            </div>
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.notes.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <!-- Aide et informations -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-question-circle me-2"></i>Aide
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>Éléments à vérifier :</h6>
+                        <ul class="list-unstyled">
+                            <li>✓ État des murs, plafonds, sols</li>
+                            <li>✓ Fonctionnement des équipements</li>
+                            <li>✓ État des sanitaires</li>
+                            <li>✓ Relevé des compteurs</li>
+                            <li>✓ État des serrures et clés</li>
+                            <li>✓ Propreté générale</li>
+                        </ul>
+                        
+                        <hr>
+                        
+                        <h6>Documents requis :</h6>
+                        <ul class="text-muted small">
+                            <li>État des lieux signé par les deux parties</li>
+                            <li>Photos datées de chaque pièce</li>
+                            <li>Relevés de compteurs</li>
+                            <li>Liste des clés remises</li>
+                        </ul>
+                        
+                        <hr>
+                        
+                        <h6>Points légaux :</h6>
+                        <ul class="text-muted small">
+                            <li>Établi contradictoirement</li>
+                            <li>Signé par bailleur et locataire</li>
+                            <li>Conservation pendant tout le bail</li>
+                            <li>Peut servir en cas de litige</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="card mt-3">
+                    <div class="card-body">
+                        <button type="submit" class="btn btn-primary w-100 mb-2" style="background-color: #6f42c1; border-color: #6f42c1;">
+                            <i class="bi bi-check-circle me-2"></i>Enregistrer l'État des Lieux
+                        </button>
+                        <a href="{% url 'proprietes:liste' %}" class="btn btn-outline-secondary w-100">
+                            <i class="bi bi-x-circle me-2"></i>Annuler
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Informations de contact -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-telephone me-2"></i>Besoin d'aide ?
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-1">
+                            Pour toute question sur la réalisation d'un état des lieux :
+                        </p>
+                        <p class="text-muted small mb-0">
+                            <i class="bi bi-envelope me-1"></i> support@gestimmob.com<br>
+                            <i class="bi bi-phone me-1"></i> 01 23 45 67 89
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validation du formulaire
+    const form = document.querySelector('.needs-validation');
+    
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        
+        form.classList.add('was-validated');
+    });
+    
+    // Amélioration de l'affichage des champs de fichier
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    fileInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            const uploadArea = this.closest('.file-upload-area, .photo-upload-area');
+            if (this.files.length > 0) {
+                uploadArea.style.borderColor = '#6f42c1';
+                uploadArea.style.backgroundColor = '#f3f0ff';
+                
+                let fileInfo = uploadArea.querySelector('.text-muted');
+                if (this.files.length === 1) {
+                    fileInfo.textContent = `Fichier sélectionné: ${this.files[0].name}`;
+                } else {
+                    fileInfo.textContent = `${this.files.length} fichiers sélectionnés`;
+                }
+                fileInfo.style.color = '#6f42c1';
+            }
+        });
+    });
+    
+    // Interaction dynamique avec la sélection de propriété
+    const proprieteSelect = document.getElementById('{{ form.propriete.id_for_label }}');
+    const locataireSelect = document.getElementById('{{ form.locataire.id_for_label }}');
+    
+    if (proprieteSelect && locataireSelect) {
+        proprieteSelect.addEventListener('change', function() {
+            // Ici on pourrait ajouter une logique pour filtrer les locataires
+            // selon la propriété sélectionnée
+        });
+    }
+    
+    // Configuration de la date par défaut (aujourd'hui)
+    const dateInput = document.getElementById('{{ form.date_etat_lieux.id_for_label }}');
+    if (dateInput && !dateInput.value) {
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,325 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ propriete.titre }} - Gestion Immobilière{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête avec navigation -->
+    <div class="dashboard-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1><i class="bi bi-house"></i> {{ propriete.titre }}</h1>
+                <p>{{ propriete.get_adresse_complete }}</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'proprietes:liste' %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Retour à la liste
+                </a>
+                <a href="{% url 'proprietes:modifier' propriete.pk %}" class="btn btn-primary">
+                    <i class="bi bi-pencil"></i> Modifier
+                </a>
+                <a href="{% url 'proprietes:ajouter_charge_bailleur' %}" class="btn btn-warning">
+                    <i class="bi bi-plus-circle"></i> Ajouter Charge Bailleur
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Informations principales -->
+        <div class="col-lg-8">
+            <!-- Informations de base -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-info-circle"></i> Informations Générales</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Type :</strong> {{ propriete.type_bien }}</p>
+                            <p><strong>Surface :</strong> {{ propriete.surface }} m²</p>
+                            <p><strong>Pièces :</strong> {{ propriete.nombre_pieces }} ({{ propriete.nombre_chambres }} chambres, {{ propriete.nombre_salles_bain }} SDB)</p>
+                            <p><strong>État :</strong> 
+                                <span class="badge bg-{% if propriete.etat == 'excellent' %}success{% elif propriete.etat == 'bon' %}primary{% elif propriete.etat == 'moyen' %}warning{% else %}danger{% endif %}">
+                                    {{ propriete.get_etat_display }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Disponible :</strong> 
+                                {% if propriete.disponible %}
+                                    <span class="badge bg-success">Oui</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Non</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Bailleur :</strong> 
+                                <a href="{% url 'proprietes:bailleur_detail' propriete.bailleur.pk %}">
+                                    {{ propriete.bailleur.get_nom_complet }}
+                                </a>
+                            </p>
+                            <p><strong>Prix d'achat :</strong> 
+                                {% if propriete.prix_achat %}
+                                    {{ propriete.prix_achat }} XOF
+                                {% else %}
+                                    Non renseigné
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Équipements -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-gear"></i> Équipements</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <p><i class="bi bi-arrow-up-circle"></i> Ascenseur : 
+                                {% if propriete.ascenseur %}
+                                    <span class="badge bg-success">Oui</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Non</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><i class="bi bi-car-front"></i> Parking : 
+                                {% if propriete.parking %}
+                                    <span class="badge bg-success">Oui</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Non</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><i class="bi bi-sun"></i> Balcon : 
+                                {% if propriete.balcon %}
+                                    <span class="badge bg-success">Oui</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Non</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><i class="bi bi-flower1"></i> Jardin : 
+                                {% if propriete.jardin %}
+                                    <span class="badge bg-success">Oui</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Non</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations financières -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-cash-coin"></i> Informations Financières</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h6>Loyer</h6>
+                                <h4 class="text-primary">{% include 'includes/montant.html' with montant=propriete.loyer_actuel devise_source=devise_base %}</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h6>Charges Locataire</h6>
+                                <h4 class="text-info">{% include 'includes/montant.html' with montant=propriete.charges_locataire devise_source=devise_base %}</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h6>Total</h6>
+                                <h4 class="text-success">{% include 'includes/montant.html' with montant=propriete.get_loyer_total devise_source=devise_base %}</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charges Bailleur -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-exclamation-triangle"></i> Charges Bailleur</h5>
+                </div>
+                <div class="card-body">
+                    {% if charges_bailleur_en_cours %}
+                        <div class="alert alert-warning">
+                            <h6><i class="bi bi-exclamation-triangle"></i> Charges en attente de remboursement</h6>
+                            <p class="mb-2">Total des charges : <strong>{% include 'includes/montant.html' with montant=total_charges_bailleur devise_source=devise_base %}</strong></p>
+                            <p class="mb-0">Loyer net après déduction : <strong>{% include 'includes/montant.html' with montant=loyer_net devise_source=devise_base %}</strong></p>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Titre</th>
+                                        <th>Type</th>
+                                        <th>Montant</th>
+                                        <th>Statut</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for charge in charges_bailleur_en_cours %}
+                                    <tr>
+                                        <td>{{ charge.date_charge|date:"d/m/Y" }}</td>
+                                        <td>
+                                            <a href="{% url 'proprietes:detail_charge_bailleur' charge.pk %}">
+                                                {{ charge.titre }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">{{ charge.get_type_charge_display }}</span>
+                                        </td>
+                                        <td>{% include 'includes/montant.html' with montant=charge.montant devise_source=devise_base %}</td>
+                                        <td>
+                                            <span class="badge bg-warning">{{ charge.get_statut_display }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{% url 'proprietes:deduction_charge_bailleur' charge.pk %}" 
+                                                   class="btn btn-outline-primary" title="Déduire du loyer">
+                                                    <i class="bi bi-calculator"></i>
+                                                </a>
+                                                <a href="{% url 'proprietes:detail_charge_bailleur' charge.pk %}" 
+                                                   class="btn btn-outline-info" title="Voir détails">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle"></i> Aucune charge bailleur en attente
+                        </div>
+                    {% endif %}
+                    
+                    <div class="mt-3">
+                        <a href="{% url 'proprietes:ajouter_charge_bailleur' %}" class="btn btn-warning">
+                            <i class="bi bi-plus-circle"></i> Ajouter une charge
+                        </a>
+                        <a href="{% url 'proprietes:liste_charges_bailleur' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-list"></i> Voir toutes les charges
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            {% if propriete.notes %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-journal-text"></i> Notes</h5>
+                </div>
+                <div class="card-body">
+                    <p>{{ propriete.notes|linebreaks }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Statistiques rapides -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-graph-up"></i> Statistiques</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <div class="stat-card primary">
+                                <div class="stat-number">{% include 'includes/montant.html' with montant=propriete.get_loyer_total devise_source=devise_base %}</div>
+                                <div class="stat-label">Loyer Total</div>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="stat-card {% if total_charges_bailleur > 0 %}danger{% else %}success{% endif %}">
+                                <div class="stat-number">{% include 'includes/montant.html' with montant=total_charges_bailleur devise_source=devise_base %}</div>
+                                <div class="stat-label">Charges Bailleur</div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="stat-card {% if loyer_net < propriete.get_loyer_total %}warning{% else %}success{% endif %}">
+                                <div class="stat-number">{% include 'includes/montant.html' with montant=loyer_net devise_source=devise_base %}</div>
+                                <div class="stat-label">Loyer Net</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions rapides -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-lightning"></i> Actions Rapides</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'proprietes:ajouter_charge_bailleur' %}" class="btn btn-warning">
+                            <i class="bi bi-plus-circle"></i> Nouvelle Charge
+                        </a>
+                        <a href="{% url 'proprietes:liste_charges_bailleur' %}" class="btn btn-info">
+                            <i class="bi bi-list"></i> Gérer Charges
+                        </a>
+                        <a href="{% url 'proprietes:modifier' propriete.pk %}" class="btn btn-primary">
+                            <i class="bi bi-pencil"></i> Modifier Propriété
+                        </a>
+                        <a href="{% url 'proprietes:bailleur_detail' propriete.bailleur.pk %}" class="btn btn-secondary">
+                            <i class="bi bi-person"></i> Voir Bailleur
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations système -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-info-circle"></i> Informations Système</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Créé le :</strong> {{ propriete.date_creation|date:"d/m/Y H:i" }}</p>
+                    <p><strong>Modifié le :</strong> {{ propriete.date_modification|date:"d/m/Y H:i" }}</p>
+                    {% if propriete.cree_par %}
+                        <p><strong>Créé par :</strong> {{ propriete.cree_par.username }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Calcul en temps réel du loyer net
+function updateLoyerNet() {
+    fetch('{% url "proprietes:api_calcul_loyer_net" propriete.pk %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Mettre à jour les affichages si nécessaire
+                console.log('Loyer net mis à jour:', data.loyer_net);
+            }
+        })
+        .catch(error => console.error('Erreur:', error));
+}
+
+// Mettre à jour toutes les 30 secondes
+setInterval(updateLoyerNet, 30000);
+</script>
+{% endblock %} 

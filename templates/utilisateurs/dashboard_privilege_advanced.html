@@ -1,0 +1,346 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .privilege-card {
+        border-left: 4px solid #dc3545;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    
+    .privilege-stats-card {
+        background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .privilege-action-btn {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        border: none;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 5px;
+        text-decoration: none;
+        display: inline-block;
+        margin: 2px;
+        transition: all 0.3s ease;
+    }
+    
+    .privilege-action-btn:hover {
+        background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+        color: white;
+        text-decoration: none;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+    }
+    
+    .privilege-secondary-btn {
+        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        border: none;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 5px;
+        text-decoration: none;
+        display: inline-block;
+        margin: 2px;
+        transition: all 0.3s ease;
+    }
+    
+    .privilege-secondary-btn:hover {
+        background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+        color: white;
+        text-decoration: none;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+    }
+    
+    .stats-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #dc3545;
+    }
+    
+    .stats-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .warning-badge {
+        background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+        color: #212529;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    
+    .danger-badge {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête du dashboard PRIVILEGE -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="privilege-card p-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="mb-0">
+                            <i class="bi bi-shield-lock-fill text-danger"></i>
+                            Dashboard PRIVILEGE - Gestion Avancée
+                        </h1>
+                        <p class="text-muted mb-0">Accès complet aux fonctionnalités de suppression et gestion des profils</p>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-danger fs-6">PRIVILEGE</span>
+                        <p class="text-muted mb-0">Utilisateur: {{ user.username }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions principales -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gear-fill"></i>
+                        Actions PRIVILEGE
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'utilisateurs:privilege_element_management' %}" class="privilege-action-btn w-100 text-center">
+                                <i class="bi bi-list-ul"></i><br>
+                                Gestion des Éléments
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'utilisateurs:privilege_profile_management' %}" class="privilege-action-btn w-100 text-center">
+                                <i class="bi bi-people-fill"></i><br>
+                                Gestion des Profils
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'utilisateurs:privilege_audit_log' %}" class="privilege-secondary-btn w-100 text-center">
+                                <i class="bi bi-journal-text"></i><br>
+                                Journal d'Audit
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'utilisateurs:dashboard_groupe' groupe_nom='PRIVILEGE' %}" class="privilege-secondary-btn w-100 text-center">
+                                <i class="bi bi-arrow-left"></i><br>
+                                Dashboard Standard
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques générales -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">
+                <i class="bi bi-graph-up"></i>
+                Statistiques Générales
+            </h4>
+        </div>
+        
+        <!-- Utilisateurs -->
+        <div class="col-md-3 mb-3">
+            <div class="privilege-stats-card p-3 text-center">
+                <div class="stats-number">{{ stats.total_utilisateurs }}</div>
+                <div class="stats-label">Utilisateurs</div>
+                <small class="text-success">{{ stats.utilisateurs_actifs }} actifs</small>
+            </div>
+        </div>
+        
+        <!-- Bailleurs -->
+        <div class="col-md-3 mb-3">
+            <div class="privilege-stats-card p-3 text-center">
+                <div class="stats-number">{{ stats.total_bailleurs }}</div>
+                <div class="stats-label">Bailleurs</div>
+                <small class="text-success">{{ stats.bailleurs_actifs }} actifs</small>
+            </div>
+        </div>
+        
+        <!-- Locataires -->
+        <div class="col-md-3 mb-3">
+            <div class="privilege-stats-card p-3 text-center">
+                <div class="stats-number">{{ stats.total_locataires }}</div>
+                <div class="stats-label">Locataires</div>
+                <small class="text-success">{{ stats.locataires_actifs }} actifs</small>
+            </div>
+        </div>
+        
+        <!-- Propriétés -->
+        <div class="col-md-3 mb-3">
+            <div class="privilege-stats-card p-3 text-center">
+                <div class="stats-number">{{ stats.total_proprietes }}</div>
+                <div class="stats-label">Propriétés</div>
+                <small class="text-success">{{ stats.proprietes_actives }} actives</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Éléments supprimés et désactivés -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Éléments Supprimés Logiquement
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6 mb-2">
+                            <span class="warning-badge">{{ elements_supprimes.utilisateurs }}</span>
+                            <small class="d-block">Utilisateurs</small>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <span class="warning-badge">{{ elements_supprimes.bailleurs }}</span>
+                            <small class="d-block">Bailleurs</small>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <span class="warning-badge">{{ elements_supprimes.locataires }}</span>
+                            <small class="d-block">Locataires</small>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <span class="warning-badge">{{ elements_supprimes.proprietes }}</span>
+                            <small class="d-block">Propriétés</small>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <span class="warning-badge">{{ elements_supprimes.types_bien }}</span>
+                            <small class="d-block">Types de bien</small>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <span class="warning-badge">{{ elements_supprimes.templates }}</span>
+                            <small class="d-block">Templates</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pause-circle"></i>
+                        Éléments Désactivés
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6 mb-2">
+                            <span class="danger-badge">{{ elements_desactives.bailleurs }}</span>
+                            <small class="d-block">Bailleurs</small>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <span class="danger-badge">{{ elements_desactives.locataires }}</span>
+                            <small class="d-block">Locataires</small>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <span class="danger-badge">{{ elements_desactives.proprietes }}</span>
+                            <small class="d-block">Propriétés</small>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <span class="danger-badge">{{ elements_desactives.templates }}</span>
+                            <small class="d-block">Templates</small>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <span class="danger-badge">{{ elements_desactives.devises }}</span>
+                            <small class="d-block">Devises</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informations sur les permissions -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        Permissions PRIVILEGE
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-danger">
+                                <i class="bi bi-trash"></i>
+                                Suppression Conditionnelle
+                            </h6>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-check-circle text-success"></i> Suppression d'éléments non référencés</li>
+                                <li><i class="bi bi-check-circle text-success"></i> Désactivation d'éléments référencés</li>
+                                <li><i class="bi bi-check-circle text-success"></i> Journal d'audit automatique</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-danger">
+                                <i class="bi bi-person-gear"></i>
+                                Gestion des Profils
+                            </h6>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-check-circle text-success"></i> Création d'utilisateurs</li>
+                                <li><i class="bi bi-check-circle text-success"></i> Modification de profils</li>
+                                <li><i class="bi bi-check-circle text-success"></i> Suppression d'utilisateurs</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Animation des statistiques
+    $(document).ready(function() {
+        $('.stats-number').each(function() {
+            var $this = $(this);
+            var countTo = $this.text();
+            
+            $({ countNum: 0 }).animate({
+                countNum: countTo
+            }, {
+                duration: 2000,
+                easing: 'swing',
+                step: function() {
+                    $this.text(Math.floor(this.countNum));
+                },
+                complete: function() {
+                    $this.text(this.countNum);
+                }
+            });
+        });
+    });
+</script>
+{% endblock %} 

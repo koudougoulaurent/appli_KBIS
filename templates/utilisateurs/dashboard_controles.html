@@ -1,0 +1,189 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Dashboard CONTROLES - GESTIMMOB{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid" id="group-dashboard" data-groupe-nom="CONTROLES">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-search text-primary"></i>
+                Dashboard CONTROLES
+            </h1>
+            <p class="text-muted">Contrôle et audit des données</p>
+        </div>
+    </div>
+
+    <!-- Statistiques rapides -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Paiements à valider
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="paiements-a-valider">{{ paiements_a_valider|default:"0" }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Contrats à vérifier
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="contrats-a-verifier">{{ contrats_a_verifier|default:"0" }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-file-alt fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Anomalies détectées
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="anomalies">{{ anomalies|default:"0" }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Rapports générés
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="rapports-generes">{{ rapports_generes|default:"0" }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions rapides -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Actions de contrôle</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'paiements:liste' %}" class="btn btn-primary btn-block">
+                                <i class="fas fa-check-circle"></i> Valider paiements
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'contrats:liste' %}" class="btn btn-success btn-block">
+                                <i class="fas fa-file-alt"></i> Vérifier contrats
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'core:rapports_audit' %}" class="btn btn-info btn-block">
+                                <i class="fas fa-chart-bar"></i> Rapports d'audit
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'core:detection_anomalies' %}" class="btn btn-warning btn-block">
+                                <i class="fas fa-exclamation-triangle"></i> Anomalies
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Derniers contrôles -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Derniers contrôles effectués</h6>
+                    <a href="#" class="btn btn-sm btn-primary">
+                        Voir tous
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if derniers_controles %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Type</th>
+                                        <th>Élément</th>
+                                        <th>Résultat</th>
+                                        <th>Contrôleur</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for controle in derniers_controles %}
+                                    <tr>
+                                        <td>{{ controle.date|date:"d/m/Y H:i" }}</td>
+                                        <td>{{ controle.type_controle }}</td>
+                                        <td>{{ controle.element_controle }}</td>
+                                        <td>
+                                            {% if controle.resultat == 'valide' %}
+                                                <span class="badge badge-success">Validé</span>
+                                            {% elif controle.resultat == 'anomalie' %}
+                                                <span class="badge badge-warning">Anomalie</span>
+                                            {% else %}
+                                                <span class="badge badge-danger">Rejeté</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ controle.controleur.username }}</td>
+                                        <td>
+                                            <a href="#" class="btn btn-sm btn-info">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">Aucun contrôle récent</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'js/dashboard-realtime.js' %}"></script>
+{% endblock %}

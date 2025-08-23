@@ -1,0 +1,442 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Détail du Reçu {{ recu.numero_recu }} - GESTIMMOB{% endblock %}
+
+{% block extra_css %}
+<style>
+    .receipt-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    .info-card {
+        border-left: 4px solid #28a745;
+        margin-bottom: 20px;
+    }
+    .info-card.payment {
+        border-left-color: #007bff;
+    }
+    .info-card.property {
+        border-left-color: #ffc107;
+    }
+    .info-card.tenant {
+        border-left-color: #17a2b8;
+    }
+    .info-card.receipt {
+        border-left-color: #6f42c1;
+    }
+    .status-badge {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+    }
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .amount-display {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #28a745;
+    }
+    .receipt-number {
+        font-family: 'Courier New', monospace;
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    .stat-item {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        border: 1px solid #dee2e6;
+    }
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #495057;
+    }
+    .stat-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête du reçu -->
+    <div class="receipt-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="h2 mb-2">
+                    <i class="fas fa-receipt"></i>
+                    Reçu de Paiement
+                </h1>
+                <p class="mb-0">Numéro: <span class="receipt-number">{{ recu.numero_recu }}</span></p>
+                <p class="mb-0">Émis le: {{ recu.date_emission|date:"d/m/Y à H:i" }}</p>
+                <p class="mb-0">Template: {{ recu.get_template_utilise_display }}</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="amount-display">{{ informations.montant|floatformat:2 }} XOF</div>
+                <small>{{ informations.montant_lettres }}</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques du reçu -->
+    <div class="stats-grid">
+        <div class="stat-item">
+            <div class="stat-value">{{ recu.nombre_impressions }}</div>
+            <div class="stat-label">Impressions</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">{{ recu.nombre_emails }}</div>
+            <div class="stat-label">Emails envoyés</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">{{ recu.get_format_impression_display }}</div>
+            <div class="stat-label">Format d'impression</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">{{ recu.version_template }}</div>
+            <div class="stat-label">Version template</div>
+        </div>
+    </div>
+
+    <!-- Boutons d'action -->
+    <div class="action-buttons mb-4">
+        <a href="{% url 'paiements:recu_impression' recu.pk %}" class="btn btn-success btn-lg" target="_blank">
+            <i class="bi bi-printer"></i> Imprimer le Reçu
+        </a>
+        <a href="{% url 'paiements:recu_telecharger_pdf' recu.pk %}" class="btn btn-info btn-lg">
+            <i class="fas fa-download"></i> Télécharger PDF
+        </a>
+        
+        <!-- Nouvelles actions avancées -->
+        {% if recu.valide %}
+            <a href="{% url 'paiements:invalider_recu' recu.pk %}" class="btn btn-warning btn-lg">
+                <i class="fas fa-times"></i> Invalider
+            </a>
+        {% else %}
+            <a href="{% url 'paiements:valider_recu' recu.pk %}" class="btn btn-success btn-lg">
+                <i class="fas fa-check"></i> Valider
+            </a>
+        {% endif %}
+        
+        {% if recu.peut_etre_envoye_email %}
+            <a href="{% url 'paiements:envoyer_recu_email' recu.pk %}" class="btn btn-primary btn-lg">
+                <i class="fas fa-envelope"></i> Envoyer par email
+            </a>
+        {% endif %}
+        
+        <a href="{% url 'paiements:changer_template_recu' recu.pk %}" class="btn btn-outline-secondary btn-lg">
+            <i class="fas fa-palette"></i> Changer template
+        </a>
+        
+        <a href="{% url 'paiements:recus_liste' %}" class="btn btn-secondary btn-lg">
+            <i class="fas fa-arrow-left"></i> Retour à la liste
+        </a>
+        <a href="{% url 'paiements:detail' recu.paiement.pk %}" class="btn btn-outline-primary btn-lg">
+            <i class="fas fa-money-bill"></i> Voir le paiement
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Informations du reçu -->
+        <div class="col-lg-6">
+            <div class="card info-card receipt shadow">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-receipt text-purple"></i>
+                        Informations du Reçu
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Statut:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-{{ recu.get_statut_color }} status-badge">
+                                {{ recu.get_statut_display }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Template:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {{ recu.get_template_utilise_display }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Format d'impression:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {{ recu.get_format_impression_display }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Généré automatiquement:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {% if recu.genere_automatiquement %}
+                                <span class="badge bg-success">Oui</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Non</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if recu.imprime %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Imprimé le:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {{ recu.date_impression|date:"d/m/Y à H:i" }}
+                            {% if recu.imprime_par %}
+                                par {{ recu.imprime_par.get_full_name|default:recu.imprime_par.username }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if recu.envoye_email %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Envoyé par email:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {{ recu.date_envoi_email|date:"d/m/Y à H:i" }}
+                            {% if recu.email_destinataire %}
+                                à {{ recu.email_destinataire }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if recu.valide_par %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Validé par:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {{ recu.valide_par.get_full_name|default:recu.valide_par.username }}
+                            le {{ recu.date_validation|date:"d/m/Y à H:i" }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if recu.notes_internes %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Notes internes:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            <small class="text-muted">{{ recu.notes_internes }}</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations du paiement -->
+        <div class="col-lg-6">
+            <div class="card info-card payment shadow">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-money-bill text-primary"></i>
+                        Informations du Paiement
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Type de paiement:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {{ informations.type_paiement }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Mode de paiement:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {{ informations.mode_paiement }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Date de paiement:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {{ informations.date_paiement|date:"d/m/Y" }}
+                        </div>
+                    </div>
+                    
+                    {% if informations.numero_cheque %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Numéro de chèque:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {{ informations.numero_cheque }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if informations.reference_virement %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Référence virement:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {{ informations.reference_virement }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <!-- Informations du locataire -->
+        <div class="col-lg-6">
+            <div class="card info-card tenant shadow">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user text-info"></i>
+                        Informations du Locataire
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Nom complet:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {{ informations.locataire_nom }} {{ informations.locataire_prenom }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Email:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {{ informations.locataire_email|default:"Non renseigné" }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Téléphone:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {{ informations.locataire_telephone|default:"Non renseigné" }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations de la propriété -->
+        <div class="col-lg-6">
+            <div class="card info-card property shadow">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-home text-warning"></i>
+                        Informations de la Propriété
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Adresse:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {{ informations.propriete_adresse }}<br>
+                            {{ informations.propriete_code_postal }} {{ informations.propriete_ville }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Bailleur:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {{ informations.bailleur_nom }} {{ informations.bailleur_prenom }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>Contrat:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            {{ informations.contrat_numero }}<br>
+                            <small class="text-muted">
+                                Du {{ informations.contrat_date_debut|date:"d/m/Y" }} 
+                                au {{ informations.contrat_date_fin|date:"d/m/Y" }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+        // Fonction pour imprimer le reçu
+        function imprimerRecu() {
+            window.open('{% url "paiements:recu_impression" recu.pk %}', '_blank');
+        }
+
+// Fonction pour télécharger PDF
+function telechargerPDF() {
+    window.location.href = '{% url "paiements:recu_telecharger_pdf" recu.pk %}';
+}
+
+// Raccourcis clavier
+document.addEventListener('keydown', function(e) {
+    // Ctrl+P pour imprimer
+    if (e.ctrlKey && e.key === 'p') {
+        e.preventDefault();
+        imprimerRecu();
+    }
+    // Ctrl+D pour télécharger PDF
+    if (e.ctrlKey && e.key === 'd') {
+        e.preventDefault();
+        telechargerPDF();
+    }
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,352 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sélectionner un Contrat à Résilier{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête avec navigation -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="bi bi-search text-primary"></i> Sélectionner un Contrat à Résilier
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'core:dashboard' %}">Tableau de bord</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'contrats:liste' %}">Contrats</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'contrats:liste_resiliations' %}">Résiliations</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Sélectionner un contrat</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'contrats:liste_resiliations' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Retour aux résiliations
+            </a>
+            <a href="{% url 'contrats:liste' %}" class="btn btn-outline-primary">
+                <i class="bi bi-list"></i> Voir tous les contrats
+            </a>
+        </div>
+    </div>
+
+    <!-- Informations -->
+    <div class="alert alert-info mb-4">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-info-circle me-2"></i>
+            <div>
+                <strong>Information :</strong> Sélectionnez un contrat actif pour créer une résiliation. 
+                Seuls les contrats non résiliés sont affichés.
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Contrats Actifs</h6>
+                            <h3 class="mb-0">{{ total_contrats }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-file-contract fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Disponibles</h6>
+                            <h3 class="mb-0">{{ total_contrats }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-check-circle fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Actions</h6>
+                            <h3 class="mb-0">Résilier</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-x-circle fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-funnel"></i> Filtres de Recherche
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="bailleur" class="form-label">Bailleur</label>
+                    <select class="form-select" id="bailleur" name="bailleur">
+                        <option value="">Tous les bailleurs</option>
+                        {% for bailleur in bailleurs %}
+                        <option value="{{ bailleur.id }}" {% if request.GET.bailleur == bailleur.id|stringformat:"s" %}selected{% endif %}>
+                            {{ bailleur.nom }} {{ bailleur.prenom }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="ville" class="form-label">Ville</label>
+                    <select class="form-select" id="ville" name="ville">
+                        <option value="">Toutes les villes</option>
+                        {% for ville in villes %}
+                        <option value="{{ ville }}" {% if request.GET.ville == ville %}selected{% endif %}>
+                            {{ ville }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="locataire" class="form-label">Locataire</label>
+                    <input type="text" class="form-control" id="locataire" name="locataire" 
+                           placeholder="Nom ou prénom" value="{{ request.GET.locataire }}">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> Rechercher
+                    </button>
+                    <a href="{% url 'contrats:selectionner_contrat_resiliation' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-clockwise"></i> Réinitialiser
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Liste des contrats -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-list-ul"></i> Contrats Disponibles pour Résiliation ({{ page_obj.paginator.count }} contrat{{ page_obj.paginator.count|pluralize }})
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            {% if page_obj %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>N° Contrat</th>
+                            <th>Propriété</th>
+                            <th>Locataire</th>
+                            <th>Bailleur</th>
+                            <th>Période</th>
+                            <th>Loyer</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for contrat in page_obj %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <span class="badge bg-primary fs-6">{{ contrat.numero_contrat }}</span>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted d-block">Créé le {{ contrat.date_creation|date:"d/m/Y" }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <strong>{{ contrat.propriete.titre }}</strong>
+                                    <small class="text-muted d-block">
+                                        <i class="bi bi-geo-alt"></i> {{ contrat.propriete.ville }}
+                                    </small>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <strong>{{ contrat.locataire.nom }} {{ contrat.locataire.prenom }}</strong>
+                                    <small class="text-muted d-block">
+                                        <i class="bi bi-telephone"></i> {{ contrat.locataire.telephone }}
+                                    </small>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <strong>{{ contrat.propriete.bailleur.nom }} {{ contrat.propriete.bailleur.prenom }}</strong>
+                                    <small class="text-muted d-block">
+                                        <i class="bi bi-person"></i> Bailleur
+                                    </small>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <strong>{{ contrat.date_debut|date:"d/m/Y" }}</strong>
+                                    <small class="text-muted d-block">au {{ contrat.date_fin|date:"d/m/Y" }}</small>
+                                    <small class="text-muted d-block">
+                                        <i class="bi bi-calendar"></i> {{ contrat.get_duree_mois }} mois
+                                    </small>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <strong class="text-success">{{ contrat.get_loyer_mensuel_formatted }}</strong>
+                                    <small class="text-muted d-block">+ {{ contrat.get_charges_mensuelles_formatted }} charges</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle"></i> Actif
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'contrats:detail' contrat.pk %}" 
+                                       class="btn btn-sm btn-outline-primary" 
+                                       title="Voir les détails">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    
+                                    <a href="{% url 'contrats:resilier' contrat.pk %}" 
+                                       class="btn btn-sm btn-danger" 
+                                       title="Résilier ce contrat">
+                                        <i class="bi bi-x-circle"></i> Résilier
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox fs-1 text-muted"></i>
+                <h5 class="text-muted mt-3">Aucun contrat disponible</h5>
+                <p class="text-muted">
+                    {% if request.GET.bailleur or request.GET.ville or request.GET.locataire %}
+                        Aucun contrat ne correspond aux critères de recherche.
+                    {% else %}
+                        Tous les contrats sont déjà résiliés ou inactifs.
+                    {% endif %}
+                </p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <a href="{% url 'contrats:liste' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Créer un nouveau contrat
+                    </a>
+                    <a href="{% url 'contrats:selectionner_contrat_resiliation' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-clockwise"></i> Réinitialiser les filtres
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="Navigation des pages" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}{% if request.GET.ville %}&ville={{ request.GET.ville }}{% endif %}{% if request.GET.locataire %}&locataire={{ request.GET.locataire }}{% endif %}">
+                    <i class="bi bi-chevron-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}{% if request.GET.ville %}&ville={{ request.GET.ville }}{% endif %}{% if request.GET.locataire %}&locataire={{ request.GET.locataire }}{% endif %}">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}{% if request.GET.ville %}&ville={{ request.GET.ville }}{% endif %}{% if request.GET.locataire %}&locataire={{ request.GET.locataire }}{% endif %}">
+                        {{ num }}
+                    </a>
+                </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}{% if request.GET.ville %}&ville={{ request.GET.ville }}{% endif %}{% if request.GET.locataire %}&locataire={{ request.GET.locataire }}{% endif %}">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}{% if request.GET.ville %}&ville={{ request.GET.ville }}{% endif %}{% if request.GET.locataire %}&locataire={{ request.GET.locataire }}{% endif %}">
+                    <i class="bi bi-chevron-double-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filtrage automatique lors du changement des sélecteurs
+    const filters = document.querySelectorAll('select[name="bailleur"], select[name="ville"]');
+    filters.forEach(filter => {
+        filter.addEventListener('change', function() {
+            // Attendre un peu avant de soumettre pour éviter les soumissions multiples
+            setTimeout(() => {
+                this.closest('form').submit();
+            }, 300);
+        });
+    });
+
+    // Confirmation pour la résiliation
+    const resiliationButtons = document.querySelectorAll('a[href*="resilier"]');
+    resiliationButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            if (!confirm('Êtes-vous sûr de vouloir résilier ce contrat ? Cette action est irréversible.')) {
+                e.preventDefault();
+            }
+        });
+    });
+
+    // Recherche en temps réel pour le champ locataire
+    const locataireInput = document.getElementById('locataire');
+    let searchTimeout;
+    
+    locataireInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            if (this.value.length >= 2 || this.value.length === 0) {
+                this.closest('form').submit();
+            }
+        }, 500);
+    });
+});
+</script>
+{% endblock %}
