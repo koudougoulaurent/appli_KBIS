@@ -113,6 +113,15 @@
 
 {% block content %}
 <div class="container-fluid">
+    <!-- Boutons de navigation professionnels -->
+    {% include 'includes/navigation_buttons.html' with 
+        page_title=page_title|default:""
+        page_subtitle=page_subtitle|default:""
+        back_url='proprietes:liste'
+        back_text="Retour à la liste"
+        show_dashboard_button=True
+        show_list_button=True %}
+    
     <div class="row">
         <div class="col-12">
             <!-- En-tête -->

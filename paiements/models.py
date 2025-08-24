@@ -5,6 +5,8 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from contrats.models import Contrat
 from proprietes.managers import NonDeletedManager
+from django.conf import settings
+from proprietes.models import Bailleur, Propriete
 
 Utilisateur = get_user_model()
 
@@ -481,7 +483,7 @@ class Paiement(models.Model):
         return self.statut == 'en_attente'
     
     def valider_paiement(self, utilisateur):
-        """Valide le paiement et génère automatiquement une quittance."""
+        """Valide le paiement et génère automatiquement une quittance et un reçu."""
         if self.peut_etre_valide():
             self.statut = 'valide'
             self.date_encaissement = timezone.now().date()
@@ -490,6 +492,9 @@ class Paiement(models.Model):
             
             # Générer automatiquement une quittance de paiement
             self.generer_quittance(utilisateur)
+            
+            # Générer automatiquement un reçu de paiement
+            self.generer_recu_automatique(utilisateur)
             
             return True
         return False
@@ -503,6 +508,18 @@ class Paiement(models.Model):
             QuittancePaiement.objects.create(
                 paiement=self,
                 cree_par=utilisateur
+            )
+    
+    def generer_recu_automatique(self, utilisateur):
+        """Génère automatiquement un reçu de paiement."""
+        # Vérifier si un reçu existe déjà
+        if not hasattr(self, 'recu'):
+            from .models import Recu
+            Recu.objects.create(
+                paiement=self,
+                genere_automatiquement=True,
+                valide=True,
+                valide_par=utilisateur
             )
     
     def peut_etre_annule(self):
@@ -1107,6 +1124,221 @@ class RetraitBailleur(models.Model):
     def peut_etre_edite(self):
         """Vérifie si le retrait peut être édité."""
         return self.peut_etre_modifie and self.statut == 'en_attente'
+    
+    def ajouter_charge_bailleur(self, charge_bailleur, montant_deduction, notes=""):
+        """
+        Ajoute une charge de bailleur au retrait pour déduction automatique.
+        
+        Args:
+            charge_bailleur: Instance de ChargesBailleur
+            montant_deduction: Montant à déduire
+            notes: Notes sur la déduction
+            
+        Returns:
+            bool: True si la charge a été ajoutée avec succès
+        """
+        try:
+            from proprietes.models import ChargesBailleurRetrait
+            
+            # Vérifier que le retrait peut être modifié
+            if not self.peut_etre_edite():
+                raise ValueError("Ce retrait ne peut plus être modifié")
+            
+            # Vérifier que la charge peut être déduite
+            if not charge_bailleur.peut_etre_deduit():
+                raise ValueError("Cette charge ne peut pas être déduite")
+            
+            # Vérifier le montant
+            montant_deductible = charge_bailleur.get_montant_deductible()
+            if montant_deduction > montant_deductible:
+                raise ValueError(f"Le montant de déduction ({montant_deduction}) dépasse le montant déductible ({montant_deductible})")
+            
+            # Créer la liaison
+            liaison = ChargesBailleurRetrait.objects.create(
+                charge_bailleur=charge_bailleur,
+                retrait_bailleur=self,
+                montant_deduit=montant_deduction,
+                notes=notes
+            )
+            
+            # Marquer la charge comme déduite
+            montant_effectivement_deduit = charge_bailleur.marquer_comme_deduit(montant_deduction)
+            
+            # Mettre à jour le montant des charges déductibles du retrait
+            self.montant_charges_deductibles += montant_effectivement_deduit
+            self.save()
+            
+            # Créer un log d'audit
+            self.creer_log_audit('ajout_charge', self.cree_par, 
+                                f"Charge '{charge_bailleur.titre}' ajoutée pour {montant_effectivement_deduit} XOF")
+            
+            return True
+            
+        except Exception as e:
+            # Log l'erreur
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Erreur lors de l'ajout de la charge bailleur: {e}")
+            return False
+    
+    def retirer_charge_bailleur(self, charge_bailleur, notes=""):
+        """
+        Retire une charge de bailleur du retrait.
+        
+        Args:
+            charge_bailleur: Instance de ChargesBailleur
+            notes: Notes sur le retrait
+            
+        Returns:
+            bool: True si la charge a été retirée avec succès
+        """
+        try:
+            from proprietes.models import ChargesBailleurRetrait
+            
+            # Vérifier que le retrait peut être modifié
+            if not self.peut_etre_edite():
+                raise ValueError("Ce retrait ne peut plus être modifié")
+            
+            # Trouver la liaison
+            liaison = ChargesBailleurRetrait.objects.filter(
+                charge_bailleur=charge_bailleur,
+                retrait_bailleur=self
+            ).first()
+            
+            if not liaison:
+                raise ValueError("Cette charge n'est pas liée à ce retrait")
+            
+            # Récupérer le montant déduit
+            montant_deduit = liaison.montant_deduit
+            
+            # Supprimer la liaison
+            liaison.delete()
+            
+            # Remettre la charge en attente
+            charge_bailleur.montant_deja_deduit -= montant_deduit
+            charge_bailleur.statut = 'en_attente'
+            charge_bailleur.save()
+            
+            # Mettre à jour le montant des charges déductibles du retrait
+            self.montant_charges_deductibles -= montant_deduit
+            self.save()
+            
+            # Créer un log d'audit
+            self.creer_log_audit('retrait_charge', self.cree_par, 
+                                f"Charge '{charge_bailleur.titre}' retirée ({montant_deduit} XOF)")
+            
+            return True
+            
+        except Exception as e:
+            # Log l'erreur
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Erreur lors du retrait de la charge bailleur: {e}")
+            return False
+    
+    def get_charges_bailleur_liees(self):
+        """Récupère toutes les charges de bailleur liées à ce retrait."""
+        try:
+            from proprietes.models import ChargesBailleurRetrait
+            return ChargesBailleurRetrait.objects.filter(retrait_bailleur=self).select_related('charge_bailleur')
+        except Exception:
+            return []
+    
+    def calculer_charges_automatiquement(self, mois_retrait=None):
+        """
+        Calcule automatiquement les charges de bailleur à déduire pour le mois donné.
+        
+        Args:
+            mois_retrait: Mois de retrait (par défaut: mois du retrait)
+            
+        Returns:
+            dict: Résumé des charges calculées
+        """
+        try:
+            from proprietes.models import ChargesBailleur
+            from django.db.models import Sum
+            from django.utils import timezone
+            
+            if mois_retrait is None:
+                mois_retrait = self.mois_retrait
+            
+            # Récupérer toutes les charges de bailleur du bailleur pour le mois
+            charges = ChargesBailleur.objects.filter(
+                propriete__bailleur=self.bailleur,
+                date_charge__year=mois_retrait.year,
+                date_charge__month=mois_retrait.month,
+                statut__in=['en_attente', 'deduite_retrait']
+            ).select_related('propriete')
+            
+            total_charges = 0
+            charges_details = []
+            
+            for charge in charges:
+                montant_deductible = charge.get_montant_deductible()
+                if montant_deductible > 0:
+                    total_charges += montant_deductible
+                    charges_details.append({
+                        'charge': charge,
+                        'montant_deductible': montant_deductible,
+                        'propriete': charge.propriete
+                    })
+            
+            return {
+                'total_charges': total_charges,
+                'charges_details': charges_details,
+                'nombre_charges': len(charges_details)
+            }
+            
+        except Exception as e:
+            # Log l'erreur
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Erreur lors du calcul automatique des charges: {e}")
+            return {'total_charges': 0, 'charges_details': [], 'nombre_charges': 0}
+    
+    def appliquer_charges_automatiquement(self, mois_retrait=None):
+        """
+        Applique automatiquement toutes les charges de bailleur calculées.
+        
+        Args:
+            mois_retrait: Mois de retrait (par défaut: mois du retrait)
+            
+        Returns:
+            dict: Résumé de l'application des charges
+        """
+        try:
+            # Calculer les charges
+            calcul = self.calculer_charges_automatiquement(mois_retrait)
+            
+            if calcul['total_charges'] == 0:
+                return {'success': True, 'message': 'Aucune charge à appliquer', 'charges_appliquees': 0}
+            
+            charges_appliquees = 0
+            
+            # Appliquer chaque charge
+            for detail in calcul['charges_details']:
+                charge = detail['charge']
+                montant = detail['montant_deductible']
+                
+                if self.ajouter_charge_bailleur(charge, montant, "Application automatique"):
+                    charges_appliquees += 1
+            
+            # Mettre à jour le retrait
+            self.save()
+            
+            return {
+                'success': True,
+                'message': f'{charges_appliquees} charges appliquées pour un total de {calcul["total_charges"]} XOF',
+                'charges_appliquees': charges_appliquees,
+                'total_applique': calcul['total_charges']
+            }
+            
+        except Exception as e:
+            # Log l'erreur
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Erreur lors de l'application automatique des charges: {e}")
+            return {'success': False, 'message': f'Erreur: {str(e)}', 'charges_appliquees': 0}
     
     def utilisateur_est_autorise(self, utilisateur, niveau_requis):
         """Vérifie si l'utilisateur a le niveau d'autorisation requis."""
@@ -1845,3 +2077,574 @@ class RecapMensuel(models.Model):
         """Retourne le total net formaté en XOF"""
         from core.utils import format_currency_xof
         return format_currency_xof(self.total_net_a_payer)
+
+
+class RecapitulatifMensuelBailleur(models.Model):
+    """Modèle pour le récapitulatif mensuel d'un bailleur individuel."""
+    
+    TYPE_RECAPITULATIF_CHOICES = [
+        ('mensuel', 'Mensuel'),
+        ('trimestriel', 'Trimestriel'),
+        ('annuel', 'Annuel'),
+        ('exceptionnel', 'Exceptionnel'),
+    ]
+    
+    STATUT_CHOICES = [
+        ('en_preparation', 'En préparation'),
+        ('valide', 'Validé'),
+        ('envoye', 'Envoyé au bailleur'),
+        ('paye', 'Payé'),
+        ('annule', 'Annulé'),
+    ]
+    
+    # BAILLEUR INDIVIDUEL - C'EST ICI LA DIFFÉRENCE !
+    bailleur = models.ForeignKey(
+        'proprietes.Bailleur',
+        on_delete=models.CASCADE,
+        verbose_name=_("Bailleur"),
+        related_name='recapitulatifs_mensuels_bailleur',
+        help_text=_("Bailleur concerné par ce récapitulatif")
+    )
+    
+    # Informations générales
+    mois_recapitulatif = models.DateField(
+        verbose_name=_("Mois du récapitulatif"),
+        help_text=_("Mois de référence pour le récapitulatif")
+    )
+    type_recapitulatif = models.CharField(
+        max_length=20,
+        choices=TYPE_RECAPITULATIF_CHOICES,
+        default='mensuel',
+        verbose_name=_("Type de récapitulatif")
+    )
+    statut = models.CharField(
+        max_length=20,
+        choices=STATUT_CHOICES,
+        default='en_preparation',
+        verbose_name=_("Statut")
+    )
+    
+    # Dates importantes
+    date_creation = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Date de création")
+    )
+    date_validation = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date de validation")
+    )
+    date_envoi = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date d'envoi au bailleur")
+    )
+    date_paiement = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date de paiement")
+    )
+    
+    # Informations de gestion
+    gestionnaire = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("Gestionnaire responsable"),
+        related_name='recapitulatifs_crees'
+    )
+    notes = models.TextField(
+        blank=True,
+        verbose_name=_("Notes et observations")
+    )
+    
+    # Métadonnées
+    hash_securite = models.CharField(
+        max_length=64,
+        blank=True,
+        verbose_name=_("Hash de sécurité")
+    )
+    version = models.CharField(
+        max_length=10,
+        default='1.0',
+        verbose_name=_("Version du récapitulatif")
+    )
+    
+    class Meta:
+        verbose_name = _("Récapitulatif mensuel")
+        verbose_name_plural = _("Récapitulatifs mensuels")
+        ordering = ['-mois_recapitulatif', '-date_creation']
+        unique_together = ['bailleur', 'mois_recapitulatif', 'type_recapitulatif']
+        indexes = [
+            models.Index(fields=['mois_recapitulatif', 'statut']),
+            models.Index(fields=['gestionnaire', 'date_creation']),
+        ]
+    
+    def __str__(self):
+        return f"Récapitulatif {self.get_type_recapitulatif_display()} - {self.bailleur.nom} - {self.mois_recapitulatif.strftime('%B %Y')}"
+    
+    def get_nom_fichier_pdf(self):
+        """Génère le nom du fichier PDF du récapitulatif."""
+        return f"recapitulatif_{self.mois_recapitulatif.strftime('%Y_%m')}_{self.type_recapitulatif}.pdf"
+    
+    def calculer_totaux_globaux(self):
+        """Calcule les totaux globaux de tous les bailleurs."""
+        from proprietes.models import ChargesBailleur
+        
+        # Calculer les totaux pour le bailleur spécifique
+        details_bailleur = self.calculer_details_bailleur(self.bailleur)
+        
+        totaux = {
+            'bailleur': self.bailleur,
+            'nombre_proprietes': details_bailleur['nombre_proprietes'],
+            'total_loyers_bruts': details_bailleur['total_loyers_bruts'],
+            'total_charges_deductibles': details_bailleur['total_charges_deductibles'],
+            'total_charges_bailleur': details_bailleur['total_charges_bailleur'],
+            'total_net_a_payer': details_bailleur['montant_net_a_payer'],
+            'details_proprietes': details_bailleur['proprietes_details']
+        }
+        
+        return totaux
+    
+    def calculer_details_bailleur(self, bailleur):
+        """Calcule les détails complets pour un bailleur spécifique."""
+        from proprietes.models import ChargesBailleur
+        
+        # Propriétés louées du bailleur
+        proprietes_louees = Propriete.objects.filter(
+            bailleur=bailleur,
+            contrats__est_actif=True
+        ).distinct()
+        
+        details = {
+            'bailleur': bailleur,
+            'nombre_proprietes': proprietes_louees.count(),
+            'proprietes_details': [],
+            'total_loyers_bruts': 0,
+            'total_charges_deductibles': 0,
+            'total_charges_bailleur': 0,
+            'montant_net_a_payer': 0
+        }
+        
+        for propriete in proprietes_louees:
+            # Contrat actif de la propriété
+            contrat_actif = propriete.contrats.filter(est_actif=True).first()
+            if not contrat_actif:
+                continue
+            
+            # Loyers perçus pour ce mois
+            loyers_mois = Paiement.objects.filter(
+                contrat=contrat_actif,
+                date_paiement__year=self.mois_recapitulatif.year,
+                date_paiement__month=self.mois_recapitulatif.month,
+                statut='valide'
+            ).aggregate(total=Sum('montant'))['total'] or 0
+            
+            # Charges déductibles (locataire)
+            charges_deductibles = ChargeDeductible.objects.filter(
+                propriete=propriete,
+                date_charge__year=self.mois_recapitulatif.year,
+                date_charge__month=self.mois_recapitulatif.month,
+                statut='valide'
+            ).aggregate(total=Sum('montant'))['total'] or 0
+            
+            # Charges bailleur
+            charges_bailleur = ChargesBailleur.objects.filter(
+                propriete=propriete,
+                date_charge__year=self.mois_recapitulatif.year,
+                date_charge__month=self.mois_recapitulatif.month,
+                statut__in=['en_attente', 'deduite_retrait']
+            ).aggregate(total=Sum('montant_restant'))['total'] or 0
+            
+            # Calcul du montant net pour cette propriété
+            montant_net_propriete = loyers_mois - charges_deductibles - charges_bailleur
+            
+            propriete_detail = {
+                'propriete': propriete,
+                'contrat': contrat_actif,
+                'loyers_bruts': loyers_mois,
+                'charges_deductibles': charges_deductibles,
+                'charges_bailleur': charges_bailleur,
+                'montant_net': montant_net_propriete,
+                'locataire': contrat_actif.locataire
+            }
+            
+            details['proprietes_details'].append(propriete_detail)
+            details['total_loyers_bruts'] += loyers_mois
+            details['total_charges_deductibles'] += charges_deductibles
+            details['total_charges_bailleur'] += charges_bailleur
+            details['montant_net_a_payer'] += montant_net_propriete
+        
+        return details
+    
+    def generer_pdf_recapitulatif(self):
+        """Génère le PDF du récapitulatif mensuel."""
+        from django.template.loader import render_to_string
+        from weasyprint import HTML
+        import tempfile
+        import os
+        
+        # Récupérer les totaux globaux
+        totaux = self.calculer_totaux_globaux()
+        
+        # Rendre le template HTML
+        html_content = render_to_string(
+            'paiements/recapitulatifs/recapitulatif_mensuel_pdf.html',
+            {
+                'recapitulatif': self,
+                'totaux': totaux,
+                'date_generation': timezone.now(),
+            }
+        )
+        
+        # Créer le PDF
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_file:
+            HTML(string=html_content).write_pdf(tmp_file.name)
+            
+            # Lire le contenu du PDF
+            with open(tmp_file.name, 'rb') as pdf_file:
+                pdf_content = pdf_file.read()
+            
+            # Nettoyer le fichier temporaire
+            os.unlink(tmp_file.name)
+        
+        return pdf_content
+    
+    def valider(self, gestionnaire):
+        """Valide le récapitulatif mensuel."""
+        if self.statut != 'en_preparation':
+            raise ValueError("Seul un récapitulatif en préparation peut être validé")
+        
+        self.statut = 'valide'
+        self.date_validation = timezone.now()
+        self.gestionnaire = gestionnaire
+        self.save()
+        
+        # Générer le hash de sécurité
+        self.generer_hash_securite()
+        
+        return True
+    
+    def envoyer_au_bailleur(self):
+        """Marque le récapitulatif comme envoyé au bailleur."""
+        if self.statut != 'valide':
+            raise ValueError("Seul un récapitulatif validé peut être envoyé")
+        
+        self.statut = 'envoye'
+        self.date_envoi = timezone.now()
+        self.save()
+        
+        return True
+    
+    def marquer_comme_paye(self):
+        """Marque le récapitulatif comme payé."""
+        if self.statut not in ['envoye', 'valide']:
+            raise ValueError("Seul un récapitulatif envoyé ou validé peut être marqué comme payé")
+        
+        self.statut = 'paye'
+        self.date_paiement = timezone.now()
+        self.save()
+        
+        return True
+    
+    def generer_hash_securite(self):
+        """Génère un hash de sécurité pour vérifier l'intégrité."""
+        import hashlib
+        
+        # Créer une chaîne de données pour le hash
+        data_string = f"{self.id}_{self.mois_recapitulatif}_{self.type_recapitulatif}_{self.date_creation}"
+        
+        # Générer le hash SHA-256
+        hash_object = hashlib.sha256(data_string.encode())
+        self.hash_securite = hash_object.hexdigest()
+        self.save()
+    
+    def verifier_integrite(self):
+        """Vérifie l'intégrité du récapitulatif avec le hash de sécurité."""
+        if not self.hash_securite:
+            return False
+        
+        # Régénérer le hash pour comparaison
+        import hashlib
+        data_string = f"{self.id}_{self.mois_recapitulatif}_{self.type_recapitulatif}_{self.date_creation}"
+        hash_object = hashlib.sha256(data_string.encode())
+        hash_calcule = hash_object.hexdigest()
+        
+        return self.hash_securite == hash_calcule
+    
+    def get_statut_display_color(self):
+        """Retourne la couleur CSS pour le statut."""
+        colors = {
+            'en_preparation': 'warning',
+            'valide': 'success',
+            'envoye': 'info',
+            'paye': 'success',
+            'annule': 'danger',
+        }
+        return colors.get(self.statut, 'secondary')
+    
+    def peut_etre_modifie(self):
+        """Vérifie si le récapitulatif peut être modifié."""
+        return self.statut in ['en_preparation']
+    
+    def peut_etre_valide(self):
+        """Vérifie si le récapitulatif peut être validé."""
+        return self.statut == 'en_preparation'
+    
+    def peut_etre_envoye(self):
+        """Vérifie si le récapitulatif peut être envoyé."""
+        return self.statut == 'valide'
+    
+    def peut_etre_paye(self):
+        """Vérifie si le récapitulatif peut être marqué comme payé."""
+        return self.statut in ['envoye', 'valide']
+
+
+class Recu(models.Model):
+    """Modèle pour les reçus de paiement générés automatiquement."""
+    
+    # Numéro unique du reçu
+    numero_recu = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name=_("Numéro de reçu"),
+        help_text=_("Numéro unique du reçu")
+    )
+    
+    # Paiement associé
+    paiement = models.OneToOneField(
+        Paiement,
+        on_delete=models.CASCADE,
+        related_name='recu',
+        verbose_name=_("Paiement")
+    )
+    
+    # Template utilisé
+    template_utilise = models.CharField(
+        max_length=20,
+        choices=[
+            ('standard', 'Standard'),
+            ('simplified', 'Simplifié'),
+            ('detailed', 'Détaillé'),
+            ('professionnel', 'Professionnel'),
+            ('luxe', 'Luxe'),
+            ('entreprise', 'Entreprise'),
+        ],
+        default='standard',
+        verbose_name=_("Template utilisé")
+    )
+    
+    # Format d'impression
+    format_impression = models.CharField(
+        max_length=20,
+        choices=[
+            ('A4', 'A4'),
+            ('A5', 'A5'),
+            ('lettre', 'Lettre'),
+            ('personnalise', 'Personnalisé'),
+        ],
+        default='A4',
+        verbose_name=_("Format d'impression")
+    )
+    
+    # Statut du reçu
+    valide = models.BooleanField(
+        default=True,
+        verbose_name=_("Reçu validé")
+    )
+    
+    # Informations d'impression
+    imprime = models.BooleanField(
+        default=False,
+        verbose_name=_("Reçu imprimé")
+    )
+    date_impression = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date d'impression")
+    )
+    imprime_par = models.ForeignKey(
+        'utilisateurs.Utilisateur',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='recus_imprimes',
+        verbose_name=_("Imprimé par")
+    )
+    nombre_impressions = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Nombre d'impressions")
+    )
+    
+    # Informations d'envoi par email
+    envoye_email = models.BooleanField(
+        default=False,
+        verbose_name=_("Reçu envoyé par email")
+    )
+    date_envoi_email = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date d'envoi par email")
+    )
+    email_destinataire = models.EmailField(
+        null=True,
+        blank=True,
+        verbose_name=_("Email du destinataire")
+    )
+    nombre_emails = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Nombre d'emails envoyés")
+    )
+    
+    # Métadonnées
+    date_emission = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Date d'émission")
+    )
+    date_validation = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date de validation")
+    )
+    valide_par = models.ForeignKey(
+        'utilisateurs.Utilisateur',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='recus_valides',
+        verbose_name=_("Validé par")
+    )
+    
+    # Génération automatique
+    genere_automatiquement = models.BooleanField(
+        default=True,
+        verbose_name=_("Généré automatiquement")
+    )
+    
+    # Gestion de la suppression logique
+    is_deleted = models.BooleanField(
+        default=False,
+        verbose_name=_("Supprimé")
+    )
+    
+    class Meta:
+        verbose_name = _("Reçu")
+        verbose_name_plural = _("Reçus")
+        ordering = ['-date_emission']
+        indexes = [
+            models.Index(fields=['numero_recu']),
+            models.Index(fields=['date_emission']),
+            models.Index(fields=['valide']),
+            models.Index(fields=['imprime']),
+        ]
+    
+    def __str__(self):
+        return f"Reçu {self.numero_recu} - {self.paiement.reference_paiement}"
+    
+    def save(self, *args, **kwargs):
+        # Générer automatiquement le numéro de reçu s'il n'existe pas
+        if not self.numero_recu:
+            self.numero_recu = self.generer_numero_recu()
+        super().save(*args, **kwargs)
+    
+    def generer_numero_recu(self):
+        """Génère un numéro de reçu unique."""
+        from datetime import datetime
+        import random
+        
+        # Format: REC-YYYYMMDD-XXXXX
+        date_str = datetime.now().strftime('%Y%m%d')
+        random_suffix = random.randint(10000, 99999)
+        
+        numero = f"REC-{date_str}-{random_suffix}"
+        
+        # Vérifier l'unicité
+        while Recu.objects.filter(numero_recu=numero).exists():
+            random_suffix = random.randint(10000, 99999)
+            numero = f"REC-{date_str}-{random_suffix}"
+        
+        return numero
+    
+    def marquer_comme_imprime(self, utilisateur):
+        """Marque le reçu comme imprimé."""
+        self.imprime = True
+        self.date_impression = timezone.now()
+        self.imprime_par = utilisateur
+        self.nombre_impressions += 1
+        self.save()
+    
+    def marquer_comme_envoye_email(self, email_destinataire):
+        """Marque le reçu comme envoyé par email."""
+        self.envoye_email = True
+        self.date_envoi_email = timezone.now()
+        self.email_destinataire = email_destinataire
+        self.nombre_emails += 1
+        self.save()
+    
+    def valider_recu(self, utilisateur):
+        """Valide le reçu."""
+        self.valide = True
+        self.date_validation = timezone.now()
+        self.valide_par = utilisateur
+        self.save()
+    
+    def get_statut_color(self):
+        """Retourne la couleur CSS pour le statut."""
+        if self.imprime:
+            return 'success'
+        elif self.envoye_email:
+            return 'info'
+        elif self.valide:
+            return 'primary'
+        else:
+            return 'warning'
+    
+    def get_template_utilise_display(self):
+        """Retourne le nom du template utilisé."""
+        return dict(self._meta.get_field('template_utilise').choices)[self.template_utilise]
+    
+    def get_format_impression_display(self):
+        """Retourne le format d'impression."""
+        return dict(self._meta.get_field('format_impression').choices)[self.format_impression]
+
+
+# Signaux Django pour la génération automatique des reçus
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=Paiement)
+def generer_recu_automatique(sender, instance, created, **kwargs):
+    """Génère automatiquement un reçu lors de la création d'un paiement."""
+    if created and instance.statut == 'valide':
+        # Créer le reçu automatiquement
+        Recu.objects.create(
+            paiement=instance,
+            genere_automatiquement=True,
+            valide=True
+        )
+
+@receiver(post_save, sender=Paiement)
+def generer_recu_apres_validation(sender, instance, created, **kwargs):
+    """Génère automatiquement un reçu lors de la validation d'un paiement."""
+    if not created and instance.statut == 'valide':
+        # Vérifier si un reçu existe déjà
+        if not hasattr(instance, 'recu'):
+            # Créer le reçu automatiquement
+            Recu.objects.create(
+                paiement=instance,
+                genere_automatiquement=True,
+                valide=True
+            )
+
+# Méthode pour générer un reçu manuellement si nécessaire
+def generer_recu_manuel(paiement, utilisateur):
+    """Génère manuellement un reçu pour un paiement."""
+    if not hasattr(paiement, 'recu'):
+        return Recu.objects.create(
+            paiement=paiement,
+            genere_automatiquement=False,
+            valide=True,
+            valide_par=utilisateur
+        )
+    return paiement.recu

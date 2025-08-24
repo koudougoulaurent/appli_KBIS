@@ -1,1 +1,1 @@
-# Fichier d'initialisation pour le package templatetags
+# Templatetags package

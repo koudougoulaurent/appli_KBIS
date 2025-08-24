@@ -1,0 +1,180 @@
+{% comment %}
+    Template partiel pour les boutons de retour rapides
+    Utilisation: {% include 'includes/back_button.html' with back_url='url_name' back_text='Texte du bouton' %}
+{% endcomment %}
+
+<style>
+.back-button-container {
+    margin-bottom: 20px;
+    padding: 15px 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #6c757d 0%, #545b62 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 25px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.back-button:hover {
+    background: linear-gradient(135deg, #545b62 0%, #3d4449 100%);
+    color: white;
+    text-decoration: none;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.back-button i {
+    font-size: 1.1em;
+}
+
+.back-button-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #545b62 100%);
+}
+
+.back-button-secondary:hover {
+    background: linear-gradient(135deg, #545b62 0%, #3d4449 100%);
+}
+
+.back-button-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+.back-button-primary:hover {
+    background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+}
+
+.back-button-success {
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+}
+
+.back-button-success:hover {
+    background: linear-gradient(135deg, #1e7e34 0%, #155724 100%);
+}
+
+.back-button-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    color: #212529;
+}
+
+.back-button-warning:hover {
+    background: linear-gradient(135deg, #e0a800 0%, #c69500 100%);
+    color: #212529;
+}
+
+.back-button-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+}
+
+.back-button-info:hover {
+    background: linear-gradient(135deg, #138496 0%, #0f6674 100%);
+}
+
+.back-button-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+}
+
+.back-button-danger:hover {
+    background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%);
+}
+
+.back-button-outline {
+    background: transparent;
+    border: 2px solid #6c757d;
+    color: #6c757d;
+}
+
+.back-button-outline:hover {
+    background: #6c757d;
+    color: white;
+}
+
+.back-button-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .back-button-container {
+        padding: 12px 15px;
+    }
+    
+    .back-button {
+        padding: 8px 16px;
+        font-size: 0.9rem;
+    }
+    
+    .back-button-group {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+</style>
+
+<div class="back-button-container">
+    <div class="back-button-group">
+        {% if back_url %}
+            <a href="{{ back_url }}" class="back-button back-button-{{ button_style|default:'secondary' }}">
+                <i class="bi bi-arrow-left"></i>
+                {% if back_text %}{{ back_text }}{% else %}Retour{% endif %}
+            </a>
+        {% endif %}
+        
+        {% if show_dashboard %}
+            <a href="{% url 'proprietes:dashboard' %}" class="back-button back-button-outline">
+                <i class="bi bi-house-door"></i>
+                Dashboard
+            </a>
+        {% endif %}
+        
+        {% if show_list %}
+            <a href="{% url 'proprietes:liste' %}" class="back-button back-button-outline">
+                <i class="bi bi-list"></i>
+                Liste des propriétés
+            </a>
+        {% endif %}
+        
+        {% if show_bailleurs %}
+            <a href="{% url 'proprietes:bailleurs_liste' %}" class="back-button back-button-outline">
+                <i class="bi bi-people"></i>
+                Bailleurs
+            </a>
+        {% endif %}
+        
+        {% if show_locataires %}
+            <a href="{% url 'proprietes:locataires_liste' %}" class="back-button back-button-outline">
+                <i class="bi bi-person-badge"></i>
+                Locataires
+            </a>
+        {% endif %}
+        
+        {% if show_charges %}
+            <a href="{% url 'proprietes:liste_charges_bailleur' %}" class="back-button back-button-outline">
+                <i class="bi bi-exclamation-triangle"></i>
+                Charges bailleur
+            </a>
+        {% endif %}
+        
+        {% if custom_buttons %}
+            {% for button in custom_buttons %}
+                <a href="{{ button.url }}" class="back-button back-button-{{ button.style|default:'secondary' }}">
+                    <i class="bi bi-{{ button.icon|default:'arrow-right' }}"></i>
+                    {{ button.text }}
+                </a>
+            {% endfor %}
+        {% endif %}
+    </div>
+</div>

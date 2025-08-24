@@ -2,7 +2,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from .models import Paiement, ChargeDeductible, RetraitBailleur, TableauBordFinancier
+from .models import Paiement, ChargeDeductible, RetraitBailleur, TableauBordFinancier, RecapitulatifMensuelBailleur
 from contrats.models import Contrat
 from proprietes.models import Bailleur
 from datetime import date, datetime
@@ -343,95 +343,60 @@ class RetraitBailleurForm(forms.ModelForm):
     class Meta:
         model = RetraitBailleur
         fields = [
-            'bailleur', 'mois_retrait', 'montant_loyers_bruts', 
-            'montant_charges_deductibles', 'montant_net_a_payer',
-            'type_retrait', 'statut', 'mode_retrait', 'date_demande',
-            'date_versement', 'numero_cheque', 'reference_virement', 'notes'
+            'bailleur', 'mois_retrait', 'montant_loyers_bruts',
+            'montant_charges_deductibles', 'montant_net_a_payer', 'type_retrait', 'statut', 'mode_retrait',
+            'date_demande', 'date_versement', 'numero_cheque', 'reference_virement', 'notes'
         ]
         widgets = {
-            'mois_retrait': forms.DateInput(
-                attrs={
-                    'type': 'date',
-                    'class': 'form-control',
-                    'placeholder': 'YYYY-MM-DD'
-                }
-            ),
-            'date_demande': forms.DateInput(
-                attrs={
-                    'type': 'date',
-                    'class': 'form-control'
-                }
-            ),
-            'date_versement': forms.DateInput(
-                attrs={
-                    'type': 'date',
-                    'class': 'form-control'
-                }
-            ),
-            'montant_loyers_bruts': forms.NumberInput(
-                attrs={
-                    'class': 'form-control',
-                    'step': '0.01',
-                    'min': '0.01'
-                }
-            ),
-            'montant_charges_deductibles': forms.NumberInput(
-                attrs={
-                    'class': 'form-control',
-                    'step': '0.01',
-                    'min': '0'
-                }
-            ),
-            'montant_net_a_payer': forms.NumberInput(
-                attrs={
-                    'class': 'form-control',
-                    'step': '0.01',
-                    'min': '0.01',
-                    'readonly': True,
-                    'style': 'background-color: #f8f9fa; cursor: not-allowed;'
-                }
-            ),
-            'type_retrait': forms.Select(attrs={'class': 'form-control'}),
-            'statut': forms.Select(attrs={'class': 'form-control'}),
-            'mode_retrait': forms.Select(attrs={'class': 'form-control'}),
-            'numero_cheque': forms.TextInput(
-                attrs={
-                    'class': 'form-control',
-                    'placeholder': 'Numéro du chèque (si applicable)'
-                }
-            ),
-            'reference_virement': forms.TextInput(
-                attrs={
-                    'class': 'form-control',
-                    'placeholder': 'Référence du virement (si applicable)'
-                }
-            ),
-            'notes': forms.Textarea(
-                attrs={
-                    'class': 'form-control',
-                    'rows': 3,
-                    'placeholder': 'Informations complémentaires...'
-                }
-            ),
-        }
-        labels = {
-            'bailleur': _('Bailleur'),
-            'mois_retrait': _('Mois de retrait'),
-            'montant_loyers_bruts': _('Montant des loyers bruts'),
-            'montant_charges_deductibles': _('Montant des charges déductibles'),
-            'montant_net_a_payer': _('Montant net à payer'),
-            'type_retrait': _('Type de retrait'),
-            'statut': _('Statut'),
-            'mode_retrait': _('Mode de retrait'),
-            'date_demande': _('Date de demande'),
-            'date_versement': _('Date de versement'),
-            'numero_cheque': _('Numéro de chèque'),
-            'reference_virement': _('Référence virement'),
-            'notes': _('Notes'),
-        }
-        help_texts = {
-            'mois_retrait': _('Sélectionnez le mois pour lequel le retrait est effectué'),
-            'montant_net_a_payer': _('Montant après déduction des charges déductibles'),
+            'mois_retrait': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'montant_loyers_bruts': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0.01'
+            }),
+            'montant_charges_deductibles': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'type_retrait': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'statut': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'mode_retrait': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'date_demande': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'montant_net_a_payer': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0.01',
+                'readonly': 'readonly'
+            }),
+            'date_versement': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'numero_cheque': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Numéro de chèque'
+            }),
+            'reference_virement': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Référence du virement'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3
+            })
         }
     
     def __init__(self, *args, **kwargs):
@@ -454,6 +419,7 @@ class RetraitBailleurForm(forms.ModelForm):
             self.fields['statut'].initial = 'en_attente'
             self.fields['type_retrait'].initial = 'mensuel'
             self.fields['montant_charges_deductibles'].initial = 0
+            self.fields['montant_net_a_payer'].initial = 0
     
     def clean_mois_retrait(self):
         """Valider le format du mois de retrait."""
@@ -487,6 +453,94 @@ class RetraitBailleurForm(forms.ModelForm):
             
             # Mettre à jour le champ montant net
             cleaned_data['montant_net_a_payer'] = montant_net_calcule
+        
+        return cleaned_data
+
+
+class GestionChargesBailleurForm(forms.Form):
+    """Formulaire pour gérer les charges de bailleur dans un retrait."""
+    
+    charge_bailleur = forms.ModelChoiceField(
+        queryset=None,
+        label=_('Charge bailleur à déduire'),
+        help_text=_('Sélectionnez la charge à déduire du retrait mensuel'),
+        widget=forms.Select(attrs={
+            'class': 'form-control',
+            'id': 'charge_bailleur_select'
+        })
+    )
+    
+    montant_deduction = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        min_value=0.01,
+        label=_('Montant à déduire (XOF)'),
+        help_text=_('Montant à déduire du retrait mensuel'),
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'min': '0.01',
+            'id': 'montant_deduction'
+        })
+    )
+    
+    notes = forms.CharField(
+        max_length=500,
+        required=False,
+        label=_('Notes'),
+        help_text=_('Commentaires sur cette déduction'),
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Notes sur la déduction...'
+        })
+    )
+    
+    def __init__(self, retrait_bailleur=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.retrait_bailleur = retrait_bailleur
+        
+        if retrait_bailleur:
+            # Filtrer les charges de bailleur éligibles
+            from proprietes.models import ChargesBailleur
+            
+            charges_eligibles = ChargesBailleur.objects.filter(
+                propriete__bailleur=retrait_bailleur.bailleur,
+                statut__in=['en_attente', 'deduite_retrait']
+            ).exclude(
+                retraits_lies__retrait_bailleur=retrait_bailleur
+            ).select_related('propriete')
+            
+            self.fields['charge_bailleur'].queryset = charges_eligibles
+            
+            # Personnaliser l'affichage des charges
+            self.fields['charge_bailleur'].label_from_instance = lambda obj: (
+                f"{obj.titre} - {obj.propriete.adresse} - {obj.montant_restant} XOF restant"
+            )
+    
+    def clean(self):
+        """Validation globale du formulaire."""
+        cleaned_data = super().clean()
+        charge_bailleur = cleaned_data.get('charge_bailleur')
+        montant_deduction = cleaned_data.get('montant_deduction')
+        
+        if charge_bailleur and montant_deduction:
+            # Vérifier que le montant ne dépasse pas le montant restant
+            montant_restant = charge_bailleur.get_montant_deductible()
+            if montant_deduction > montant_restant:
+                raise ValidationError(
+                    f'Le montant de déduction ({montant_deduction}) ne peut pas dépasser '
+                    f'le montant restant ({montant_restant}) de la charge.'
+                )
+            
+            # Vérifier que le montant ne dépasse pas le montant net du retrait
+            if self.retrait_bailleur:
+                montant_net_disponible = self.retrait_bailleur.montant_net_a_payer
+                if montant_deduction > montant_net_disponible:
+                    raise ValidationError(
+                        f'Le montant de déduction ({montant_deduction}) ne peut pas dépasser '
+                        f'le montant net disponible ({montant_net_disponible}) du retrait.'
+                    )
         
         return cleaned_data
 
@@ -658,3 +712,118 @@ class TableauBordFinancierForm(forms.ModelForm):
                 raise ValidationError(_('Un tableau de bord avec ce nom existe déjà.'))
         
         return nom
+
+
+class RecapitulatifMensuelBailleurForm(forms.ModelForm):
+    """Formulaire pour créer/modifier un récapitulatif mensuel par bailleur."""
+    
+    class Meta:
+        model = RecapitulatifMensuelBailleur
+        fields = [
+            'bailleur', 'mois_recapitulatif', 'type_recapitulatif', 'notes'
+        ]
+        widgets = {
+            'bailleur': forms.Select(attrs={
+                'class': 'form-control',
+                'placeholder': 'Sélectionnez le bailleur'
+            }),
+            'mois_recapitulatif': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'type_recapitulatif': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Notes et observations sur ce récapitulatif...'
+            })
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Définir le mois actuel par défaut
+        if not self.instance.pk:
+            from django.utils import timezone
+            mois_actuel = timezone.now().replace(day=1)
+            self.fields['mois_recapitulatif'].initial = mois_actuel
+    
+    def clean_mois_recapitulatif(self):
+        """Validation du mois du récapitulatif."""
+        mois = self.cleaned_data['mois_recapitulatif']
+        
+        # Vérifier qu'il n'y a pas déjà un récapitulatif pour ce mois
+        if not self.instance.pk:
+            type_recap = self.cleaned_data.get('type_recapitulatif', 'mensuel')
+            if RecapitulatifMensuelBailleur.objects.filter(
+                mois_recapitulatif=mois,
+                type_recapitulatif=type_recap
+            ).exists():
+                raise forms.ValidationError(
+                    f"Un récapitulatif {type_recap} existe déjà pour {mois.strftime('%B %Y')}"
+                )
+        
+        return mois
+
+
+class RecapitulatifMensuelValidationForm(forms.Form):
+    """Formulaire pour valider un récapitulatif mensuel par bailleur."""
+    
+    confirmation = forms.BooleanField(
+        required=True,
+        label="Je confirme que ce récapitulatif est correct et peut être validé",
+        help_text="Cette action ne peut pas être annulée"
+    )
+    
+    notes_validation = forms.CharField(
+        max_length=500,
+        required=False,
+        label="Notes de validation",
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 2,
+            'placeholder': 'Observations sur la validation...'
+        })
+    )
+
+
+class RecapitulatifMensuelEnvoiForm(forms.Form):
+    """Formulaire pour envoyer un récapitulatif mensuel par bailleur."""
+    
+    methode_envoi = forms.ChoiceField(
+        choices=[
+            ('email', 'Email'),
+            ('courrier', 'Courrier postal'),
+            ('main_propre', 'Remis en main propre'),
+            ('autre', 'Autre méthode')
+        ],
+        label="Méthode d'envoi",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    destinataire = forms.CharField(
+        max_length=200,
+        label="Destinataire",
+        help_text="Nom et coordonnées du destinataire"
+    )
+    
+    notes_envoi = forms.CharField(
+        max_length=500,
+        required=False,
+        label="Notes d'envoi",
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 2,
+            'placeholder': 'Détails sur l\'envoi...'
+        })
+    )
+    
+    date_envoi_prevue = forms.DateField(
+        label="Date d'envoi prévue",
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        })
+    )

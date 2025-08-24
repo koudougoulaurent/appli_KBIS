@@ -4,26 +4,12 @@
 
 {% block content %}
 <div class="container-fluid">
-    <!-- En-tête avec navigation -->
-    <div class="dashboard-header">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <h1><i class="bi bi-houses"></i> Liste des Propriétés</h1>
-                <p>Gestion de votre patrimoine immobilier</p>
-            </div>
-            <div class="d-flex gap-2">
-                <a href="{% url 'proprietes:ajouter' %}" class="btn btn-success">
-                    <i class="bi bi-plus-circle"></i> Nouvelle Propriété
-                </a>
-                <a href="{% url 'proprietes:ajouter_charge_bailleur' %}" class="btn btn-warning">
-                    <i class="bi bi-exclamation-triangle"></i> Nouvelle Charge
-                </a>
-                <a href="{% url 'proprietes:liste_charges_bailleur' %}" class="btn btn-info">
-                    <i class="bi bi-list-check"></i> Gérer Charges
-                </a>
-            </div>
-        </div>
-    </div>
+    <!-- Boutons de navigation professionnels -->
+    {% include 'includes/navigation_buttons.html' with 
+        page_title="Liste des Propriétés"
+        page_subtitle="Gestion de votre patrimoine immobilier"
+        show_dashboard_button=True
+        action_buttons=action_buttons|default:"" %}
 
     <!-- Cartes de statistiques -->
     <div class="row mb-4">

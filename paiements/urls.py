@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views, views_retraits
+from . import views, api_views, views_retraits, views_recapitulatifs
 
 app_name = 'paiements'
 
@@ -25,13 +25,22 @@ urlpatterns = [
     
     # URLs manquantes pour compatibilité avec les templates existants
     path('recus/', views.liste_recus, name='recus_liste'),
-    path('recaps-mensuels/', views.liste_recaps_mensuels, name='liste_recaps_mensuels'),
-    path('recaps-mensuels/creer/', views.creer_recap_mensuel, name='creer_recap_mensuel'),
-    path('recaps-mensuels/<int:recap_id>/', views.detail_recap_mensuel, name='detail_recap_mensuel'),
-    path('recaps-mensuels/<int:recap_id>/valider/', views.valider_recap_mensuel, name='valider_recap_mensuel'),
-    path('recaps-mensuels/<int:recap_id>/marquer-envoye/', views.marquer_recap_envoye, name='marquer_recap_envoye'),
-    path('recaps-mensuels/<int:recap_id>/marquer-paye/', views.marquer_recap_paye, name='marquer_recap_paye'),
-    path('recaps-mensuels/<int:recap_id>/imprimer/', views.imprimer_recap_mensuel, name='imprimer_recap_mensuel'),
+    
+    # RÉCAPITULATIFS MENSUELS - NOUVEAU SYSTÈME COMPLET
+    # Redirection de l'ancien système vers le nouveau pour compatibilité
+    path('recaps-mensuels/', views_recapitulatifs.liste_recapitulatifs, name='liste_recaps_mensuels'),
+    path('recaps-mensuels/creer/', views_recapitulatifs.creer_recapitulatif, name='creer_recap_mensuel'),
+    path('recaps-mensuels/<int:recap_id>/', views_recapitulatifs.detail_recapitulatif, name='detail_recap_mensuel'),
+    path('recaps-mensuels/<int:recap_id>/valider/', views_recapitulatifs.valider_recapitulatif, name='valider_recap_mensuel'),
+    path('recaps-mensuels/<int:recap_id>/marquer-envoye/', views_recapitulatifs.envoyer_recapitulatif, name='marquer_recap_envoye'),
+    path('recaps-mensuels/<int:recap_id>/marquer-paye/', views_recapitulatifs.marquer_paye_recapitulatif, name='marquer_recap_paye'),
+    path('recaps-mensuels/<int:recap_id>/imprimer/', views_recapitulatifs.apercu_recapitulatif, name='imprimer_recap_mensuel'),
+    
+    # NOUVELLES FONCTIONNALITÉS AVANCÉES pour l'ancien système
+    path('recaps-mensuels/<int:recap_id>/pdf/', views_recapitulatifs.telecharger_pdf_recapitulatif, name='telecharger_pdf_recap_mensuel'),
+    path('recaps-mensuels/<int:recap_id>/apercu/', views_recapitulatifs.apercu_recapitulatif, name='apercu_recap_mensuel'),
+    path('recaps-mensuels/statistiques/', views_recapitulatifs.statistiques_recapitulatifs, name='statistiques_recaps_mensuels'),
+    path('recaps-mensuels/generer-automatique/', views_recapitulatifs.generer_recapitulatif_automatique, name='generer_recap_automatique'),
     path('retraits-bailleur/', views.liste_retraits_bailleur, name='liste_retraits_bailleur'),
     path('modifier/<int:pk>/', views.modifier_paiement, name='modifier_paiement'),
     path('supprimer/<int:pk>/', views.supprimer_paiement, name='supprimer_paiement'),
@@ -92,4 +101,16 @@ urlpatterns = [
     
     # URLs pour les retraits aux bailleurs (nouveau système)
     path('retraits-bailleurs/', include('paiements.urls_retraits')),
+
+    # URLs pour les récapitulatifs mensuels
+    path('recapitulatifs/', views_recapitulatifs.liste_recapitulatifs, name='liste_recapitulatifs'),
+    path('recapitulatifs/creer/', views_recapitulatifs.creer_recapitulatif, name='creer_recapitulatif'),
+    path('recapitulatifs/<int:recapitulatif_id>/', views_recapitulatifs.detail_recapitulatif, name='detail_recapitulatif'),
+    path('recapitulatifs/<int:recapitulatif_id>/valider/', views_recapitulatifs.valider_recapitulatif, name='valider_recapitulatif'),
+    path('recapitulatifs/<int:recapitulatif_id>/envoyer/', views_recapitulatifs.envoyer_recapitulatif, name='envoyer_recapitulatif'),
+    path('recapitulatifs/<int:recapitulatif_id>/marquer-paye/', views_recapitulatifs.marquer_paye_recapitulatif, name='marquer_paye_recapitulatif'),
+    path('recapitulatifs/<int:recapitulatif_id>/pdf/', views_recapitulatifs.telecharger_pdf_recapitulatif, name='telecharger_pdf_recapitulatif'),
+    path('recapitulatifs/<int:recapitulatif_id>/apercu/', views_recapitulatifs.apercu_recapitulatif, name='apercu_recapitulatif'),
+    path('recapitulatifs/statistiques/', views_recapitulatifs.statistiques_recapitulatifs, name='statistiques_recapitulatifs'),
+    path('recapitulatifs/generer-automatique/', views_recapitulatifs.generer_recapitulatif_automatique, name='generer_recapitulatif_automatique'),
 ]

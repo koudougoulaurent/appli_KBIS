@@ -190,6 +190,19 @@
     <p class="lead mb-0">Vue d'ensemble et gestion de vos flux financiers</p>
 </div>
 
+<!-- Note d'information sur la génération automatique des reçus -->
+<div class="alert alert-info alert-dismissible fade show mb-4" role="alert">
+    <div class="d-flex align-items-center">
+        <i class="bi bi-info-circle-fill me-3 fs-4"></i>
+        <div>
+            <strong>Génération automatique des reçus :</strong> 
+            Les quittances et reçus sont maintenant générés automatiquement lors de la création ou modification des paiements. 
+            Vous n'avez plus besoin de gérer manuellement cette section.
+        </div>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+
 <!-- Statistiques principales -->
 <div class="row mb-4">
     <div class="col-xl-3 col-md-6">
@@ -313,9 +326,7 @@
                 <a href="{% url 'paiements:liste' %}" class="quick-action-btn secondary">
                     <i class="bi bi-list me-2"></i>Voir Tous les Paiements
                 </a>
-                <a href="{% url 'paiements:recus_liste' %}" class="quick-action-btn warning">
-                    <i class="bi bi-receipt me-2"></i>Gérer les Reçus
-                </a>
+
                 <a href="{% url 'paiements:retraits_liste' %}" class="quick-action-btn danger">
                     <i class="bi bi-bank me-2"></i>Gérer les Retraits
                 </a>

@@ -179,3 +179,10 @@ def mul(value, arg):
         return float(value) * float(arg)
     except (ValueError, TypeError):
         return 0
+
+@register.filter
+def replace_underscores(value):
+    """Remplace les underscores par des espaces et met en majuscule la première lettre"""
+    if value:
+        return value.replace('_', ' ').title()
+    return value

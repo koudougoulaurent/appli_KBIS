@@ -1,0 +1,520 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gestion des Pièces - {{ propriete.titre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Boutons de navigation professionnels -->
+    {% include 'includes/navigation_buttons.html' with 
+        page_title="Gestion des Pièces"
+        page_subtitle=propriete.titre
+        back_url='proprietes:detail'
+        back_text="Retour à la propriété"
+        show_dashboard_button=True
+        show_list_button=True %}
+    
+    <!-- Statistiques des pièces -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="stat-card primary">
+                <div class="stat-number">{{ stats.total_pieces }}</div>
+                <div class="stat-label">Total Pièces</div>
+                <div class="stat-icon"><i class="bi bi-grid-3x3-gap"></i></div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card success">
+                <div class="stat-number">{{ stats.pieces_disponibles }}</div>
+                <div class="stat-label">Disponibles</div>
+                <div class="stat-icon"><i class="bi bi-check-circle"></i></div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card warning">
+                <div class="stat-number">{{ stats.pieces_occupees }}</div>
+                <div class="stat-label">Occupées</div>
+                <div class="stat-icon"><i class="bi bi-person-check"></i></div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card danger">
+                <div class="stat-number">{{ stats.pieces_renovation }}</div>
+                <div class="stat-label">En Rénovation</div>
+                <div class="stat-icon"><i class="bi bi-tools"></i></div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card info">
+                <div class="stat-number">{{ stats.taux_occupation }}%</div>
+                <div class="stat-label">Taux Occupation</div>
+                <div class="stat-icon"><i class="bi bi-graph-up"></i></div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card secondary">
+                <div class="stat-number">{{ stats.surface_totale|floatformat:0 }} m²</div>
+                <div class="stat-label">Surface Totale</div>
+                <div class="stat-icon"><i class="bi bi-arrows-angle-expand"></i></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actions sur les pièces -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-gear"></i> Actions sur les Pièces</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#creerPieceModal">
+                            <i class="bi bi-plus-circle"></i> Créer une Pièce
+                        </button>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#creerPiecesAutoModal">
+                            <i class="bi bi-magic"></i> Créer Automatiquement
+                        </button>
+                        <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#planifierRenovationModal">
+                            <i class="bi bi-tools"></i> Planifier Rénovation
+                        </button>
+                        <button class="btn btn-warning" onclick="exporterPieces()">
+                            <i class="bi bi-download"></i> Exporter
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filtres et recherche -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-funnel"></i> Filtres et Recherche</h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Statut</label>
+                            <select name="statut" class="form-select">
+                                <option value="">Tous les statuts</option>
+                                <option value="disponible" {% if filtres.statut == 'disponible' %}selected{% endif %}>Disponible</option>
+                                <option value="occupee" {% if filtres.statut == 'occupee' %}selected{% endif %}>Occupée</option>
+                                <option value="en_renovation" {% if filtres.statut == 'en_renovation' %}selected{% endif %}>En rénovation</option>
+                                <option value="hors_service" {% if filtres.statut == 'hors_service' %}selected{% endif %}>Hors service</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Type de pièce</label>
+                            <select name="type_piece" class="form-select">
+                                <option value="">Tous les types</option>
+                                <option value="chambre" {% if filtres.type_piece == 'chambre' %}selected{% endif %}>Chambre</option>
+                                <option value="salon" {% if filtres.type_piece == 'salon' %}selected{% endif %}>Salon</option>
+                                <option value="cuisine" {% if filtres.type_piece == 'cuisine' %}selected{% endif %}>Cuisine</option>
+                                <option value="salle_bain" {% if filtres.type_piece == 'salle_bain' %}selected{% endif %}>Salle de bain</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Recherche</label>
+                            <input type="text" name="recherche" class="form-control" 
+                                   placeholder="Nom ou description..." value="{{ filtres.recherche }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-search"></i> Filtrer
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Liste des pièces -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-grid-3x3-gap"></i> Liste des Pièces</h5>
+                </div>
+                <div class="card-body">
+                    {% if pieces %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Pièce</th>
+                                        <th>Type</th>
+                                        <th>Surface</th>
+                                        <th>Statut</th>
+                                        <th>Locataire actuel</th>
+                                        <th>Contrat</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for piece in pieces %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ piece.nom }}</strong>
+                                            {% if piece.numero_piece %}
+                                                <br><small class="text-muted">#{{ piece.numero_piece }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">{{ piece.get_type_piece_display }}</span>
+                                        </td>
+                                        <td>
+                                            {% if piece.surface %}
+                                                {{ piece.surface }} m²
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if piece.statut == 'disponible' %}
+                                                <span class="badge bg-success">Disponible</span>
+                                            {% elif piece.statut == 'occupee' %}
+                                                <span class="badge bg-warning">Occupée</span>
+                                            {% elif piece.statut == 'en_renovation' %}
+                                                <span class="badge bg-danger">En rénovation</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Hors service</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if piece.get_locataire_actuel %}
+                                                <a href="{% url 'proprietes:detail_locataire' piece.get_locataire_actuel.pk %}">
+                                                    {{ piece.get_locataire_actuel.get_nom_complet }}
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">Aucun</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if piece.get_contrat_actuel %}
+                                                <a href="{% url 'contrats:detail' piece.get_contrat_actuel.pk %}">
+                                                    {{ piece.get_contrat_actuel.numero_contrat }}
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button class="btn btn-sm btn-outline-primary" 
+                                                        onclick="voirPiece({{ piece.pk }})"
+                                                        title="Voir détails">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-secondary" 
+                                                        onclick="modifierPiece({{ piece.pk }})"
+                                                        title="Modifier">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                {% if piece.statut == 'disponible' %}
+                                                    <button class="btn btn-sm btn-outline-success" 
+                                                            onclick="louerPiece({{ piece.pk }})"
+                                                            title="Louer">
+                                                        <i class="bi bi-person-plus"></i>
+                                                    </button>
+                                                {% endif %}
+                                                {% if piece.statut == 'occupee' %}
+                                                    <button class="btn btn-sm btn-outline-warning" 
+                                                            onclick="libererPiece({{ piece.pk }})"
+                                                            title="Libérer">
+                                                        <i class="bi bi-person-x"></i>
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-grid-3x3-gap display-1 text-muted"></i>
+                            <h4 class="text-muted mt-3">Aucune pièce trouvée</h4>
+                            <p class="text-muted">Commencez par créer des pièces pour cette propriété.</p>
+                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#creerPieceModal">
+                                <i class="bi bi-plus-circle"></i> Créer la première pièce
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Créer Pièce -->
+<div class="modal fade" id="creerPieceModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Créer une nouvelle pièce</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{% url 'proprietes:creer_piece' propriete.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Nom de la pièce *</label>
+                                <input type="text" name="nom" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Type de pièce *</label>
+                                <select name="type_piece" class="form-select" required>
+                                    <option value="">Sélectionner...</option>
+                                    <option value="chambre">Chambre</option>
+                                    <option value="salon">Salon</option>
+                                    <option value="cuisine">Cuisine</option>
+                                    <option value="salle_bain">Salle de bain</option>
+                                    <option value="toilettes">Toilettes</option>
+                                    <option value="couloir">Couloir</option>
+                                    <option value="balcon">Balcon</option>
+                                    <option value="terrasse">Terrasse</option>
+                                    <option value="jardin">Jardin</option>
+                                    <option value="parking">Parking</option>
+                                    <option value="cave">Cave</option>
+                                    <option value="grenier">Grenier</option>
+                                    <option value="autre">Autre</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Numéro de pièce</label>
+                                <input type="text" name="numero_piece" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Surface (m²)</label>
+                                <input type="number" name="surface" class="form-control" step="0.01" min="0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Créer la pièce</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Créer Pièces Automatiquement -->
+<div class="modal fade" id="creerPiecesAutoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Créer les pièces automatiquement</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Cette action va créer automatiquement les pièces suivantes basées sur les caractéristiques de la propriété :</p>
+                <ul>
+                    <li><strong>{{ propriete.nombre_chambres }} chambre(s)</strong></li>
+                    <li><strong>1 salon</strong> (si applicable)</li>
+                    <li><strong>1 cuisine</strong></li>
+                    <li><strong>{{ propriete.nombre_salles_bain }} salle(s) de bain</strong></li>
+                    <li><strong>1 toilettes</strong></li>
+                    <li><strong>1 couloir</strong></li>
+                    {% if propriete.balcon %}<li><strong>1 balcon</strong></li>{% endif %}
+                    {% if propriete.parking %}<li><strong>1 parking</strong></li>{% endif %}
+                    {% if propriete.jardin %}<li><strong>1 jardin</strong></li>{% endif %}
+                </ul>
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    Les pièces existantes ne seront pas dupliquées.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form method="POST" action="{% url 'proprietes:creer_pieces_auto' propriete.pk %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary">Créer automatiquement</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Planifier Rénovation -->
+<div class="modal fade" id="planifierRenovationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Planifier une rénovation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{% url 'proprietes:planifier_renovation' propriete.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Pièces à rénover *</label>
+                        <select name="pieces" class="form-select" multiple required>
+                            {% for piece in pieces %}
+                                {% if piece.statut == 'disponible' %}
+                                    <option value="{{ piece.pk }}">{{ piece.nom }} ({{ piece.get_type_piece_display }})</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Sélectionnez les pièces à mettre en rénovation</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date de début de rénovation *</label>
+                        <input type="date" name="date_debut_renovation" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date de fin prévue</label>
+                        <input type="date" name="date_fin_renovation" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Motif de la rénovation</label>
+                        <textarea name="motif_renovation" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-warning">Planifier la rénovation</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Fonctions JavaScript pour la gestion des pièces
+function voirPiece(pieceId) {
+    window.location.href = `/proprietes/piece/${pieceId}/`;
+}
+
+function modifierPiece(pieceId) {
+    window.location.href = `/proprietes/piece/${pieceId}/modifier/`;
+}
+
+function louerPiece(pieceId) {
+    window.location.href = `/contrats/creer/?piece=${pieceId}`;
+}
+
+function libererPiece(pieceId) {
+    if (confirm('Êtes-vous sûr de vouloir libérer cette pièce ?')) {
+        fetch(`/proprietes/piece/${pieceId}/liberer/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur lors de la libération de la pièce : ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la libération de la pièce');
+        });
+    }
+}
+
+function exporterPieces() {
+    window.location.href = `/proprietes/${propriete.pk}/pieces/export/`;
+}
+
+// Mise à jour dynamique des pièces disponibles lors du changement de propriété
+document.addEventListener('DOMContentLoaded', function() {
+    const proprieteSelect = document.querySelector('select[name="propriete"]');
+    if (proprieteSelect) {
+        proprieteSelect.addEventListener('change', function() {
+            const proprieteId = this.value;
+            if (proprieteId) {
+                fetch(`/proprietes/${proprieteId}/pieces/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const piecesSelect = document.querySelector('select[name="pieces"]');
+                        piecesSelect.innerHTML = '';
+                        data.pieces.forEach(piece => {
+                            const option = document.createElement('option');
+                            option.value = piece.id;
+                            option.textContent = `${piece.nom} (${piece.type_piece})`;
+                            piecesSelect.appendChild(option);
+                        });
+                    });
+            }
+        });
+    }
+});
+</script>
+
+<style>
+.stat-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #495057;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-bottom: 10px;
+}
+
+.stat-icon {
+    font-size: 1.5rem;
+    color: #6c757d;
+}
+
+.table th {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+}
+
+.btn-group .btn {
+    margin-right: 2px;
+}
+
+.btn-group .btn:last-child {
+    margin-right: 0;
+}
+</style>
+{% endblock %}

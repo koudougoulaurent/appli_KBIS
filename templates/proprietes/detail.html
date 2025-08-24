@@ -4,26 +4,13 @@
 
 {% block content %}
 <div class="container-fluid">
-    <!-- En-tête avec navigation -->
-    <div class="dashboard-header">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <h1><i class="bi bi-house"></i> {{ propriete.titre }}</h1>
-                <p>{{ propriete.get_adresse_complete }}</p>
-            </div>
-            <div class="d-flex gap-2">
-                <a href="{% url 'proprietes:liste' %}" class="btn btn-secondary">
-                    <i class="bi bi-arrow-left"></i> Retour à la liste
-                </a>
-                <a href="{% url 'proprietes:modifier' propriete.pk %}" class="btn btn-primary">
-                    <i class="bi bi-pencil"></i> Modifier
-                </a>
-                <a href="{% url 'proprietes:ajouter_charge_bailleur' %}" class="btn btn-warning">
-                    <i class="bi bi-plus-circle"></i> Ajouter Charge Bailleur
-                </a>
-            </div>
-        </div>
-    </div>
+    <!-- Boutons de navigation professionnels -->
+    {% include 'includes/navigation_buttons.html' with 
+        page_title=propriete.titre
+        page_subtitle=propriete.get_adresse_complete
+        back_url='proprietes:liste'
+        back_text="Retour à la liste"
+        show_dashboard_button=True %}
 
     <div class="row">
         <!-- Informations principales -->
@@ -283,6 +270,15 @@
                         </a>
                         <a href="{% url 'proprietes:bailleur_detail' propriete.bailleur.pk %}" class="btn btn-secondary">
                             <i class="bi bi-person"></i> Voir Bailleur
+                        </a>
+                        <a href="{% url 'proprietes:gestion_pieces' propriete.pk %}" class="btn btn-outline-primary">
+                            <i class="bi bi-grid-3x3-gap"></i> Gestion des Pièces
+                        </a>
+                        <a href="{% url 'proprietes:photo_gallery' propriete.pk %}" class="btn btn-outline-info">
+                            <i class="bi bi-images"></i> Galerie Photos
+                        </a>
+                        <a href="{% url 'proprietes:document_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-file-earmark-text"></i> Documents
                         </a>
                     </div>
                 </div>

@@ -241,23 +241,26 @@ class PrivilegeDeleteMixin:
             AuditLog.objects.create(
                 content_type=ContentType.objects.get_for_model(element),
                 object_id=element.id,
-                action=f'PRIVILEGE_{action.upper()}',
-                old_data={
-                    'object_name': str(element),
-                    'model_name': element._meta.model_name,
-                    'app_label': element._meta.app_label
+                action=f'privilege_{action.lower()}',
+                details={
+                    'old_data': {
+                        'object_name': str(element),
+                        'model_name': element._meta.model_name,
+                        'app_label': element._meta.app_label
+                    },
+                    'new_data': {
+                        'action_performed': action,
+                        'performed_by': user.username,
+                        'performed_at': timezone.now().isoformat(),
+                        'ip_address': request.META.get('REMOTE_ADDR'),
+                        'user_agent': request.META.get('HTTP_USER_AGENT')
+                    }
                 },
-                new_data={
-                    'action_performed': action,
-                    'performed_by': user.username,
-                    'performed_at': timezone.now().isoformat(),
-                    'ip_address': request.META.get('REMOTE_ADDR'),
-                    'user_agent': request.META.get('HTTP_USER_AGENT')
-                },
+                object_repr=str(element),
                 user=user,
                 ip_address=request.META.get('REMOTE_ADDR'),
                 user_agent=request.META.get('HTTP_USER_AGENT'),
-                notes=f"Action PRIVILEGE: {action} effectuée par {user.username} sur {element._meta.verbose_name} '{str(element)}'"
+                description=f"Action PRIVILEGE: {action} effectuée par {user.username} sur {element._meta.verbose_name} '{str(element)}'"
             )
             
             # Message de confirmation pour l'utilisateur

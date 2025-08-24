@@ -71,4 +71,20 @@ urlpatterns = [
     path('formulaires/diagnostics/', views.diagnostic_form_view, name='diagnostic_form'),
     path('formulaires/assurances/', views.assurance_form_view, name='assurance_form'),
     path('formulaires/etat-lieux/', views.etat_lieux_form_view, name='etat_lieux_form'),
+    
+    # URLs pour la gestion des pièces
+    path('<int:propriete_id>/pieces/', views.gestion_pieces, name='gestion_pieces'),
+    path('<int:propriete_id>/pieces/creer/', views.creer_piece, name='creer_piece'),
+    path('<int:propriete_id>/pieces/creer-auto/', views.creer_pieces_auto, name='creer_pieces_auto'),
+    path('<int:propriete_id>/pieces/planifier-renovation/', views.planifier_renovation, name='planifier_renovation'),
+    path('<int:propriete_id>/pieces/export/', views.export_pieces, name='export_pieces'),
+    
+    # URLs pour les pièces individuelles
+    path('piece/<int:piece_id>/', views.detail_piece, name='piece_detail'),
+    path('piece/<int:piece_id>/modifier/', views.modifier_piece, name='piece_modifier'),
+    path('piece/<int:piece_id>/liberer/', views.liberer_piece, name='piece_liberer'),
+    
+    # URLs API pour les pièces
+    path('api/<int:propriete_id>/pieces-disponibles/', views.api_pieces_disponibles, name='api_pieces_disponibles'),
+    path('api/verifier-disponibilite/', views.api_verifier_disponibilite, name='api_verifier_disponibilite'),
 ]

@@ -204,16 +204,16 @@
                             </div>
                             <div class="card-body">
                                 <div class="row">
-                                    {% if log.old_data %}
+                                    {% if log.details.old_data %}
                                     <div class="col-md-6">
                                         <h6 class="text-danger">Anciennes données:</h6>
-                                        <pre class="bg-light p-2 rounded"><code>{{ log.old_data|pprint }}</code></pre>
+                                        <pre class="bg-light p-2 rounded"><code>{{ log.details.old_data|pprint }}</code></pre>
                                     </div>
                                     {% endif %}
-                                    {% if log.new_data %}
+                                    {% if log.details.new_data %}
                                     <div class="col-md-6">
                                         <h6 class="text-success">Nouvelles données:</h6>
-                                        <pre class="bg-light p-2 rounded"><code>{{ log.new_data|pprint }}</code></pre>
+                                        <pre class="bg-light p-2 rounded"><code>{{ log.details.new_data|pprint }}</code></pre>
                                     </div>
                                     {% endif %}
                                 </div>

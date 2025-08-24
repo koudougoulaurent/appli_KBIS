@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Modifier la Pièce - {{ piece.nom }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Boutons de navigation professionnels -->
+    {% include 'includes/navigation_buttons.html' with 
+        page_title="Modifier la Pièce"
+        page_subtitle=piece.nom
+        back_url='proprietes:piece_detail'
+        back_text="Retour aux détails"
+        show_dashboard_button=True
+        show_list_button=True %}
+    
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-pencil"></i> Modifier la Pièce : {{ piece.nom }}</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Nom de la pièce *</label>
+                                    <input type="text" name="nom" class="form-control" value="{{ piece.nom }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Type de pièce *</label>
+                                    <select name="type_piece" class="form-select" required>
+                                        <option value="chambre" {% if piece.type_piece == 'chambre' %}selected{% endif %}>Chambre</option>
+                                        <option value="salon" {% if piece.type_piece == 'salon' %}selected{% endif %}>Salon</option>
+                                        <option value="cuisine" {% if piece.type_piece == 'cuisine' %}selected{% endif %}>Cuisine</option>
+                                        <option value="salle_bain" {% if piece.type_piece == 'salle_bain' %}selected{% endif %}>Salle de bain</option>
+                                        <option value="toilettes" {% if piece.type_piece == 'toilettes' %}selected{% endif %}>Toilettes</option>
+                                        <option value="couloir" {% if piece.type_piece == 'couloir' %}selected{% endif %}>Couloir</option>
+                                        <option value="balcon" {% if piece.type_piece == 'balcon' %}selected{% endif %}>Balcon</option>
+                                        <option value="terrasse" {% if piece.type_piece == 'terrasse' %}selected{% endif %}>Terrasse</option>
+                                        <option value="jardin" {% if piece.type_piece == 'jardin' %}selected{% endif %}>Jardin</option>
+                                        <option value="parking" {% if piece.type_piece == 'parking' %}selected{% endif %}>Parking</option>
+                                        <option value="cave" {% if piece.type_piece == 'cave' %}selected{% endif %}>Cave</option>
+                                        <option value="grenier" {% if piece.type_piece == 'grenier' %}selected{% endif %}>Grenier</option>
+                                        <option value="autre" {% if piece.type_piece == 'autre' %}selected{% endif %}>Autre</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Numéro de pièce</label>
+                                    <input type="text" name="numero_piece" class="form-control" value="{{ piece.numero_piece|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Surface (m²)</label>
+                                    <input type="number" name="surface" class="form-control" step="0.01" min="0" value="{{ piece.surface|default:'' }}">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Statut</label>
+                            <select name="statut" class="form-select">
+                                <option value="disponible" {% if piece.statut == 'disponible' %}selected{% endif %}>Disponible</option>
+                                <option value="occupee" {% if piece.statut == 'occupee' %}selected{% endif %}>Occupée</option>
+                                <option value="en_renovation" {% if piece.statut == 'en_renovation' %}selected{% endif %}>En rénovation</option>
+                                <option value="hors_service" {% if piece.statut == 'hors_service' %}selected{% endif %}>Hors service</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-control" rows="3">{{ piece.description|default:'' }}</textarea>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'proprietes:piece_detail' piece.pk %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Enregistrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

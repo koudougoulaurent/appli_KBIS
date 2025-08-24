@@ -523,7 +523,10 @@ def detail_bailleur(request, pk):
     
     # Récupérer les derniers paiements
     from paiements.models import Paiement
-    derniers_paiements = Paiement.get_paiements_bailleur(bailleur, statut='valide')[:10]
+    derniers_paiements = Paiement.objects.filter(
+        contrat__propriete__bailleur=bailleur,
+        statut='valide'
+    ).select_related('contrat__propriete', 'contrat__locataire').order_by('-date_paiement')[:10]
     
     # Récupérer les contrats actifs
     from contrats.models import Contrat
@@ -577,7 +580,25 @@ def ajouter_bailleur(request):
             # Générer automatiquement le numéro unique de bailleur
             if not bailleur.numero_bailleur:
                 generator = IDGenerator()
-                bailleur.numero_bailleur = generator.generate_id('bailleur')
+                # Essayer de générer un ID unique, réessayer en cas de conflit
+                max_attempts = 10
+                for attempt in range(max_attempts):
+                    try:
+                        candidate_id = generator.generate_id('bailleur')
+                        # Vérifier si l'ID existe déjà
+                        if not Bailleur.objects.filter(numero_bailleur=candidate_id).exists():
+                            bailleur.numero_bailleur = candidate_id
+                            break
+                        else:
+                            # Forcer une nouvelle séquence en ajoutant un offset
+                            continue
+                    except Exception as e:
+                        if attempt == max_attempts - 1:
+                            # Dernière tentative, générer un ID avec timestamp
+                            from datetime import datetime
+                            timestamp = datetime.now().strftime('%H%M%S')
+                            bailleur.numero_bailleur = f"BAI-{datetime.now().year}-{timestamp}"
+                            break
             
             bailleur.save()
             
@@ -2068,3 +2089,315 @@ def proprietes_dashboard(request):
     }
     
     return render(request, 'proprietes/dashboard.html', context)
+
+# ============================================================================
+# VUES POUR LA GESTION DES PIÈCES
+# ============================================================================
+
+@login_required
+def gestion_pieces(request, propriete_id):
+    """Vue pour la gestion des pièces d'une propriété."""
+    propriete = get_object_or_404(Propriete, pk=propriete_id, is_deleted=False)
+    
+    # Récupérer les pièces de la propriété
+    pieces = propriete.pieces.filter(is_deleted=False)
+    
+    # Appliquer les filtres
+    statut = request.GET.get('statut')
+    type_piece = request.GET.get('type_piece')
+    recherche = request.GET.get('recherche')
+    
+    if statut:
+        pieces = pieces.filter(statut=statut)
+    
+    if type_piece:
+        pieces = pieces.filter(type_piece=type_piece)
+    
+    if recherche:
+        pieces = pieces.filter(
+            Q(nom__icontains=recherche) | 
+            Q(description__icontains=recherche) |
+            Q(numero_piece__icontains=recherche)
+        )
+    
+    # Statistiques des pièces
+    from .services import GestionPiecesService
+    stats = GestionPiecesService.get_statistiques_pieces(propriete_id)
+    
+    context = {
+        'propriete': propriete,
+        'pieces': pieces,
+        'stats': stats,
+        'filtres': {
+            'statut': statut,
+            'type_piece': type_piece,
+            'recherche': recherche
+        }
+    }
+    
+    return render(request, 'proprietes/pieces_gestion.html', context)
+
+
+@login_required
+def creer_piece(request, propriete_id):
+    """Vue pour créer une nouvelle pièce."""
+    propriete = get_object_or_404(Propriete, pk=propriete_id, is_deleted=False)
+    
+    if request.method == 'POST':
+        nom = request.POST.get('nom')
+        type_piece = request.POST.get('type_piece')
+        numero_piece = request.POST.get('numero_piece')
+        surface = request.POST.get('surface')
+        description = request.POST.get('description')
+        
+        try:
+            from .models import Piece
+            
+            piece = Piece.objects.create(
+                propriete=propriete,
+                nom=nom,
+                type_piece=type_piece,
+                numero_piece=numero_piece,
+                surface=surface if surface else None,
+                description=description
+            )
+            
+            messages.success(request, f'Pièce "{piece.nom}" créée avec succès.')
+            return redirect('proprietes:gestion_pieces', propriete_id=propriete_id)
+            
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la création de la pièce : {str(e)}')
+    
+    return redirect('proprietes:gestion_pieces', propriete_id=propriete_id)
+
+
+@login_required
+def creer_pieces_auto(request, propriete_id):
+    """Vue pour créer automatiquement les pièces d'une propriété."""
+    propriete = get_object_or_404(Propriete, pk=propriete_id, is_deleted=False)
+    
+    try:
+        from .services import GestionPiecesService
+        
+        pieces_crees = GestionPiecesService.creer_pieces_automatiques(propriete)
+        
+        messages.success(
+            request, 
+            f'{len(pieces_crees)} pièces créées automatiquement pour la propriété "{propriete.titre}".'
+        )
+        
+    except Exception as e:
+        messages.error(request, f'Erreur lors de la création automatique des pièces : {str(e)}')
+    
+    return redirect('proprietes:gestion_pieces', propriete_id=propriete_id)
+
+
+@login_required
+def planifier_renovation(request, propriete_id):
+    """Vue pour planifier une rénovation de pièces."""
+    propriete = get_object_or_404(Propriete, pk=propriete_id, is_deleted=False)
+    
+    if request.method == 'POST':
+        pieces_ids = request.POST.getlist('pieces')
+        date_debut = request.POST.get('date_debut_renovation')
+        date_fin = request.POST.get('date_fin_renovation')
+        motif = request.POST.get('motif_renovation')
+        
+        try:
+            from .models import Piece
+            from django.utils.dateparse import parse_date
+            
+            pieces = Piece.objects.filter(
+                id__in=pieces_ids,
+                propriete=propriete,
+                is_deleted=False
+            )
+            
+            for piece in pieces:
+                piece.statut = 'en_renovation'
+                piece.save()
+            
+            messages.success(
+                request, 
+                f'{len(pieces)} pièce(s) mise(s) en rénovation avec succès.'
+            )
+            
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la planification de la rénovation : {str(e)}')
+    
+    return redirect('proprietes:gestion_pieces', propriete_id=propriete_id)
+
+
+@login_required
+def detail_piece(request, piece_id):
+    """Vue pour afficher les détails d'une pièce."""
+    from .models import Piece
+    piece = get_object_or_404(Piece, pk=piece_id, is_deleted=False)
+    
+    context = {
+        'piece': piece,
+        'propriete': piece.propriete,
+        'contrat_actuel': piece.get_contrat_actuel(),
+        'locataire_actuel': piece.get_locataire_actuel(),
+        'historique_contrats': piece.get_historique_contrats(),
+        'statistiques': piece.get_statistiques_occupation()
+    }
+    
+    return render(request, 'proprietes/piece_detail.html', context)
+
+
+@login_required
+def modifier_piece(request, piece_id):
+    """Vue pour modifier une pièce."""
+    from .models import Piece
+    piece = get_object_or_404(Piece, pk=piece_id, is_deleted=False)
+    
+    if request.method == 'POST':
+        piece.nom = request.POST.get('nom')
+        piece.type_piece = request.POST.get('type_piece')
+        piece.numero_piece = request.POST.get('numero_piece')
+        piece.surface = request.POST.get('surface') if request.POST.get('surface') else None
+        piece.description = request.POST.get('description')
+        piece.statut = request.POST.get('statut')
+        
+        try:
+            piece.save()
+            messages.success(request, f'Pièce "{piece.nom}" modifiée avec succès.')
+            return redirect('proprietes:detail_piece', piece_id=piece_id)
+            
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la modification de la pièce : {str(e)}')
+    
+    context = {
+        'piece': piece,
+        'propriete': piece.propriete
+    }
+    
+    return render(request, 'proprietes/piece_form.html', context)
+
+
+@login_required
+def liberer_piece(request, piece_id):
+    """Vue AJAX pour libérer une pièce."""
+    from .models import Piece
+    piece = get_object_or_404(Piece, pk=piece_id, is_deleted=False)
+    
+    try:
+        # Vérifier si la pièce est actuellement louée
+        contrat_actuel = piece.get_contrat_actuel()
+        
+        if contrat_actuel:
+            # Marquer le contrat comme résilié
+            contrat_actuel.est_resilie = True
+            contrat_actuel.est_actif = False
+            contrat_actuel.date_resiliation = timezone.now().date()
+            contrat_actuel.save()
+            
+            # Désactiver les liaisons pièce-contrat
+            contrat_actuel.pieces_contrat.filter(piece=piece).update(actif=False)
+        
+        # Marquer la pièce comme disponible
+        piece.statut = 'disponible'
+        piece.save()
+        
+        return JsonResponse({'success': True, 'message': 'Pièce libérée avec succès'})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def export_pieces(request, propriete_id):
+    """Vue pour exporter les pièces d'une propriété."""
+    propriete = get_object_or_404(Propriete, pk=propriete_id, is_deleted=False)
+    pieces = propriete.pieces.filter(is_deleted=False)
+    
+    import csv
+    from django.http import HttpResponse
+    
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="pieces_{propriete.numero_propriete}.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['Nom', 'Type', 'Numéro', 'Surface (m²)', 'Statut', 'Description'])
+    
+    for piece in pieces:
+        writer.writerow([
+            piece.nom,
+            piece.get_type_piece_display(),
+            piece.numero_piece or '',
+            piece.surface or '',
+            piece.get_statut_display(),
+            piece.description or ''
+        ])
+    
+    return response
+
+
+# ============================================================================
+# VUES AJAX POUR LA GESTION DES PIÈCES
+# ============================================================================
+
+@login_required
+def api_pieces_disponibles(request, propriete_id):
+    """API pour récupérer les pièces disponibles d'une propriété."""
+    try:
+        from .services import GestionPiecesService
+        
+        date_debut = request.GET.get('date_debut')
+        date_fin = request.GET.get('date_fin')
+        
+        pieces = GestionPiecesService.get_pieces_disponibles(
+            propriete_id, 
+            date_debut, 
+            date_fin
+        )
+        
+        pieces_data = []
+        for piece in pieces:
+            pieces_data.append({
+                'id': piece.id,
+                'nom': piece.nom,
+                'type_piece': piece.type_piece,
+                'surface': float(piece.surface) if piece.surface else None,
+                'numero_piece': piece.numero_piece
+            })
+        
+        return JsonResponse({'pieces': pieces_data})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@login_required
+def api_verifier_disponibilite(request):
+    """API pour vérifier la disponibilité des pièces."""
+    try:
+        from .services import ValidationContratService
+        
+        propriete_id = request.POST.get('propriete_id')
+        pieces_ids = request.POST.getlist('pieces')
+        date_debut = request.POST.get('date_debut')
+        date_fin = request.POST.get('date_fin')
+        
+        if not all([propriete_id, pieces_ids, date_debut, date_fin]):
+            return JsonResponse({'error': 'Tous les paramètres sont requis'}, status=400)
+        
+        from django.utils.dateparse import parse_date
+        date_debut = parse_date(date_debut)
+        date_fin = parse_date(date_fin)
+        
+        disponible, conflits = ValidationContratService.verifier_disponibilite_pieces(
+            propriete_id=int(propriete_id),
+            pieces_ids=[int(pid) for pid in pieces_ids],
+            date_debut=date_debut,
+            date_fin=date_fin
+        )
+        
+        return JsonResponse({
+            'disponible': disponible,
+            'conflits': conflits
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)

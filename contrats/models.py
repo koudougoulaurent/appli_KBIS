@@ -116,6 +116,13 @@ class Contrat(models.Model):
     notes = models.TextField(blank=True, verbose_name=_("Notes"))
     
     # Relations
+    pieces = models.ManyToManyField(
+        'proprietes.Piece',
+        through='proprietes.PieceContrat',
+        related_name='contrats',
+        verbose_name=_("Pièces louées"),
+        help_text=_("Pièces spécifiques louées dans ce contrat")
+    )
     cree_par = models.ForeignKey(
         Utilisateur,
         on_delete=models.SET_NULL,
@@ -206,6 +213,74 @@ class Contrat(models.Model):
             return "Expiré"
         else:
             return "Actif"
+    
+    def verifier_disponibilite_pieces(self, pieces_ids, date_debut, date_fin):
+        """Vérifie si les pièces sont disponibles pour la période donnée."""
+        from proprietes.models import Piece
+        
+        if not pieces_ids:
+            return True, []
+        
+        pieces = Piece.objects.filter(id__in=pieces_ids)
+        conflits = []
+        
+        for piece in pieces:
+            if not piece.est_disponible(date_debut, date_fin):
+                # Vérifier les contrats conflictuels
+                contrats_conflictuels = piece.contrats.filter(
+                    est_actif=True,
+                    est_resilie=False,
+                    date_debut__lt=date_fin,
+                    date_fin__gt=date_debut
+                )
+                
+                for contrat in contrats_conflictuels:
+                    conflits.append({
+                        'piece': piece.nom,
+                        'contrat_existant': contrat.numero_contrat,
+                        'locataire_existant': contrat.locataire.get_nom_complet(),
+                        'periode': f"{contrat.date_debut} à {contrat.date_fin}"
+                    })
+        
+        return len(conflits) == 0, conflits
+    
+    def assigner_pieces(self, pieces_data):
+        """Assigne des pièces au contrat avec gestion des conflits."""
+        from proprietes.models import PieceContrat
+        
+        # Supprimer les anciennes assignations
+        self.pieces_contrat.all().delete()
+        
+        # Créer les nouvelles assignations
+        for piece_data in pieces_data:
+            piece_id = piece_data.get('piece_id')
+            loyer_piece = piece_data.get('loyer_piece')
+            charges_piece = piece_data.get('charges_piece', 0)
+            date_debut_occupation = piece_data.get('date_debut_occupation', self.date_debut)
+            date_fin_occupation = piece_data.get('date_fin_occupation', self.date_fin)
+            
+            PieceContrat.objects.create(
+                piece_id=piece_id,
+                contrat=self,
+                loyer_piece=loyer_piece,
+                charges_piece=charges_piece,
+                date_debut_occupation=date_debut_occupation,
+                date_fin_occupation=date_fin_occupation
+            )
+    
+    def get_pieces_louees(self):
+        """Retourne les pièces louées dans ce contrat."""
+        return self.pieces_contrat.filter(actif=True)
+    
+    def get_total_surface_louee(self):
+        """Retourne la surface totale des pièces louées."""
+        pieces = self.get_pieces_louees()
+        return sum(piece.piece.surface or 0 for piece in pieces)
+    
+    def get_loyer_total_pieces(self):
+        """Retourne le loyer total des pièces louées."""
+        pieces = self.get_pieces_louees()
+        return sum(piece.get_loyer_total() for piece in pieces)
     
     def save(self, *args, **kwargs):
         """Override save pour générer automatiquement le numéro de contrat et calculer les montants par défaut."""

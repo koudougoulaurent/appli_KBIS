@@ -1,0 +1,244 @@
+{% comment %}
+    Template partiel pour les boutons de navigation professionnels
+    Utilisation: {% include 'includes/navigation_buttons.html' with back_url='url_name' back_text='Texte du bouton retour' %}
+{% endcomment %}
+
+{% load static %}
+
+<style>
+.navigation-buttons {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.navigation-buttons .btn {
+    border-radius: 25px;
+    padding: 12px 25px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.navigation-buttons .btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.navigation-buttons .btn:hover::before {
+    left: 100%;
+}
+
+.navigation-buttons .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.navigation-buttons .btn-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+.navigation-buttons .btn-primary:hover {
+    background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+}
+
+.navigation-buttons .btn-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #545b62 100%);
+}
+
+.navigation-buttons .btn-secondary:hover {
+    background: linear-gradient(135deg, #545b62 0%, #3d4449 100%);
+}
+
+.navigation-buttons .btn-success {
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+}
+
+.navigation-buttons .btn-success:hover {
+    background: linear-gradient(135deg, #1e7e34 0%, #155724 100%);
+}
+
+.navigation-buttons .btn-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    color: #212529;
+}
+
+.navigation-buttons .btn-warning:hover {
+    background: linear-gradient(135deg, #e0a800 0%, #c69500 100%);
+    color: #212529;
+}
+
+.navigation-buttons .btn-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+}
+
+.navigation-buttons .btn-info:hover {
+    background: linear-gradient(135deg, #138496 0%, #0f6674 100%);
+}
+
+.navigation-buttons .btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+}
+
+.navigation-buttons .btn-danger:hover {
+    background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%);
+}
+
+.navigation-buttons .btn-outline-primary {
+    background: transparent;
+    border: 2px solid #007bff;
+    color: #007bff;
+}
+
+.navigation-buttons .btn-outline-primary:hover {
+    background: #007bff;
+    color: white;
+}
+
+.navigation-buttons .btn-outline-secondary {
+    background: transparent;
+    border: 2px solid #6c757d;
+    color: #6c757d;
+}
+
+.navigation-buttons .btn-outline-secondary:hover {
+    background: #6c757d;
+    color: white;
+}
+
+.navigation-buttons .btn-group {
+    gap: 10px;
+}
+
+.navigation-buttons .breadcrumb-nav {
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 10px;
+    border: 1px solid #e9ecef;
+}
+
+.navigation-buttons .breadcrumb-nav .breadcrumb-item + .breadcrumb-item::before {
+    content: "›";
+    color: #6c757d;
+    font-weight: bold;
+}
+
+.navigation-buttons .breadcrumb-nav .breadcrumb-item.active {
+    color: #495057;
+    font-weight: 600;
+}
+
+.navigation-buttons .page-title {
+    color: #495057;
+    font-weight: 700;
+    margin-bottom: 0;
+    font-size: 1.5rem;
+}
+
+.navigation-buttons .page-subtitle {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+    .navigation-buttons {
+        padding: 15px;
+    }
+    
+    .navigation-buttons .btn {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+    }
+    
+    .navigation-buttons .btn-group {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .navigation-buttons .page-title {
+        font-size: 1.3rem;
+    }
+}
+</style>
+
+<div class="navigation-buttons">
+    <!-- Fil d'Ariane -->
+    {% if breadcrumbs %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb breadcrumb-nav">
+            {% for breadcrumb in breadcrumbs %}
+                {% if forloop.last %}
+                    <li class="breadcrumb-item active" aria-current="page">{{ breadcrumb.text }}</li>
+                {% else %}
+                    <li class="breadcrumb-item">
+                        <a href="{{ breadcrumb.url }}" class="text-decoration-none">{{ breadcrumb.text }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+        </ol>
+    </nav>
+    {% endif %}
+    
+    <!-- En-tête avec titre et boutons -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap">
+        <div class="flex-grow-1 me-3">
+            {% if page_title %}
+                <h1 class="page-title">{{ page_title }}</h1>
+            {% endif %}
+            {% if page_subtitle %}
+                <p class="page-subtitle">{{ page_subtitle }}</p>
+            {% endif %}
+        </div>
+        
+        <div class="btn-group">
+            <!-- Bouton retour principal -->
+            {% if back_url %}
+                <a href="{{ back_url }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>
+                    {% if back_text %}{{ back_text }}{% else %}Retour{% endif %}
+                </a>
+            {% endif %}
+            
+            <!-- Bouton retour au dashboard -->
+            {% if show_dashboard_button %}
+                <a href="{% url 'proprietes:dashboard' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-house-door me-2"></i>
+                    Dashboard
+                </a>
+            {% endif %}
+            
+            <!-- Bouton retour à la liste -->
+            {% if show_list_button %}
+                <a href="{% url 'proprietes:liste' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-list me-2"></i>
+                    Liste
+                </a>
+            {% endif %}
+            
+            <!-- Boutons d'action spécifiques -->
+            {% if action_buttons %}
+                {% for button in action_buttons %}
+                    <a href="{{ button.url }}" class="btn btn-{{ button.style|default:'primary' }}">
+                        <i class="bi bi-{{ button.icon|default:'plus-circle' }} me-2"></i>
+                        {{ button.text }}
+                    </a>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+</div>

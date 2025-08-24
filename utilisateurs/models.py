@@ -311,7 +311,7 @@ class Utilisateur(AbstractUser):
             model_instance.save()
             
             # Log d'audit
-            self._log_audit_action(model_instance, 'DELETE', request)
+            self._log_audit_action(model_instance, 'delete', request)
             
             return True, f"Élément supprimé avec succès", "suppression", None
             
@@ -329,7 +329,7 @@ class Utilisateur(AbstractUser):
                 return False, "Impossible de désactiver cet élément", None, détails_références
             
             # Log d'audit
-            self._log_audit_action(model_instance, 'UPDATE', request, 
+            self._log_audit_action(model_instance, 'update', request, 
                                  old_data={'actif': True}, 
                                  new_data={'actif': False})
             
@@ -341,12 +341,22 @@ class Utilisateur(AbstractUser):
     def _log_audit_action(self, model_instance, action, request=None, old_data=None, new_data=None):
         """Enregistre l'action dans le journal d'audit"""
         try:
+            # Convertir l'action en minuscules pour correspondre aux nouveaux choix
+            action = action.lower()
+            
+            # Créer un dictionnaire de détails avec les anciennes et nouvelles données
+            details = {}
+            if old_data:
+                details['old_data'] = old_data
+            if new_data:
+                details['new_data'] = new_data
+            
             AuditLog.objects.create(
                 content_type=ContentType.objects.get_for_model(model_instance),
                 object_id=model_instance.pk,
                 action=action,
-                old_data=old_data,
-                new_data=new_data,
+                details=details if details else None,
+                object_repr=str(model_instance),
                 user=self,
                 ip_address=request.META.get('REMOTE_ADDR') if request else None,
                 user_agent=request.META.get('HTTP_USER_AGENT') if request else None,

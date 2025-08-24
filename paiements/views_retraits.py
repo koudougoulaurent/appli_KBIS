@@ -296,14 +296,6 @@ def recu_retrait_print(request, recu_id):
 
 
 @login_required
-def retrait_report(request):
-    """Vue pour les rapports de retraits."""
-    # Logique des rapports
-    context = {}
-    return render(request, 'paiements/retraits/retrait_report.html', context)
-
-
-@login_required
 def get_bailleur_retrait_data(request, bailleur_id):
     """API pour récupérer les données d'un bailleur pour les retraits."""
     try:
@@ -330,13 +322,23 @@ def get_bailleur_retrait_data(request, bailleur_id):
             statut='validee'
         ).aggregate(total=Sum('montant'))['total'] or 0
         
+        # Charges de bailleur (NOUVEAU)
+        from proprietes.models import ChargesBailleur
+        charges_bailleur = ChargesBailleur.objects.filter(
+            propriete__bailleur=bailleur,
+            date_charge__year=mois_actuel.year,
+            date_charge__month=mois_actuel.month,
+            statut__in=['en_attente', 'deduite_retrait']
+        ).aggregate(total=Sum('montant_restant'))['total'] or 0
+        
         data = {
             'bailleur_id': bailleur.id,
             'bailleur_nom': bailleur.get_nom_complet(),
             'mois': mois_actuel.strftime('%Y-%m'),
             'loyers_bruts': float(loyers_bruts),
             'charges_deductibles': float(charges),
-            'net_a_payer': float(loyers_bruts - charges),
+            'charges_bailleur': float(charges_bailleur),  # NOUVEAU
+            'net_a_payer': float(loyers_bruts - charges - charges_bailleur),  # MODIFIÉ
             'proprietes_count': bailleur.proprietes.filter(contrats__est_actif=True).distinct().count()
         }
         
@@ -344,3 +346,102 @@ def get_bailleur_retrait_data(request, bailleur_id):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
+
+
+@login_required
+def gerer_charges_bailleur_retrait(request, retrait_id):
+    """Vue pour gérer les charges de bailleur dans un retrait mensuel."""
+    try:
+        retrait = get_object_or_404(RetraitBailleur, id=retrait_id)
+        
+        # Vérifier les permissions
+        from core.utils import check_group_permissions
+        permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'modify')
+        if not permissions['allowed']:
+            messages.error(request, permissions['message'])
+            return redirect('paiements:retrait_detail', pk=retrait_id)
+        
+        if request.method == 'POST':
+            action = request.POST.get('action')
+            
+            if action == 'ajouter_charge':
+                form = GestionChargesBailleurForm(retrait, request.POST)
+                if form.is_valid():
+                    charge_bailleur = form.cleaned_data['charge_bailleur']
+                    montant_deduction = form.cleaned_data['montant_deduction']
+                    notes = form.cleaned_data['notes']
+                    
+                    # Ajouter la charge au retrait
+                    if retrait.ajouter_charge_bailleur(charge_bailleur, montant_deduction, notes):
+                        messages.success(
+                            request, 
+                            f'Charge "{charge_bailleur.titre}" ajoutée au retrait pour {montant_deduction} XOF'
+                        )
+                    else:
+                        messages.error(request, 'Erreur lors de l\'ajout de la charge')
+                    
+                    return redirect('paiements:gerer_charges_bailleur_retrait', retrait_id=retrait_id)
+            
+            elif action == 'retirer_charge':
+                charge_id = request.POST.get('charge_id')
+                notes = request.POST.get('notes', '')
+                
+                try:
+                    from proprietes.models import ChargesBailleur
+                    charge = ChargesBailleur.objects.get(id=charge_id)
+                    
+                    if retrait.retirer_charge_bailleur(charge, notes):
+                        messages.success(
+                            request, 
+                            f'Charge "{charge.titre}" retirée du retrait'
+                        )
+                    else:
+                        messages.error(request, 'Erreur lors du retrait de la charge')
+                    
+                except ChargesBailleur.DoesNotExist:
+                    messages.error(request, 'Charge non trouvée')
+                
+                return redirect('paiements:gerer_charges_bailleur_retrait', retrait_id=retrait_id)
+            
+            elif action == 'appliquer_automatiquement':
+                # Appliquer automatiquement toutes les charges éligibles
+                resultat = retrait.appliquer_charges_automatiquement()
+                
+                if resultat['success']:
+                    messages.success(request, resultat['message'])
+                else:
+                    messages.error(request, resultat['message'])
+                
+                return redirect('paiements:gerer_charges_bailleur_retrait', retrait_id=retrait_id)
+        
+        # Formulaire pour ajouter une charge
+        form_ajout = GestionChargesBailleurForm(retrait)
+        
+        # Charges déjà liées au retrait
+        charges_liees = retrait.get_charges_bailleur_liees()
+        
+        # Calcul des charges disponibles
+        calcul_charges = retrait.calculer_charges_automatiquement()
+        
+        context = {
+            'retrait': retrait,
+            'form_ajout': form_ajout,
+            'charges_liees': charges_liees,
+            'calcul_charges': calcul_charges,
+            'page_title': f'Gestion des charges - Retrait {retrait.bailleur}',
+            'page_icon': 'calculator'
+        }
+        
+        return render(request, 'paiements/retraits/gerer_charges_bailleur.html', context)
+        
+    except Exception as e:
+        messages.error(request, f'Erreur: {str(e)}')
+        return redirect('paiements:retrait_list')
+
+
+@login_required
+def retrait_report(request):
+    """Vue pour les rapports de retraits."""
+    # Logique des rapports
+    context = {}
+    return render(request, 'paiements/retraits/retrait_report.html', context)

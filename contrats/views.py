@@ -418,9 +418,12 @@ def supprimer_contrat(request, pk):
             AuditLog.objects.create(
                 content_type=ContentType.objects.get_for_model(Contrat),
                 object_id=contrat.pk,
-                action='DELETE',
-                old_data=old_data,
-                new_data={'is_deleted': True, 'deleted_at': str(timezone.now())},
+                action='delete',
+                details={
+                    'old_data': old_data,
+                    'new_data': {'is_deleted': True, 'deleted_at': str(timezone.now())}
+                },
+                object_repr=str(contrat),
                 user=request.user,
                 ip_address=request.META.get('REMOTE_ADDR'),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')
@@ -531,14 +534,17 @@ def resilier_contrat(request, pk):
             AuditLog.objects.create(
                 content_type=ContentType.objects.get_for_model(Contrat),
                 object_id=contrat.pk,
-                action='RESILIATE',
-                old_data=old_data,
-                new_data={
-                    'date_resiliation': str(date_resiliation),
-                    'est_actif': False,
-                    'est_resilie': True,
-                    'motif_resiliation': motif_resiliation
+                action='resiliate',
+                details={
+                    'old_data': old_data,
+                    'new_data': {
+                        'date_resiliation': str(date_resiliation),
+                        'est_actif': False,
+                        'est_resilie': True,
+                        'motif_resiliation': motif_resiliation
+                    }
                 },
+                object_repr=str(contrat),
                 user=request.user,
                 ip_address=request.META.get('REMOTE_ADDR'),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')
@@ -548,16 +554,19 @@ def resilier_contrat(request, pk):
             AuditLog.objects.create(
                 content_type=ContentType.objects.get_for_model(ResiliationContrat),
                 object_id=resiliation.pk,
-                action='CREATE',
-                old_data={},
-                new_data={
-                    'contrat': str(contrat.pk),
-                    'date_resiliation': str(date_resiliation),
-                    'motif_resiliation': motif_resiliation,
-                    'type_resiliation': type_resiliation,
-                    'caution_remboursee': caution_remboursee,
-                    'montant_remboursement': str(montant_remboursement)
+                action='create',
+                details={
+                    'old_data': {},
+                    'new_data': {
+                        'contrat': str(contrat.pk),
+                        'date_resiliation': str(date_resiliation),
+                        'motif_resiliation': motif_resiliation,
+                        'type_resiliation': type_resiliation,
+                        'caution_remboursee': caution_remboursee,
+                        'montant_remboursement': str(montant_remboursement)
+                    }
                 },
+                object_repr=str(resiliation),
                 user=request.user,
                 ip_address=request.META.get('REMOTE_ADDR'),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')

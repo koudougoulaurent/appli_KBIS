@@ -1,155 +1,609 @@
 from django.db import models
+from django.contrib.auth.models import Group
+from django.utils.translation import gettext_lazy as _
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
-from django.core.validators import FileExtensionValidator
-from django.core.exceptions import ValidationError
-import os
-from django.conf import settings
 
-class ConfigurationEntreprise(models.Model):
-    """
-    Configuration des informations de l'entreprise pour les reçus et documents
-    """
-    # Informations de base
-    nom_entreprise = models.CharField(max_length=200, default="GESTIMMOB")
-    slogan = models.CharField(max_length=200, blank=True, null=True)
+
+class NiveauAcces(models.Model):
+    """Modèle pour définir les niveaux d'accès aux données."""
     
-    # Adresse
-    adresse = models.CharField(max_length=200, default="123 Rue de la Paix")
-    code_postal = models.CharField(max_length=10, default="75001")
-    ville = models.CharField(max_length=100, default="Paris")
-    pays = models.CharField(max_length=100, default="France")
+    NIVEAUX_CHOICES = [
+        ('public', 'Public - Données générales'),
+        ('interne', 'Interne - Données de l\'équipe'),
+        ('confidentiel', 'Confidentiel - Données sensibles'),
+        ('secret', 'Secret - Données critiques direction'),
+        ('top_secret', 'Top Secret - Données stratégiques'),
+    ]
     
-    # Contact
-    telephone = models.CharField(max_length=20, default="01 23 45 67 89")
-    email = models.EmailField(default="contact@gestimmob.fr")
-    site_web = models.URLField(blank=True, null=True)
-    
-    # Informations légales
-    siret = models.CharField(max_length=20, default="123 456 789 00012")
-    numero_licence = models.CharField(max_length=50, default="123456789")
-    capital_social = models.CharField(max_length=100, blank=True, null=True)
-    forme_juridique = models.CharField(max_length=100, default="SARL")
-    
-    # Logo et branding
-    logo_url = models.URLField(blank=True, null=True, help_text="URL du logo de l'entreprise")
-    couleur_principale = models.CharField(max_length=7, default="#2c3e50", help_text="Couleur principale (format hex)")
-    couleur_secondaire = models.CharField(max_length=7, default="#3498db", help_text="Couleur secondaire (format hex)")
-    
-    # Informations bancaires (optionnel)
-    iban = models.CharField(max_length=34, blank=True, null=True)
-    bic = models.CharField(max_length=11, blank=True, null=True)
-    banque = models.CharField(max_length=100, blank=True, null=True)
-    
-    # Textes personnalisables pour les documents
-    texte_contrat = models.TextField(
-        blank=True, 
-        null=True,
-        verbose_name=_("Texte personnalisé pour les contrats"),
-        help_text=_("Texte personnalisé pour les obligations et conditions des contrats de bail")
+    nom = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name=_("Nom du niveau")
     )
-    texte_resiliation = models.TextField(
-        blank=True, 
-        null=True,
-        verbose_name=_("Texte personnalisé pour les résiliations"),
-        help_text=_("Texte personnalisé pour les conditions de sortie des résiliations")
+    niveau = models.CharField(
+        max_length=20,
+        choices=NIVEAUX_CHOICES,
+        unique=True,
+        verbose_name=_("Niveau d'accès")
+    )
+    description = models.TextField(
+        verbose_name=_("Description"),
+        help_text=_("Description détaillée du niveau d'accès")
+    )
+    priorite = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        verbose_name=_("Priorité"),
+        help_text=_("1 = niveau le plus bas, 10 = niveau le plus élevé")
+    )
+    
+    # Groupes autorisés
+    groupes_autorises = models.ManyToManyField(
+        Group,
+        related_name='niveaux_acces',
+        verbose_name=_("Groupes autorisés"),
+        help_text=_("Groupes d'utilisateurs autorisés à ce niveau")
     )
     
     # Métadonnées
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
-    actif = models.BooleanField(default=True)
+    actif = models.BooleanField(default=True, verbose_name=_("Actif"))
     
     class Meta:
-        verbose_name = 'Configuration Entreprise'
-        verbose_name_plural = 'Configurations Entreprise'
+        verbose_name = _("Niveau d'accès")
+        verbose_name_plural = _("Niveaux d'accès")
+        ordering = ['-priorite', 'nom']
+    
+    def __str__(self):
+        return f"{self.nom} ({self.get_niveau_display()})"
+
+
+class PermissionTableauBord(models.Model):
+    """Modèle pour gérer les permissions spécifiques aux tableaux de bord."""
+    
+    TYPE_DONNEES_CHOICES = [
+        ('financier', 'Données financières'),
+        ('locataire', 'Données locataires'),
+        ('bailleur', 'Données bailleurs'),
+        ('propriete', 'Données propriétés'),
+        ('contrat', 'Données contrats'),
+        ('paiement', 'Données paiements'),
+        ('charge', 'Données charges'),
+        ('statistique', 'Statistiques globales'),
+        ('rapport', 'Rapports détaillés'),
+    ]
+    
+    nom = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name=_("Nom de la permission")
+    )
+    type_donnees = models.CharField(
+        max_length=20,
+        choices=TYPE_DONNEES_CHOICES,
+        verbose_name=_("Type de données")
+    )
+    niveau_acces_requis = models.ForeignKey(
+        NiveauAcces,
+        on_delete=models.PROTECT,
+        verbose_name=_("Niveau d'accès requis")
+    )
+    
+    # Permissions spécifiques
+    peut_voir_montants = models.BooleanField(
+        default=False,
+        verbose_name=_("Peut voir les montants exacts")
+    )
+    peut_voir_details_personnels = models.BooleanField(
+        default=False,
+        verbose_name=_("Peut voir les détails personnels")
+    )
+    peut_voir_historique = models.BooleanField(
+        default=False,
+        verbose_name=_("Peut voir l'historique complet")
+    )
+    peut_exporter = models.BooleanField(
+        default=False,
+        verbose_name=_("Peut exporter les données")
+    )
+    peut_imprimer = models.BooleanField(
+        default=False,
+        verbose_name=_("Peut imprimer les rapports")
+    )
+    
+    # Limitations
+    limite_periode_jours = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Limitation période (jours)"),
+        help_text=_("Nombre de jours maximum dans le passé (null = illimité)")
+    )
+    limite_nombre_resultats = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Limite nombre de résultats"),
+        help_text=_("Nombre maximum de résultats affichés (null = illimité)")
+    )
+    
+    # Métadonnées
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+    actif = models.BooleanField(default=True, verbose_name=_("Actif"))
+    
+    class Meta:
+        verbose_name = _("Permission tableau de bord")
+        verbose_name_plural = _("Permissions tableaux de bord")
+        ordering = ['type_donnees', 'nom']
+    
+    def __str__(self):
+        return f"{self.nom} - {self.get_type_donnees_display()}"
+
+
+class LogAccesDonnees(models.Model):
+    """Modèle pour journaliser les accès aux données sensibles."""
+    
+    TYPE_ACTION_CHOICES = [
+        ('consultation', 'Consultation'),
+        ('export', 'Export'),
+        ('impression', 'Impression'),
+        ('modification', 'Modification'),
+        ('suppression', 'Suppression'),
+    ]
+    
+    utilisateur = models.ForeignKey(
+        'utilisateurs.Utilisateur',
+        on_delete=models.PROTECT,
+        verbose_name=_("Utilisateur")
+    )
+    type_action = models.CharField(
+        max_length=20,
+        choices=TYPE_ACTION_CHOICES,
+        verbose_name=_("Type d'action")
+    )
+    type_donnees = models.CharField(
+        max_length=50,
+        verbose_name=_("Type de données accédées")
+    )
+    identifiant_objet = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        verbose_name=_("Identifiant de l'objet")
+    )
+    niveau_acces_utilise = models.ForeignKey(
+        NiveauAcces,
+        on_delete=models.PROTECT,
+        verbose_name=_("Niveau d'accès utilisé")
+    )
+    
+    # Informations techniques
+    adresse_ip = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        verbose_name=_("Adresse IP")
+    )
+    user_agent = models.TextField(
+        null=True,
+        blank=True,
+        verbose_name=_("User Agent")
+    )
+    
+    # Horodatage
+    timestamp = models.DateTimeField(auto_now_add=True, verbose_name=_("Horodatage"))
+    
+    # Résultat de l'action
+    succes = models.BooleanField(default=True, verbose_name=_("Succès"))
+    message_erreur = models.TextField(
+        null=True,
+        blank=True,
+        verbose_name=_("Message d'erreur")
+    )
+    
+    class Meta:
+        verbose_name = _("Log d'accès aux données")
+        verbose_name_plural = _("Logs d'accès aux données")
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['utilisateur', '-timestamp']),
+            models.Index(fields=['type_donnees', '-timestamp']),
+            models.Index(fields=['niveau_acces_utilise', '-timestamp']),
+        ]
+    
+    def __str__(self):
+        return f"{self.utilisateur} - {self.get_type_action_display()} - {self.timestamp}"
+
+
+class ConfigurationTableauBord(models.Model):
+    """Configuration personnalisée des tableaux de bord par utilisateur."""
+    
+    utilisateur = models.ForeignKey(
+        'utilisateurs.Utilisateur',
+        on_delete=models.CASCADE,
+        verbose_name=_("Utilisateur")
+    )
+    nom_tableau = models.CharField(
+        max_length=100,
+        verbose_name=_("Nom du tableau de bord")
+    )
+    
+    # Configuration d'affichage
+    widgets_actifs = models.JSONField(
+        default=list,
+        verbose_name=_("Widgets actifs"),
+        help_text=_("Liste des widgets activés pour ce tableau")
+    )
+    ordre_widgets = models.JSONField(
+        default=list,
+        verbose_name=_("Ordre des widgets"),
+        help_text=_("Ordre d'affichage des widgets")
+    )
+    configuration_widgets = models.JSONField(
+        default=dict,
+        verbose_name=_("Configuration des widgets"),
+        help_text=_("Configuration spécifique de chaque widget")
+    )
+    
+    # Paramètres de sécurité
+    masquer_montants_sensibles = models.BooleanField(
+        default=True,
+        verbose_name=_("Masquer les montants sensibles")
+    )
+    affichage_anonymise = models.BooleanField(
+        default=False,
+        verbose_name=_("Affichage anonymisé"),
+        help_text=_("Remplacer les noms par des codes")
+    )
+    limite_donnees_recentes = models.PositiveIntegerField(
+        default=30,
+        verbose_name=_("Limiter aux données récentes (jours)")
+    )
+    
+    # Métadonnées
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+    par_defaut = models.BooleanField(
+        default=False,
+        verbose_name=_("Tableau par défaut")
+    )
+    
+    class Meta:
+        verbose_name = _("Configuration tableau de bord")
+        verbose_name_plural = _("Configurations tableaux de bord")
+        unique_together = [['utilisateur', 'nom_tableau']]
+        ordering = ['utilisateur', '-par_defaut', 'nom_tableau']
+    
+    def __str__(self):
+        return f"{self.utilisateur} - {self.nom_tableau}"
+
+
+class AuditLog(models.Model):
+    """Modèle pour l'audit des actions utilisateur (compatibilité avec l'ancien système)."""
+    
+    ACTION_CHOICES = [
+        ('create', 'Création'),
+        ('update', 'Modification'),
+        ('delete', 'Suppression'),
+        ('view', 'Consultation'),
+        ('export', 'Export'),
+        ('import', 'Import'),
+        ('login', 'Connexion'),
+        ('logout', 'Déconnexion'),
+        ('validation', 'Validation'),
+        ('rejection', 'Rejet'),
+    ]
+    
+    # Référence générique vers n'importe quel modèle
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name=_("Type de contenu")
+    )
+    object_id = models.PositiveIntegerField(
+        null=True, 
+        blank=True,
+        verbose_name=_("ID de l'objet")
+    )
+    content_object = GenericForeignKey('content_type', 'object_id')
+    
+    # Action effectuée
+    action = models.CharField(
+        max_length=20,
+        choices=ACTION_CHOICES,
+        verbose_name=_("Action")
+    )
+    
+    # Utilisateur qui a effectué l'action
+    user = models.ForeignKey(
+        'utilisateurs.Utilisateur',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='audit_logs',
+        verbose_name=_("Utilisateur")
+    )
+    
+    # Données et représentation de l'objet
+    details = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name=_("Détails")
+    )
+    object_repr = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        verbose_name=_("Représentation de l'objet")
+    )
+    
+    # Informations techniques
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        verbose_name=_("Adresse IP")
+    )
+    user_agent = models.TextField(
+        null=True,
+        blank=True,
+        verbose_name=_("User Agent")
+    )
+    
+    # Horodatage
+    timestamp = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Horodatage")
+    )
+    
+    # Informations supplémentaires
+    description = models.TextField(
+        null=True,
+        blank=True,
+        verbose_name=_("Description")
+    )
+    
+    class Meta:
+        verbose_name = _("Log d'audit")
+        verbose_name_plural = _("Logs d'audit")
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['user', 'action', 'timestamp'], name='core_auditl_user_id_0dff28_idx'),
+            models.Index(fields=['content_type', 'object_id'], name='core_auditl_content_fec0c4_idx'),
+            models.Index(fields=['timestamp'], name='core_auditl_timesta_80074f_idx'),
+        ]
+    
+    def __str__(self):
+        if self.content_object:
+            return f"{self.user} - {self.get_action_display()} - {self.content_object} - {self.timestamp}"
+        return f"{self.user} - {self.get_action_display()} - {self.timestamp}"
+
+
+class ConfigurationEntreprise(models.Model):
+    """Modèle pour la configuration de l'entreprise."""
+    
+    nom_entreprise = models.CharField(
+        max_length=200,
+        default='GESTIMMOB',
+        verbose_name=_("Nom de l'entreprise")
+    )
+    slogan = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        verbose_name=_("Slogan")
+    )
+    adresse = models.CharField(
+        max_length=200,
+        default='123 Rue de la Paix',
+        verbose_name=_("Adresse")
+    )
+    code_postal = models.CharField(
+        max_length=10,
+        default='75001',
+        verbose_name=_("Code postal")
+    )
+    ville = models.CharField(
+        max_length=100,
+        default='Paris',
+        verbose_name=_("Ville")
+    )
+    pays = models.CharField(
+        max_length=100,
+        default='France',
+        verbose_name=_("Pays")
+    )
+    telephone = models.CharField(
+        max_length=20,
+        default='01 23 45 67 89',
+        verbose_name=_("Téléphone")
+    )
+    email = models.EmailField(
+        default='contact@gestimmob.fr',
+        verbose_name=_("Email")
+    )
+    site_web = models.URLField(
+        blank=True,
+        null=True,
+        verbose_name=_("Site web")
+    )
+    siret = models.CharField(
+        max_length=20,
+        default='123 456 789 00012',
+        verbose_name=_("Numéro SIRET")
+    )
+    numero_licence = models.CharField(
+        max_length=50,
+        default='123456789',
+        verbose_name=_("Numéro de licence")
+    )
+    capital_social = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name=_("Capital social")
+    )
+    forme_juridique = models.CharField(
+        max_length=100,
+        default='SARL',
+        verbose_name=_("Forme juridique")
+    )
+    logo_url = models.URLField(
+        blank=True,
+        null=True,
+        help_text=_("URL du logo de l'entreprise"),
+        verbose_name=_("URL du logo")
+    )
+    couleur_principale = models.CharField(
+        max_length=7,
+        default='#2c3e50',
+        help_text=_("Couleur principale (format hex)"),
+        verbose_name=_("Couleur principale")
+    )
+    couleur_secondaire = models.CharField(
+        max_length=7,
+        default='#3498db',
+        help_text=_("Couleur secondaire (format hex)"),
+        verbose_name=_("Couleur secondaire")
+    )
+    iban = models.CharField(
+        max_length=34,
+        blank=True,
+        null=True,
+        verbose_name=_("IBAN")
+    )
+    bic = models.CharField(
+        max_length=11,
+        blank=True,
+        null=True,
+        verbose_name=_("BIC")
+    )
+    banque = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name=_("Banque")
+    )
+    texte_contrat = models.TextField(
+        blank=True,
+        null=True,
+        help_text=_("Texte personnalisé pour les obligations et conditions des contrats de bail"),
+        verbose_name=_("Texte personnalisé pour les contrats")
+    )
+    texte_resiliation = models.TextField(
+        blank=True,
+        null=True,
+        help_text=_("Texte personnalisé pour les conditions de sortie des résiliations"),
+        verbose_name=_("Texte personnalisé pour les résiliations")
+    )
+    
+    # Métadonnées
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+    actif = models.BooleanField(default=True, verbose_name=_("Actif"))
+    
+    class Meta:
+        verbose_name = _("Configuration Entreprise")
+        verbose_name_plural = _("Configurations Entreprise")
+        ordering = ['-date_modification']
     
     def __str__(self):
         return f"Configuration {self.nom_entreprise}"
     
-    def get_adresse_complete(self):
-        """Retourne l'adresse complète formatée"""
-        return f"{self.adresse}, {self.code_postal} {self.ville}, {self.pays}"
-    
-    def get_contact_complet(self):
-        """Retourne les informations de contact formatées"""
-        contact = f"Tél: {self.telephone}"
-        if self.email:
-            contact += f" | Email: {self.email}"
-        if self.site_web:
-            contact += f" | Web: {self.site_web}"
-        return contact
-    
-    def get_informations_legales(self):
-        """Retourne les informations légales formatées"""
-        legal = f"SIRET: {self.siret}"
-        if self.numero_licence:
-            legal += f" | N° Licence: {self.numero_licence}"
-        if self.capital_social:
-            legal += f" | Capital: {self.capital_social}"
-        if self.forme_juridique:
-            legal += f" | {self.forme_juridique}"
-        return legal
-    
     @classmethod
     def get_configuration_active(cls):
-        """Retourne la configuration active de l'entreprise"""
-        return cls.objects.filter(actif=True).first()
+        """Retourne la configuration active de l'entreprise."""
+        config = cls.objects.filter(actif=True).first()
+        if not config:
+            # Créer une configuration par défaut si aucune n'existe
+            config = cls.objects.create()
+        return config
+    
+    def get_adresse_complete(self):
+        """Retourne l'adresse complète formatée."""
+        adresse_parts = []
+        if self.adresse:
+            adresse_parts.append(self.adresse)
+        if self.code_postal and self.ville:
+            adresse_parts.append(f"{self.code_postal} {self.ville}")
+        elif self.code_postal:
+            adresse_parts.append(self.code_postal)
+        elif self.ville:
+            adresse_parts.append(self.ville)
+        if self.pays:
+            adresse_parts.append(self.pays)
+        
+        return ", ".join(adresse_parts) if adresse_parts else "Adresse non définie"
+    
+    def get_contact_complet(self):
+        """Retourne les informations de contact formatées."""
+        contact_parts = []
+        if self.telephone:
+            contact_parts.append(f"Tél: {self.telephone}")
+        if self.email:
+            contact_parts.append(f"Email: {self.email}")
+        if self.site_web:
+            contact_parts.append(f"Web: {self.site_web}")
+        
+        return " | ".join(contact_parts) if contact_parts else "Contact non défini"
+    
+    def get_informations_legales(self):
+        """Retourne les informations légales formatées."""
+        legal_parts = []
+        if self.siret:
+            legal_parts.append(f"SIRET: {self.siret}")
+        if self.numero_licence:
+            legal_parts.append(f"N° Licence: {self.numero_licence}")
+        if self.capital_social:
+            legal_parts.append(f"Capital: {self.capital_social}")
+        if self.forme_juridique:
+            legal_parts.append(self.forme_juridique)
+        
+        return " | ".join(legal_parts) if legal_parts else "Informations légales non définies"
+    
+    def get_informations_bancaires(self):
+        """Retourne les informations bancaires formatées."""
+        bank_parts = []
+        if self.banque:
+            bank_parts.append(f"Banque: {self.banque}")
+        if self.iban:
+            bank_parts.append(f"IBAN: {self.iban}")
+        if self.bic:
+            bank_parts.append(f"BIC: {self.bic}")
+        
+        return " | ".join(bank_parts) if bank_parts else "Informations bancaires non définies"
 
 
 class TemplateRecu(models.Model):
-    """Modèles de templates pour les reçus."""
+    """Modèle pour les templates de reçus (compatibilité avec l'ancien système)."""
     
     nom = models.CharField(
         max_length=100,
+        unique=True,
         verbose_name=_("Nom du template")
     )
     description = models.TextField(
         blank=True,
         verbose_name=_("Description")
     )
-    
-    # Fichier template
-    fichier_template = models.FileField(
-        upload_to='templates_recus/',
-        verbose_name=_("Fichier template"),
-        help_text=_("Fichier HTML du template"),
-        validators=[FileExtensionValidator(allowed_extensions=['html', 'htm'])]
+    contenu_html = models.TextField(
+        verbose_name=_("Contenu HTML"),
+        help_text=_("Template HTML avec variables Django")
     )
-    
-    # Options de personnalisation
-    couleur_principale = models.CharField(
-        max_length=7,
-        default='#2c3e50',
-        verbose_name=_("Couleur principale")
-    )
-    couleur_secondaire = models.CharField(
-        max_length=7,
-        default='#3498db',
-        verbose_name=_("Couleur secondaire")
-    )
-    police_principale = models.CharField(
-        max_length=50,
-        default='Arial',
-        verbose_name=_("Police principale")
-    )
-    
-    # Options d'affichage
-    afficher_logo = models.BooleanField(default=True, verbose_name=_("Afficher le logo"))
-    afficher_siret = models.BooleanField(default=True, verbose_name=_("Afficher le SIRET"))
-    afficher_tva = models.BooleanField(default=True, verbose_name=_("Afficher la TVA"))
-    afficher_iban = models.BooleanField(default=False, verbose_name=_("Afficher l'IBAN"))
     
     # Métadonnées
-    date_creation = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de création"))
-    date_modification = models.DateTimeField(auto_now=True, verbose_name=_("Date de modification"))
-    actif = models.BooleanField(default=True, verbose_name=_("Template actif"))
-    par_defaut = models.BooleanField(default=False, verbose_name=_("Template par défaut"))
-    is_deleted = models.BooleanField(default=False, verbose_name='Supprimé logiquement')
-    deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Date de suppression')
-    deleted_by = models.ForeignKey('utilisateurs.Utilisateur', null=True, blank=True, on_delete=models.SET_NULL, related_name='templaterecu_deleted', verbose_name='Supprimé par')
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+    actif = models.BooleanField(default=True, verbose_name=_("Actif"))
+    
+    # Variables disponibles
+    variables_disponibles = models.JSONField(
+        default=list,
+        verbose_name=_("Variables disponibles"),
+        help_text=_("Liste des variables utilisables dans le template")
+    )
     
     class Meta:
         verbose_name = _("Template de reçu")
@@ -158,305 +612,55 @@ class TemplateRecu(models.Model):
     
     def __str__(self):
         return self.nom
-    
-    def save(self, *args, **kwargs):
-        """S'assurer qu'il n'y a qu'un seul template par défaut."""
-        if self.par_defaut:
-            TemplateRecu.objects.exclude(pk=self.pk).update(par_defaut=False)
-        super().save(*args, **kwargs)
-    
-    @classmethod
-    def get_template_par_defaut(cls):
-        """Retourne le template par défaut."""
-        return cls.objects.filter(par_defaut=True, actif=True).first()
-    
-    @classmethod
-    def get_templates_actifs(cls):
-        """Retourne tous les templates actifs."""
-        return cls.objects.filter(actif=True).order_by('-par_defaut', 'nom')
 
 
 class Devise(models.Model):
-    code = models.CharField(max_length=3, unique=True)
-    nom = models.CharField(max_length=32)
-    symbole = models.CharField(max_length=8)
-    taux_par_rapport_a_eur = models.DecimalField(max_digits=12, decimal_places=6, default=1)
-    actif = models.BooleanField(default=True)
-
+    """Modèle pour les devises (compatibilité avec l'ancien système)."""
+    
+    code = models.CharField(
+        max_length=3,
+        unique=True,
+        verbose_name=_("Code devise"),
+        help_text=_("Code ISO 4217 (ex: EUR, USD, XOF)")
+    )
+    nom = models.CharField(
+        max_length=100,
+        verbose_name=_("Nom de la devise")
+    )
+    symbole = models.CharField(
+        max_length=10,
+        verbose_name=_("Symbole")
+    )
+    
+    # Taux de change par rapport à la devise de base
+    taux_change = models.DecimalField(
+        max_digits=10,
+        decimal_places=4,
+        default=1.0,
+        verbose_name=_("Taux de change")
+    )
+    
+    # Métadonnées
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+    actif = models.BooleanField(default=True, verbose_name=_("Actif"))
+    
+    # Devise par défaut
+    par_defaut = models.BooleanField(
+        default=False,
+        verbose_name=_("Devise par défaut")
+    )
+    
+    class Meta:
+        verbose_name = _("Devise")
+        verbose_name_plural = _("Devises")
+        ordering = ['nom']
+    
     def __str__(self):
         return f"{self.nom} ({self.code})"
-
-
-
-
-
-class LogAudit(models.Model):
-    """
-    Modèle pour tracer toutes les actions critiques sur les entités importantes
-    """
-    # Informations de base
-    modele = models.CharField(max_length=100, verbose_name=_("Modèle concerné"))
-    instance_id = models.IntegerField(verbose_name=_("ID de l'instance"))
     
-    # Action effectuée
-    action = models.CharField(max_length=50, verbose_name=_("Action effectuée"))
-    description = models.TextField(verbose_name=_("Description de l'action"))
-    
-    # Utilisateur et contexte
-    utilisateur = models.ForeignKey(
-        'utilisateurs.Utilisateur',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        verbose_name=_("Utilisateur ayant effectué l'action")
-    )
-    ip_address = models.GenericIPAddressField(
-        null=True, 
-        blank=True, 
-        verbose_name=_("Adresse IP")
-    )
-    user_agent = models.TextField(
-        blank=True, 
-        null=True, 
-        verbose_name=_("User Agent")
-    )
-    
-    # Données avant/après pour l'audit
-    donnees_avant = models.JSONField(
-        default=dict, 
-        verbose_name=_("Données avant modification")
-    )
-    donnees_apres = models.JSONField(
-        default=dict, 
-        verbose_name=_("Données après modification")
-    )
-    
-    # Horodatage
-    date_action = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de l'action"))
-    
-    # Champ pour la suppression logique
-    deleted_by = models.ForeignKey(
-        'utilisateurs.Utilisateur', 
-        null=True, 
-        blank=True, 
-        on_delete=models.SET_NULL, 
-        related_name='logaudit_deleted', 
-        verbose_name='Supprimé par'
-    )
-    
-    class Meta:
-        verbose_name = 'Log d\'audit'
-        verbose_name_plural = 'Logs d\'audit'
-        ordering = ['-date_action']
-        indexes = [
-            models.Index(fields=['modele', 'instance_id']),
-            models.Index(fields=['action']),
-            models.Index(fields=['utilisateur']),
-            models.Index(fields=['date_action']),
-        ]
-    
-    def __str__(self):
-        return f"{self.action} sur {self.modele} #{self.instance_id} par {self.utilisateur}"
-    
-    @classmethod
-    def log_action(cls, modele, instance_id, action, utilisateur, description, 
-                   donnees_avant=None, donnees_apres=None, request=None):
-        """
-        Méthode utilitaire pour créer un log d'audit
-        """
-        log = cls.objects.create(
-            modele=modele,
-            instance_id=instance_id,
-            action=action,
-            utilisateur=utilisateur,
-            description=description,
-            donnees_avant=donnees_avant or {},
-            donnees_apres=donnees_apres or {}
-        )
-        
-        # Ajouter les informations de contexte si disponible
-        if request:
-            log.ip_address = cls.get_client_ip(request)
-            log.user_agent = request.META.get('HTTP_USER_AGENT', '')
-            log.save()
-        
-        return log
-    
-    @staticmethod
-    def get_client_ip(request):
-        """Récupère l'adresse IP du client"""
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip
-
-
-class AuditLog(models.Model):
-
-    """
-
-    Modèle pour enregistrer les actions des utilisateurs (audit trail)
-
-    """
-
-    ACTION_CHOICES = [
-
-        ('create', 'Création'),
-
-        ('update', 'Modification'),
-
-        ('delete', 'Suppression'),
-
-        ('view', 'Consultation'),
-
-        ('login', 'Connexion'),
-
-        ('logout', 'Déconnexion'),
-
-        ('export', 'Export'),
-
-        ('import', 'Import'),
-
-        ('validation', 'Validation'),
-
-        ('rejection', 'Rejet'),
-
-    ]
-
-    
-
-    user = models.ForeignKey(
-
-        settings.AUTH_USER_MODEL, 
-
-        on_delete=models.CASCADE, 
-
-        verbose_name="Utilisateur",
-
-        related_name='audit_logs',
-
-        null=True,
-
-        blank=True
-
-    )
-
-    action = models.CharField(
-
-        max_length=20, 
-
-        choices=ACTION_CHOICES, 
-
-        verbose_name="Action"
-
-    )
-
-    content_type = models.ForeignKey(
-
-        ContentType, 
-
-        on_delete=models.CASCADE, 
-
-        verbose_name="Type de contenu",
-
-        null=True, 
-
-        blank=True
-
-    )
-
-    object_id = models.PositiveIntegerField(
-
-        verbose_name="ID de l'objet",
-
-        null=True, 
-
-        blank=True
-
-    )
-
-    object_repr = models.CharField(
-
-        max_length=200, 
-
-        verbose_name="Représentation de l'objet",
-
-        null=True, 
-
-        blank=True
-
-    )
-
-    details = models.JSONField(
-
-        verbose_name="Détails",
-
-        null=True, 
-
-        blank=True
-
-    )
-
-    ip_address = models.GenericIPAddressField(
-
-        verbose_name="Adresse IP",
-
-        null=True, 
-
-        blank=True
-
-    )
-
-    user_agent = models.TextField(
-
-        verbose_name="User Agent",
-
-        null=True, 
-
-        blank=True
-
-    )
-
-    timestamp = models.DateTimeField(
-
-        auto_now_add=True, 
-
-        verbose_name="Horodatage"
-
-    )
-
-    
-
-    class Meta:
-
-        verbose_name = "Log d'audit"
-
-        verbose_name_plural = "Logs d'audit"
-
-        ordering = ['-timestamp']
-
-        indexes = [
-
-            models.Index(fields=['user', 'action', 'timestamp']),
-
-            models.Index(fields=['content_type', 'object_id']),
-
-            models.Index(fields=['timestamp']),
-
-        ]
-
-    
-
-    def __str__(self):
-
-        return f"{self.user.username} - {self.get_action_display()} - {self.timestamp}"
-
-    
-
-    def get_absolute_url(self):
-
-        return reverse('admin:core_auditlog_change', args=[self.id])
-
-
+    def save(self, *args, **kwargs):
+        # S'assurer qu'une seule devise est par défaut
+        if self.par_defaut:
+            Devise.objects.filter(par_defaut=True).update(par_defaut=False)
+        super().save(*args, **kwargs)

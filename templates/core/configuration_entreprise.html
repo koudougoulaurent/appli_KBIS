@@ -47,8 +47,9 @@
                             </h4>
                         </div>
                         <div class="card-body">
-                            <form method="post">
-                                {% csrf_token %}
+                            {% if can_modify %}
+                                <form method="post">
+                                    {% csrf_token %}
                                 
                                 <!-- Informations de base -->
                                 <div class="row mb-4">
@@ -323,11 +324,14 @@
                                 <div class="row">
                                     <div class="col-12">
                                         <hr>
-                                        <div class="d-flex justify-content-between">
-                                            <button type="button" class="btn btn-outline-secondary" id="resetDefaults">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            {% if can_modify %}
+                                            <button type="button" id="resetDefaults" class="btn btn-outline-warning">
                                                 <i class="fas fa-undo me-1"></i>
                                                 Réinitialiser aux valeurs par défaut
                                             </button>
+                                            {% endif %}
+                                            {% if can_modify %}
                                             <div>
                                                 <a href="{% url 'core:dashboard' %}" class="btn btn-outline-secondary me-2">
                                                     Annuler
@@ -337,10 +341,23 @@
                                                     Enregistrer la configuration
                                                 </button>
                                             </div>
+                                            {% else %}
+                                            <div>
+                                                <a href="{% url 'core:dashboard' %}" class="btn btn-outline-secondary">
+                                                    Retour au Dashboard
+                                                </a>
+                                            </div>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
                             </form>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Mode consultation uniquement :</strong> Vous pouvez consulter la configuration mais vous n'avez pas les permissions pour la modifier. Contactez un administrateur pour effectuer des changements.
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

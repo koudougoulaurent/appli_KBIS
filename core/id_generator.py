@@ -20,21 +20,21 @@ class IDGenerator:
             'prefix': 'BAI',
             'format': 'BAI-{year}-{sequence:04d}',
             'description': 'Bailleur (BAI-YYYY-XXXX)',
-            'sequence_field': 'code_bailleur',
+            'sequence_field': 'numero_bailleur',
             'model': 'proprietes.Bailleur'
         },
         'locataire': {
             'prefix': 'LOC',
             'format': 'LOC-{year}-{sequence:04d}',
             'description': 'Locataire (LOC-YYYY-XXXX)',
-            'sequence_field': 'code_locataire',
+            'sequence_field': 'numero_locataire',
             'model': 'proprietes.Locataire'
         },
         'propriete': {
             'prefix': 'PRO',
             'format': 'PRO-{year}-{sequence:04d}',
             'description': 'Propriété (PRO-YYYY-XXXX)',
-            'sequence_field': 'code_propriete',
+            'sequence_field': 'numero_propriete',
             'model': 'proprietes.Propriete'
         },
         'contrat': {
@@ -61,12 +61,13 @@ class IDGenerator:
     }
     
     @classmethod
-    def generate_id(cls, entity_type, **kwargs):
+    def generate_id(cls, entity_type, force_new_sequence=False, **kwargs):
         """
         Génère un ID unique pour une entité donnée
         
         Args:
             entity_type (str): Type d'entité (bailleur, locataire, propriete, etc.)
+            force_new_sequence (bool): Force une nouvelle séquence même si des gaps existent
             **kwargs: Paramètres supplémentaires (ex: date_paiement pour les paiements)
         
         Returns:
@@ -81,7 +82,7 @@ class IDGenerator:
         current_year = datetime.now().year
         
         # Obtenir la séquence suivante
-        sequence = cls._get_next_sequence(entity_type, current_year, **kwargs)
+        sequence = cls._get_next_sequence(entity_type, current_year, force_new_sequence=force_new_sequence, **kwargs)
         
         # Générer l'ID selon le format
         if entity_type == 'paiement':
@@ -99,9 +100,12 @@ class IDGenerator:
             return config['format'].format(year=current_year, sequence=sequence)
     
     @classmethod
-    def _get_next_sequence(cls, entity_type, year, **kwargs):
+    def _get_next_sequence(cls, entity_type, year, force_new_sequence=False, **kwargs):
         """
         Obtient la prochaine séquence disponible pour une entité et une année
+        
+        Args:
+            force_new_sequence (bool): Si True, force une nouvelle séquence après la plus haute existante
         """
         config = cls.ID_FORMATS[entity_type]
         model_name = config['model']
@@ -112,60 +116,71 @@ class IDGenerator:
         from django.apps import apps
         model = apps.get_model(app_label, model_name)
         
-        # Construire le filtre pour l'année
-        if entity_type == 'paiement':
-            # Pour les paiements, filtrer par mois
-            if 'date_paiement' in kwargs:
-                date = kwargs['date_paiement']
-                yearmonth = date.strftime('%Y%m')
-                # Extraire l'année et le mois du numéro existant
-                existing_ids = model.objects.filter(
-                    **{f"{sequence_field}__startswith": f"PAY-{yearmonth}"}
-                ).values_list(sequence_field, flat=True)
+        # Utiliser une transaction pour éviter les conflits de concurrence
+        with transaction.atomic():
+            # Construire le filtre pour l'année
+            if entity_type == 'paiement':
+                # Pour les paiements, filtrer par mois
+                if 'date_paiement' in kwargs:
+                    date = kwargs['date_paiement']
+                    yearmonth = date.strftime('%Y%m')
+                    # Extraire l'année et le mois du numéro existant
+                    existing_ids = model.objects.filter(
+                        **{f"{sequence_field}__startswith": f"PAY-{yearmonth}"}
+                    ).values_list(sequence_field, flat=True)
+                else:
+                    # Utiliser l'année courante
+                    existing_ids = model.objects.filter(
+                        **{f"{sequence_field}__startswith": f"PAY-{year}"}
+                    ).values_list(sequence_field, flat=True)
+            
+            elif entity_type == 'quittance':
+                # Pour les quittances, filtrer par mois
+                if 'date_emission' in kwargs:
+                    date = kwargs['date_emission']
+                    yearmonth = date.strftime('%Y%m')
+                    existing_ids = model.objects.filter(
+                        **{f"{sequence_field}__startswith": f"QUI-{yearmonth}"}
+                    ).values_list(sequence_field, flat=True)
+                else:
+                    # Utiliser l'année courante
+                    existing_ids = model.objects.filter(
+                        **{f"{sequence_field}__startswith": f"QUI-{year}"}
+                    ).values_list(sequence_field, flat=True)
+            
             else:
-                # Utiliser l'année courante
+                # Pour les autres entités, filtrer par année
                 existing_ids = model.objects.filter(
-                    **{f"{sequence_field}__startswith": f"PAY-{year}"}
+                    **{f"{sequence_field}__startswith": f"{config['prefix']}-{year}"}
                 ).values_list(sequence_field, flat=True)
-        
-        elif entity_type == 'quittance':
-            # Pour les quittances, filtrer par mois
-            if 'date_emission' in kwargs:
-                date = kwargs['date_emission']
-                yearmonth = date.strftime('%Y%m')
-                existing_ids = model.objects.filter(
-                    **{f"{sequence_field}__startswith": f"QUI-{yearmonth}"}
-                ).values_list(sequence_field, flat=True)
+            
+            # Extraire les séquences existantes
+            sequences = []
+            for id_value in existing_ids:
+                if id_value:
+                    # Extraire le numéro de séquence (dernière partie après le dernier tiret)
+                    parts = id_value.split('-')
+                    if len(parts) >= 2:
+                        try:
+                            seq_num = int(parts[-1])
+                            sequences.append(seq_num)
+                        except ValueError:
+                            continue
+            
+            # Retourner la prochaine séquence disponible
+            if sequences:
+                if force_new_sequence:
+                    # Forcer une nouvelle séquence après la plus haute
+                    return max(sequences) + 1
+                else:
+                    # Chercher le premier gap ou retourner max + 1
+                    sequences_sorted = sorted(sequences)
+                    for i, seq in enumerate(sequences_sorted, 1):
+                        if i != seq:
+                            return i  # Retourner le premier gap trouvé
+                    return max(sequences) + 1  # Pas de gap, retourner max + 1
             else:
-                # Utiliser l'année courante
-                existing_ids = model.objects.filter(
-                    **{f"{sequence_field}__startswith": f"QUI-{year}"}
-                ).values_list(sequence_field, flat=True)
-        
-        else:
-            # Pour les autres entités, filtrer par année
-            existing_ids = model.objects.filter(
-                **{f"{sequence_field}__startswith": f"{config['prefix']}-{year}"}
-            ).values_list(sequence_field, flat=True)
-        
-        # Extraire les séquences existantes
-        sequences = []
-        for id_value in existing_ids:
-            if id_value:
-                # Extraire le numéro de séquence (dernière partie après le dernier tiret)
-                parts = id_value.split('-')
-                if len(parts) >= 2:
-                    try:
-                        seq_num = int(parts[-1])
-                        sequences.append(seq_num)
-                    except ValueError:
-                        continue
-        
-        # Retourner la prochaine séquence disponible
-        if sequences:
-            return max(sequences) + 1
-        else:
-            return 1
+                return 1
     
     @classmethod
     def validate_id_format(cls, entity_type, id_value):

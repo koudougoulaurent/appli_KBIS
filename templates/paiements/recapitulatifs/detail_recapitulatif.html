@@ -1,0 +1,379 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    .detail-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px 10px 0 0;
+        padding: 1.5rem;
+    }
+    .detail-body {
+        padding: 2rem;
+    }
+    .stat-badge {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+    }
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+    }
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .info-item {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid #007bff;
+    }
+    .info-label {
+        font-weight: 600;
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+    .info-value {
+        font-size: 1.1rem;
+        color: #212529;
+    }
+    .status-badge {
+        font-size: 1rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="bi bi-{{ page_icon }}"></i>
+                {{ page_title }}
+            </h1>
+            <p class="text-muted">
+                Détails complets du récapitulatif mensuel
+            </p>
+        </div>
+        <div class="action-buttons">
+            <a href="{% url 'paiements:liste_recapitulatifs' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Retour à la liste
+            </a>
+            <a href="{% url 'paiements:apercu_recapitulatif' recapitulatif.pk %}" class="btn btn-info">
+                <i class="bi bi-eye"></i> Aperçu
+            </a>
+            <a href="{% url 'paiements:telecharger_pdf_recapitulatif' recapitulatif.pk %}" class="btn btn-success">
+                <i class="bi bi-download"></i> Télécharger PDF
+            </a>
+        </div>
+    </div>
+
+    <!-- Informations générales -->
+    <div class="detail-card">
+        <div class="detail-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 class="mb-1">
+                        <i class="bi bi-file-earmark-text"></i>
+                        Récapitulatif {{ recapitulatif.get_type_recapitulatif_display }}
+                    </h3>
+                    <p class="mb-0">{{ recapitulatif.mois_recapitulatif|date:"F Y" }}</p>
+                </div>
+                <span class="status-badge bg-{{ recapitulatif.get_statut_display_color }}">
+                    {{ recapitulatif.get_statut_display }}
+                </span>
+            </div>
+        </div>
+        
+        <div class="detail-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Bailleur</div>
+                    <div class="info-value">{{ recapitulatif.bailleur.nom }}</div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-label">Type de récapitulatif</div>
+                    <div class="info-value">{{ recapitulatif.get_type_recapitulatif_display }}</div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-label">Mois de référence</div>
+                    <div class="info-value">{{ recapitulatif.mois_recapitulatif|date:"F Y" }}</div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-label">Statut actuel</div>
+                    <div class="info-value">
+                        <span class="badge bg-{{ recapitulatif.get_statut_display_color }}">
+                            {{ recapitulatif.get_statut_display }}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-label">Gestionnaire</div>
+                    <div class="info-value">
+                        {% if recapitulatif.gestionnaire %}
+                            {{ recapitulatif.gestionnaire.get_full_name|default:recapitulatif.gestionnaire.username }}
+                        {% else %}
+                            <span class="text-muted">Non assigné</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-label">Date de création</div>
+                    <div class="info-value">{{ recapitulatif.date_creation|date:"d/m/Y H:i" }}</div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-label">Version</div>
+                    <div class="info-value">{{ recapitulatif.version }}</div>
+                </div>
+            </div>
+
+            {% if recapitulatif.notes %}
+            <div class="alert alert-info">
+                <i class="bi bi-chat-text"></i>
+                <strong>Notes :</strong> {{ recapitulatif.notes }}
+            </div>
+            {% endif %}
+
+            <!-- Actions selon le statut -->
+            <div class="mt-4">
+                <h5><i class="bi bi-gear"></i> Actions disponibles</h5>
+                
+                {% if recapitulatif.peut_etre_valide %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>En attente de validation :</strong> Ce récapitulatif peut être validé.
+                    <button type="button" class="btn btn-success btn-sm ms-3" onclick="validerRecapitulatif({{ recapitulatif.pk }})">
+                        <i class="bi bi-check-circle"></i> Valider
+                    </button>
+                </div>
+                {% endif %}
+
+                {% if recapitulatif.peut_etre_envoye %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Prêt à être envoyé :</strong> Ce récapitulatif peut être envoyé aux bailleurs.
+                    <button type="button" class="btn btn-info btn-sm ms-3" onclick="envoyerRecapitulatif({{ recapitulatif.pk }})">
+                        <i class="bi bi-send"></i> Envoyer
+                    </button>
+                </div>
+                {% endif %}
+
+                {% if recapitulatif.peut_etre_paye %}
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle"></i>
+                    <strong>Prêt à être marqué comme payé :</strong> Ce récapitulatif peut être marqué comme payé.
+                    <button type="button" class="btn btn-warning btn-sm ms-3" onclick="marquerPayeRecapitulatif({{ recapitulatif.pk }})">
+                        <i class="bi bi-cash"></i> Marquer Payé
+                    </button>
+                </div>
+                {% endif %}
+
+                {% if recapitulatif.statut == 'paye' %}
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle"></i>
+                    <strong>Récapitulatif payé :</strong> Ce récapitulatif a été marqué comme payé le {{ recapitulatif.date_paiement|date:"d/m/Y H:i" }}.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Résumé des totaux du bailleur -->
+    {% if totaux %}
+    <div class="detail-card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">
+                <i class="bi bi-calculator"></i> Résumé des totaux pour {{ totaux.bailleur.nom }}
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="text-center p-3">
+                        <div class="h4 text-primary">{{ totaux.nombre_proprietes }}</div>
+                        <div class="text-muted">Propriétés louées</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3">
+                        <div class="h4 text-info">{{ totaux.total_loyers_bruts|floatformat:0 }} XOF</div>
+                        <div class="text-muted">Loyers bruts</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3">
+                        <div class="h4 text-warning">{{ totaux.total_charges_deductibles|floatformat:0 }} XOF</div>
+                        <div class="text-muted">Charges déductibles</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3">
+                        <div class="h4 text-success">{{ totaux.total_net_a_payer|floatformat:0 }} XOF</div>
+                        <div class="text-muted">Montant net à payer</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Détails des propriétés du bailleur -->
+    {% if totaux and totaux.details_proprietes %}
+    <div class="detail-card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">
+                <i class="bi bi-house"></i> Détails des propriétés de {{ totaux.bailleur.nom }}
+            </h5>
+        </div>
+        <div class="card-body">
+            {% for propriete_detail in totaux.details_proprietes %}
+            <div class="border rounded p-3 mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0">{{ propriete_detail.propriete.adresse }}</h6>
+                    <span class="badge bg-primary">{{ propriete_detail.propriete.type_propriete }}</span>
+                </div>
+                
+                <div class="row mb-2">
+                    <div class="col-md-6">
+                        <small class="text-muted">Locataire</small>
+                        <div class="fw-bold">{{ propriete_detail.locataire.nom }} {{ propriete_detail.locataire.prenom }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">Loyer mensuel</small>
+                        <div class="fw-bold">{{ propriete_detail.contrat.loyer|floatformat:0 }} XOF</div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-3">
+                        <small class="text-muted">Loyers perçus</small>
+                        <div class="fw-bold">{{ propriete_detail.loyers_bruts|floatformat:0 }} XOF</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Charges déductibles</small>
+                        <div class="fw-bold">{{ propriete_detail.charges_deductibles|floatformat:0 }} XOF</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Charges bailleur</small>
+                        <div class="fw-bold">{{ propriete_detail.charges_bailleur|floatformat:0 }} XOF</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Montant net</small>
+                        <div class="fw-bold text-success">{{ propriete_detail.montant_net|floatformat:0 }} XOF</div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Fonction pour valider un récapitulatif
+function validerRecapitulatif(recapitulatifId) {
+    if (confirm('Êtes-vous sûr de vouloir valider ce récapitulatif ? Cette action ne peut pas être annulée.')) {
+        fetch(`/paiements/recapitulatifs/${recapitulatifId}/valider/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la validation');
+        });
+    }
+}
+
+// Fonction pour envoyer un récapitulatif
+function envoyerRecapitulatif(recapitulatifId) {
+    if (confirm('Êtes-vous sûr de vouloir marquer ce récapitulatif comme envoyé ?')) {
+        fetch(`/paiements/recapitulatifs/${recapitulatifId}/envoyer/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de l\'envoi');
+        });
+    }
+}
+
+// Fonction pour marquer un récapitulatif comme payé
+function marquerPayeRecapitulatif(recapitulatifId) {
+    if (confirm('Êtes-vous sûr de vouloir marquer ce récapitulatif comme payé ?')) {
+        fetch(`/paiements/recapitulatifs/${recapitulatifId}/marquer-paye/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors du marquage payé');
+        });
+    }
+}
+</script>
+
+<!-- Token CSRF pour les requêtes AJAX -->
+{% csrf_token %}
+{% endblock %}

@@ -15,19 +15,16 @@ from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.template.loader import render_to_string
-from django.conf import settings
 import json
 import os
 
-from .models import ConfigurationEntreprise, TemplateRecu
+from .models import ConfigurationEntreprise, TemplateRecu, Devise, AuditLog
 from paiements.models import Paiement
 from proprietes.models import Propriete, Locataire, Bailleur
 from contrats.models import Contrat
 from utilisateurs.models import Utilisateur
 from .forms import ConfigurationEntrepriseForm
-from core.models import Devise
-from core.utils import convertir_montant, check_group_permissions
-from core.models import AuditLog
+from .utils import convertir_montant, check_group_permissions
 from django.contrib.contenttypes.models import ContentType
 from .optimizations import (
     performance_monitor, 
@@ -190,12 +187,10 @@ def configuration_entreprise(request):
     """
     Vue pour configurer les informations de l'entreprise
     """
-    # Vérification des permissions : Seul PRIVILEGE peut modifier la configuration
+    # Vérification des permissions : Tous les utilisateurs connectés peuvent accéder
+    # mais seuls PRIVILEGE peuvent modifier
     from core.utils import check_group_permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'modify')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
-        return redirect('core:dashboard')
+    can_modify = check_group_permissions(request.user, ['PRIVILEGE'], 'modify')['allowed']
     
     # Récupérer ou créer la configuration active
     config = ConfigurationEntreprise.get_configuration_active()
@@ -212,18 +207,24 @@ def configuration_entreprise(request):
             numero_licence="123456789"
         )
     
-    if request.method == 'POST':
+    if request.method == 'POST' and can_modify:
         form = ConfigurationEntrepriseForm(request.POST, instance=config)
         if form.is_valid():
             form.save()
             messages.success(request, 'Configuration de l\'entreprise mise à jour avec succès.')
             return redirect('core:configuration_entreprise')
+        else:
+            messages.error(request, 'Erreur dans le formulaire. Veuillez vérifier les informations.')
+    elif request.method == 'POST' and not can_modify:
+        messages.warning(request, 'Vous n\'avez pas les permissions pour modifier la configuration. Contactez un administrateur.')
+        return redirect('core:configuration_entreprise')
     else:
         form = ConfigurationEntrepriseForm(instance=config)
     
     context = {
         'form': form,
         'config': config,
+        'can_modify': can_modify,
     }
     
     return render(request, 'core/configuration_entreprise.html', context)
@@ -305,9 +306,12 @@ def gestion_templates(request):
             AuditLog.objects.create(
                 content_type=ContentType.objects.get_for_model(TemplateRecu),
                 object_id=template.pk,
-                action='DELETE',
-                old_data=old_data,
-                new_data=None,
+                action='delete',
+                details={
+                    'old_data': old_data,
+                    'new_data': None
+                },
+                object_repr=str(template),
                 user=request.user,
                 ip_address=request.META.get('REMOTE_ADDR'),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')

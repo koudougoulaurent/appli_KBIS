@@ -8,10 +8,10 @@ class AuditLogAdmin(admin.ModelAdmin):
     """
     Administration des logs d'audit
     """
-    list_display = ['user', 'action', 'content_type', 'object_repr', 'timestamp', 'ip_address']
+    list_display = ['user', 'action', 'content_type', 'object_id', 'timestamp', 'ip_address']
     list_filter = ['action', 'content_type', 'timestamp', 'user']
-    search_fields = ['user__username', 'user__email', 'object_repr', 'details']
-    readonly_fields = ['user', 'action', 'content_type', 'object_id', 'object_repr', 'details', 'ip_address', 'user_agent', 'timestamp']
+    search_fields = ['user__username', 'user__email', 'description', 'action']
+    readonly_fields = ['user', 'action', 'content_type', 'object_id', 'ip_address', 'user_agent', 'timestamp', 'description']
     date_hierarchy = 'timestamp'
     ordering = ['-timestamp']
     

@@ -191,6 +191,16 @@ def ajouter_paiement(request):
             paiement = form.save(commit=False)
             paiement.save()
             
+            # Générer automatiquement un reçu si le paiement est validé
+            if paiement.statut == 'valide':
+                try:
+                    paiement.generer_recu_automatique(request.user)
+                    messages.success(request, 'Paiement ajouté et reçu généré automatiquement!')
+                except Exception as e:
+                    messages.warning(request, f'Paiement ajouté mais erreur lors de la génération du reçu: {str(e)}')
+            else:
+                messages.success(request, 'Paiement ajouté avec succès!')
+            
             # Log d'audit
             AuditLog.objects.create(
                 content_type=ContentType.objects.get_for_model(Paiement),
@@ -203,7 +213,6 @@ def ajouter_paiement(request):
                 user_agent=request.META.get('HTTP_USER_AGENT', '')
             )
             
-            messages.success(request, 'Paiement ajouté avec succès!')
             return redirect('paiements:paiement_detail', pk=paiement.pk)
     else:
         form = PaiementForm()
@@ -232,7 +241,19 @@ def modifier_paiement(request, pk):
     if request.method == 'POST':
         form = PaiementForm(request.POST, instance=paiement)
         if form.is_valid():
+            # Sauvegarder l'ancien statut pour vérifier les changements
+            ancien_statut = paiement.statut
             form.save()
+            
+            # Générer automatiquement un reçu si le statut passe à "valide"
+            if ancien_statut != 'valide' and paiement.statut == 'valide':
+                try:
+                    paiement.generer_recu_automatique(request.user)
+                    messages.success(request, 'Paiement modifié et reçu généré automatiquement!')
+                except Exception as e:
+                    messages.warning(request, f'Paiement modifié mais erreur lors de la génération du reçu: {str(e)}')
+            else:
+                messages.success(request, 'Paiement modifié avec succès!')
             
             # Log d'audit
             new_data = {f.name: getattr(paiement, f.name) for f in paiement._meta.fields}
@@ -247,7 +268,6 @@ def modifier_paiement(request, pk):
                 user_agent=request.META.get('HTTP_USER_AGENT', '')
             )
             
-            messages.success(request, 'Paiement modifié avec succès!')
             return redirect('paiements:paiement_detail', pk=pk)
     else:
         form = PaiementForm(instance=paiement)

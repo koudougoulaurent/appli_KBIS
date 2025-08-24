@@ -1,8 +1,32 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
-from .models import Propriete, Bailleur, Locataire, TypeBien, ChargesBailleur, Photo, Document
+from .models import Propriete, Bailleur, Locataire, TypeBien, ChargesBailleur, Photo, Document, Piece, PieceContrat
 from core.widgets import UniqueIdField, ReadOnlyUniqueIdWidget
+from django.core.validators import RegexValidator
+import re
+
+# Validation personnalisée pour les numéros de téléphone français
+phone_regex_fr = RegexValidator(
+    regex=r'^(\+33|0)?[1-9](\d{1,2}\s?){3,4}\d{1,2}$',
+    message="Le numéro de téléphone doit être au format français valide (ex: 01 23 45 67 89 ou 06 12 34 56 78)"
+)
+
+def validate_phone_french(value):
+    """Validation personnalisée pour les numéros de téléphone français"""
+    if not value:
+        return
+    
+    # Nettoyer le numéro (supprimer espaces, tirets, points)
+    clean_number = re.sub(r'[\s\-\.]', '', value)
+    
+    # Vérifier la longueur minimale (8 chiffres pour les numéros français)
+    if len(clean_number) < 8:
+        raise ValidationError("Le numéro de téléphone doit contenir au moins 8 chiffres.")
+    
+    # Vérifier le format français
+    if not re.match(r'^(\+33|0)?[1-9](\d{1,2}){3,4}$', clean_number):
+        raise ValidationError("Format de numéro de téléphone invalide pour la France.")
 
 
 class ProprieteForm(forms.ModelForm):
@@ -545,6 +569,16 @@ class ChargesBailleurDeductionForm(forms.Form):
 class BailleurForm(forms.ModelForm):
     """Formulaire pour l'ajout et la modification de bailleurs avec gestion documentaire intégrée."""
     
+    # Validation personnalisée pour le téléphone
+    telephone = forms.CharField(
+        max_length=20,
+        validators=[validate_phone_french],
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': '01 23 45 67 89'
+        })
+    )
+    
     # Champs pour les documents requis
     piece_identite = forms.FileField(
         required=True,
@@ -627,10 +661,6 @@ class BailleurForm(forms.ModelForm):
             'email': forms.EmailInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'jean.dupont@email.com'
-            }),
-            'telephone': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': '01 23 45 67 89'
             }),
             'telephone_mobile': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -740,8 +770,8 @@ class BailleurForm(forms.ModelForm):
         if telephone:
             # Suppression des espaces et caractères spéciaux
             tel_clean = ''.join(filter(str.isdigit, telephone))
-            if len(tel_clean) < 10:
-                raise ValidationError(_('Le numéro de téléphone doit contenir au moins 10 chiffres.'))
+            if len(tel_clean) < 8:
+                raise ValidationError(_('Le numéro de téléphone doit contenir au moins 8 chiffres.'))
         return telephone
 
 
@@ -903,8 +933,8 @@ class LocataireForm(forms.ModelForm):
         if telephone:
             # Suppression des espaces et caractères spéciaux
             tel_clean = ''.join(filter(str.isdigit, telephone))
-            if len(tel_clean) < 10:
-                raise ValidationError(_('Le numéro de téléphone doit contenir au moins 10 chiffres.'))
+            if len(tel_clean) < 8:
+                raise ValidationError(_('Le numéro de téléphone doit contenir au moins 8 chiffres.'))
         return telephone
 
     def clean_revenus_mensuels(self):
@@ -1212,6 +1242,289 @@ class DocumentSearchForm(forms.Form):
             'type': 'date'
         })
     )
+
+
+class PieceSelectionForm(forms.Form):
+    """Formulaire pour la sélection des pièces dans un contrat."""
+    
+    pieces = forms.ModelMultipleChoiceField(
+        queryset=Piece.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+        label=_("Pièces à louer"),
+        help_text=_("Sélectionnez les pièces que vous souhaitez louer")
+    )
+    
+    def __init__(self, propriete_id=None, date_debut=None, date_fin=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        if propriete_id:
+            # Filtrer les pièces disponibles pour cette propriété
+            from .services import GestionPiecesService
+            
+            if date_debut and date_fin:
+                pieces_disponibles = GestionPiecesService.get_pieces_disponibles(
+                    propriete_id, date_debut, date_fin
+                )
+            else:
+                pieces_disponibles = GestionPiecesService.get_pieces_disponibles(propriete_id)
+            
+            self.fields['pieces'].queryset = pieces_disponibles
+            self.fields['pieces'].label = f"Pièces disponibles ({pieces_disponibles.count()})"
+    
+    def clean_pieces(self):
+        """Validation personnalisée pour les pièces sélectionnées."""
+        pieces = self.cleaned_data.get('pieces')
+        
+        if not pieces:
+            raise forms.ValidationError(_("Vous devez sélectionner au moins une pièce."))
+        
+        return pieces
+
+
+class PieceContratForm(forms.ModelForm):
+    """Formulaire pour la gestion des pièces dans un contrat."""
+    
+    class Meta:
+        model = PieceContrat
+        fields = ['piece', 'loyer_piece', 'charges_piece', 'date_debut_occupation', 'date_fin_occupation']
+        widgets = {
+            'piece': forms.Select(attrs={'class': 'form-select'}),
+            'loyer_piece': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'charges_piece': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'date_debut_occupation': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'date_fin_occupation': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        }
+    
+    def __init__(self, contrat=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        if contrat:
+            # Filtrer les pièces disponibles pour ce contrat
+            from .services import GestionPiecesService
+            
+            pieces_disponibles = GestionPiecesService.get_pieces_disponibles(
+                contrat.propriete.id,
+                contrat.date_debut,
+                contrat.date_fin
+            )
+            
+            # Ajouter les pièces déjà assignées à ce contrat
+            pieces_assignees = contrat.pieces.all()
+            pieces_disponibles = pieces_disponibles | pieces_assignees
+            
+            self.fields['piece'].queryset = pieces_disponibles
+            self.fields['piece'].label = f"Pièce ({pieces_disponibles.count()} disponibles)"
+    
+    def clean(self):
+        """Validation personnalisée pour éviter les conflits."""
+        cleaned_data = super().clean()
+        
+        piece = cleaned_data.get('piece')
+        date_debut = cleaned_data.get('date_debut_occupation')
+        date_fin = cleaned_data.get('date_fin_occupation')
+        
+        if piece and date_debut and date_fin:
+            # Vérifier que la pièce est disponible pour cette période
+            if not piece.est_disponible(date_debut, date_fin):
+                raise forms.ValidationError(
+                    _("La pièce '{piece}' n'est pas disponible pour la période du {debut} au {fin}.").format(
+                        piece=piece.nom,
+                        debut=date_debut,
+                        fin=date_fin
+                    )
+                )
+        
+        return cleaned_data
+
+
+class ContratPiecesForm(forms.Form):
+    """Formulaire principal pour la création/modification d'un contrat avec pièces."""
+    
+    # Informations du contrat
+    numero_contrat = forms.CharField(
+        max_length=50,
+        label=_("Numéro de contrat"),
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    
+    propriete = forms.ModelChoiceField(
+        queryset=Propriete.objects.filter(is_deleted=False),
+        label=_("Propriété"),
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    locataire = forms.ModelChoiceField(
+        queryset=Locataire.objects.filter(is_deleted=False),
+        label=_("Locataire"),
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    # Dates
+    date_debut = forms.DateField(
+        label=_("Date de début"),
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
+    
+    date_fin = forms.DateField(
+        label=_("Date de fin"),
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
+    
+    date_signature = forms.DateField(
+        label=_("Date de signature"),
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
+    
+    # Informations financières
+    loyer_mensuel = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        label=_("Loyer mensuel"),
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+    )
+    
+    charges_mensuelles = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        label=_("Charges mensuelles"),
+        required=False,
+        initial=0,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+    )
+    
+    # Sélection des pièces
+    pieces = forms.ModelMultipleChoiceField(
+        queryset=Piece.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+        label=_("Pièces à louer"),
+        help_text=_("Sélectionnez les pièces que vous souhaitez louer")
+    )
+    
+    # Informations supplémentaires
+    depot_garantie = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        label=_("Dépôt de garantie"),
+        required=False,
+        initial=0,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+    )
+    
+    avance_loyer = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        label=_("Avance de loyer"),
+        required=False,
+        initial=0,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+    )
+    
+    jour_paiement = forms.IntegerField(
+        min_value=1,
+        max_value=31,
+        label=_("Jour de paiement"),
+        initial=1,
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
+    
+    mode_paiement = forms.ChoiceField(
+        choices=[
+            ('virement', 'Virement bancaire'),
+            ('cheque', 'Chèque'),
+            ('especes', 'Espèces'),
+            ('prelevement', 'Prélèvement automatique'),
+        ],
+        label=_("Mode de paiement"),
+        initial='virement',
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    def __init__(self, contrat=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        if contrat:
+            # Pré-remplir les champs avec les données du contrat existant
+            self.fields['numero_contrat'].initial = contrat.numero_contrat
+            self.fields['propriete'].initial = contrat.propriete
+            self.fields['locataire'].initial = contrat.locataire
+            self.fields['date_debut'].initial = contrat.date_debut
+            self.fields['date_fin'].initial = contrat.date_fin
+            self.fields['date_signature'].initial = contrat.date_signature
+            self.fields['loyer_mensuel'].initial = contrat.loyer_mensuel
+            self.fields['charges_mensuelles'].initial = contrat.charges_mensuelles
+            self.fields['depot_garantie'].initial = contrat.depot_garantie
+            self.fields['avance_loyer'].initial = contrat.avance_loyer
+            self.fields['jour_paiement'].initial = contrat.jour_paiement
+            self.fields['mode_paiement'].initial = contrat.mode_paiement
+            
+            # Pré-sélectionner les pièces déjà assignées
+            self.fields['pieces'].initial = contrat.pieces.all()
+        
+        # Mettre à jour le queryset des pièces si une propriété est sélectionnée
+        if 'propriete' in self.data:
+            try:
+                propriete_id = int(self.data.get('propriete'))
+                self.fields['pieces'].queryset = Piece.objects.filter(
+                    propriete_id=propriete_id,
+                    is_deleted=False
+                )
+            except (ValueError, TypeError):
+                pass
+        elif self.initial.get('propriete'):
+            propriete_id = self.initial['propriete'].id
+            self.fields['pieces'].queryset = Piece.objects.filter(
+                propriete_id=propriete_id,
+                is_deleted=False
+            )
+    
+    def clean(self):
+        """Validation personnalisée pour éviter les conflits de pièces."""
+        cleaned_data = super().clean()
+        
+        propriete = cleaned_data.get('propriete')
+        pieces = cleaned_data.get('pieces')
+        date_debut = cleaned_data.get('date_debut')
+        date_fin = cleaned_data.get('date_fin')
+        
+        if propriete and pieces and date_debut and date_fin:
+            # Vérifier la disponibilité des pièces
+            from .services import ValidationContratService
+            
+            disponible, conflits = ValidationContratService.verifier_disponibilite_pieces(
+                propriete_id=propriete.id,
+                pieces_ids=[p.id for p in pieces],
+                date_debut=date_debut,
+                date_fin=date_fin,
+                contrat_existant=getattr(self, 'contrat', None)
+            )
+            
+            if not disponible:
+                erreurs = []
+                for conflit in conflits:
+                    if conflit['type'] == 'conflit_dates':
+                        erreurs.append(
+                            _("Conflit pour la pièce '{piece}': {raison} "
+                              "(Contrat {contrat} - {locataire} du {periode})").format(
+                                piece=conflit['piece'],
+                                raison=conflit['raison'],
+                                contrat=conflit['contrat_existant'],
+                                locataire=conflit['locataire_existant'],
+                                periode=conflit['periode']
+                            )
+                        )
+                    else:
+                        erreurs.append(
+                            _("Conflit pour la pièce '{piece}': {raison}").format(
+                                piece=conflit['piece'],
+                                raison=conflit['raison']
+                            )
+                        )
+                
+                if erreurs:
+                    raise forms.ValidationError(erreurs)
+        
+        return cleaned_data 
 
 
  
