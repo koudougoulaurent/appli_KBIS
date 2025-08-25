@@ -267,7 +267,12 @@ def ajouter_contrat(request):
                     )
                 return redirect('contrats:detail', pk=contrat.pk)
         else:
-            messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
+            # Afficher les erreurs détaillées
+            error_summary = form.get_errors_summary()
+            if error_summary:
+                messages.error(request, f'Veuillez corriger les erreurs suivantes :\n{error_summary}')
+            else:
+                messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
     else:
         form = ContratForm()
     
@@ -275,7 +280,8 @@ def ajouter_contrat(request):
         'form': form,
         'title': 'Ajouter un contrat',
         'proprietes': Propriete.objects.filter(disponible=True),
-        'locataires': Locataire.objects.all()
+        'locataires': Locataire.objects.all(),
+        'proprietes_data': form.proprietes_data
     }
     return render(request, 'contrats/contrat_form.html', context)
 
@@ -380,7 +386,12 @@ def modifier_contrat(request, pk):
                     messages.success(request, f'Contrat "{contrat.numero_contrat}" modifié avec succès!')
                 return redirect('contrats:detail', pk=pk)
         else:
-            messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
+            # Afficher les erreurs détaillées
+            error_summary = form.get_errors_summary()
+            if error_summary:
+                messages.error(request, f'Veuillez corriger les erreurs suivantes :\n{error_summary}')
+            else:
+                messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
     else:
         form = ContratForm(instance=contrat)
     
@@ -389,7 +400,8 @@ def modifier_contrat(request, pk):
         'title': f'Modifier le contrat {contrat.numero_contrat}',
         'contrat': contrat,
         'proprietes': Propriete.objects.filter(disponible=True),
-        'locataires': Locataire.objects.all()
+        'locataires': Locataire.objects.all(),
+        'proprietes_data': form.proprietes_data
     }
     return render(request, 'contrats/contrat_form.html', context)
 
@@ -2124,3 +2136,82 @@ def contrats_dashboard(request):
     }
     
     return render(request, 'contrats/dashboard.html', context)
+
+
+@login_required
+def gestion_cautions(request):
+    """
+    Vue principale pour la gestion des cautions
+    """
+    # Vérification des permissions : PRIVILEGE et ADMINISTRATION peuvent gérer les cautions
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('contrats:liste')
+    
+    # Récupérer les contrats avec leurs cautions
+    contrats_avec_cautions = Contrat.objects.filter(
+        depot_garantie__isnull=False
+    ).exclude(
+        depot_garantie__exact=''
+    ).exclude(
+        depot_garantie__exact='0.00'
+    ).select_related('propriete', 'locataire')
+    
+    # Statistiques des cautions
+    total_cautions = sum(float(contrat.depot_garantie) for contrat in contrats_avec_cautions if contrat.depot_garantie)
+    cautions_payees = 0
+    cautions_en_attente = 0
+    cautions_remboursees = 0
+    
+    # Récupérer les paiements de caution
+    from paiements.models import Paiement
+    paiements_caution = Paiement.objects.filter(
+        type_paiement='caution'
+    ).select_related('contrat', 'contrat__propriete', 'contrat__locataire')
+    
+    # Calculer les statistiques
+    for contrat in contrats_avec_cautions:
+        montant_caution = float(contrat.depot_garantie) if contrat.depot_garantie else 0
+        paiements_contrat = paiements_caution.filter(contrat=contrat)
+        
+        if paiements_contrat.exists():
+            montant_paye = sum(float(p.montant) for p in paiements_contrat)
+            if montant_paye >= montant_caution:
+                cautions_payees += montant_caution
+            else:
+                cautions_en_attente += montant_caution
+        else:
+            cautions_en_attente += montant_caution
+    
+    # Récupérer les remboursements de caution
+    remboursements_caution = Paiement.objects.filter(
+        type_paiement='remboursement_caution'
+    ).select_related('contrat', 'contrat__propriete', 'contrat__locataire')
+    
+    cautions_remboursees = sum(float(r.montant) for r in remboursements_caution)
+    
+    # Calculer le pourcentage de paiement
+    pourcentage_paiement = 0
+    if total_cautions > 0:
+        pourcentage_paiement = (cautions_payees / total_cautions) * 100
+    
+    context = {
+        'title': 'Gestion des Cautions',
+        'contrats_avec_cautions': contrats_avec_cautions,
+        'paiements_caution': paiements_caution,
+        'remboursements_caution': remboursements_caution,
+        'statistiques': {
+            'total_cautions': total_cautions,
+            'cautions_payees': cautions_payees,
+            'cautions_en_attente': cautions_en_attente,
+            'cautions_remboursees': cautions_remboursees,
+            'nombre_contrats': contrats_avec_cautions.count(),
+            'nombre_paiements': paiements_caution.count(),
+            'nombre_remboursements': remboursements_caution.count(),
+            'pourcentage_paiement': pourcentage_paiement,
+        }
+    }
+    
+    return render(request, 'contrats/gestion_cautions.html', context)

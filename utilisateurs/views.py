@@ -387,13 +387,23 @@ def ajouter_utilisateur(request):
         return redirect('utilisateurs:liste_utilisateurs')
     
     if request.method == 'POST':
-        form = UtilisateurForm(request.POST, request.FILES)
+        # Créer une copie des données POST pour inclure country_code
+        post_data = request.POST.copy()
+        
+        # Si country_code est dans request.POST, l'ajouter explicitement
+        if 'country_code' in request.POST:
+            post_data['country_code'] = request.POST['country_code']
+        
+        form = UtilisateurForm(post_data, request.FILES)
         if form.is_valid():
             utilisateur = form.save(commit=False)
             utilisateur.set_password(form.cleaned_data['password'])
             utilisateur.save()
             messages.success(request, f"Utilisateur {utilisateur.username} créé avec succès.")
             return redirect('utilisateurs:detail_utilisateur', pk=utilisateur.pk)
+        else:
+            print(f"DEBUG - Erreurs de validation du formulaire:")
+            print(f"  {form.errors}")
     else:
         form = UtilisateurForm()
     

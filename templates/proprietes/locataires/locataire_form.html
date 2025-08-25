@@ -1,92 +1,84 @@
-{% extends 'base_dashboard.html' %}
-{% load crispy_forms_tags %}
+{% extends 'base.html' %}
 {% load static %}
 
-{% block title %}
-    {% if form.instance.pk %}
-        Modifier le locataire - {{ form.instance.nom }} {{ form.instance.prenom }}
-    {% else %}
-        Ajouter un nouveau locataire
-    {% endif %}
-{% endblock %}
+{% block title %}Ajouter un nouveau locataire{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/phone_input_widget.css' %}">
-<link rel="stylesheet" href="{% static 'css/form_validation.css' %}">
 <style>
-    .document-section {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border: 2px dashed #28a745;
-        border-radius: 15px;
-        padding: 25px;
-        margin: 20px 0;
-        transition: all 0.3s ease;
-    }
-    .document-section:hover {
-        border-color: #1e7e34;
-        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.1);
-    }
-    .document-section h4 {
-        color: #28a745;
-        font-weight: 600;
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    .document-required {
-        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-        border-color: #ffc107;
-    }
-    .document-optional {
-        background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
-        border-color: #17a2b8;
-    }
-    .file-input-wrapper {
-        position: relative;
-        margin-bottom: 15px;
-    }
-    .file-input-wrapper input[type="file"] {
-        border: 2px solid #dee2e6;
-        border-radius: 8px;
-        padding: 10px;
-        transition: border-color 0.3s ease;
-    }
-    .file-input-wrapper input[type="file"]:focus {
-        border-color: #28a745;
-        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
-    }
     .form-section {
-        background: white;
-        border-radius: 15px;
+        background: #f8f9fa;
+        border-radius: 10px;
         padding: 25px;
-        margin-bottom: 25px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
+        border: 1px solid #e9ecef;
     }
+    
     .form-section h3 {
-        color: #495057;
-        font-weight: 600;
-        margin-bottom: 20px;
-        border-bottom: 2px solid #e9ecef;
+        color: #2c3e50;
+        border-bottom: 2px solid #3498db;
         padding-bottom: 10px;
+        margin-bottom: 25px;
     }
-    .btn-custom {
-        border-radius: 25px;
-        padding: 12px 30px;
+    
+    .required-field::after {
+        content: " *";
+        color: #e74c3c;
+        font-weight: bold;
+    }
+    
+    .btn-submit {
+        background: linear-gradient(135deg, #27ae60, #2ecc71);
+        border: none;
+        color: white;
+        padding: 15px 40px;
+        font-size: 18px;
+        font-weight: bold;
+        border-radius: 50px;
+        box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
+        background: linear-gradient(135deg, #229954, #27ae60);
+    }
+    
+    .btn-submit:active {
+        transform: translateY(0);
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-label {
         font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 1px;
+        color: #2c3e50;
+        margin-bottom: 8px;
+    }
+    
+    .form-control, .form-select {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 12px 15px;
         transition: all 0.3s ease;
     }
-    .btn-custom:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #3498db;
+        box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
     }
-    .alert-success {
-        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    
+    .alert-info {
+        background: linear-gradient(135deg, #3498db, #5dade2);
         border: none;
-        border-radius: 15px;
-        color: #155724;
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 25px;
     }
 </style>
 {% endblock %}
@@ -95,217 +87,552 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <!-- En-tête -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h2 class="mb-0">
-                        <i class="bi bi-person-check-fill me-2"></i>
-                        {% if form.instance.pk %}
-                            Modifier le locataire
-                        {% else %}
-                            Nouveau locataire
-                        {% endif %}
-                    </h2>
-                    <p class="text-muted mb-0">Gestion documentaire intégrée - Dossier locataire complet</p>
+                    <h1 class="h2 mb-0">
+                        <i class="bi bi-person-plus text-primary"></i>
+                        Ajouter un nouveau locataire
+                    </h1>
+                    <p class="text-muted">Remplissez le formulaire ci-dessous pour créer un nouveau locataire</p>
                 </div>
-                <a href="{% url 'proprietes:locataires_liste' %}" class="btn btn-outline-secondary btn-custom">
-                    <i class="bi bi-arrow-left me-2"></i>Retour à la liste
-                </a>
+                <div>
+                    <a href="{% url 'proprietes:locataires_liste' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Retour à la liste
+                    </a>
+                </div>
             </div>
 
-            <!-- Alerte d'information -->
-            <div class="alert alert-success" role="alert">
-                <i class="bi bi-shield-check me-2"></i>
-                <strong>Dossier locataire sécurisé :</strong> 
-                Tous les documents personnels seront automatiquement stockés de manière confidentielle. 
-                Seuls les utilisateurs autorisés pourront y accéder.
+            <!-- Alerte informative -->
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Information :</strong> Tous les champs marqués d'un astérisque (*) sont obligatoires. 
+                Les revenus du locataire et du garant sont optionnels. Si les revenus du garant sont renseignés, ils doivent être d'au moins 3 fois ceux du locataire.
             </div>
 
-            <!-- Formulaire -->
-            <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate id="locataire-form">
+            <!-- Debug des erreurs de validation -->
+            {% if form.errors %}
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Erreurs de validation détectées :</strong>
+                <ul class="mb-0 mt-2">
+                    {% for field, errors in form.errors.items %}
+                        {% if field != '__all__' %}
+                            <li><strong>{{ field }}:</strong> 
+                                {% for error in errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                        <li><strong>Erreur générale:</strong> {{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- Debug des données reçues -->
+            {% if request.method == 'POST' %}
+            <div class="alert alert-warning">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Debug - Données reçues :</strong>
+                <ul class="mb-0 mt-2">
+                    <li><strong>Méthode:</strong> {{ request.method }}</li>
+                    <li><strong>Fichiers reçus:</strong> {{ request.FILES|length }}</li>
+                    <li><strong>Données POST:</strong> {{ request.POST|length }} champs</li>
+                    <li><strong>Formulaire valide:</strong> {{ form.is_valid }}</li>
+                    {% if form.errors %}
+                        <li><strong>Nombre d'erreurs:</strong> {{ form.errors|length }}</li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <form method="POST" enctype="multipart/form-data" id="locataire-form">
                 {% csrf_token %}
                 
-                <!-- Indicateur de progression de validation -->
-                <div class="form-progress mb-4">
-                    <div class="form-progress-bar" style="width: 0%"></div>
-                </div>
-
-                <!-- Section 1: Informations personnelles -->
+                <!-- Section 1: Informations personnelles du locataire -->
                 <div class="form-section">
-                    <h3><i class="bi bi-person me-2"></i>Informations personnelles</h3>
+                    <h3><i class="bi bi-person me-2"></i>Informations personnelles du locataire</h3>
                     <div class="row">
                         <div class="col-md-6">
-                            {{ form.numero_locataire|as_crispy_field }}
+                            <div class="form-group">
+                                <label for="{{ form.numero_locataire.id_for_label }}" class="form-label">
+                                    {{ form.numero_locataire.label }}
+                                </label>
+                                {{ form.numero_locataire }}
+                                {% if form.numero_locataire.help_text %}
+                                    <div class="form-text">{{ form.numero_locataire.help_text }}</div>
+                                {% endif %}
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            {{ form.civilite|as_crispy_field }}
+                            <div class="form-group">
+                                <label for="{{ form.civilite.id_for_label }}" class="form-label required-field">
+                                    {{ form.civilite.label }}
+                                </label>
+                                {{ form.civilite }}
+                                {% if form.civilite.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.civilite.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="{{ form.nom.id_for_label }}" class="form-label">
-                                    {{ form.nom.label }} <span class="text-danger">*</span>
+                                <label for="{{ form.nom.id_for_label }}" class="form-label required-field">
+                                    {{ form.nom.label }}
                                 </label>
                                 {{ form.nom }}
                                 {% if form.nom.errors %}
-                                    <div class="invalid-feedback d-block">
+                                    <div class="text-danger">
                                         {% for error in form.nom.errors %}
                                             <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
                                         {% endfor %}
                                     </div>
                                 {% endif %}
-                                {% if form.nom.help_text %}
-                                    <div class="form-text">{{ form.nom.help_text }}</div>
-                                {% endif %}
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="{{ form.prenom.id_for_label }}" class="form-label">
-                                    {{ form.prenom.label }} <span class="text-danger">*</span>
+                                <label for="{{ form.prenom.id_for_label }}" class="form-label required-field">
+                                    {{ form.prenom.label }}
                                 </label>
                                 {{ form.prenom }}
                                 {% if form.prenom.errors %}
-                                    <div class="invalid-feedback d-block">
+                                    <div class="text-danger">
                                         {% for error in form.prenom.errors %}
                                             <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
                                         {% endfor %}
                                     </div>
                                 {% endif %}
-                                {% if form.prenom.help_text %}
-                                    <div class="form-text">{{ form.prenom.help_text }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.date_naissance.id_for_label }}" class="form-label">
+                                    {{ form.date_naissance.label }}
+                                </label>
+                                {{ form.date_naissance }}
+                                {% if form.date_naissance.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.date_naissance.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.statut.id_for_label }}" class="form-label required-field">
+                                    {{ form.statut.label }}
+                                </label>
+                                {{ form.statut }}
+                                {% if form.statut.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.statut.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Contact du locataire -->
+                <div class="form-section">
+                    <h3><i class="bi bi-telephone me-2"></i>Contact du locataire</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.telephone.id_for_label }}" class="form-label required-field">
+                                    {{ form.telephone.label }}
+                                </label>
+                                {{ form.telephone }}
+                                {% if form.telephone.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.telephone.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.telephone_mobile.id_for_label }}" class="form-label">
+                                    {{ form.telephone_mobile.label }}
+                                </label>
+                                {{ form.telephone_mobile }}
+                                {% if form.telephone_mobile.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.telephone_mobile.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
                                 {% endif %}
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
-                            {{ form.date_naissance|as_crispy_field }}
+                            <div class="form-group">
+                                <label for="{{ form.email.id_for_label }}" class="form-label">
+                                    {{ form.email.label }}
+                                </label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.email.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            {{ form.email|as_crispy_field }}
+                            <div class="form-group">
+                                <label for="{{ form.revenus_mensuels.id_for_label }}" class="form-label">
+                                    {{ form.revenus_mensuels.label }}
+                                </label>
+                                {{ form.revenus_mensuels }}
+                                {% if form.revenus_mensuels.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.revenus_mensuels.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Section 2: Contact -->
+                <!-- Section 3: Informations du garant -->
                 <div class="form-section">
-                    <h3><i class="bi bi-telephone me-2"></i>Informations de contact</h3>
+                    <h3><i class="bi bi-shield-check me-2"></i>Informations du garant</h3>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Information :</strong> Les champs email, profession, employeur et revenus du garant sont optionnels. Si les revenus sont renseignés, ils doivent être d'au moins 3 fois ceux du locataire pour une garantie solide.
+                    </div>
                     <div class="row">
                         <div class="col-md-6">
-                            {% include 'includes/phone_input_widget.html' with field=form.telephone %}
+                            <div class="form-group">
+                                <label for="{{ form.garant_civilite.id_for_label }}" class="form-label required-field">
+                                    {{ form.garant_civilite.label }}
+                                </label>
+                                {{ form.garant_civilite }}
+                                {% if form.garant_civilite.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.garant_civilite.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            {% include 'includes/phone_input_widget.html' with field=form.telephone_mobile %}
+                            <div class="form-group">
+                                <label for="{{ form.garant_nom.id_for_label }}" class="form-label required-field">
+                                    {{ form.garant_nom.label }}
+                                </label>
+                                {{ form.garant_nom }}
+                                {% if form.garant_nom.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.garant_nom.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
-                    
-                    <!-- Affichage des erreurs de validation -->
-                    {% if form.non_field_errors %}
-                        <div class="alert alert-danger mt-3" role="alert">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
-                            <strong>Erreurs de validation :</strong>
-                            <ul class="mb-0 mt-2">
-                                {% for error in form.non_field_errors %}
-                                    <li>{{ error }}</li>
-                                {% endfor %}
-                            </ul>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.garant_prenom.id_for_label }}" class="form-label required-field">
+                                    {{ form.garant_prenom.label }}
+                                </label>
+                                {{ form.garant_prenom }}
+                                {% if form.garant_prenom.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.garant_prenom.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
-                    {% endif %}
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.garant_telephone.id_for_label }}" class="form-label required-field">
+                                    {{ form.garant_telephone.label }}
+                                </label>
+                                {{ form.garant_telephone }}
+                                {% if form.garant_telephone.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.garant_telephone.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.garant_email.id_for_label }}" class="form-label">
+                                    {{ form.garant_email.label }}
+                                </label>
+                                {{ form.garant_email }}
+                                {% if form.garant_email.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.garant_email.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.garant_revenus_mensuels.id_for_label }}" class="form-label">
+                                    {{ form.garant_revenus_mensuels.label }}
+                                </label>
+                                {{ form.garant_revenus_mensuels }}
+                                {% if form.garant_revenus_mensuels.help_text %}
+                                    <div class="form-text">{{ form.garant_revenus_mensuels.help_text }}</div>
+                                {% endif %}
+                                {% if form.garant_revenus_mensuels.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.garant_revenus_mensuels.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.garant_profession.id_for_label }}" class="form-label">
+                                    {{ form.garant_profession.label }}
+                                </label>
+                                {{ form.garant_profession }}
+                                {% if form.garant_profession.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.garant_profession.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.garant_employeur.id_for_label }}" class="form-label">
+                                    {{ form.garant_employeur.label }}
+                                </label>
+                                {{ form.garant_employeur }}
+                                {% if form.garant_employeur.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.garant_employeur.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
                     <div class="row">
                         <div class="col-12">
-                            {{ form.adresse|as_crispy_field }}
+                            <div class="form-group">
+                                <label for="{{ form.garant_adresse.id_for_label }}" class="form-label required-field">
+                                    {{ form.garant_adresse.label }}
+                                </label>
+                                {{ form.garant_adresse }}
+                                {% if form.garant_adresse.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.garant_adresse.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-4">
-                            {{ form.code_postal|as_crispy_field }}
+                            <div class="form-group">
+                                <label for="{{ form.garant_code_postal.id_for_label }}" class="form-label required-field">
+                                    {{ form.garant_code_postal.label }}
+                                </label>
+                                {{ form.garant_code_postal }}
+                                {% if form.garant_code_postal.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.garant_code_postal.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
                         <div class="col-md-4">
-                            {{ form.ville|as_crispy_field }}
+                            <div class="form-group">
+                                <label class="form-label required-field">
+                                    {{ form.garant_ville.label }}
+                                </label>
+                                {{ form.garant_ville }}
+                                {% if form.garant_ville.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.garant_ville.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
                         <div class="col-md-4">
-                            {{ form.pays|as_crispy_field }}
+                            <div class="form-group">
+                                <label for="{{ form.garant_pays.id_for_label }}" class="form-label required-field">
+                                    {{ form.garant_pays.label }}
+                                </label>
+                                {{ form.garant_pays }}
+                                {% if form.garant_pays.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.garant_pays.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <!-- Section 3: Informations professionnelles -->
-                <div class="form-section">
-                    <h3><i class="bi bi-briefcase me-2"></i>Informations professionnelles</h3>
                     <div class="row">
                         <div class="col-md-6">
-                            {{ form.profession|as_crispy_field }}
-                        </div>
-                        <div class="col-md-6">
-                            {{ form.employeur|as_crispy_field }}
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            {{ form.revenus_mensuels|as_crispy_field }}
-                        </div>
-                        <div class="col-md-6">
-                            {{ form.statut|as_crispy_field }}
+                            <div class="form-group">
+                                <label for="{{ form.garant_piece_identite.id_for_label }}" class="form-label">
+                                    {{ form.garant_piece_identite.label }}
+                                </label>
+                                {{ form.garant_piece_identite }}
+                                {% if form.garant_piece_identite.help_text %}
+                                    <div class="form-text">{{ form.garant_piece_identite.help_text }}</div>
+                                {% endif %}
+                                {% if form.garant_piece_identite.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.garant_piece_identite.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Section 4: Documents requis -->
-                <div class="document-section document-required">
-                    <h4><i class="bi bi-file-earmark-check"></i>Documents obligatoires</h4>
+                <div class="form-section">
+                    <h3><i class="bi bi-file-earmark-text me-2"></i>Documents requis</h3>
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="file-input-wrapper">
-                                {{ form.piece_identite|as_crispy_field }}
+                            <div class="form-group">
+                                <label for="{{ form.piece_identite.id_for_label }}" class="form-label required-field">
+                                    {{ form.piece_identite.label }}
+                                </label>
+                                {{ form.piece_identite }}
+                                {% if form.piece_identite.help_text %}
+                                    <div class="form-text">{{ form.piece_identite.help_text }}</div>
+                                {% endif %}
+                                {% if form.piece_identite.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.piece_identite.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="file-input-wrapper">
-                                {{ form.justificatif_domicile|as_crispy_field }}
+                            <div class="form-group">
+                                <label for="{{ form.justificatif_domicile.id_for_label }}" class="form-label required-field">
+                                    {{ form.justificatif_domicile.label }}
+                                </label>
+                                {{ form.justificatif_domicile }}
+                                {% if form.justificatif_domicile.help_text %}
+                                    <div class="form-text">{{ form.justificatif_domicile.help_text }}</div>
+                                {% endif %}
+                                {% if form.justificatif_domicile.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.justificatif_domicile.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="file-input-wrapper">
-                                {{ form.justificatifs_revenus|as_crispy_field }}
+                            <div class="form-group">
+                                <label for="{{ form.justificatifs_revenus.id_for_label }}" class="form-label required-field">
+                                    {{ form.justificatifs_revenus.label }}
+                                </label>
+                                {{ form.justificatifs_revenus }}
+                                {% if form.justificatifs_revenus.help_text %}
+                                    <div class="form-text">{{ form.justificatifs_revenus.help_text }}</div>
+                                {% endif %}
+                                {% if form.justificatifs_revenus.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.justificatifs_revenus.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="file-input-wrapper">
-                                {{ form.avis_imposition|as_crispy_field }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Section 5: Documents optionnels -->
-                <div class="document-section document-optional">
-                    <h4><i class="bi bi-file-earmark-plus"></i>Documents optionnels</h4>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="file-input-wrapper">
-                                {{ form.garant_caution|as_crispy_field }}
+                            <div class="form-group">
+                                <label for="{{ form.avis_imposition.id_for_label }}" class="form-label required-field">
+                                    {{ form.avis_imposition.label }}
+                                </label>
+                                {{ form.avis_imposition }}
+                                {% if form.avis_imposition.help_text %}
+                                    <div class="form-text">{{ form.avis_imposition.help_text }}</div>
+                                {% endif %}
+                                {% if form.avis_imposition.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.avis_imposition.errors %}
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Boutons d'action -->
-                <div class="d-flex justify-content-between">
-                    <a href="{% url 'proprietes:locataires_liste' %}" class="btn btn-outline-secondary btn-custom">
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <a href="{% url 'proprietes:locataires_liste' %}" class="btn btn-outline-secondary">
                         <i class="bi bi-x-circle me-2"></i>Annuler
                     </a>
-                    <button type="submit" class="btn btn-success btn-custom">
-                        <i class="bi bi-check-circle me-2"></i>
-                        {% if form.instance.pk %}
-                            Modifier le locataire
-                        {% else %}
-                            Créer le locataire
-                        {% endif %}
-                    </button>
+                    <div class="d-flex gap-2">
+
+                        <button type="submit" class="btn-submit" id="submit-btn">
+                            <i class="bi bi-check-circle me-2"></i>CRÉER LE LOCATAIRE
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -316,73 +643,93 @@
 {% block extra_js %}
 <script src="{% static 'js/africa_phone_codes.js' %}"></script>
 <script src="{% static 'js/phone_input_widget.js' %}"></script>
-<script src="{% static 'js/form_validation.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Validation des formulaires Bootstrap
-    const forms = document.querySelectorAll('.needs-validation');
-    Array.from(forms).forEach(form => {
-        form.addEventListener('submit', event => {
-            if (!form.checkValidity()) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-            form.classList.add('was-validated');
-        });
-    });
-
-    // Prévisualisation des fichiers
-    const fileInputs = document.querySelectorAll('input[type="file"]');
-    fileInputs.forEach(input => {
-        input.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const fileName = file.name;
-                const fileSize = (file.size / 1024 / 1024).toFixed(2);
-                
-                // Créer un élément d'info
-                let infoElement = e.target.parentNode.querySelector('.file-info');
-                if (!infoElement) {
-                    infoElement = document.createElement('div');
-                    infoElement.className = 'file-info mt-2 p-2 bg-light rounded';
-                    e.target.parentNode.appendChild(infoElement);
-                }
-                
-                infoElement.innerHTML = `
-                    <small class="text-success">
-                        <i class="bi bi-check-circle me-1"></i>
-                        Fichier sélectionné : <strong>${fileName}</strong> (${fileSize} MB)
-                    </small>
-                `;
+    console.log('Formulaire chargé - Bouton activé par défaut');
+    
+    // Activer le bouton immédiatement
+    const submitBtn = document.getElementById('submit-btn');
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+        submitBtn.style.cursor = 'pointer';
+        console.log('Bouton activé:', submitBtn.disabled, submitBtn.style.opacity);
+    }
+    
+    // Validation simple avant soumission
+    const form = document.getElementById('locataire-form');
+    form.addEventListener('submit', function(e) {
+        console.log('Soumission du formulaire...');
+        
+        // Vérifier les champs obligatoires
+        const requiredFields = form.querySelectorAll('[required]');
+        let isValid = true;
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                isValid = false;
+                field.style.borderColor = '#e74c3c';
+                console.log('Champ manquant:', field.name);
+            } else {
+                field.style.borderColor = '#e9ecef';
             }
         });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Veuillez remplir tous les champs obligatoires (marqués d\'un *)');
+            return false;
+        }
+        
+        // Si valide, permettre la soumission
+        console.log('Formulaire valide - Soumission autorisée');
+        return true;
     });
-
-    // Calcul automatique du ratio revenus/loyer
+    
+    // Validation en temps réel pour les revenus du garant
     const revenusInput = document.querySelector('#id_revenus_mensuels');
-    if (revenusInput) {
-        revenusInput.addEventListener('input', function() {
-            const revenus = parseFloat(this.value);
-            if (revenus > 0) {
-                const ratioMax = revenus / 3; // Règle des 1/3
-                
+    const garantRevenusInput = document.querySelector('#id_garant_revenus_mensuels');
+    
+    if (revenusInput && garantRevenusInput) {
+        const updateRatio = () => {
+            const revenus = parseFloat(revenusInput.value) || 0;
+            const garantRevenus = parseFloat(garantRevenusInput.value) || 0;
+            
+            if (revenus > 0 && garantRevenus > 0) {
+                const ratio = garantRevenus / revenus;
                 let ratioElement = document.querySelector('#ratio-info');
                 if (!ratioElement) {
                     ratioElement = document.createElement('div');
                     ratioElement.id = 'ratio-info';
-                    ratioElement.className = 'mt-2 p-2 bg-info text-white rounded';
-                    this.parentNode.appendChild(ratioElement);
+                    ratioElement.className = 'mt-2 p-2 rounded';
+                    garantRevenusInput.parentNode.appendChild(ratioElement);
                 }
                 
-                ratioElement.innerHTML = `
-                    <small>
-                        <i class="bi bi-calculator me-1"></i>
-                        Loyer maximum recommandé : <strong>${ratioMax.toFixed(0)} XOF</strong> (règle du 1/3)
-                    </small>
-                `;
+                if (ratio >= 3) {
+                    ratioElement.className = 'mt-2 p-2 bg-success text-white rounded';
+                    ratioElement.innerHTML = `
+                        <small>
+                            <i class="bi bi-check-circle me-1"></i>
+                            Ratio garant/locataire : <strong>${ratio.toFixed(1)}x</strong> ✅ Garantie solide
+                        </small>
+                    `;
+                } else {
+                    ratioElement.className = 'mt-2 p-2 bg-warning text-dark rounded';
+                    ratioElement.innerHTML = `
+                        <small>
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            Ratio garant/locataire : <strong>${ratio.toFixed(1)}x</strong> ⚠️ Garantie insuffisante (minimum 3x)
+                        </small>
+                    `;
+                }
             }
-        });
+        };
+        
+        revenusInput.addEventListener('input', updateRatio);
+        garantRevenusInput.addEventListener('input', updateRatio);
     }
+    
+
 });
 </script>
 {% endblock %}

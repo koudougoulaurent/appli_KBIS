@@ -3,7 +3,11 @@ from django.shortcuts import redirect
 from .main_views import (
     dashboard,
     configuration_entreprise,
-    changer_devise
+    changer_devise,
+    rapports_audit,
+    detection_anomalies,
+    detail_audit_log,
+    audit_statistiques
 )
 from .views.tableaux_bord_securises import (
     tableau_bord_principal,
@@ -46,4 +50,10 @@ urlpatterns = [
     
     # Export sécurisé
     path('export/<str:type_donnees>/', export_donnees_securise, name='export_donnees_securise'),
+    
+    # Audit et sécurité
+    path('rapports-audit/', rapports_audit, name='rapports_audit'),
+    path('detection-anomalies/', detection_anomalies, name='detection_anomalies'),
+    path('audit/log/<int:log_id>/', detail_audit_log, name='detail_audit_log'),
+    path('audit/statistiques/', audit_statistiques, name='audit_statistiques'),
 ]

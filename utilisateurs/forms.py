@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from .models import Utilisateur, GroupeTravail
+from django.core.validators import RegexValidator
 
 class UtilisateurForm(forms.ModelForm):
     """Formulaire pour créer/modifier un utilisateur"""
@@ -16,6 +17,13 @@ class UtilisateurForm(forms.ModelForm):
         help_text="Confirmez le mot de passe"
     )
     
+    # Champ pour le code pays (sera utilisé par le widget de téléphone)
+    country_code = forms.CharField(
+        required=False,
+        widget=forms.HiddenInput(),
+        help_text="Code pays pour le numéro de téléphone"
+    )
+    
     class Meta:
         model = Utilisateur
         fields = [
@@ -27,6 +35,11 @@ class UtilisateurForm(forms.ModelForm):
         widgets = {
             'date_naissance': forms.DateInput(attrs={'type': 'date'}),
             'date_embauche': forms.DateInput(attrs={'type': 'date'}),
+            'telephone': forms.TextInput(attrs={
+                'class': 'form-control phone-number-input',
+                'placeholder': 'Sélectionnez d\'abord un pays',
+                'maxlength': '15'
+            }),
         }
     
     def __init__(self, *args, **kwargs):
@@ -66,11 +79,25 @@ class UtilisateurForm(forms.ModelForm):
             elif isinstance(field.widget, forms.FileInput):
                 field.widget.attrs.update({'class': 'form-control'})
     
+    def clean_telephone(self):
+        """Nettoyer et valider le numéro de téléphone - TEMPORAIREMENT DÉSACTIVÉ"""
+        telephone = self.cleaned_data.get('telephone')
+        
+        # TEMPORAIREMENT : Accepter n'importe quoi
+        if telephone:
+            # Nettoyer seulement les espaces, tirets, points
+            import re
+            clean_number = re.sub(r'[\s\-\.]', '', telephone)
+            return clean_number
+        
+        return telephone
+    
     def clean(self):
         cleaned_data = super().clean()
         password = cleaned_data.get('password')
         password_confirm = cleaned_data.get('password_confirm')
         
+        # Validation du mot de passe
         if password and password_confirm:
             if password != password_confirm:
                 raise forms.ValidationError("Les mots de passe ne correspondent pas.")

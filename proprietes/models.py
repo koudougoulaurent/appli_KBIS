@@ -195,6 +195,40 @@ class Locataire(models.Model):
         verbose_name=_("Revenus mensuels")
     )
     
+    # Informations du garant
+    garant_civilite = models.CharField(
+        max_length=5,
+        choices=CIVILITE_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name=_("Civilité du garant")
+    )
+    garant_nom = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Nom du garant"))
+    garant_prenom = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Prénom du garant"))
+    garant_telephone = models.CharField(max_length=20, blank=True, null=True, verbose_name=_("Téléphone du garant"))
+    garant_email = models.EmailField(blank=True, null=True, verbose_name=_("Email du garant"))
+    garant_profession = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Profession du garant"))
+    garant_employeur = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Employeur du garant"))
+    garant_revenus_mensuels = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        verbose_name=_("Revenus mensuels du garant")
+    )
+    garant_adresse = models.TextField(blank=True, null=True, verbose_name=_("Adresse du garant"))
+    garant_code_postal = models.CharField(max_length=10, blank=True, null=True, verbose_name=_("Code postal du garant"))
+    garant_ville = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Ville du garant"))
+    garant_pays = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Pays du garant"))
+    
+    # Pièce d'identité du garant
+    garant_piece_identite = models.FileField(
+        upload_to='garants/pieces_identite/',
+        blank=True,
+        null=True,
+        verbose_name=_("Pièce d'identité du garant")
+    )
+    
     # Statut
     statut = models.CharField(
         max_length=20,

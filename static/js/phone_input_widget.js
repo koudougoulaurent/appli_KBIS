@@ -1,6 +1,6 @@
 /**
  * JavaScript pour le composant de sélection de pays et numéro de téléphone
- * Gère la logique de sélection de pays, validation et formatage automatique
+ * Gère la logique de sélection de pays et validation simplifiée
  */
 
 class PhoneInputWidget {
@@ -44,8 +44,8 @@ class PhoneInputWidget {
             
             // Mettre à jour l'interface
             this.countryFlag.textContent = flag;
-            this.formatInfo.textContent = 'Format';
-            this.phoneInput.placeholder = placeholder;
+            this.formatInfo.textContent = format;
+            this.phoneInput.placeholder = `${format} ${placeholder}`;
             this.phoneInput.disabled = false;
             
             // Afficher les informations du pays
@@ -66,28 +66,16 @@ class PhoneInputWidget {
     
     validatePhoneNumber() {
         const countryCode = this.countrySelector.value;
-        const phoneNumber = this.phoneInput.value.replace(/[^0-9]/g, '');
+        const phoneNumber = this.phoneInput.value;
         
         if (!countryCode || !phoneNumber) {
             this.phoneInput.classList.remove('is-valid', 'is-invalid');
             return;
         }
         
-        // Validation basée sur le pays sélectionné
-        let isValid = false;
-        const selectedOption = this.countrySelector.options[this.countrySelector.selectedIndex];
-        const maxLength = parseInt(selectedOption.getAttribute('data-placeholder').replace(/[^0-9]/g, '').length);
-        
-        if (phoneNumber.length === maxLength) {
-            // Validation simple basée sur la longueur
-            isValid = true;
-            
-            // Formater automatiquement le numéro
-            const formattedNumber = this.formatPhoneNumber(countryCode, phoneNumber);
-            if (formattedNumber) {
-                this.phoneInput.value = formattedNumber;
-            }
-        }
+        // Validation basée sur le format +999999999 avec max 15 chiffres
+        const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+        const isValid = phoneNumber.startsWith('+') && cleanNumber.length >= 1 && cleanNumber.length <= 15;
         
         // Mettre à jour l'apparence
         this.phoneInput.classList.remove('is-valid', 'is-invalid');
@@ -98,32 +86,16 @@ class PhoneInputWidget {
         }
     }
     
-    formatPhoneNumber(code, number) {
-        const cleanNumber = number.replace(/[^0-9]/g, '');
-        
-        switch (code) {
-            case '234': // Nigeria
-                return `${cleanNumber.slice(0, 3)} ${cleanNumber.slice(3, 6)} ${cleanNumber.slice(6)}`;
-            case '233': case '224': case '231': case '221': // Ghana, Guinée, Libéria, Sénégal
-                return `${cleanNumber.slice(0, 2)} ${cleanNumber.slice(2, 5)} ${cleanNumber.slice(5)}`;
-            case '238': case '220': case '245': case '232': // Cap-Vert, Gambie, Guinée-Bissau, Sierra Leone
-                return `${cleanNumber.slice(0, 3)} ${cleanNumber.slice(3, 5)} ${cleanNumber.slice(5)}`;
-            default: // Autres pays (8 chiffres)
-                return `${cleanNumber.slice(0, 2)} ${cleanNumber.slice(2, 4)} ${cleanNumber.slice(4, 6)} ${cleanNumber.slice(6)}`;
-        }
-    }
-    
     validateForm(e) {
         const countryCode = this.countrySelector.value;
-        const phoneNumber = this.phoneInput.value.replace(/[^0-9]/g, '');
+        const phoneNumber = this.phoneInput.value;
         
         if (countryCode && phoneNumber) {
-            const selectedOption = this.countrySelector.options[this.countrySelector.selectedIndex];
-            const maxLength = parseInt(selectedOption.getAttribute('data-placeholder').replace(/[^0-9]/g, '').length);
-            
-            if (phoneNumber.length !== maxLength) {
+            // Validation du format +999999999 avec max 15 chiffres
+            const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+            if (!phoneNumber.startsWith('+') || cleanNumber.length < 1 || cleanNumber.length > 15) {
                 e.preventDefault();
-                alert('Le numéro de téléphone doit respecter le format du pays sélectionné.');
+                alert('Le numéro de téléphone doit être au format : "+999999999". Jusqu\'à 15 chiffres autorisés.');
                 this.phoneInput.focus();
                 return false;
             }
@@ -135,10 +107,10 @@ class PhoneInputWidget {
     // Méthode pour obtenir le numéro complet formaté
     getFullPhoneNumber() {
         const countryCode = this.countrySelector.value;
-        const phoneNumber = this.phoneInput.value.replace(/[^0-9]/g, '');
+        const phoneNumber = this.phoneInput.value;
         
         if (countryCode && phoneNumber) {
-            return `+${countryCode} ${phoneNumber}`;
+            return phoneNumber;
         }
         
         return '';

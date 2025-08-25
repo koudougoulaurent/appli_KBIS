@@ -528,6 +528,39 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Fonction pour remplir automatiquement le loyer à partir de la propriété sélectionnée
+    function updateLoyerFromPropriete() {
+        const proprieteSelect = document.getElementById('id_propriete');
+        const loyerInput = document.getElementById('id_loyer_mensuel');
+        
+        if (proprieteSelect && loyerInput) {
+            const selectedOption = proprieteSelect.options[proprieteSelect.selectedIndex];
+            if (selectedOption && selectedOption.value) {
+                // Récupérer le loyer directement depuis les données du template
+                const proprieteId = selectedOption.value;
+                const proprietesData = {{ proprietes_data|safe }};
+                
+                if (proprietesData && proprietesData[proprieteId]) {
+                    const loyer = proprietesData[proprieteId].loyer;
+                    loyerInput.value = loyer;
+                    // Déclencher l'événement change pour mettre à jour les calculs
+                    loyerInput.dispatchEvent(new Event('change'));
+                    console.log(`Loyer automatiquement rempli : ${loyer} XOF`);
+                } else {
+                    console.log('Données de propriété non trouvées pour l\'ID:', proprieteId);
+                }
+            } else {
+                loyerInput.value = '';
+            }
+        }
+    }
+
+    // Écouter le changement de propriété
+    const proprieteSelect = document.getElementById('id_propriete');
+    if (proprieteSelect) {
+        proprieteSelect.addEventListener('change', updateLoyerFromPropriete);
+    }
+
     // Calculs automatiques
     function updateContractSummary() {
         const loyer = parseFloat(document.getElementById('id_loyer_mensuel')?.value) || 0;

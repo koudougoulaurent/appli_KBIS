@@ -11,6 +11,7 @@
 {% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/form_required_fields.css' %}">
 <style>
     .document-section {
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
@@ -155,7 +156,7 @@
                 {% csrf_token %}
 
                 <!-- Section 1: Informations générales -->
-                <div class="form-section">
+                <div class="form-section has-required">
                     <h3><i class="bi bi-info-circle me-2"></i>Informations générales</h3>
                     <div class="row">
                         <div class="col-md-6">
@@ -181,7 +182,7 @@
                 </div>
 
                 <!-- Section 2: Localisation -->
-                <div class="form-section">
+                <div class="form-section has-required">
                     <h3><i class="bi bi-geo-alt me-2"></i>Localisation</h3>
                     <div class="row">
                         <div class="col-12">
@@ -202,7 +203,7 @@
                 </div>
 
                 <!-- Section 3: Caractéristiques -->
-                <div class="form-section">
+                <div class="form-section has-required">
                     <h3><i class="bi bi-rulers me-2"></i>Caractéristiques</h3>
                     <div class="row">
                         <div class="col-md-6">
@@ -223,7 +224,7 @@
                 </div>
 
                 <!-- Section 4: Équipements -->
-                <div class="form-section">
+                <div class="form-section optional-only">
                     <h3><i class="bi bi-gear me-2"></i>Équipements et commodités</h3>
                     <div class="row">
                         <div class="col-md-3">
@@ -250,7 +251,7 @@
                 </div>
 
                 <!-- Section 5: Informations financières -->
-                <div class="form-section">
+                <div class="form-section optional-only">
                     <h3><i class="bi bi-currency-exchange me-2"></i>Informations financières</h3>
                     <div class="row">
                         <div class="col-md-6">

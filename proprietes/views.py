@@ -876,10 +876,22 @@ def detail_locataire(request, pk):
     
     # Récupérer les derniers paiements
     from paiements.models import Paiement
-    derniers_paiements = Paiement.get_paiements_locataire(locataire, statut='valide')[:10]
+    derniers_paiements = Paiement.objects.filter(
+        contrat__locataire=locataire,
+        statut='valide'
+    ).order_by('-date_paiement')[:10]
     
     # Récupérer le contrat actuel
-    contrat_actuel = locataire.get_contrat_actuel()
+    from contrats.models import Contrat
+    from django.utils import timezone
+    
+    contrat_actuel = Contrat.objects.filter(
+        locataire=locataire,
+        est_actif=True,
+        est_resilie=False,
+        date_debut__lte=timezone.now().date(),
+        date_fin__gte=timezone.now().date()
+    ).first()
     
     # Récupérer les charges déductibles
     from paiements.models import ChargeDeductible
@@ -900,9 +912,9 @@ def detail_locataire(request, pk):
             {'label': locataire.get_nom_complet()}
         ],
         'quick_actions': [
-            {'url': 'proprietes:modifier_locataire', 'pk': locataire.pk, 'label': 'Modifier', 'icon': 'bi-pencil'},
-            {'url': 'contrats:ajouter', 'label': 'Nouveau Contrat', 'icon': 'bi-plus-circle'},
-            {'url': 'paiements:liste', 'label': 'Voir Paiements', 'icon': 'bi-cash-coin'},
+            {'url': f'/proprietes/locataires/{locataire.pk}/modifier/', 'label': 'Modifier', 'icon': 'pencil', 'style': 'btn-outline-primary'},
+            {'url': '/contrats/ajouter/', 'label': 'Nouveau Contrat', 'icon': 'plus-circle', 'style': 'btn-outline-success'},
+            {'url': '/paiements/', 'label': 'Voir Paiements', 'icon': 'cash-coin', 'style': 'btn-outline-info'},
         ]
     }
     
@@ -947,7 +959,20 @@ def ajouter_locataire(request):
             )
             return redirect('proprietes:detail_locataire', pk=locataire.pk)
         else:
-            messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
+            # Afficher les erreurs détaillées
+            error_messages = []
+            for field, errors in form.errors.items():
+                if field != '__all__':
+                    field_name = form.fields[field].label if field in form.fields else field
+                    error_messages.append(f"{field_name}: {', '.join(errors)}")
+                else:
+                    for error in errors:
+                        error_messages.append(f"Erreur générale: {error}")
+            
+            if error_messages:
+                messages.error(request, f'Erreurs de validation: {" | ".join(error_messages)}')
+            else:
+                messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
     else:
         form = LocataireForm()
         # Pré-générer le numéro unique pour l'affichage

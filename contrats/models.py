@@ -39,10 +39,14 @@ class Contrat(models.Model):
     # Informations financières
     loyer_mensuel = models.CharField(
         max_length=20,
-        verbose_name=_("Loyer mensuel")
+        blank=True,
+        verbose_name=_("Loyer mensuel"),
+        help_text=_("Sera automatiquement rempli à partir de la propriété sélectionnée")
     )
     charges_mensuelles = models.CharField(
         max_length=20,
+        blank=True,
+        null=True,
         default="0.00",
         verbose_name=_("Charges mensuelles")
     )
@@ -50,8 +54,10 @@ class Contrat(models.Model):
     # Gestion des cautions et avances
     depot_garantie = models.CharField(
         max_length=20,
+        blank=True,
+        null=True,
         default="0.00",
-        verbose_name=_("Dépôt de garantie")
+        verbose_name=_("Dépôt de garantie ou Caution")
     )
     avance_loyer = models.CharField(
         max_length=20,

@@ -79,14 +79,8 @@ class UtilisateurManager(BaseUserManager):
 class Utilisateur(AbstractUser):
     """Modèle utilisateur étendu avec groupe de travail"""
     
-    # Validation pour le téléphone
-    phone_regex = RegexValidator(
-        regex=r'^\+?1?\d{9,15}$',
-        message="Le numéro de téléphone doit être au format : '+999999999'. Jusqu'à 15 chiffres autorisés."
-    )
-    
     # Champs supplémentaires
-    telephone = models.CharField(validators=[phone_regex], max_length=17, blank=True)
+    telephone = models.CharField(max_length=100, blank=True, null=True)  # Aucune validation - temporaire
     adresse = models.TextField(blank=True)
     date_naissance = models.DateField(null=True, blank=True)
     photo = models.ImageField(upload_to='photos_utilisateurs/', null=True, blank=True)

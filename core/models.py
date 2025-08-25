@@ -590,7 +590,8 @@ class TemplateRecu(models.Model):
     )
     contenu_html = models.TextField(
         verbose_name=_("Contenu HTML"),
-        help_text=_("Template HTML avec variables Django")
+        help_text=_("Template HTML avec variables Django"),
+        default="<p>Template vide</p>"
     )
     
     # Métadonnées

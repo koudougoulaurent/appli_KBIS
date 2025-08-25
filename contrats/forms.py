@@ -165,6 +165,25 @@ class ContratForm(forms.ModelForm):
         # Filtrer les locataires actifs
         self.fields['locataire'].queryset = Locataire.objects.filter(statut='actif')
         
+        # Rendre les champs optionnels
+        self.fields['charges_mensuelles'].required = False
+        self.fields['depot_garantie'].required = False
+        
+        # Ajouter des classes CSS pour le style
+        self.fields['loyer_mensuel'].widget.attrs.update({
+            'readonly': 'readonly',
+            'class': 'form-control bg-light',
+            'title': 'Ce champ sera automatiquement rempli à partir de la propriété sélectionnée'
+        })
+        
+        # Ajouter les données des propriétés pour le JavaScript
+        self.proprietes_data = {}
+        for propriete in Propriete.objects.filter(disponible=True):
+            self.proprietes_data[propriete.id] = {
+                'loyer': str(propriete.loyer_actuel),
+                'titre': propriete.titre
+            }
+        
         # Suppression de la personnalisation des anciens champs de caution/avance
     
     def clean(self):
@@ -239,6 +258,13 @@ class ContratForm(forms.ModelForm):
                         f"({contrat_existant.date_debut} - {contrat_existant.date_fin})."
                     )
         
+        # Remplir automatiquement le loyer à partir de la propriété sélectionnée
+        if propriete and not cleaned_data.get('loyer_mensuel'):
+            try:
+                cleaned_data['loyer_mensuel'] = str(propriete.loyer_actuel)
+            except AttributeError:
+                pass
+        
         return cleaned_data
     
     def save(self, commit=True, user=None):
@@ -253,6 +279,35 @@ class ContratForm(forms.ModelForm):
                 self._create_documents_for_contrat(contrat, user)
         
         return contrat
+    
+    def get_errors_summary(self):
+        """Retourne un résumé des erreurs de validation avec les noms des champs"""
+        if not self.errors:
+            return ""
+        
+        error_messages = []
+        field_names = {
+            'numero_contrat': 'Numéro de contrat',
+            'propriete': 'Propriété',
+            'locataire': 'Locataire',
+            'date_debut': 'Date de début',
+            'date_fin': 'Date de fin',
+            'date_signature': 'Date de signature',
+            'loyer_mensuel': 'Loyer mensuel',
+            'charges_mensuelles': 'Charges mensuelles',
+            'depot_garantie': 'Dépôt de garantie ou Caution',
+            'avance_loyer': 'Avance de loyer',
+            'jour_paiement': 'Jour de paiement',
+            'mode_paiement': 'Mode de paiement',
+            'notes': 'Notes'
+        }
+        
+        for field, errors in self.errors.items():
+            field_display_name = field_names.get(field, field)
+            for error in errors:
+                error_messages.append(f"• {field_display_name}: {error}")
+        
+        return "\n".join(error_messages)
     
     def _create_documents_for_contrat(self, contrat, user):
         """Crée automatiquement les documents pour un contrat."""

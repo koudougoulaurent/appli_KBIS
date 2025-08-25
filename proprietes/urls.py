@@ -1,6 +1,13 @@
-from django.urls import path
-from . import views
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from . import views, api_views
 from .views import ajouter_charge_bailleur_rapide
+
+# Router pour l'API
+router = DefaultRouter()
+router.register(r'api/proprietes', api_views.ProprieteViewSet, basename='propriete')
+router.register(r'api/bailleurs', api_views.BailleurViewSet, basename='bailleur')
+router.register(r'api/locataires', api_views.LocataireViewSet, basename='locataire')
 
 app_name = 'proprietes'
 
@@ -87,4 +94,7 @@ urlpatterns = [
     # URLs API pour les pièces
     path('api/<int:propriete_id>/pieces-disponibles/', views.api_pieces_disponibles, name='api_pieces_disponibles'),
     path('api/verifier-disponibilite/', views.api_verifier_disponibilite, name='api_verifier_disponibilite'),
+    
+    # URLs API REST
+    path('api/', include(router.urls)),
 ]

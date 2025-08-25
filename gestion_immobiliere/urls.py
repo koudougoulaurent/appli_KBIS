@@ -41,6 +41,8 @@ urlpatterns = [
     path('contrats/', include('contrats.urls')),
     path('paiements/', include('paiements.urls')),
     path('notifications/', include('notifications.urls')),
+    
+
 ]
 
 # URLs pour les fichiers statiques et media en développement

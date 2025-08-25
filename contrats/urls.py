@@ -49,6 +49,9 @@ urlpatterns = [
     path('cautions/<int:contrat_id>/marquer-avance/', views.marquer_avance_payee, name='marquer_avance_payee'),
     path('cautions/<int:contrat_id>/imprimer-recu/', views.imprimer_recu_caution, name='imprimer_recu_caution'),
     path('cautions/<int:contrat_id>/imprimer-contrat/', views.imprimer_document_contrat, name='imprimer_document_contrat'),
+    
+    # URL pour la gestion globale des cautions
+    path('gestion-cautions/', views.gestion_cautions, name='gestion_cautions'),
 
     # URLs pour la gestion des résiliations
     path('resiliations/', views.liste_resiliations, name='liste_resiliations'),
