@@ -84,7 +84,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="card-title text-white-50 mb-1">Total Cautions</h6>
-                            <h3 class="mb-0">{{ statistiques.total_cautions|floatformat:0 }} XOF</h3>
+                            <h3 class="mb-0">{{ statistiques.total_cautions|floatformat:0 }} F CFA</h3>
                         </div>
                         <div class="fs-1">
                             <i class="bi bi-shield-check"></i>
@@ -100,7 +100,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="card-title text-white-50 mb-1">Cautions Payées</h6>
-                            <h3 class="mb-0">{{ statistiques.cautions_payees|floatformat:0 }} XOF</h3>
+                            <h3 class="mb-0">{{ statistiques.cautions_payees|floatformat:0 }} F CFA</h3>
                         </div>
                         <div class="fs-1">
                             <i class="bi bi-check-circle"></i>
@@ -116,7 +116,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="card-title text-white-50 mb-1">En Attente</h6>
-                            <h3 class="mb-0">{{ statistiques.cautions_en_attente|floatformat:0 }} XOF</h3>
+                            <h3 class="mb-0">{{ statistiques.cautions_en_attente|floatformat:0 }} F CFA</h3>
                         </div>
                         <div class="fs-1">
                             <i class="bi bi-clock"></i>
@@ -132,7 +132,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="card-title text-white-50 mb-1">Remboursées</h6>
-                            <h3 class="mb-0">{{ statistiques.cautions_remboursees|floatformat:0 }} XOF</h3>
+                            <h3 class="mb-0">{{ statistiques.cautions_remboursees|floatformat:0 }} F CFA</h3>
                         </div>
                         <div class="fs-1">
                             <i class="bi bi-arrow-return-left"></i>
@@ -202,7 +202,7 @@
                                         <small class="text-muted">{{ contrat.locataire.telephone }}</small>
                                     </td>
                                     <td>
-                                        <span class="caution-amount">{{ contrat.depot_garantie }} XOF</span>
+                                        <span class="caution-amount">{{ contrat.depot_garantie }} F CFA</span>
                                     </td>
                                     <td>
                                         <span class="caution-status status-en-attente">
@@ -274,7 +274,7 @@
                                     <td>{{ remboursement.date_paiement|date:"d/m/Y" }}</td>
                                     <td>{{ remboursement.contrat.numero_contrat }}</td>
                                     <td>{{ remboursement.contrat.locataire.get_nom_complet }}</td>
-                                    <td class="text-success fw-bold">{{ remboursement.montant }} XOF</td>
+                                    <td class="text-success fw-bold">{{ remboursement.montant }} F CFA</td>
                                     <td>{{ remboursement.mode_paiement|title }}</td>
                                     <td>{{ remboursement.notes|default:"-" }}</td>
                                 </tr>

@@ -107,7 +107,7 @@
                                     <input type="number" name="montant_loyers_bruts" 
                                            id="montant_loyers_bruts" class="form-control" 
                                            step="0.01" min="0" required>
-                                    <span class="input-group-text">XOF</span>
+                                    <span class="input-group-text">F CFA</span>
                                 </div>
                                 <div class="form-text">Montant total des loyers perçus</div>
                             </div>
@@ -121,7 +121,7 @@
                                     <input type="number" name="montant_charges_deductibles" 
                                            id="montant_charges_deductibles" class="form-control" 
                                            step="0.01" min="0" value="0">
-                                    <span class="input-group-text">XOF</span>
+                                    <span class="input-group-text">F CFA</span>
                                 </div>
                                 <div class="form-text">Montant des charges à déduire</div>
                             </div>
@@ -139,15 +139,15 @@
                             <div class="row">
                                 <div class="col-md-4">
                                     <strong>Loyers bruts:</strong> 
-                                    <span id="loyers_bruts_display">0 XOF</span>
+                                    <span id="loyers_bruts_display">0 F CFA</span>
                                 </div>
                                 <div class="col-md-4">
                                     <strong>Charges déductibles:</strong> 
-                                    <span id="charges_deductibles_display">0 XOF</span>
+                                    <span id="charges_deductibles_display">0 F CFA</span>
                                 </div>
                                 <div class="col-md-4">
                                     <strong>Net à payer:</strong> 
-                                    <span id="net_a_payer_display" class="fw-bold text-primary">0 XOF</span>
+                                    <span id="net_a_payer_display" class="fw-bold text-primary">0 F CFA</span>
                                 </div>
                             </div>
                         </div>
@@ -239,9 +239,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const charges = parseFloat(chargesInput.value) || 0;
         const net = loyers - charges;
         
-        document.getElementById('loyers_bruts_display').textContent = loyers.toLocaleString() + ' XOF';
-        document.getElementById('charges_deductibles_display').textContent = charges.toLocaleString() + ' XOF';
-        document.getElementById('net_a_payer_display').textContent = net.toLocaleString() + ' XOF';
+        document.getElementById('loyers_bruts_display').textContent = loyers.toLocaleString() + ' F CFA';
+        document.getElementById('charges_deductibles_display').textContent = charges.toLocaleString() + ' F CFA';
+        document.getElementById('net_a_payer_display').textContent = net.toLocaleString() + ' F CFA';
     }
     
     loyersInput.addEventListener('input', updateCalcul);

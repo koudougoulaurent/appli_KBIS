@@ -281,7 +281,7 @@
             <div class="card-body text-center">
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="text-start">
-                        <div class="stat-number">{{ montant_total|floatformat:0 }} XOF</div>
+                        <div class="stat-number">{{ montant_total|floatformat:0 }} F CFA</div>
                         <div class="stat-label">Montant Total</div>
                         <div class="stat-subtitle">Tous paiements validés</div>
                     </div>
@@ -298,7 +298,7 @@
             <div class="card-body text-center">
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="text-start">
-                        <div class="stat-number">{{ montant_mois_courant|floatformat:0 }} XOF</div>
+                        <div class="stat-number">{{ montant_mois_courant|floatformat:0 }} F CFA</div>
                         <div class="stat-label">Mois Courant</div>
                         <div class="stat-subtitle">Paiements du mois</div>
                     </div>
@@ -357,7 +357,7 @@
                                 <small class="text-muted">{{ prop.propriete__ville|default:"Ville non renseignée" }}</small>
                             </div>
                             <div class="text-end">
-                                <div class="h5 mb-0 text-success">{{ prop.total|floatformat:0 }} XOF</div>
+                                <div class="h5 mb-0 text-success">{{ prop.total|floatformat:0 }} F CFA</div>
                                 <small class="text-muted">Total des revenus</small>
                             </div>
                         </div>
@@ -390,7 +390,7 @@
                                 <span class="payment-status status-{{ paiement.statut }} ms-2">{{ paiement.get_statut_display }}</span>
                             </div>
                             <div class="text-end">
-                                <div class="h6 mb-0 text-success">{{ paiement.montant|floatformat:0 }} XOF</div>
+                                <div class="h6 mb-0 text-success">{{ paiement.montant|floatformat:0 }} F CFA</div>
                                 <small class="text-muted">{{ paiement.date_paiement|date:"d/m/Y" }}</small>
                             </div>
                         </div>
@@ -420,7 +420,7 @@
                                 <span class="payment-status status-{{ paiement.statut }} ms-2">{{ paiement.get_statut_display }}</span>
                             </div>
                             <div class="text-end">
-                                <div class="h6 mb-0 text-warning">{{ paiement.montant|floatformat:0 }} XOF</div>
+                                <div class="h6 mb-0 text-warning">{{ paiement.montant|floatformat:0 }} F CFA</div>
                                 <small class="text-muted">{{ paiement.date_paiement|date:"d/m/Y" }}</small>
                             </div>
                         </div>
@@ -462,7 +462,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const data = {
         labels: [{% for stat in mois_stats %}'{{ stat.mois }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
         datasets: [{
-            label: 'Revenus (XOF)',
+                            label: 'Revenus (F CFA)',
             data: [{% for stat in mois_stats %}{{ stat.total }}{% if not forloop.last %}, {% endif %}{% endfor %}],
             backgroundColor: 'rgba(6, 182, 212, 0.2)',
             borderColor: 'rgba(6, 182, 212, 1)',
@@ -488,7 +488,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return value.toLocaleString() + ' XOF';
+                            return value.toLocaleString() + ' F CFA';
                         }
                     }
                 }

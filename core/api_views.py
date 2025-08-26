@@ -66,7 +66,7 @@ def api_dashboard_data(request):
     }
     
     devise_active = getattr(request, 'devise_active', None)
-    devise_base = Devise.objects.get(code='XOF')
+            devise_base = Devise.objects.get(code='F CFA')
     
     data = {
         'stats': stats,

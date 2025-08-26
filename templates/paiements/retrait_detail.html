@@ -33,7 +33,7 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <p><strong>Montant :</strong> <span class="text-success fw-bold">{{ retrait.montant }} XOF</span></p>
+                            <p><strong>Montant :</strong> <span class="text-success fw-bold">{{ retrait.montant }} F CFA</span></p>
                             <p><strong>Type :</strong> <span class="badge bg-info">{{ retrait.get_type_retrait_display }}</span></p>
                             <p><strong>Mode de retrait :</strong> {{ retrait.get_mode_retrait_display }}</p>
                         </div>
@@ -175,7 +175,7 @@
                                         {% for r in retrait.bailleur.retraits.all %}
                                             {% with total=total|add:r.montant %}{% endwith %}
                                         {% endfor %}
-                                        {{ total }} XOF
+                                        {{ total }} F CFA
                                     {% endwith %}
                                 </div>
                                 <div class="stat-label">Total</div>

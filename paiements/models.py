@@ -1813,270 +1813,183 @@ Retrait = RetraitBailleur
 
 
 class RecapMensuel(models.Model):
-    """Modèle pour les récapitulatifs mensuels des bailleurs."""
+    """Récapitulatif mensuel pour un bailleur."""
+    
+    STATUT_CHOICES = [
+        ('brouillon', _('Brouillon')),
+        ('valide', _('Validé')),
+        ('envoye', _('Envoyé au bailleur')),
+        ('paye', _('Payé au bailleur')),
+    ]
     
     # Informations de base
     bailleur = models.ForeignKey(
-        'proprietes.Bailleur',
-        on_delete=models.PROTECT,
-        related_name='recaps_mensuels',
-        verbose_name=_("Bailleur")
+        'proprietes.Bailleur', on_delete=models.PROTECT, related_name='recaps_mensuels', verbose_name=_("Bailleur")
     )
-    mois_recap = models.DateField(
-        verbose_name=_("Mois du récapitulatif"),
-        help_text=_("Mois pour lequel le récapitulatif est établi")
-    )
+    mois_recap = models.DateField(verbose_name=_("Mois du récapitulatif"))
     
-    # Montants des loyers
-    total_loyers_bruts = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=0,
-        verbose_name=_("Total des loyers bruts")
-    )
-    total_charges_deductibles = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=0,
-        verbose_name=_("Total des charges déductibles")
-    )
-    total_net_a_payer = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=0,
-        verbose_name=_("Total net à payer")
-    )
+    # Montants calculés automatiquement
+    total_loyers_bruts = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total des loyers bruts"))
+    total_charges_deductibles = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total des charges déductibles"))
+    total_net_a_payer = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total net à payer"))
     
-    # Informations sur les propriétés
-    nombre_proprietes = models.PositiveIntegerField(
-        default=0,
-        verbose_name=_("Nombre de propriétés")
-    )
-    nombre_contrats_actifs = models.PositiveIntegerField(
-        default=0,
-        verbose_name=_("Nombre de contrats actifs")
-    )
-    nombre_paiements_recus = models.PositiveIntegerField(
-        default=0,
-        verbose_name=_("Nombre de paiements reçus")
-    )
+    # Compteurs automatiques
+    nombre_proprietes = models.PositiveIntegerField(default=0, verbose_name=_("Nombre de propriétés"))
+    nombre_contrats_actifs = models.PositiveIntegerField(default=0, verbose_name=_("Nombre de contrats actifs"))
+    nombre_paiements_recus = models.PositiveIntegerField(default=0, verbose_name=_("Nombre de paiements reçus"))
     
-    # Statut du récapitulatif
-    statut = models.CharField(
-        max_length=20,
-        choices=[
-            ('brouillon', 'Brouillon'),
-            ('valide', 'Validé'),
-            ('envoye', 'Envoyé au bailleur'),
-            ('paye', 'Payé au bailleur'),
-        ],
-        default='brouillon',
-        verbose_name=_("Statut")
-    )
+    # NOUVEAU : Vérification des garanties financières
+    total_cautions_requises = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total des cautions requises"))
+    total_avances_requises = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total des avances requises"))
+    total_cautions_versees = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total des cautions versées"))
+    total_avances_versees = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total des avances versées"))
+    garanties_suffisantes = models.BooleanField(default=False, verbose_name=_("Garanties financières suffisantes"))
+    
+    # Statut et workflow
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='brouillon', verbose_name=_("Statut"))
     
     # Métadonnées
     date_creation = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de création"))
-    date_validation = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name=_("Date de validation")
-    )
-    date_envoi = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name=_("Date d'envoi")
-    )
-    date_paiement = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name=_("Date de paiement")
-    )
+    cree_par = models.ForeignKey('utilisateurs.Utilisateur', on_delete=models.SET_NULL, null=True, blank=True, related_name='recaps_mensuels_crees', verbose_name=_("Créé par"))
+    date_modification = models.DateTimeField(auto_now=True, verbose_name=_("Date de modification"))
+    modifie_par = models.ForeignKey('utilisateurs.Utilisateur', on_delete=models.SET_NULL, null=True, blank=True, related_name='recaps_mensuels_modifies', verbose_name=_("Modifié par"))
     
     # Relations
-    cree_par = models.ForeignKey(
-        Utilisateur,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='recaps_mensuels_crees',
-        verbose_name=_("Créé par")
-    )
-    valide_par = models.ForeignKey(
-        Utilisateur,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='recaps_mensuels_valides',
-        verbose_name=_("Validé par")
-    )
+    retraits_associes = models.ManyToManyField('RetraitBailleur', related_name='recaps_mensuels', verbose_name=_("Retraits associés"), blank=True)
+    paiements_concernes = models.ManyToManyField('Paiement', related_name='recaps_mensuels', verbose_name=_("Paiements concernés"), blank=True)
+    charges_deductibles = models.ManyToManyField('ChargeDeductible', related_name='recaps_mensuels', verbose_name=_("Charges déductibles"), blank=True)
     
-    # Lien avec les retraits
-    retraits_associes = models.ManyToManyField(
-        'RetraitBailleur',
-        related_name='recaps_mensuels',
-        verbose_name=_("Retraits associés")
-    )
-    
-    # Lien avec les paiements
-    paiements_concernes = models.ManyToManyField(
-        'Paiement',
-        related_name='recaps_mensuels',
-        verbose_name=_("Paiements concernés")
-    )
-    
-    # Lien avec les charges déductibles
-    charges_deductibles = models.ManyToManyField(
-        'ChargeDeductible',
-        related_name='recaps_mensuels',
-        verbose_name=_("Charges déductibles")
-    )
-    
-    is_deleted = models.BooleanField(default=False, verbose_name='Supprimé logiquement')
-    deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Date de suppression')
-    deleted_by = models.ForeignKey(
-        Utilisateur,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='recaps_mensuels_supprimes',
-        verbose_name='Supprimé par'
-    )
-    
-    objects = NonDeletedManager()
-    all_objects = models.Manager()
+    # Suppression logique
+    is_deleted = models.BooleanField(default=False, verbose_name=_("Supprimé logiquement"))
+    deleted_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Date de suppression"))
+    deleted_by = models.ForeignKey('utilisateurs.Utilisateur', on_delete=models.SET_NULL, null=True, blank=True, related_name='recaps_mensuels_supprimes', verbose_name=_("Supprimé par"))
     
     class Meta:
         verbose_name = _("Récapitulatif mensuel")
         verbose_name_plural = _("Récapitulatifs mensuels")
-        ordering = ['-mois_recap']
+        ordering = ['-mois_recap', 'bailleur__nom']
         unique_together = ['bailleur', 'mois_recap']
         indexes = [
-            models.Index(fields=['bailleur', 'mois_recap']),
-            models.Index(fields=['statut']),
-            models.Index(fields=['date_creation']),
+            models.Index(fields=['mois_recap', 'bailleur']),
+            models.Index(fields=['statut', 'mois_recap']),
+            models.Index(fields=['garanties_suffisantes', 'mois_recap']),
         ]
     
     def __str__(self):
-        return f"Récap {self.bailleur} - {self.mois_recap.strftime('%B %Y')} - {self.total_net_a_payer} XOF"
+        return f"Récapitulatif {self.bailleur.get_nom_complet()} - {self.mois_recap.strftime('%B %Y')}"
     
-    def save(self, *args, **kwargs):
-        """Override save pour calculer automatiquement les totaux."""
-        if self.total_loyers_bruts > 0:
-            self.total_net_a_payer = self.total_loyers_bruts - self.total_charges_deductibles
-        super().save(*args, **kwargs)
+    def get_absolute_url(self):
+        return reverse('paiements:detail_recap_mensuel_auto', kwargs={'recap_id': self.pk})
     
     def calculer_totaux(self):
-        """Calcule les totaux du récapitulatif."""
+        """Calcule automatiquement tous les totaux et vérifie les garanties financières."""
         from django.db.models import Sum, Count
         
-        # Calculer le total des loyers bruts
-        loyers_bruts = self.paiements_concernes.filter(
-            type_paiement='loyer',
-            statut='valide'
-        ).aggregate(total=Sum('montant'))['total'] or 0
+        # Calculer les totaux des loyers (basés sur les contrats actifs, pas les paiements reçus)
+        total_loyers = 0
+        total_charges = 0
+        nombre_proprietes = 0
+        nombre_contrats = 0
         
-        # Calculer le total des charges déductibles
-        charges_deductibles = self.charges_deductibles.filter(
-            statut='validee'
-        ).aggregate(total=Sum('montant'))['total'] or 0
-        
-        # Mettre à jour les totaux
-        self.total_loyers_bruts = loyers_bruts
-        self.total_charges_deductibles = charges_deductibles
-        self.total_net_a_payer = loyers_bruts - charges_deductibles
-        
-        # Mettre à jour les compteurs
-        self.nombre_proprietes = self.bailleur.propriete_set.count()
-        self.nombre_contrats_actifs = self.bailleur.propriete_set.filter(
+        # Récupérer toutes les propriétés du bailleur avec contrats actifs
+        proprietes_actives = self.bailleur.propriete_set.filter(
             contrats__est_actif=True,
             contrats__est_resilie=False
-        ).distinct().count()
-        self.nombre_paiements_recus = self.paiements_concernes.filter(
-            statut='valide'
-        ).count()
+        ).distinct()
+        
+        nombre_proprietes = proprietes_actives.count()
+        
+        for propriete in proprietes_actives:
+            contrat_actif = propriete.contrats.filter(est_actif=True).first()
+            if contrat_actif:
+                nombre_contrats += 1
+                # Loyer mensuel du contrat (pas besoin d'attendre le paiement)
+                total_loyers += contrat_actif.loyer_mensuel
+                # Charges mensuelles du contrat
+                total_charges += contrat_actif.charges_mensuelles
+        
+        # Mettre à jour les totaux
+        self.total_loyers_bruts = total_loyers
+        self.total_charges_deductibles = total_charges
+        self.total_net_a_payer = total_loyers - total_charges
+        self.nombre_proprietes = nombre_proprietes
+        self.nombre_contrats_actifs = nombre_contrats
+        
+        # NOUVEAU : Calculer et vérifier les garanties financières
+        self.calculer_garanties_financieres()
         
         self.save()
     
-    def valider_recap(self, utilisateur):
-        """Valide le récapitulatif."""
-        self.statut = 'valide'
-        self.valide_par = utilisateur
-        self.date_validation = timezone.now()
-        self.save()
-    
-    def marquer_envoye(self, utilisateur):
-        """Marque le récapitulatif comme envoyé."""
-        self.statut = 'envoye'
-        self.date_envoi = timezone.now()
-        self.save()
-    
-    def marquer_paye(self, utilisateur):
-        """Marque le récapitulatif comme payé."""
-        self.statut = 'paye'
-        self.date_paiement = timezone.now()
-        self.save()
-    
-    def generer_document_pdf(self):
-        """Génère le document PDF du récapitulatif."""
-        # Cette méthode sera implémentée dans les vues
-        pass
-    
-    def get_detail_proprietes(self):
-        """Retourne le détail des propriétés et contrats."""
-        proprietes = self.bailleur.propriete_set.all()
-        detail = []
+    def calculer_garanties_financieres(self):
+        """Calcule et vérifie si les garanties financières sont suffisantes."""
+        from django.db.models import Sum
         
-        for propriete in proprietes:
-            contrats_actifs = propriete.contrats.filter(
-                est_actif=True,
-                est_resilie=False
-            )
-            
-            if contrats_actifs.exists():
-                for contrat in contrats_actifs:
-                    # Calculer le loyer du mois
-                    loyer_mois = contrat.loyer_mensuel + contrat.charges_mensuelles
-                    
-                    # Vérifier si un paiement a été reçu
-                    paiement_mois = self.paiements_concernes.filter(
-                        contrat=contrat,
-                        mois_paye__month=self.mois_recap.month,
-                        mois_paye__year=self.mois_recap.year,
-                        statut='valide'
-                    ).first()
-                    
-                    detail.append({
-                        'propriete': propriete,
-                        'contrat': contrat,
-                        'locataire': contrat.locataire,
-                        'loyer_mensuel': contrat.loyer_mensuel,
-                        'charges_mensuelles': contrat.charges_mensuelles,
-                        'loyer_total': loyer_mois,
-                        'paiement_recu': paiement_mois.montant if paiement_mois else 0,
-                        'statut_paiement': 'Payé' if paiement_mois else 'En attente',
-                    })
+        total_cautions_requises = 0
+        total_avances_requises = 0
+        total_cautions_versees = 0
+        total_avances_versees = 0
         
-        return detail
+        # Récupérer toutes les propriétés du bailleur avec contrats actifs
+        proprietes_actives = self.bailleur.propriete_set.filter(
+            contrats__est_actif=True,
+            contrats__est_resilie=False
+        ).distinct()
+        
+        for propriete in proprietes_actives:
+            contrat_actif = propriete.contrats.filter(est_actif=True).first()
+            if contrat_actif:
+                # Calculer les garanties requises (caution + avance)
+                caution_requise = contrat_actif.loyer_mensuel  # Généralement 1 mois de loyer
+                avance_requise = contrat_actif.loyer_mensuel   # Généralement 1 mois de loyer
+                
+                total_cautions_requises += caution_requise
+                total_avances_requises += avance_requise
+                
+                # Récupérer les paiements de caution et d'avance déjà reçus
+                paiements_caution = contrat_actif.paiements.filter(
+                    type_paiement='caution',
+                    statut='valide'
+                ).aggregate(total=Sum('montant'))['total'] or 0
+                
+                paiements_avance = contrat_actif.paiements.filter(
+                    type_paiement='avance',
+                    statut='valide'
+                ).aggregate(total=Sum('montant'))['total'] or 0
+                
+                total_cautions_versees += paiements_caution
+                total_avances_versees += paiements_avance
+        
+        # Mettre à jour les totaux des garanties
+        self.total_cautions_requises = total_cautions_requises
+        self.total_avances_requises = total_avances_requises
+        self.total_cautions_versees = total_cautions_versees
+        self.total_avances_versees = total_avances_versees
+        
+        # Vérifier si les garanties sont suffisantes
+        self.garanties_suffisantes = (
+            total_cautions_versees >= total_cautions_requises and
+            total_avances_versees >= total_avances_requises
+        )
     
-    def get_detail_charges(self):
-        """Retourne le détail des charges déductibles."""
-        return self.charges_deductibles.filter(statut='validee')
+    def peut_etre_paye(self):
+        """Vérifie si le récapitulatif peut être payé au bailleur."""
+        return (
+            self.statut in ['brouillon', 'valide'] and
+            self.garanties_suffisantes and
+            self.total_net_a_payer > 0
+        )
     
-    # Méthodes de formatage XOF
-    def get_total_loyers_bruts_formatted(self):
-        """Retourne le total des loyers bruts formaté en XOF"""
-        from core.utils import format_currency_xof
-        return format_currency_xof(self.total_loyers_bruts)
-    
-    def get_total_charges_deductibles_formatted(self):
-        """Retourne le total des charges déductibles formaté en XOF"""
-        from core.utils import format_currency_xof
-        return format_currency_xof(self.total_charges_deductibles)
-    
-    def get_total_net_formatted(self):
-        """Retourne le total net formaté en XOF"""
-        from core.utils import format_currency_xof
-        return format_currency_xof(self.total_net_a_payer)
+    def get_statut_display(self):
+        """Retourne le statut affiché avec indication des garanties."""
+        statut_base = dict(self.STATUT_CHOICES).get(self.statut, self.statut)
+        
+        if self.statut in ['brouillon', 'valide']:
+            if not self.garanties_suffisantes:
+                return f"{statut_base} - Garanties insuffisantes"
+            elif self.peut_etre_paye():
+                return f"{statut_base} - Prêt pour paiement"
+        
+        return statut_base
 
 
 class RecapitulatifMensuelBailleur(models.Model):
@@ -2188,9 +2101,30 @@ class RecapitulatifMensuelBailleur(models.Model):
         """Génère le nom du fichier PDF du récapitulatif."""
         return f"recapitulatif_{self.mois_recapitulatif.strftime('%Y_%m')}_{self.type_recapitulatif}.pdf"
     
+    def calculer_totaux_bailleur(self):
+        """Calcule les totaux pour le bailleur spécifique de ce récapitulatif."""
+        from proprietes.models import ChargesBailleur
+        from django.db.models import Sum
+        
+        # Calculer les totaux pour le bailleur spécifique
+        details_bailleur = self.calculer_details_bailleur(self.bailleur)
+        
+        totaux = {
+            'bailleur': self.bailleur,
+            'nombre_proprietes': details_bailleur['nombre_proprietes'],
+            'total_loyers_bruts': details_bailleur['total_loyers_bruts'],
+            'total_charges_deductibles': details_bailleur['total_charges_deductibles'],
+            'total_charges_bailleur': details_bailleur['total_charges_bailleur'],
+            'total_net_a_payer': details_bailleur['montant_net_a_payer'],
+            'details_proprietes': details_bailleur['proprietes_details']
+        }
+        
+        return totaux
+    
     def calculer_totaux_globaux(self):
         """Calcule les totaux globaux de tous les bailleurs."""
         from proprietes.models import ChargesBailleur
+        from django.db.models import Sum
         
         # Calculer les totaux pour le bailleur spécifique
         details_bailleur = self.calculer_details_bailleur(self.bailleur)
@@ -2210,6 +2144,7 @@ class RecapitulatifMensuelBailleur(models.Model):
     def calculer_details_bailleur(self, bailleur):
         """Calcule les détails complets pour un bailleur spécifique."""
         from proprietes.models import ChargesBailleur
+        from django.db.models import Sum
         
         # Propriétés louées du bailleur
         proprietes_louees = Propriete.objects.filter(
@@ -2243,10 +2178,10 @@ class RecapitulatifMensuelBailleur(models.Model):
             
             # Charges déductibles (locataire)
             charges_deductibles = ChargeDeductible.objects.filter(
-                propriete=propriete,
+                contrat__propriete=propriete,
                 date_charge__year=self.mois_recapitulatif.year,
                 date_charge__month=self.mois_recapitulatif.month,
-                statut='valide'
+                statut='validee'
             ).aggregate(total=Sum('montant'))['total'] or 0
             
             # Charges bailleur

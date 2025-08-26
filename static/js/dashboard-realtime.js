@@ -12,7 +12,7 @@ function updateMainDashboard() {
             document.getElementById('total-recus').textContent = data.stats.recus.total;
             document.getElementById('recus-valides').textContent = data.stats.recus.valides;
             document.getElementById('recus-imprimes').textContent = data.stats.recus.imprimes;
-            document.getElementById('montant-total-recus').textContent = data.stats.recus.montant_total + ' XOF';
+            document.getElementById('montant-total-recus').textContent = data.stats.recus.montant_total + ' F CFA';
             document.getElementById('total-proprietes').textContent = data.stats.proprietes.total;
             document.getElementById('proprietes-louees').textContent = data.stats.proprietes.disponibles;
             document.getElementById('total-contrats').textContent = data.stats.contrats.total;

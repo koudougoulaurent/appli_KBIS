@@ -471,7 +471,7 @@ def _get_search_trends():
     return {
         'trending_keywords': ['appartement', 'maison', 'studio', 'location'],
         'trending_cities': ['Paris', 'Lyon', 'Marseille', 'Bordeaux'],
-        'trending_prices': ['500-800 XOF', '800-1200 XOF', '1200-2000 XOF']
+        'trending_prices': ['500-800 F CFA', '800-1200 F CFA', '1200-2000 F CFA']
     }
 
 

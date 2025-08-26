@@ -45,7 +45,7 @@
             <div class="card bg-success text-white">
                 <div class="card-body">
                     <h5>Montant Total</h5>
-                    <h2>{{ stats.total_montant|default:0|floatformat:0|intcomma }} XOF</h2>
+                    <h2>{{ stats.total_montant|default:0|floatformat:0|intcomma }} F CFA</h2>
                 </div>
             </div>
         </div>
@@ -162,21 +162,21 @@
                             </td>
                             <td class="text-end">
                                 <span class="fw-bold text-success">
-                                    {{ retrait.montant_loyers_bruts|floatformat:0|intcomma }} XOF
+                                    {{ retrait.montant_loyers_bruts|floatformat:0|intcomma }} F CFA
                                 </span>
                             </td>
                             <td class="text-end">
                                 {% if retrait.montant_charges_deductibles > 0 %}
                                 <span class="text-danger">
-                                    -{{ retrait.montant_charges_deductibles|floatformat:0|intcomma }} XOF
+                                    -{{ retrait.montant_charges_deductibles|floatformat:0|intcomma }} F CFA
                                 </span>
                                 {% else %}
-                                <span class="text-muted">0 XOF</span>
+                                <span class="text-muted">0 F CFA</span>
                                 {% endif %}
                             </td>
                             <td class="text-end">
                                 <span class="fw-bold text-primary fs-6">
-                                    {{ retrait.montant_net_a_payer|floatformat:0|intcomma }} XOF
+                                    {{ retrait.montant_net_a_payer|floatformat:0|intcomma }} F CFA
                                 </span>
                             </td>
                             <td>

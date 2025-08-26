@@ -77,7 +77,7 @@ def main():
                             <tr>
                                 <td>{{ propriete.adresse }}</td>
                                 <td>{{ propriete.type_bien.nom }}</td>
-                                <td>{{ propriete.loyer_actuel }} XOF</td>
+                                <td>{{ propriete.loyer_actuel }} F CFA</td>
                                 <td>
                                     {% if propriete.disponible %}
                                         <span class="badge bg-success">Disponible</span>
@@ -143,7 +143,7 @@ def main():
                     <h6>Informations générales</h6>
                     <p><strong>Adresse:</strong> {{ propriete.adresse }}</p>
                     <p><strong>Type:</strong> {{ propriete.type_bien.nom }}</p>
-                    <p><strong>Loyer actuel:</strong> {{ propriete.loyer_actuel }} XOF</p>
+                    <p><strong>Loyer actuel:</strong> {{ propriete.loyer_actuel }} F CFA</p>
                     <p><strong>Statut:</strong> 
                         {% if propriete.disponible %}
                             <span class="badge bg-success">Disponible</span>
@@ -204,7 +204,7 @@ def main():
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="loyer_actuel" class="form-label">Loyer mensuel (XOF)</label>
+                            <label for="loyer_actuel" class="form-label">Loyer mensuel (F CFA)</label>
                             <input type="number" class="form-control" id="loyer_actuel" name="loyer_actuel" required>
                         </div>
                         <div class="mb-3">
@@ -271,7 +271,7 @@ def main():
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="loyer_actuel" class="form-label">Loyer mensuel (XOF)</label>
+                            <label for="loyer_actuel" class="form-label">Loyer mensuel (F CFA)</label>
                             <input type="number" class="form-control" id="loyer_actuel" name="loyer_actuel" 
                                    value="{{ propriete.loyer_actuel }}" required>
                         </div>
@@ -331,7 +331,7 @@ def main():
                     <p><strong>Référence:</strong> {{ contrat.reference }}</p>
                     <p><strong>Date de début:</strong> {{ contrat.date_debut|date:"d/m/Y" }}</p>
                     <p><strong>Date de fin:</strong> {{ contrat.date_fin|date:"d/m/Y" }}</p>
-                    <p><strong>Loyer mensuel:</strong> {{ contrat.loyer_mensuel }} XOF</p>
+                    <p><strong>Loyer mensuel:</strong> {{ contrat.loyer_mensuel }} F CFA</p>
                     <p><strong>Statut:</strong> 
                         {% if contrat.est_actif and not contrat.est_resilie %}
                             <span class="badge bg-success">Actif</span>
@@ -408,7 +408,7 @@ def main():
                             <input type="date" class="form-control" id="date_fin" name="date_fin" required>
                         </div>
                         <div class="mb-3">
-                            <label for="loyer_mensuel" class="form-label">Loyer mensuel (XOF)</label>
+                            <label for="loyer_mensuel" class="form-label">Loyer mensuel (F CFA)</label>
                             <input type="number" class="form-control" id="loyer_mensuel" name="loyer_mensuel" required>
                         </div>
                     </div>
@@ -481,7 +481,7 @@ def main():
                                    value="{{ contrat.date_fin|date:'Y-m-d' }}" required>
                         </div>
                         <div class="mb-3">
-                            <label for="loyer_mensuel" class="form-label">Loyer mensuel (XOF)</label>
+                            <label for="loyer_mensuel" class="form-label">Loyer mensuel (F CFA)</label>
                             <input type="number" class="form-control" id="loyer_mensuel" name="loyer_mensuel" 
                                    value="{{ contrat.loyer_mensuel }}" required>
                         </div>
@@ -529,7 +529,7 @@ def main():
                 <div class="col-md-6">
                     <h6>Informations du paiement</h6>
                     <p><strong>Référence:</strong> {{ paiement.reference }}</p>
-                    <p><strong>Montant:</strong> {{ paiement.montant }} XOF</p>
+                    <p><strong>Montant:</strong> {{ paiement.montant }} F CFA</p>
                     <p><strong>Date de paiement:</strong> {{ paiement.date_paiement|date:"d/m/Y" }}</p>
                     <p><strong>Méthode:</strong> {{ paiement.get_methode_paiement_display }}</p>
                     <p><strong>Statut:</strong> 
@@ -588,7 +588,7 @@ def main():
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label for="montant" class="form-label">Montant (XOF)</label>
+                            <label for="montant" class="form-label">Montant (F CFA)</label>
                             <input type="number" step="0.01" class="form-control" id="montant" name="montant" required>
                         </div>
                     </div>
@@ -655,7 +655,7 @@ def main():
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label for="montant" class="form-label">Montant (XOF)</label>
+                            <label for="montant" class="form-label">Montant (F CFA)</label>
                             <input type="number" step="0.01" class="form-control" id="montant" name="montant" 
                                    value="{{ paiement.montant }}" required>
                         </div>

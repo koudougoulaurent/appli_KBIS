@@ -104,7 +104,7 @@
                                     <label for="{{ form.montant.id_for_label }}" class="form-label">{{ form.montant.label }}</label>
                                     <div class="input-group">
                                         {{ form.montant }}
-                                        <span class="input-group-text" style="background-color: #e9ecef; color: #495057; font-weight: bold; border: 2px solid #007bff;">XOF</span>
+                                        <span class="input-group-text" style="background-color: #e9ecef; color: #495057; font-weight: bold; border: 2px solid #007bff;">F CFA</span>
                                     </div>
 
                                     {% if form.montant.errors %}
@@ -216,15 +216,15 @@
                                             <h6><i class="bi bi-calculator"></i> Résumé du paiement</h6>
                                             <div class="montant-line">
                                                 <span>Montant du loyer:</span>
-                                                <span id="montant-brut" class="currency-display">0 XOF</span>
+                                                <span id="montant-brut" class="currency-display">0 F CFA</span>
                                             </div>
                                             <div class="montant-line">
                                                 <span>Charges déduites:</span>
-                                                <span id="total-charges" class="charge-amount currency-display">-0 XOF</span>
+                                                <span id="total-charges" class="charge-amount currency-display">-0 F CFA</span>
                                             </div>
                                             <div class="montant-line">
                                                 <span>Montant net à payer:</span>
-                                                <span id="montant-net" class="currency-display">0 XOF</span>
+                                                <span id="montant-net" class="currency-display">0 F CFA</span>
                                             </div>
                                         </div>
                                     {% else %}
@@ -331,9 +331,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const montantNet = montantBrut - totalCharges;
         
         // Mettre à jour l'affichage
-        montantBrutSpan.textContent = CurrencyXOF.format(montantBrut);
-        totalChargesSpan.textContent = '-' + CurrencyXOF.format(totalCharges);
-        montantNetSpan.textContent = CurrencyXOF.format(montantNet);
+                    montantBrutSpan.textContent = CurrencyFCFA.format(montantBrut);
+            totalChargesSpan.textContent = '-' + CurrencyFCFA.format(totalCharges);
+            montantNetSpan.textContent = CurrencyFCFA.format(montantNet);
         
         // Afficher/masquer le résumé
         if (totalCharges > 0) {

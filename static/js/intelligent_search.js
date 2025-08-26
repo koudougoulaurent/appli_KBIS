@@ -241,7 +241,7 @@ class IntelligentSearch {
     handleAutoComplete(query) {
         // Logique d'auto-complétion basée sur les patterns
         const patterns = {
-            'prix': /(\d+)\s*(XOF|francs?|cfa)/i,
+            'prix': /(\d+)\s*(F CFA|francs?|cfa)/i,
             'surface': /(\d+)\s*(m²|m2|mètres?\s*carrés?)/i,
             'ville': /(à|dans|sur)\s+([A-Za-zÀ-ÿ\s]+)/i,
             'type': /(appartement|maison|studio|loft|duplex|terrasse)/i,
@@ -258,7 +258,7 @@ class IntelligentSearch {
     
     suggestCompletion(type, match) {
         const suggestions = {
-            'prix': ['XOF', 'francs', 'CFA'],
+            'prix': ['F CFA', 'francs', 'CFA'],
             'surface': ['m²', 'm2', 'mètres carrés'],
             'ville': ['Paris', 'Lyon', 'Marseille', 'Bordeaux', 'Toulouse'],
             'type': ['appartement', 'maison', 'studio', 'loft', 'duplex'],
@@ -541,7 +541,7 @@ class AdvancedFilters {
         
         priceInputs.forEach(input => {
             // Ajouter des options de prix basées sur les données
-            const priceOptions = ['0-500 XOF', '500-1000 XOF', '1000-1500 XOF', '1500 XOF+'];
+            const priceOptions = ['0-500 F CFA', '500-1000 F CFA', '1000-1500 F CFA', '1500 F CFA+'];
             
             if (input.tagName === 'SELECT') {
                 input.innerHTML = '<option value="">Tous les prix</option>';

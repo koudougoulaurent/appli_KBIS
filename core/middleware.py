@@ -6,7 +6,7 @@ class DeviseMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        devise_code = request.session.get('devise_active', 'XOF')
+        devise_code = request.session.get('devise_active', 'F CFA')
         
         # Utiliser le cache pour éviter les requêtes répétées
         cache_key = f"devise_{devise_code}"
@@ -19,7 +19,7 @@ class DeviseMiddleware:
                 cache.set(cache_key, devise, 3600)
             except Devise.DoesNotExist:
                 # Récupérer la devise par défaut depuis le cache
-                default_cache_key = "devise_XOF"
+                default_cache_key = "devise_F CFA"
                 devise = cache.get(default_cache_key)
                 
                 if devise is None:

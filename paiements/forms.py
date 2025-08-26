@@ -827,3 +827,26 @@ class RecapitulatifMensuelEnvoiForm(forms.Form):
             'type': 'date'
         })
     )
+
+
+class GenererPDFLotForm(forms.Form):
+    """Formulaire pour la génération de PDF en lot."""
+    
+    mois_recap = forms.DateField(
+        label="Mois à traiter",
+        widget=forms.DateInput(
+            attrs={
+                'type': 'month',
+                'class': 'form-control',
+                'required': True
+            }
+        ),
+        help_text="Sélectionnez le mois pour lequel générer les PDFs"
+    )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Définir la valeur par défaut au mois actuel
+        if not self.initial:
+            from datetime import date
+            self.initial['mois_recap'] = date.today().replace(day=1)

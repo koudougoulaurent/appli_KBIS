@@ -9,6 +9,12 @@ from .main_views import (
     detail_audit_log,
     audit_statistiques
 )
+from .views import (
+    configuration_entreprise_admin,
+    supprimer_entete,
+    supprimer_logo,
+    valider_fichier_upload
+)
 from .views.tableaux_bord_securises import (
     tableau_bord_principal,
     configuration_tableau_bord,
@@ -34,6 +40,10 @@ urlpatterns = [
     
     # Configuration
     path('configuration-entreprise/', configuration_entreprise, name='configuration_entreprise'),
+    path('configuration-entreprise-admin/', configuration_entreprise_admin, name='configuration_entreprise_admin'),
+    path('supprimer-entete/', supprimer_entete, name='supprimer_entete'),
+    path('supprimer-logo/', supprimer_logo, name='supprimer_logo'),
+    path('valider-fichier-upload/', valider_fichier_upload, name='valider_fichier_upload'),
     path('changer-devise/', changer_devise, name='changer_devise'),
     
     # Tableaux de bord sécurisés

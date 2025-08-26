@@ -52,10 +52,10 @@ Date de signature: 15/01/2024
 
 #### Étape 2: Conditions Financières
 ```
-Loyer mensuel: 75 000 XOF
-Charges mensuelles: 8 000 XOF
-Dépôt de garantie: 150 000 XOF
-Avance de loyer: 83 000 XOF
+Loyer mensuel: 75 000 F CFA
+Charges mensuelles: 8 000 F CFA
+Dépôt de garantie: 150 000 F CFA
+Avance de loyer: 83 000 F CFA
 Jour de paiement: 5
 Mode de paiement: Virement bancaire
 ```
@@ -141,10 +141,10 @@ Mode de paiement: Virement bancaire
 
 #### Résumé Financier
 ```
-Total mensuel: 83 000 XOF (loyer + charges)
-Total à l'entrée: 316 000 XOF (caution + avance + premier mois)
+Total mensuel: 83 000 F CFA (loyer + charges)
+Total à l'entrée: 316 000 F CFA (caution + avance + premier mois)
 Durée: 12 mois
-Total contrat: 996 000 XOF
+Total contrat: 996 000 F CFA
 ```
 
 #### Mise à Jour en Temps Réel

@@ -23,7 +23,7 @@ class IntelligentSearchEngine:
     def __init__(self):
         self.search_history = {}
         self.search_patterns = {
-            'prix': r'(\d+)\s*(XOF|francs?|cfa)',
+            'prix': r'(\d+)\s*(F CFA|francs?|cfa)',
             'surface': r'(\d+)\s*(m²|m2|mètres?\s*carrés?)',
             'ville': r'(à|dans|sur)\s+([A-Za-zÀ-ÿ\s]+)',
             'type': r'(appartement|maison|studio|loft|duplex|terrasse)',
@@ -264,7 +264,7 @@ class IntelligentSearchEngine:
                 
             # Prix
             if any(char.isdigit() for char in query):
-                suggestions.extend([f"{query} XOF", f"{query} francs CFA"])
+                suggestions.extend([f"{query} F CFA", f"{query} francs CFA"])
                 
         except Exception as e:
             logger.error(f"Erreur lors de la génération des suggestions: {e}")

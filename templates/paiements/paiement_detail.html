@@ -395,7 +395,7 @@
                 
                 <div class="info-row">
                     <span class="info-label">Loyer mensuel</span>
-                    <span class="info-value">{{ paiement.contrat.loyer_mensuel|floatformat:2|intcomma }} XOF</span>
+                    <span class="info-value">{{ paiement.contrat.loyer_mensuel|floatformat:2|intcomma }} F CFA</span>
                 </div>
             </div>
             {% endif %}
@@ -420,19 +420,19 @@
                 </h4>
                 
                 <div class="montant-total">
-                    {{ paiement.montant|floatformat:2|intcomma }} XOF
+                    {{ paiement.montant|floatformat:2|intcomma }} F CFA
                 </div>
                 
                 <div class="montant-details">
                     <div class="montant-item">
                         <div class="montant-label">Montant principal</div>
-                        <div class="montant-value">{{ paiement.montant|floatformat:2|intcomma }} XOF</div>
+                        <div class="montant-value">{{ paiement.montant|floatformat:2|intcomma }} F CFA</div>
                     </div>
                     
                     {% if paiement.charges_deductibles.exists %}
                     <div class="montant-item">
                         <div class="montant-label">Charges déductibles</div>
-                        <div class="montant-value">{{ paiement.total_charges_deductibles|floatformat:2|intcomma }} XOF</div>
+                        <div class="montant-value">{{ paiement.total_charges_deductibles|floatformat:2|intcomma }} F CFA</div>
                     </div>
                     {% endif %}
                 </div>

@@ -299,9 +299,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const montantNet = montant - chargesDeduites;
         
         // Mise à jour de l'affichage
-        document.getElementById('montant-brut').textContent = montant.toLocaleString() + ' XOF';
-        document.getElementById('charges-deduites').textContent = chargesDeduites.toLocaleString() + ' XOF';
-        document.getElementById('montant-net').textContent = montantNet.toLocaleString() + ' XOF';
+        document.getElementById('montant-brut').textContent = montant.toLocaleString() + ' F CFA';
+        document.getElementById('charges-deduites').textContent = chargesDeduites.toLocaleString() + ' F CFA';
+        document.getElementById('montant-net').textContent = montantNet.toLocaleString() + ' F CFA';
         document.getElementById('statut-paiement').textContent = montant > 0 ? 'Validé' : 'En attente';
     }
 

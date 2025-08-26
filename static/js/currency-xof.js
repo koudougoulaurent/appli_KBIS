@@ -1,35 +1,35 @@
 /**
- * Utilitaires pour le formatage de la devise XOF (Franc CFA)
+ * Utilitaires pour le formatage de la devise F CFA (Franc CFA)
  * Conforme aux standards de formatage du Franc CFA
  */
 
-class CurrencyXOF {
+class CurrencyF CFA {
     
     /**
-     * Formate un montant en XOF selon les standards du Franc CFA
+     * Formate un montant en F CFA selon les standards du Franc CFA
      * @param {number|string} value - Le montant à formater
      * @param {boolean} showDecimals - Afficher les décimales (défaut: true)
      * @param {boolean} shortFormat - Utiliser les abréviations K/M (défaut: false)
-     * @returns {string} Le montant formaté avec XOF
+     * @returns {string} Le montant formaté avec F CFA
      */
     static format(value, showDecimals = true, shortFormat = false) {
         try {
             if (value === null || value === undefined || value === '') {
-                return '0 XOF';
+                return '0 F CFA';
             }
             
             const amount = parseFloat(value);
             
             if (isNaN(amount)) {
-                return `${value} XOF`;
+                return `${value} F CFA`;
             }
             
             // Format court avec abréviations
             if (shortFormat) {
                 if (amount >= 1000000) {
-                    return `${(amount / 1000000).toFixed(1).replace('.', ',')}M XOF`;
+                    return `${(amount / 1000000).toFixed(1).replace('.', ',')}M F CFA`;
                 } else if (amount >= 1000) {
-                    return `${Math.round(amount / 1000)} K XOF`;
+                    return `${Math.round(amount / 1000)} K F CFA`;
                 }
             }
             
@@ -46,18 +46,18 @@ class CurrencyXOF {
             // Ajouter les séparateurs de milliers (espaces) et remplacer le point par une virgule
             formatted = formatted.replace(/\B(?=(\d{3})+(?!\d))/g, ' ').replace('.', ',');
             
-            return `${formatted} XOF`;
+            return `${formatted} F CFA`;
             
         } catch (error) {
-            console.error('Erreur de formatage XOF:', error);
-            return `${value} XOF`;
+            console.error('Erreur de formatage F CFA:', error);
+            return `${value} F CFA`;
         }
     }
     
     /**
      * Formate un montant pour l'affichage dans les formulaires
      * @param {number|string} value - Le montant à formater
-     * @returns {string} Le montant formaté sans le symbole XOF
+     * @returns {string} Le montant formaté sans le symbole F CFA
      */
     static formatForInput(value) {
         try {
@@ -84,17 +84,17 @@ class CurrencyXOF {
     }
     
     /**
-     * Parse un montant formaté en XOF vers un nombre
-     * @param {string} formattedValue - La valeur formatée (ex: "1 234,50 XOF")
+     * Parse un montant formaté en F CFA vers un nombre
+     * @param {string} formattedValue - La valeur formatée (ex: "1 234,50 F CFA")
      * @returns {number} Le montant sous forme numérique
      */
     static parse(formattedValue) {
         try {
             if (!formattedValue) return 0;
             
-            // Supprimer XOF, espaces, et remplacer la virgule par un point
+            // Supprimer F CFA, espaces, et remplacer la virgule par un point
             const cleaned = formattedValue
-                .replace(/XOF/g, '')
+                .replace(/F CFA/g, '')
                 .replace(/\s/g, '')
                 .replace(',', '.');
             
@@ -102,7 +102,7 @@ class CurrencyXOF {
             return isNaN(amount) ? 0 : amount;
             
         } catch (error) {
-            console.error('Erreur de parsing XOF:', error);
+            console.error('Erreur de parsing F CFA:', error);
             return 0;
         }
     }
@@ -118,9 +118,9 @@ class CurrencyXOF {
         input.classList.add('currency-input');
         
         input.addEventListener('blur', function() {
-            const value = CurrencyXOF.parse(this.value);
+            const value = CurrencyF CFA.parse(this.value);
             if (value > 0) {
-                this.value = CurrencyXOF.formatForInput(value);
+                this.value = CurrencyF CFA.formatForInput(value);
             }
             // FORCER la visibilité du texte
             this.style.setProperty('color', '#000000', 'important');
@@ -131,7 +131,7 @@ class CurrencyXOF {
         
         input.addEventListener('focus', function() {
             // Supprimer le formatage pour faciliter l'édition
-            const value = CurrencyXOF.parse(this.value);
+            const value = CurrencyF CFA.parse(this.value);
             if (value > 0) {
                 this.value = value.toString().replace('.', ',');
             }
@@ -175,14 +175,14 @@ class CurrencyXOF {
         );
         
         moneyInputs.forEach(input => {
-            CurrencyXOF.formatInput(input);
+            CurrencyF CFA.formatInput(input);
             
-            // Ajouter un indicateur visuel XOF seulement si pas déjà dans un input-group
+            // Ajouter un indicateur visuel F CFA seulement si pas déjà dans un input-group
             const parentGroup = input.closest('.input-group');
             if (!parentGroup && (!input.nextElementSibling || !input.nextElementSibling.classList.contains('currency-indicator'))) {
                 const indicator = document.createElement('span');
                 indicator.className = 'currency-indicator';
-                indicator.textContent = 'XOF';
+                indicator.textContent = 'F CFA';
                 indicator.style.cssText = `
                     margin-left: 8px;
                     color: #495057;
@@ -216,18 +216,18 @@ class CurrencyXOF {
         const displays = document.querySelectorAll(selector);
         displays.forEach(display => {
             const value = display.textContent || display.innerText;
-            const amount = CurrencyXOF.parse(value);
-            display.textContent = CurrencyXOF.format(amount);
+            const amount = CurrencyF CFA.parse(value);
+            display.textContent = CurrencyF CFA.format(amount);
         });
     }
 }
 
 // Initialisation simple au chargement du DOM
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Initialisation CurrencyXOF...');
+    console.log('🚀 Initialisation CurrencyF CFA...');
     
     // Seulement mettre à jour les affichages existants, pas de formatage automatique
-    CurrencyXOF.updateDisplays();
+    CurrencyF CFA.updateDisplays();
     
     // Forcer la visibilité des champs de montant sans formatage complexe
     const moneyInputs = document.querySelectorAll(
@@ -252,8 +252,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Export pour utilisation modulaire
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = CurrencyXOF;
+    module.exports = CurrencyF CFA;
 }
 
 // Rendre disponible globalement
-window.CurrencyXOF = CurrencyXOF;
+window.CurrencyF CFA = CurrencyF CFA;

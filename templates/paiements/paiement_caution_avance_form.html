@@ -125,7 +125,7 @@
                             
                             <!-- Affichage du montant total -->
                             <div class="montant-total">
-                                <h4 id="montant-total-display">0,00 XOF</h4>
+                                <h4 id="montant-total-display">0,00 F CFA</h4>
                                 <small>Montant total du paiement</small>
                             </div>
                         </div>
@@ -269,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
         montantTotalDisplay.textContent = total.toLocaleString('fr-FR', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
-        }) + ' XOF';
+        }) + ' F CFA';
     }
     
     // Fonction pour gérer l'affichage des champs conditionnels

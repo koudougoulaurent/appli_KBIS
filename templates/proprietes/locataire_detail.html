@@ -84,7 +84,7 @@
                         {% endif %}
                         {% if locataire.salaire_mensuel %}
                         <div class="col-md-4">
-                            <p><strong>Salaire mensuel :</strong> {{ locataire.salaire_mensuel }} XOF</p>
+                            <p><strong>Salaire mensuel :</strong> {{ locataire.salaire_mensuel }} F CFA</p>
                         </div>
                         {% endif %}
                     </div>
@@ -144,7 +144,7 @@
                                         </td>
                                         <td>{{ contrat.date_debut|date:"d/m/Y" }}</td>
                                         <td>{{ contrat.date_fin|date:"d/m/Y" }}</td>
-                                        <td>{{ contrat.get_loyer_total }} XOF</td>
+                                        <td>{{ contrat.get_loyer_total }} F CFA</td>
                                         <td>
                                             {% if contrat.est_actif %}
                                                 <span class="badge bg-success">Actif</span>
@@ -215,7 +215,7 @@
                             <div class="stat-card info">
                                 <div class="stat-number">
                                     {% if locataire.salaire_mensuel %}
-                                        {{ locataire.salaire_mensuel }} XOF
+                                        {{ locataire.salaire_mensuel }} F CFA
                                     {% else %}
                                         N/A
                                     {% endif %}

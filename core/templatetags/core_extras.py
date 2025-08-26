@@ -33,17 +33,17 @@ def get_list(dictionary, key):
 @register.filter
 def currency_format(value):
     """
-    Formate un nombre avec la devise XOF selon les standards du Franc CFA
+    Formate un nombre avec la devise F CFA selon les standards du Franc CFA
     Usage : {{ montant|currency_format }}
     
     Exemples:
-    - 1000 → "1 000 XOF"
-    - 1234.50 → "1 234,50 XOF" 
-    - None → "0 XOF"
+    - 1000 → "1 000 F CFA"
+    - 1234.50 → "1 234,50 F CFA" 
+    - None → "0 F CFA"
     """
     try:
         if value is None or value == '':
-            return "0 XOF"
+            return "0 F CFA"
         
         # Convertir en float
         amount = float(value)
@@ -57,27 +57,27 @@ def currency_format(value):
             # Afficher avec 2 décimales
             formatted = f"{amount:,.2f}".replace(',', ' ').replace('.', ',')
         
-        return f"{formatted} XOF"
+        return f"{formatted} F CFA"
         
     except (ValueError, TypeError):
-        return f"{value} XOF"
+        return f"{value} F CFA"
 
 @register.filter
 def currency_symbol(value):
     """
-    Ajoute simplement le symbole XOF avec formatage basique
+    Ajoute simplement le symbole F CFA avec formatage basique
     Usage : {{ montant|currency_symbol }}
     """
     try:
         if value is None or value == '':
-            return "0 XOF"
+            return "0 F CFA"
         amount = float(value)
         if amount == int(amount):
-            return f"{int(amount)} XOF"
+            return f"{int(amount)} F CFA"
         else:
-            return f"{amount:,.2f}".replace(',', ' ').replace('.', ',') + " XOF"
+            return f"{amount:,.2f}".replace(',', ' ').replace('.', ',') + " F CFA"
     except (ValueError, TypeError):
-        return f"{value} XOF"
+        return f"{value} F CFA"
 
 @register.filter
 def currency_short(value):
@@ -87,22 +87,22 @@ def currency_short(value):
     """
     try:
         if value is None or value == '':
-            return "0 XOF"
+            return "0 F CFA"
         
         amount = float(value)
         
         # Pour les gros montants, utiliser des abréviations
         if amount >= 1000000:
-            return f"{amount/1000000:,.1f}M XOF".replace(',', ' ').replace('.', ',')
+            return f"{amount/1000:,.1f}M F CFA".replace(',', ' ').replace('.', ',')
         elif amount >= 1000:
-            return f"{amount/1000:,.0f}K XOF".replace(',', ' ')
+            return f"{amount/1000:,.0f}K F CFA".replace(',', ' ')
         elif amount == int(amount):
-            return f"{int(amount)} XOF"
+            return f"{int(amount)} F CFA"
         else:
-            return f"{amount:,.2f} XOF".replace(',', ' ').replace('.', ',')
+            return f"{amount:,.2f} F CFA".replace(',', ' ').replace('.', ',')
             
     except (ValueError, TypeError):
-        return f"{value} XOF"
+        return f"{value} F CFA"
 
 @register.filter
 def get_attribute(obj, attr_name):

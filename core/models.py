@@ -453,8 +453,22 @@ class ConfigurationEntreprise(models.Model):
     logo_url = models.URLField(
         blank=True,
         null=True,
-        help_text=_("URL du logo de l'entreprise"),
-        verbose_name=_("URL du logo")
+        help_text=_("URL externe du logo de l'entreprise (optionnel)"),
+        verbose_name=_("URL externe du logo")
+    )
+    logo_upload = models.ImageField(
+        upload_to='logos_entreprise/',
+        blank=True,
+        null=True,
+        help_text=_("Logo uploadé directement (PNG, JPG, GIF - max 5MB)"),
+        verbose_name=_("Logo uploadé")
+    )
+    entete_upload = models.ImageField(
+        upload_to='entetes_entreprise/',
+        blank=True,
+        null=True,
+        help_text=_("En-tête complet uploadé (PNG, JPG - max 10MB, dimensions recommandées: 800x200 pixels)"),
+        verbose_name=_("En-tête complet uploadé")
     )
     couleur_principale = models.CharField(
         max_length=7,
@@ -574,6 +588,63 @@ class ConfigurationEntreprise(models.Model):
             bank_parts.append(f"BIC: {self.bic}")
         
         return " | ".join(bank_parts) if bank_parts else "Informations bancaires non définies"
+    
+    def get_logo_prioritaire(self):
+        """
+        Retourne le logo prioritaire : d'abord l'upload, puis l'URL externe.
+        
+        Returns:
+            str: Chemin du logo ou URL, None si aucun logo
+        """
+        if self.logo_upload:
+            return self.logo_upload.path
+        elif self.logo_url:
+            return self.logo_url
+        return None
+    
+    def get_logo_url_prioritaire(self):
+        """
+        Retourne l'URL du logo prioritaire pour l'affichage.
+        
+        Returns:
+            str: URL du logo ou chemin media, None si aucun logo
+        """
+        if self.logo_upload:
+            return self.logo_upload.url
+        elif self.logo_url:
+            return self.logo_url
+        return None
+    
+    def get_entete_prioritaire(self):
+        """
+        Retourne l'en-tête prioritaire : d'abord l'upload, puis le logo + texte.
+        
+        Returns:
+            str: Chemin de l'en-tête ou None si aucun en-tête
+        """
+        if self.entete_upload:
+            return self.entete_upload.path
+        return None
+    
+    def get_entete_url_prioritaire(self):
+        """
+        Retourne l'URL de l'en-tête prioritaire pour l'affichage.
+        
+        Returns:
+            str: URL de l'en-tête ou None si aucun en-tête
+        """
+        if self.entete_upload:
+            return self.entete_upload.url
+        return None
+    
+    def a_un_entete_personnalise(self):
+        """
+        Vérifie si l'entreprise a un en-tête personnalisé.
+        
+        Returns:
+            bool: True si un en-tête personnalisé existe
+        """
+        return bool(self.entete_upload)
 
 
 class TemplateRecu(models.Model):
@@ -622,7 +693,7 @@ class Devise(models.Model):
         max_length=3,
         unique=True,
         verbose_name=_("Code devise"),
-        help_text=_("Code ISO 4217 (ex: EUR, USD, XOF)")
+        help_text=_("Code ISO 4217 (ex: EUR, USD, F CFA)")
     )
     nom = models.CharField(
         max_length=100,

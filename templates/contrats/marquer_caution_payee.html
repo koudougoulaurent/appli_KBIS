@@ -1,0 +1,328 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Marquer Caution Payée - {{ contrat.numero_contrat }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .caution-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .caution-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+    }
+    
+    .caution-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px 15px 0 0;
+        padding: 2rem;
+    }
+    
+    .caution-amount {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .caution-details {
+        padding: 2rem;
+    }
+    
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+    
+    .detail-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .detail-value {
+        color: #2c3e50;
+        font-weight: 500;
+    }
+    
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .status-payee { 
+        background-color: #d4edda; 
+        color: #155724; 
+    }
+    
+    .status-en-attente { 
+        background-color: #fff3cd; 
+        color: #856404; 
+    }
+    
+    .form-container {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-top: 2rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .btn-action {
+        padding: 0.75rem 2rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        border: none;
+    }
+    
+    .btn-secondary:hover {
+        background: #5a6268;
+        transform: translateY(-2px);
+    }
+    
+    .info-alert {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border: 1px solid #90caf9;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .info-icon {
+        color: #1976d2;
+        font-size: 1.5rem;
+        margin-right: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- En-tête de la page -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-0">
+                <i class="bi bi-shield-check text-primary"></i> Marquer Caution Payée
+            </h1>
+            <p class="text-muted mb-0">Confirmation du paiement de la caution pour le contrat {{ contrat.numero_contrat }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'contrats:detail_contrat_caution' contrat.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Retour au Détail
+            </a>
+            <a href="{% url 'contrats:liste_contrats_caution' %}" class="btn btn-outline-primary">
+                <i class="bi bi-list"></i> Liste des Cautions
+            </a>
+        </div>
+    </div>
+
+    <!-- Alerte d'information -->
+    <div class="info-alert">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-info-circle info-icon"></i>
+            <div>
+                <h6 class="mb-1">Information importante</h6>
+                <p class="mb-0">En marquant cette caution comme payée, vous confirmez que le locataire a effectué le versement du montant de la caution. Cette action est irréversible.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Carte principale de la caution -->
+            <div class="card caution-card">
+                <div class="caution-header text-center">
+                    <h2 class="caution-amount">{{ contrat.depot_garantie|floatformat:0 }} F CFA</h2>
+                    <p class="mb-0">Montant de la caution</p>
+                </div>
+                
+                <div class="caution-details">
+                    <div class="detail-row">
+                        <span class="detail-label">Numéro de contrat</span>
+                        <span class="detail-value">{{ contrat.numero_contrat }}</span>
+                    </div>
+                    
+                                         <div class="detail-row">
+                         <span class="detail-label">Locataire</span>
+                         <span class="detail-value">{{ contrat.locataire.get_nom_complet }}</span>
+                     </div>
+                    
+                    <div class="detail-row">
+                        <span class="detail-label">Propriété</span>
+                        <span class="detail-value">{{ contrat.propriete.titre }}</span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="detail-label">Adresse</span>
+                        <span class="detail-value">{{ contrat.propriete.adresse }}, {{ contrat.propriete.ville }}</span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="detail-label">Date de début</span>
+                        <span class="detail-value">{{ contrat.date_debut|date:"d/m/Y" }}</span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="detail-label">Statut actuel</span>
+                        <span class="status-badge {% if contrat.caution_payee %}status-payee{% else %}status-en-attente{% endif %}">
+                            {% if contrat.caution_payee %}
+                                <i class="bi bi-check-circle"></i> Payée
+                            {% else %}
+                                <i class="bi bi-clock"></i> En attente
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    {% if contrat.date_paiement_caution %}
+                    <div class="detail-row">
+                        <span class="detail-label">Date de paiement</span>
+                        <span class="detail-value">{{ contrat.date_paiement_caution|date:"d/m/Y" }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <!-- Formulaire de confirmation -->
+            <div class="form-container">
+                <h5 class="mb-3">
+                    <i class="bi bi-check-circle text-success"></i> Confirmation du paiement
+                </h5>
+                
+                {% if not contrat.caution_payee %}
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <div class="form-group">
+                        <label for="date_paiement" class="form-label">Date de paiement</label>
+                        <input type="date" 
+                               class="form-control" 
+                               id="date_paiement" 
+                               name="date_paiement" 
+                               value="{{ today|date:'Y-m-d' }}"
+                               required>
+                        <small class="form-text text-muted">Laissez vide pour utiliser la date actuelle</small>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-action">
+                            <i class="bi bi-check-circle"></i> Confirmer le Paiement
+                        </button>
+                    </div>
+                </form>
+                {% else %}
+                <div class="text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
+                    </div>
+                    <h6 class="text-success">Caution déjà payée</h6>
+                    <p class="text-muted">Cette caution a été marquée comme payée le {{ contrat.date_paiement_caution|date:"d/m/Y" }}</p>
+                </div>
+                {% endif %}
+                
+                <hr class="my-4">
+                
+                <div class="d-grid gap-2">
+                    <a href="{% url 'contrats:detail_contrat_caution' contrat.id %}" class="btn btn-secondary btn-action">
+                        <i class="bi bi-arrow-left"></i> Retour au Détail
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validation du formulaire
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const dateInput = document.getElementById('date_paiement');
+            const selectedDate = new Date(dateInput.value);
+            const today = new Date();
+            
+            // Vérifier que la date n'est pas dans le futur
+            if (selectedDate > today) {
+                e.preventDefault();
+                alert('La date de paiement ne peut pas être dans le futur.');
+                dateInput.focus();
+                return false;
+            }
+            
+            // Confirmation avant soumission
+            if (!confirm('Êtes-vous sûr de vouloir marquer cette caution comme payée ? Cette action est irréversible.')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    }
+    
+    // Mise à jour automatique de la date si laissée vide
+    const dateInput = document.getElementById('date_paiement');
+    if (dateInput) {
+        dateInput.addEventListener('change', function() {
+            if (!this.value) {
+                const today = new Date().toISOString().split('T')[0];
+                this.value = today;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

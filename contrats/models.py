@@ -158,51 +158,58 @@ class Contrat(models.Model):
         return self.loyer_mensuel + self.charges_mensuelles
     
     def get_loyer_mensuel_formatted(self):
-        """Retourne le loyer mensuel formaté en XOF"""
-        from core.utils import format_currency_xof
-        return format_currency_xof(self.loyer_mensuel)
+        """Retourne le loyer mensuel formaté en F CFA"""
+        from core.utils import format_currency_fcfa
+        return format_currency_fcfa(self.loyer_mensuel)
     
     def get_charges_mensuelles_formatted(self):
-        """Retourne les charges mensuelles formatées en XOF"""
-        from core.utils import format_currency_xof
-        return format_currency_xof(self.charges_mensuelles)
+        """Retourne les charges mensuelles formatées en F CFA"""
+        from core.utils import format_currency_fcfa
+        return format_currency_fcfa(self.charges_mensuelles)
     
     def get_loyer_total_formatted(self):
-        """Retourne le loyer total formaté en XOF"""
-        from core.utils import format_currency_xof
-        return format_currency_xof(self.get_loyer_total())
+        """Retourne le loyer total formaté en F CFA"""
+        from core.utils import format_currency_fcfa
+        return format_currency_fcfa(self.get_loyer_total())
     
     def get_depot_garantie_formatted(self):
-        """Retourne le dépôt de garantie formaté en XOF"""
-        from core.utils import format_currency_xof
-        return format_currency_xof(self.depot_garantie)
+        """Retourne le dépôt de garantie formaté en F CFA"""
+        from core.utils import format_currency_fcfa
+        return format_currency_fcfa(self.depot_garantie)
     
     def get_avance_loyer_formatted(self):
-        """Retourne l'avance de loyer formatée en XOF"""
-        from core.utils import format_currency_xof
-        return format_currency_xof(self.avance_loyer)
+        """Retourne l'avance de loyer formatée en F CFA"""
+        from core.utils import format_currency_fcfa
+        return format_currency_fcfa(self.avance_loyer)
     
     def get_total_caution_avance(self):
         """Retourne le total caution + avance."""
         return self.depot_garantie + self.avance_loyer
     
     def get_total_caution_avance_formatted(self):
-        """Retourne le total caution + avance formaté en XOF"""
-        from core.utils import format_currency_xof
-        return format_currency_xof(self.get_total_caution_avance())
+        """Retourne le total caution + avance formaté en F CFA"""
+        from core.utils import format_currency_fcfa
+        return format_currency_fcfa(self.get_total_caution_avance())
     
     def get_duree_mois(self):
         """Retourne la durée du contrat en mois."""
+        if not self.date_fin:
+            return "Non définie"
+        
         try:
             from dateutil.relativedelta import relativedelta
             delta = relativedelta(self.date_fin, self.date_debut)
-            return delta.years * 12 + delta.months
+            return f"{delta.years * 12 + delta.months} mois"
         except ImportError:
             # Fallback si dateutil n'est pas disponible
-            return (self.date_fin - self.date_debut).days // 30
+            try:
+                days = (self.date_fin - self.date_debut).days
+                return f"{days // 30} mois"
+            except Exception:
+                return "Erreur de calcul"
         except Exception:
             # Fallback en cas d'erreur
-            return 0
+            return "Erreur de calcul"
     
     def est_expire(self):
         """Vérifie si le contrat est expiré."""
@@ -945,5 +952,5 @@ class ResiliationContrat(models.Model):
     
     def get_montant_remboursement_formatted(self):
         """Retourne le montant de remboursement formaté en XOF"""
-        from core.utils import format_currency_xof
-        return format_currency_xof(self.montant_remboursement)
+        from core.utils import format_currency_fcfa
+        return format_currency_fcfa(self.montant_remboursement)

@@ -156,7 +156,7 @@ def creer_paiements_et_recus(contrats, user):
                 valide_par=user
             )
             paiements_crees.append(paiement)
-            print(f"✅ Paiement {i+1}-{j+1} créé: {paiement.montant} XOF")
+            print(f"✅ Paiement {i+1}-{j+1} créé: {paiement.montant} F CFA")
     
     # Attendre un peu pour que les reçus soient créés automatiquement
     import time
@@ -214,7 +214,7 @@ def demontrer_fonctionnalites_avancees(recus, user):
     # 5. Démonstration des méthodes avancées
     print("\n5️⃣ Méthodes avancées:")
     infos = recu.get_informations_paiement()
-    print(f"   💰 Montant: {infos['montant']} XOF")
+            print(f"   💰 Montant: {infos['montant']} F CFA")
     print(f"   📝 Montant en lettres: {infos['montant_lettres']}")
     print(f"   👤 Locataire: {infos['locataire_nom']} {infos['locataire_prenom']}")
     print(f"   🏠 Propriété: {infos['propriete_adresse']}")
@@ -266,14 +266,14 @@ def afficher_statistiques_avancees():
     top_recus = Recu.objects.order_by('-nombre_impressions', '-nombre_emails')[:5]
     
     for i, recu in enumerate(top_recus, 1):
-        print(f"   {i}. {recu.numero_recu} - {recu.paiement.montant} XOF")
+        print(f"   {i}. {recu.numero_recu} - {recu.paiement.montant} F CFA")
         print(f"      Impressions: {recu.nombre_impressions}, Emails: {recu.nombre_emails}")
     
     # Montant total des reçus
     montant_total = Recu.objects.aggregate(
         total=django.db.models.Sum('paiement__montant')
     )['total'] or 0
-    print(f"\n💰 Montant total des reçus: {montant_total:,.2f} XOF")
+    print(f"\n💰 Montant total des reçus: {montant_total:,.2f} F CFA")
 
 def nettoyer_donnees_demo():
     """Nettoie les données de démonstration"""

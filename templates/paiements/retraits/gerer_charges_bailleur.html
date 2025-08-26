@@ -92,15 +92,15 @@
                 <div class="stat-label">Mois de retrait</div>
             </div>
             <div class="stat-item">
-                <div class="stat-value">{{ retrait.montant_loyers_bruts }} XOF</div>
+                <div class="stat-value">{{ retrait.montant_loyers_bruts }} F CFA</div>
                 <div class="stat-label">Loyers bruts</div>
             </div>
             <div class="stat-item">
-                <div class="stat-value">{{ retrait.montant_charges_deductibles }} XOF</div>
+                <div class="stat-value">{{ retrait.montant_charges_deductibles }} F CFA</div>
                 <div class="stat-label">Charges déductibles</div>
             </div>
             <div class="stat-item">
-                <div class="stat-value">{{ retrait.montant_net_a_payer }} XOF</div>
+                <div class="stat-value">{{ retrait.montant_net_a_payer }} F CFA</div>
                 <div class="stat-label">Net à payer</div>
             </div>
         </div>
@@ -121,7 +121,7 @@
                             <h6>Charges disponibles pour {{ retrait.mois_retrait|date:"F Y" }}</h6>
                             <p class="text-muted">
                                 {{ calcul_charges.nombre_charges }} charges éligibles pour un total de 
-                                <strong>{{ calcul_charges.total_charges }} XOF</strong>
+                                <strong>{{ calcul_charges.total_charges }} F CFA</strong>
                             </p>
                         </div>
                         <div class="col-md-6 text-end">
@@ -235,11 +235,11 @@
                                             <small class="text-muted">{{ liaison.charge_bailleur.type_charge }}</small>
                                         </td>
                                         <td>{{ liaison.charge_bailleur.propriete.adresse }}</td>
-                                        <td>{{ liaison.charge_bailleur.montant }} XOF</td>
-                                        <td>{{ liaison.charge_bailleur.montant_deja_deduit }} XOF</td>
+                                        <td>{{ liaison.charge_bailleur.montant }} F CFA</td>
+                                        <td>{{ liaison.charge_bailleur.montant_deja_deduit }} F CFA</td>
                                         <td>
                                             <span class="montant-restant {% if liaison.charge_bailleur.montant_restant == 0 %}text-success{% endif %}">
-                                                {{ liaison.charge_bailleur.montant_restant }} XOF
+                                                {{ liaison.charge_bailleur.montant_restant }} F CFA
                                             </span>
                                         </td>
                                         <td>
@@ -303,11 +303,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (selectedOption.value) {
                 // Extraire le montant restant du texte de l'option
                 const text = selectedOption.text;
-                const match = text.match(/(\d+(?:\.\d+)?)\s+XOF restant/);
+                const match = text.match(/(\d+(?:\.\d+)?)\s+F CFA restant/);
                 if (match) {
                     const montantRestant = parseFloat(match[1]);
                     montantInput.max = montantRestant;
-                    montantInput.placeholder = `Max: ${montantRestant} XOF`;
+                    montantInput.placeholder = `Max: ${montantRestant} F CFA`;
                 }
             }
         });

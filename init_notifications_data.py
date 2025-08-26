@@ -57,7 +57,7 @@ def create_notification_data():
         {
             'type': 'payment_received',
             'title': 'Paiement reçu',
-            'message': 'Un paiement de {} XOF a été reçu pour le contrat #{}',
+            'message': 'Un paiement de {} F CFA a été reçu pour le contrat #{}',
             'priority': 'medium',
             'content_objects': list(paiements)
         },

@@ -405,10 +405,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const totalMensuel = loyerActuel + charges;
         
         // Mise à jour de l'affichage
-        document.getElementById('prix-m2').textContent = prixM2 > 0 ? Math.round(prixM2).toLocaleString() + ' XOF/m²' : '-';
-        document.getElementById('loyer-m2').textContent = loyerM2 > 0 ? Math.round(loyerM2).toLocaleString() + ' XOF/m²' : '-';
+        document.getElementById('prix-m2').textContent = prixM2 > 0 ? Math.round(prixM2).toLocaleString() + ' F CFA/m²' : '-';
+        document.getElementById('loyer-m2').textContent = loyerM2 > 0 ? Math.round(loyerM2).toLocaleString() + ' F CFA/m²' : '-';
         document.getElementById('rendement').textContent = rendementBrut > 0 ? rendementBrut.toFixed(2) + '%' : '-';
-        document.getElementById('total-mensuel').textContent = totalMensuel > 0 ? totalMensuel.toLocaleString() + ' XOF' : '-';
+        document.getElementById('total-mensuel').textContent = totalMensuel > 0 ? totalMensuel.toLocaleString() + ' F CFA' : '-';
     }
 
     // Écouter les changements sur les champs financiers

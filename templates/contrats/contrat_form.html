@@ -259,7 +259,7 @@
                                     <div class="d-flex justify-content-between align-items-center">
                                         <span class="fw-bold">Montant :</span>
                                         <span class="h5 text-primary mb-0" id="montant-caution-requis">
-                                            {{ form.depot_garantie.value|default:"0"|floatformat:0 }} XOF
+                                            {{ form.depot_garantie.value|default:"0"|floatformat:0 }} F CFA
                                         </span>
                                     </div>
                                     <small class="text-muted">Défini dans les conditions financières</small>
@@ -275,7 +275,7 @@
                                     <div class="d-flex justify-content-between align-items-center">
                                         <span class="fw-bold">Montant :</span>
                                         <span class="h5 text-success mb-0" id="montant-avance-requis">
-                                            {{ form.avance_loyer.value|default:"0"|floatformat:0 }} XOF
+                                            {{ form.avance_loyer.value|default:"0"|floatformat:0 }} F CFA
                                         </span>
                                     </div>
                                     <small class="text-muted">Défini dans les conditions financières</small>
@@ -545,7 +545,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     loyerInput.value = loyer;
                     // Déclencher l'événement change pour mettre à jour les calculs
                     loyerInput.dispatchEvent(new Event('change'));
-                    console.log(`Loyer automatiquement rempli : ${loyer} XOF`);
+                                                console.log(`Loyer automatiquement rempli : ${loyer} F CFA`);
                 } else {
                     console.log('Données de propriété non trouvées pour l\'ID:', proprieteId);
                 }
@@ -586,10 +586,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const totalContrat = totalMensuel * dureeMois;
         
         // Mise à jour de l'affichage
-        document.getElementById('total-mensuel').textContent = totalMensuel.toLocaleString() + ' XOF';
-        document.getElementById('total-entree').textContent = totalEntree.toLocaleString() + ' XOF';
+                    document.getElementById('total-mensuel').textContent = totalMensuel.toLocaleString() + ' F CFA';
+            document.getElementById('total-entree').textContent = totalEntree.toLocaleString() + ' F CFA';
         document.getElementById('duree-contrat').textContent = dureeMois + ' mois';
-        document.getElementById('total-contrat').textContent = totalContrat.toLocaleString() + ' XOF';
+        document.getElementById('total-contrat').textContent = totalContrat.toLocaleString() + ' F CFA';
     }
 
     // Écouter les changements sur les champs financiers
@@ -610,8 +610,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const depotGarantie = parseFloat(document.getElementById('id_depot_garantie')?.value) || 0;
         const avanceLoyer = parseFloat(document.getElementById('id_avance_loyer')?.value) || 0;
         
-        document.getElementById('montant-caution-requis').textContent = depotGarantie.toLocaleString() + ' XOF';
-        document.getElementById('montant-avance-requis').textContent = avanceLoyer.toLocaleString() + ' XOF';
+        document.getElementById('montant-caution-requis').textContent = depotGarantie.toLocaleString() + ' F CFA';
+        document.getElementById('montant-avance-requis').textContent = avanceLoyer.toLocaleString() + ' F CFA';
     }
 
     // Écouter les changements sur les montants

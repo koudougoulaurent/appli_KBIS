@@ -171,11 +171,11 @@ class ContratViewSet(viewsets.ModelViewSet):
             select={
                 'fourchette': """
                     CASE 
-                        WHEN loyer_mensuel < 500 THEN '0-500 XOF'
-                        WHEN loyer_mensuel < 1000 THEN '500-1000 XOF'
-                        WHEN loyer_mensuel < 1500 THEN '1000-1500 XOF'
-                        WHEN loyer_mensuel < 2000 THEN '1500-2000 XOF'
-                        ELSE '2000 XOF+'
+                                    WHEN loyer_mensuel < 500 THEN '0-500 F CFA'
+            WHEN loyer_mensuel < 1000 THEN '500-1000 F CFA'
+            WHEN loyer_mensuel < 1500 THEN '1000-1500 F CFA'
+            WHEN loyer_mensuel < 2000 THEN '1500-2000 F CFA'
+            ELSE '2000 F CFA+'
                     END
                 """
             }

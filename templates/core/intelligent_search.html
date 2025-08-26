@@ -317,7 +317,7 @@
                                class="search-input" 
                                name="q" 
                                id="searchInput"
-                               placeholder="Recherchez des propriétés, contrats, paiements... (ex: appartement 2 pièces à Paris moins de 800 XOF)"
+                               placeholder="Recherchez des propriétés, contrats, paiements... (ex: appartement 2 pièces à Paris moins de 800 F CFA)"
                                value="{{ search_query }}"
                                autocomplete="off">
                         <div class="search-suggestions" id="searchSuggestions" style="display: none;"></div>
@@ -340,9 +340,9 @@
                 <div class="filter-group">
                     <div class="filter-label">Prix</div>
                     <div class="filter-controls">
-                        <div class="filter-chip" data-filter="prix" data-value="0-500">0-500 XOF</div>
-                        <div class="filter-chip" data-filter="prix" data-value="500-1000">500-1000 XOF</div>
-                        <div class="filter-chip" data-filter="prix" data-value="1000+">1000 XOF+</div>
+                                        <div class="filter-chip" data-filter="prix" data-value="0-500">0-500 F CFA</div>
+                <div class="filter-chip" data-filter="prix" data-value="500-1000">500-1000 F CFA</div>
+                <div class="filter-chip" data-filter="prix" data-value="1000+">1000 F CFA+</div>
                     </div>
                 </div>
             </div>
@@ -462,7 +462,7 @@
                 <div class="result-details">
                     <div class="detail-item">
                         <div class="detail-label">Prix</div>
-                        <div class="detail-value">{{ propriete.loyer_actuel }} XOF</div>
+                        <div class="detail-value">{{ propriete.loyer_actuel }} F CFA</div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Surface</div>

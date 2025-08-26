@@ -365,11 +365,11 @@
                 </div>
                 <div class="info-row">
                     <span class="info-label">Loyer mensuel:</span>
-                    <span class="info-value">{{ informations.contrat.loyer_mensuel|floatformat:2 }} XOF</span>
+                    <span class="info-value">{{ informations.contrat.loyer_mensuel|floatformat:2 }} F CFA</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Charges mensuelles:</span>
-                    <span class="info-value">{{ informations.contrat.charges_mensuelles|floatformat:2 }} XOF</span>
+                    <span class="info-value">{{ informations.contrat.charges_mensuelles|floatformat:2 }} F CFA</span>
                 </div>
             </div>
             
@@ -386,12 +386,12 @@
                         <div class="info-label">{{ charge.libelle }}</div>
                         <div style="font-size: 11px; color: #666;">{{ charge.type }} - {{ charge.date|date:"d/m/Y" }}</div>
                     </div>
-                    <span class="info-value" style="color: #dc3545; font-weight: bold;">-{{ charge.montant|floatformat:2 }} XOF</span>
+                    <span class="info-value" style="color: #dc3545; font-weight: bold;">-{{ charge.montant|floatformat:2 }} F CFA</span>
                 </div>
                 {% endfor %}
                 <div class="info-row" style="border-top: 2px solid #dc3545; padding-top: 10px; margin-top: 15px; font-weight: bold;">
                     <span class="info-label" style="color: #dc3545;">Total des charges déduites:</span>
-                    <span class="info-value" style="color: #dc3545; font-size: 16px;">-{{ informations.montant_charges_deduites|floatformat:2 }} XOF</span>
+                    <span class="info-value" style="color: #dc3545; font-size: 16px;">-{{ informations.montant_charges_deduites|floatformat:2 }} F CFA</span>
                 </div>
             </div>
             {% endif %}

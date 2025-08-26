@@ -284,7 +284,7 @@
         <div class="resume-financier">
             <div class="ligne">
                 <div class="cellule"><strong>Détail</strong></div>
-                <div class="cellule montant"><strong>Montant (XOF)</strong></div>
+                <div class="cellule montant"><strong>Montant (F CFA)</strong></div>
             </div>
             <div class="ligne">
                 <div class="cellule">Total des loyers bruts</div>
@@ -329,9 +329,9 @@
                 <tr>
                     <th>Propriété</th>
                     <th>Locataire</th>
-                    <th>Loyer (XOF)</th>
-                    <th>Charges (XOF)</th>
-                    <th>Total (XOF)</th>
+                    <th>Loyer (F CFA)</th>
+                    <th>Charges (F CFA)</th>
+                    <th>Total (F CFA)</th>
                     <th>Paiement reçu</th>
                     <th>Statut</th>
                 </tr>
@@ -360,7 +360,7 @@
         {% for charge in detail_charges %}
         <div class="charge-item">
             <div class="charge-libelle">{{ charge.libelle }}</div>
-            <div class="charge-montant">{{ charge.montant }} XOF</div>
+            <div class="charge-montant">{{ charge.montant }} F CFA</div>
             <div style="clear: both;"></div>
             <small>{{ charge.description|default:"" }}</small>
             <br><small><strong>Type:</strong> {{ charge.get_type_charge_display }} | <strong>Date:</strong> {{ charge.date_charge|date:"d/m/Y" }}</small>

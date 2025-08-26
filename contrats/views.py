@@ -92,8 +92,6 @@ class ContratListView(PrivilegeButtonsMixin, IntelligentListView):
         from core.utils import check_group_permissions
         permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
         if not permissions['allowed']:
-            from django.contrib import messages
-            from django.shortcuts import redirect
             messages.error(request, permissions['message'])
             return redirect('core:dashboard')
         
@@ -178,7 +176,7 @@ def ajouter_contrat(request):
                     messages.success(
                         request, 
                         f'Contrat "{contrat.numero_contrat}" ajouté avec succès! '
-                        f'Le paiement de caution de {contrat.depot_garantie} XOF a été créé automatiquement.'
+                        f'Le paiement de caution de {contrat.depot_garantie} F CFA a été créé automatiquement.'
                     )
                     
                 except Exception as e:
@@ -205,7 +203,7 @@ def ajouter_contrat(request):
                     messages.success(
                         request, 
                         f'Contrat "{contrat.numero_contrat}" ajouté avec succès! '
-                        f'Le paiement d\'avance de loyer de {contrat.avance_loyer} XOF a été créé automatiquement.'
+                        f'Le paiement d\'avance de loyer de {contrat.avance_loyer} F CFA a été créé automatiquement.'
                     )
                     
                 except Exception as e:
@@ -669,8 +667,6 @@ class QuittanceListView(PrivilegeButtonsMixin, IntelligentListView):
         from core.utils import check_group_permissions
         permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
         if not permissions['allowed']:
-            from django.contrib import messages
-            from django.shortcuts import redirect
             messages.error(request, permissions['message'])
             return redirect('core:dashboard')
         
@@ -778,8 +774,6 @@ class EtatLieuxListView(PrivilegeButtonsMixin, IntelligentListView):
         from core.utils import check_group_permissions
         permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
         if not permissions['allowed']:
-            from django.contrib import messages
-            from django.shortcuts import redirect
             messages.error(request, permissions['message'])
             return redirect('core:dashboard')
         
@@ -1130,8 +1124,6 @@ def liste_contrats_caution(request):
     from core.utils import check_group_permissions
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
     if not permissions['allowed']:
-        from django.contrib import messages
-        from django.shortcuts import redirect
         messages.error(request, permissions['message'])
         return redirect('core:dashboard')
     
@@ -1184,8 +1176,6 @@ def marquer_caution_payee(request, contrat_id):
     from core.utils import check_group_permissions
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CAISSE'], 'modify')
     if not permissions['allowed']:
-        from django.contrib import messages
-        from django.shortcuts import redirect
         messages.error(request, permissions['message'])
         return redirect('contrats:liste_contrats_caution')
     
@@ -1224,8 +1214,6 @@ def marquer_avance_payee(request, contrat_id):
     from core.utils import check_group_permissions
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CAISSE'], 'modify')
     if not permissions['allowed']:
-        from django.contrib import messages
-        from django.shortcuts import redirect
         messages.error(request, permissions['message'])
         return redirect('contrats:liste_contrats_caution')
     
@@ -1264,8 +1252,6 @@ def detail_contrat_caution(request, contrat_id):
     from core.utils import check_group_permissions
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
     if not permissions['allowed']:
-        from django.contrib import messages
-        from django.shortcuts import redirect
         messages.error(request, permissions['message'])
         return redirect('contrats:liste_contrats_caution')
     
@@ -1298,8 +1284,6 @@ def imprimer_recu_caution(request, contrat_id):
     from core.utils import check_group_permissions
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CAISSE'], 'view')
     if not permissions['allowed']:
-        from django.contrib import messages
-        from django.shortcuts import redirect
         messages.error(request, permissions['message'])
         return redirect('contrats:detail_contrat_caution', contrat_id=contrat_id)
     
@@ -1324,52 +1308,62 @@ def imprimer_recu_caution(request, contrat_id):
     
     # Récupérer la configuration de l'entreprise
     from core.models import ConfigurationEntreprise
+    from core.utils import ajouter_en_tete_entreprise, ajouter_pied_entreprise
     config = ConfigurationEntreprise.get_configuration_active()
     
-    # En-tête
+    # En-tête de l'entreprise (en haut de page)
+    ajouter_en_tete_entreprise(p, config, y_position=750)
+    
+    # Ligne de séparation après l'en-tête
+    p.setStrokeColorRGB(0.7, 0.7, 0.7)
+    p.line(50, 720, 400, 720)
+    p.setStrokeColorRGB(0, 0, 0)
+    
+    # Titre du document (bien séparé de l'en-tête)
     p.setFont("Helvetica-Bold", 16)
-    p.drawString(50, 750, f"RECU DE CAUTION ET AVANCE")
+    p.drawString(50, 680, f"RECU DE CAUTION ET AVANCE")
     p.setFont("Helvetica", 12)
-    p.drawString(50, 730, f"Numéro: {recu.numero_recu}")
-    p.drawString(50, 710, f"Date: {recu.date_emission.strftime('%d/%m/%Y')}")
+    p.drawString(50, 650, f"Numéro: {recu.numero_recu}")
+    p.drawString(50, 630, f"Date: {recu.date_emission.strftime('%d/%m/%Y')}")
     
     # Informations du contrat
     p.setFont("Helvetica-Bold", 14)
-    p.drawString(50, 680, "INFORMATIONS DU CONTRAT")
+    p.drawString(50, 600, "INFORMATIONS DU CONTRAT")
     p.setFont("Helvetica", 10)
-    p.drawString(50, 660, f"Numéro: {contrat.numero_contrat}")
-    p.drawString(50, 640, f"Propriété: {contrat.propriete.titre}")
-    p.drawString(50, 620, f"Locataire: {contrat.locataire.nom} {contrat.locataire.prenom}")
+    p.drawString(50, 580, f"Numéro: {contrat.numero_contrat}")
+    p.drawString(50, 560, f"Propriété: {contrat.propriete.titre}")
+    p.drawString(50, 540, f"Locataire: {contrat.locataire.nom} {contrat.locataire.prenom}")
     
     # Détails financiers
     p.setFont("Helvetica-Bold", 14)
-    p.drawString(50, 580, "DETAILS FINANCIERS")
+    p.drawString(50, 500, "DETAILS FINANCIERS")
     p.setFont("Helvetica", 10)
-    p.drawString(50, 560, f"Loyer mensuel: {contrat.get_loyer_mensuel_formatted()}")
-    p.drawString(50, 540, f"Charges mensuelles: {contrat.get_charges_mensuelles_formatted()}")
-    p.drawString(50, 520, f"Dépôt de garantie: {contrat.get_depot_garantie_formatted()}")
-    p.drawString(50, 500, f"Avance de loyer: {contrat.get_avance_loyer_formatted()}")
+    p.drawString(50, 480, f"Loyer mensuel: {contrat.get_loyer_mensuel_formatted()}")
+    p.drawString(50, 460, f"Charges mensuelles: {contrat.get_charges_mensuelles_formatted()}")
+    p.drawString(50, 440, f"Dépôt de garantie: {contrat.get_depot_garantie_formatted()}")
+    p.drawString(50, 420, f"Avance de loyer: {contrat.get_avance_loyer_formatted()}")
     p.setFont("Helvetica-Bold", 12)
-    p.drawString(50, 480, f"TOTAL: {contrat.get_total_caution_avance_formatted()}")
+    p.drawString(50, 400, f"TOTAL: {contrat.get_total_caution_avance_formatted()}")
     
     # Statut des paiements
     p.setFont("Helvetica-Bold", 14)
-    p.drawString(50, 440, "STATUT DES PAIEMENTS")
+    p.drawString(50, 360, "STATUT DES PAIEMENTS")
     p.setFont("Helvetica", 10)
-    p.drawString(50, 420, f"Caution: {'Payée' if contrat.caution_payee else 'En attente'}")
-    p.drawString(50, 400, f"Avance: {'Payée' if contrat.avance_loyer_payee else 'En attente'}")
+    p.drawString(50, 340, f"Caution: {'Payée' if contrat.caution_payee else 'En attente'}")
+    p.drawString(50, 320, f"Avance: {'Payée' if contrat.avance_loyer_payee else 'En attente'}")
     
-    # Informations de l'entreprise
-    p.setFont("Helvetica-Bold", 12)
-    p.drawString(50, 200, config.nom_entreprise)
-    p.setFont("Helvetica", 10)
-    p.drawString(50, 180, config.get_adresse_complete())
-    p.drawString(50, 160, config.get_contact_complet())
+    # Ligne de séparation avant la signature
+    p.setStrokeColorRGB(0.7, 0.7, 0.7)
+    p.line(50, 300, 400, 300)
+    p.setStrokeColorRGB(0, 0, 0)
     
     # Signature
     p.setFont("Helvetica", 10)
-    p.drawString(50, 100, "Signature du locataire:")
-    p.line(50, 90, 200, 90)
+    p.drawString(50, 280, "Signature du locataire:")
+    p.line(50, 270, 200, 270)
+    
+    # Pied de page avec informations de l'entreprise (bien séparé)
+    ajouter_pied_entreprise(p, config, y_position=220)
     
     p.showPage()
     p.save()
@@ -1385,8 +1379,6 @@ def imprimer_document_contrat(request, contrat_id):
     from core.utils import check_group_permissions
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CAISSE'], 'view')
     if not permissions['allowed']:
-        from django.contrib import messages
-        from django.shortcuts import redirect
         messages.error(request, permissions['message'])
         return redirect('contrats:detail_contrat_caution', contrat_id=contrat_id)
     
@@ -1411,64 +1403,73 @@ def imprimer_document_contrat(request, contrat_id):
     
     # Récupérer la configuration de l'entreprise
     from core.models import ConfigurationEntreprise
+    from core.utils import ajouter_en_tete_entreprise, ajouter_pied_entreprise
     config = ConfigurationEntreprise.get_configuration_active()
     
-    # En-tête
+    # En-tête de l'entreprise (en haut de page)
+    ajouter_en_tete_entreprise(p, config, y_position=800)
+    
+    # Ligne de séparation après l'en-tête
+    p.setStrokeColorRGB(0.7, 0.7, 0.7)
+    p.line(50, 750, 550, 750)
+    p.setStrokeColorRGB(0, 0, 0)
+    
+    # Titre du document (bien séparé de l'en-tête)
     p.setFont("Helvetica-Bold", 18)
-    p.drawString(50, 800, f"CONTRAT DE LOCATION")
+    p.drawString(50, 720, f"CONTRAT DE LOCATION")
     p.setFont("Helvetica", 12)
-    p.drawString(50, 780, f"Numéro: {contrat.numero_contrat}")
-    p.drawString(50, 760, f"Date de signature: {contrat.date_signature.strftime('%d/%m/%Y')}")
+    p.drawString(50, 700, f"Numéro: {contrat.numero_contrat}")
+    p.drawString(50, 680, f"Date de signature: {contrat.date_signature.strftime('%d/%m/%Y')}")
     
     # Informations des parties
     p.setFont("Helvetica-Bold", 14)
-    p.drawString(50, 720, "BAILLEUR")
+    p.drawString(50, 650, "BAILLEUR")
     p.setFont("Helvetica", 10)
-    p.drawString(50, 700, f"Nom: {contrat.propriete.bailleur.nom} {contrat.propriete.bailleur.prenom}")
-    p.drawString(50, 680, f"Adresse: {contrat.propriete.bailleur.adresse}")
-    p.drawString(50, 660, f"Téléphone: {contrat.propriete.bailleur.telephone}")
+    p.drawString(50, 630, f"Nom: {contrat.propriete.bailleur.nom} {contrat.propriete.bailleur.prenom}")
+    p.drawString(50, 610, f"Adresse: {contrat.propriete.bailleur.adresse}")
+    p.drawString(50, 590, f"Téléphone: {contrat.propriete.bailleur.telephone}")
     
     p.setFont("Helvetica-Bold", 14)
-    p.drawString(50, 620, "LOCATAIRE")
+    p.drawString(50, 550, "LOCATAIRE")
     p.setFont("Helvetica", 10)
-    p.drawString(50, 600, f"Nom: {contrat.locataire.nom} {contrat.locataire.prenom}")
-    p.drawString(50, 580, f"Adresse: {contrat.locataire.adresse}")
-    p.drawString(50, 560, f"Téléphone: {contrat.locataire.telephone}")
+    p.drawString(50, 530, f"Nom: {contrat.locataire.nom} {contrat.locataire.prenom}")
+    p.drawString(50, 510, f"Adresse: {contrat.locataire.adresse}")
+    p.drawString(50, 490, f"Téléphone: {contrat.locataire.telephone}")
     
     # Informations de la propriété
     p.setFont("Helvetica-Bold", 14)
-    p.drawString(50, 520, "PROPRIETE LOUE")
+    p.drawString(50, 450, "PROPRIETE LOUE")
     p.setFont("Helvetica", 10)
-    p.drawString(50, 500, f"Titre: {contrat.propriete.titre}")
-    p.drawString(50, 480, f"Adresse: {contrat.propriete.adresse}")
-    p.drawString(50, 460, f"Ville: {contrat.propriete.ville}")
+    p.drawString(50, 430, f"Titre: {contrat.propriete.titre}")
+    p.drawString(50, 410, f"Adresse: {contrat.propriete.adresse}")
+    p.drawString(50, 390, f"Ville: {contrat.propriete.ville}")
     
     # Conditions du contrat
     p.setFont("Helvetica-Bold", 14)
-    p.drawString(50, 420, "CONDITIONS DU CONTRAT")
+    p.drawString(50, 350, "CONDITIONS DU CONTRAT")
     p.setFont("Helvetica", 10)
-    p.drawString(50, 400, f"Date de début: {contrat.date_debut.strftime('%d/%m/%Y')}")
-    p.drawString(50, 380, f"Date de fin: {contrat.date_fin.strftime('%d/%m/%Y')}")
-    p.drawString(50, 360, f"Durée: {contrat.get_duree_mois()} mois")
-    p.drawString(50, 340, f"Loyer mensuel: {contrat.get_loyer_mensuel_formatted()}")
-    p.drawString(50, 320, f"Charges mensuelles: {contrat.get_charges_mensuelles_formatted()}")
-    p.drawString(50, 300, f"Dépôt de garantie: {contrat.get_depot_garantie_formatted()}")
-    p.drawString(50, 280, f"Avance de loyer: {contrat.get_avance_loyer_formatted()}")
+    p.drawString(50, 330, f"Date de début: {contrat.date_debut.strftime('%d/%m/%Y')}")
+    p.drawString(50, 310, f"Date de fin: {contrat.date_fin.strftime('%d/%m/%Y') if contrat.date_fin else 'Non définie'}")
+    p.drawString(50, 290, f"Durée: {contrat.get_duree_mois()}")
+    p.drawString(50, 270, f"Loyer mensuel: {contrat.get_loyer_mensuel_formatted()}")
+    p.drawString(50, 250, f"Charges mensuelles: {contrat.get_charges_mensuelles_formatted()}")
+    p.drawString(50, 230, f"Dépôt de garantie: {contrat.get_depot_garantie_formatted()}")
+    p.drawString(50, 210, f"Avance de loyer: {contrat.get_avance_loyer_formatted()}")
     
-    # Informations de l'entreprise
-    p.showPage()
-    p.setFont("Helvetica-Bold", 12)
-    p.drawString(50, 800, config.nom_entreprise)
-    p.setFont("Helvetica", 10)
-    p.drawString(50, 780, config.get_adresse_complete())
-    p.drawString(50, 760, config.get_contact_complet())
+    # Ligne de séparation avant la signature
+    p.setStrokeColorRGB(0.7, 0.7, 0.7)
+    p.line(50, 180, 550, 180)
+    p.setStrokeColorRGB(0, 0, 0)
     
     # Signature
     p.setFont("Helvetica", 10)
-    p.drawString(50, 200, "Signature du bailleur:")
-    p.line(50, 190, 200, 190)
-    p.drawString(50, 150, "Signature du locataire:")
+    p.drawString(50, 150, "Signature du bailleur:")
     p.line(50, 140, 200, 140)
+    p.drawString(50, 100, "Signature du locataire:")
+    p.line(50, 90, 200, 90)
+    
+    # Pied de page avec informations de l'entreprise (bien séparé)
+    ajouter_pied_entreprise(p, config, y_position=60)
     
     p.showPage()
     p.save()
@@ -1485,8 +1486,6 @@ def liste_resiliations(request):
     from core.utils import check_group_permissions
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES'], 'view')
     if not permissions['allowed']:
-        from django.contrib import messages
-        from django.shortcuts import redirect
         messages.error(request, permissions['message'])
         return redirect('core:dashboard')
     
@@ -1531,8 +1530,6 @@ def creer_resiliation(request, contrat_id):
     from core.utils import check_group_permissions
     permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
     if not permissions['allowed']:
-        from django.contrib import messages
-        from django.shortcuts import redirect
         messages.error(request, permissions['message'])
         return redirect('contrats:liste_resiliations')
     
@@ -1571,8 +1568,6 @@ def detail_resiliation(request, resiliation_id):
     from core.utils import check_group_permissions
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES'], 'view')
     if not permissions['allowed']:
-        from django.contrib import messages
-        from django.shortcuts import redirect
         messages.error(request, permissions['message'])
         return redirect('contrats:liste_resiliations')
     
@@ -1597,8 +1592,6 @@ def valider_resiliation(request, resiliation_id):
     from core.utils import check_group_permissions
     permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'validate')
     if not permissions['allowed']:
-        from django.contrib import messages
-        from django.shortcuts import redirect
         messages.error(request, permissions['message'])
         return redirect('contrats:detail_resiliation', resiliation_id=resiliation_id)
     
@@ -1625,8 +1618,6 @@ def supprimer_resiliation(request, resiliation_id):
     from core.utils import check_group_permissions
     permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'delete')
     if not permissions['allowed']:
-        from django.contrib import messages
-        from django.shortcuts import redirect
         messages.error(request, permissions['message'])
         return redirect('contrats:detail_resiliation', resiliation_id=resiliation_id)
     
@@ -1896,7 +1887,7 @@ def telecharger_resiliation_pdf(request, pk):
     # Détails du contrat
     story.append(Paragraph("DÉTAILS DU CONTRAT", subtitle_style))
     story.append(Paragraph(f"<b>Date de début :</b> {contrat.date_debut.strftime('%d/%m/%Y')}", normal_style))
-    story.append(Paragraph(f"<b>Date de fin initiale :</b> {contrat.date_fin.strftime('%d/%m/%Y')}", normal_style))
+    story.append(Paragraph(f"<b>Date de fin initiale :</b> {contrat.date_fin.strftime('%d/%m/%Y') if contrat.date_fin else 'Non définie'}", normal_style))
     story.append(Paragraph(f"<b>Loyer mensuel :</b> {contrat.get_loyer_mensuel_formatted()}", normal_style))
     story.append(Paragraph(f"<b>Charges mensuelles :</b> {contrat.get_charges_mensuelles_formatted()}", normal_style))
     story.append(Spacer(1, 20))

@@ -130,7 +130,7 @@
             <span class="stat-label">Bailleurs Validés</span>
         </div>
         <div class="stat-card">
-            <span class="stat-number">{{ montant_total|floatformat:0 }} XOF</span>
+            <span class="stat-number">{{ montant_total|floatformat:0 }} F CFA</span>
             <span class="stat-label">Montant Total</span>
         </div>
     </div>
@@ -174,7 +174,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <span class="badge bg-success fs-6">{{ retrait.montant|floatformat:0 }} XOF</span>
+                                <span class="badge bg-success fs-6">{{ retrait.montant|floatformat:0 }} F CFA</span>
                             </td>
                             <td>
                                 <span class="badge bg-info">{{ retrait.get_type_retrait_display }}</span>
@@ -277,7 +277,7 @@
                             </td>
                             <td>{{ retrait_bailleur.mois_retrait|date:"m/Y" }}</td>
                             <td>
-                                <span class="badge bg-success">{{ retrait_bailleur.montant|floatformat:0 }} XOF</span>
+                                <span class="badge bg-success">{{ retrait_bailleur.montant|floatformat:0 }} F CFA</span>
                             </td>
                             <td>
                                 {% if retrait_bailleur.statut == 'valide' %}

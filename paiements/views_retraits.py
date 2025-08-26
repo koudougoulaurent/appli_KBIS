@@ -17,7 +17,7 @@ from .models import (
 )
 from .forms import RetraitBailleurForm
 from proprietes.models import Bailleur
-from core.utils import format_currency_xof, get_context_with_entreprise_config
+from core.utils import format_currency_fcfa, get_context_with_entreprise_config
 
 Utilisateur = get_user_model()
 

@@ -240,7 +240,7 @@ class IntelligentProprieteListView(IntelligentListView):
             },
             {
                 'label': 'Revenus totaux',
-                'value': f"{queryset.filter(disponible=False).aggregate(Sum('loyer_actuel'))['loyer_actuel__sum'] or 0} XOF"
+                'value': f"{queryset.filter(disponible=False).aggregate(Sum('loyer_actuel'))['loyer_actuel__sum'] or 0} F CFA"
             }
         ]
     
@@ -304,7 +304,7 @@ class IntelligentContratListView(IntelligentListView):
             },
             {
                 'label': 'Loyer moyen',
-                'value': f"{queryset.aggregate(Avg('loyer_mensuel'))['loyer_mensuel__avg'] or 0:.0f} XOF"
+                'value': f"{queryset.aggregate(Avg('loyer_mensuel'))['loyer_mensuel__avg'] or 0:.0f} F CFA"
             }
         ]
 
@@ -358,7 +358,7 @@ class IntelligentPaiementListView(IntelligentListView):
             },
             {
                 'label': 'Total perçu',
-                'value': f"{queryset.filter(statut='valide').aggregate(Sum('montant'))['montant__sum'] or 0} XOF"
+                'value': f"{queryset.filter(statut='valide').aggregate(Sum('montant'))['montant__sum'] or 0} F CFA"
             }
         ]
 

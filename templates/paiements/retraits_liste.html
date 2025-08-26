@@ -71,12 +71,12 @@
                            value="{{ request.GET.date_fin }}">
                 </div>
                 <div class="col-md-3">
-                    <label for="montant_min" class="form-label">Montant min (XOF)</label>
+                    <label for="montant_min" class="form-label">Montant min (F CFA)</label>
                     <input type="number" name="montant_min" id="montant_min" class="form-control" 
                            value="{{ request.GET.montant_min }}" step="0.01" min="0">
                 </div>
                 <div class="col-md-3">
-                    <label for="montant_max" class="form-label">Montant max (XOF)</label>
+                    <label for="montant_max" class="form-label">Montant max (F CFA)</label>
                     <input type="number" name="montant_max" id="montant_max" class="form-control" 
                            value="{{ request.GET.montant_max }}" step="0.01" min="0">
                 </div>
@@ -114,7 +114,7 @@
         </div>
         <div class="col-md-3">
             <div class="stat-card info">
-                <div class="stat-number">{{ montant_total }} XOF</div>
+                <div class="stat-number">{{ montant_total }} F CFA</div>
                 <div class="stat-label">Montant Total</div>
             </div>
         </div>
@@ -174,7 +174,7 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="fw-bold text-success">{{ retrait.montant }} XOF</span>
+                                    <span class="fw-bold text-success">{{ retrait.montant }} F CFA</span>
                                 </td>
                                 <td>
                                     <span class="badge bg-info">{{ retrait.get_type_retrait_display }}</span>
@@ -309,7 +309,7 @@
                         </div>
                         <div class="col-6">
                             <div class="stat-card success">
-                                <div class="stat-number">{{ montant_ce_mois }} XOF</div>
+                                <div class="stat-number">{{ montant_ce_mois }} F CFA</div>
                                 <div class="stat-label">Montant Mois</div>
                             </div>
                         </div>

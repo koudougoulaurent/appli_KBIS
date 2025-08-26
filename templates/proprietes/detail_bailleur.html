@@ -62,10 +62,10 @@
                 </div>
                 <div class="card-body">
                     <div class="text-center">
-                        <h3 class="text-primary">{{ stats.total_mois|floatformat:0 }} XOF</h3>
+                        <h3 class="text-primary">{{ stats.total_mois|floatformat:0 }} F CFA</h3>
                         <p class="text-muted">Ce mois</p>
                         <hr>
-                        <h4 class="text-success">{{ stats.total_annee|floatformat:0 }} XOF</h4>
+                        <h4 class="text-success">{{ stats.total_annee|floatformat:0 }} F CFA</h4>
                         <p class="text-muted">Cette année</p>
                         <hr>
                         <p><strong>Paiements ce mois:</strong> {{ stats.nombre_paiements_mois }}</p>
@@ -121,7 +121,7 @@
                                     <h6 class="mb-1">{{ contrat.numero_contrat }}</h6>
                                     <small class="text-muted">{{ contrat.locataire.get_nom_complet }}</small>
                                 </div>
-                                <span class="badge bg-success rounded-pill">{{ contrat.loyer_mensuel }} XOF</span>
+                                <span class="badge bg-success rounded-pill">{{ contrat.loyer_mensuel }} F CFA</span>
                             </div>
                             {% endfor %}
                         </div>

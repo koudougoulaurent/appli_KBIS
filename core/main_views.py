@@ -114,7 +114,7 @@ def dashboard(request):
         
         # Récupérer la devise active (déjà optimisée par le middleware)
         devise_active = getattr(request, 'devise_active', None)
-        devise_base = Devise.objects.get(code='XOF')
+        devise_base = Devise.objects.get(code='F CFA')
         
         cached_stats = {
             'stats': stats,
