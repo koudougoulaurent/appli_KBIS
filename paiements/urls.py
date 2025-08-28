@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views, views_retraits, views_recapitulatifs
+from . import views, api_views, views_retraits, views_recapitulatifs, api_intelligente_retraits
 
 app_name = 'paiements'
 
@@ -130,4 +130,19 @@ urlpatterns = [
     path('recaps-mensuels-automatiques/<int:recap_id>/pdf/', views.generer_pdf_recap_mensuel, name='generer_pdf_recap_mensuel'),
     path('recaps-mensuels-automatiques/<int:recap_id>/apercu/', views.apercu_pdf_recap_mensuel, name='apercu_pdf_recap_mensuel'),
     path('recaps-mensuels-automatiques/pdf-lot/', views.generer_pdf_recaps_lot, name='generer_pdf_recaps_lot'),
+
+    # ✅ SYSTÈME DE VALIDATION DES PAIEMENTS
+    path('paiement/<int:pk>/valider/', views.valider_paiement, name='valider_paiement'),
+    path('paiement/<int:pk>/refuser/', views.refuser_paiement, name='refuser_paiement'),
+    
+    # 🔍 API DE RECHERCHE INTELLIGENTE
+    path('api/recherche-rapide/', api_views.api_recherche_contrats_rapide, name='api_recherche_rapide'),
+    path('api/contexte-intelligent/contrat/<int:contrat_id>/', api_views.api_contexte_intelligent_contrat, name='api_contexte_intelligent'),
+    # 🚀 API INTELLIGENTE DES RETRAITS - NOUVEAU !
+    path('api/contexte-bailleur/<int:bailleur_id>/', api_intelligente_retraits.APIContexteIntelligentRetraits.as_view(), name='api_contexte_bailleur'),
+    path('api/retraits-intelligents/contexte/<int:bailleur_id>/', api_intelligente_retraits.APIContexteIntelligentRetraits.as_view(), name='api_retraits_intelligents_contexte'),
+    path('api/retraits-intelligents/suggestions/<int:bailleur_id>/', api_intelligente_retraits.api_suggestions_retrait, name='api_retraits_intelligents_suggestions'),
+    path('api/retraits-intelligents/contexte-rapide/<int:bailleur_id>/', api_intelligente_retraits.api_contexte_rapide_retrait, name='api_retraits_intelligents_contexte_rapide'),
+    path('api/retraits-intelligents/historique/<int:bailleur_id>/', api_intelligente_retraits.api_historique_retraits, name='api_retraits_intelligents_historique'),
+    path('api/retraits-intelligents/alertes/<int:bailleur_id>/', api_intelligente_retraits.api_alertes_retrait, name='api_retraits_intelligents_alertes'),
 ]

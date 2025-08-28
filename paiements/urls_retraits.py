@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views_retraits
+from . import views_intelligentes_retraits
 
 urlpatterns = [
     # Liste des retraits
@@ -27,4 +28,30 @@ urlpatterns = [
     
     # API pour récupérer les données des bailleurs
     path('api/bailleur/<int:bailleur_id>/data/', views_retraits.get_bailleur_retrait_data, name='bailleur_data'),
+
+    # 🚀 SYSTÈME INTELLIGENT DES RETRAITS - NOUVEAU !
+    # Page d'accueil
+    path('intelligent/', views_intelligentes_retraits.accueil_systeme_intelligent, name='accueil_systeme_intelligent'),
+    
+    # Dashboard intelligent
+    path('intelligent/dashboard/', views_intelligentes_retraits.dashboard_intelligent_retraits, name='dashboard_intelligent'),
+    
+    # Création intelligente
+    path('intelligent/creer/', views_intelligentes_retraits.retrait_intelligent_create, name='retrait_intelligent_create'),
+    path('intelligent/creer/class/', views_intelligentes_retraits.RetraitIntelligentCreateView.as_view(), name='retrait_intelligent_create_class'),
+    
+    # Modification intelligente
+    path('intelligent/<int:pk>/modifier/', views_intelligentes_retraits.retrait_intelligent_update, name='retrait_intelligent_update'),
+    path('intelligent/<int:pk>/modifier/class/', views_intelligentes_retraits.RetraitIntelligentUpdateView.as_view(), name='retrait_intelligent_update_class'),
+    
+    # Recherche intelligente
+    path('intelligent/recherche/', views_intelligentes_retraits.recherche_bailleurs_intelligente, name='recherche_bailleurs_intelligente'),
+    
+    # Contexte et suggestions
+    path('intelligent/contexte/<int:bailleur_id>/', views_intelligentes_retraits.contexte_bailleur_rapide, name='contexte_bailleur_rapide'),
+    path('intelligent/suggestions/<int:bailleur_id>/', views_intelligentes_retraits.suggestions_retrait_automatiques, name='suggestions_retrait_automatiques'),
+    
+    # API intelligente
+    path('intelligent/api/contexte/<int:bailleur_id>/', views_intelligentes_retraits.api_contexte_bailleur, name='api_contexte_bailleur'),
+    path('intelligent/api/suggestions/<int:bailleur_id>/', views_intelligentes_retraits.api_suggestions_retrait, name='api_suggestions_retrait'),
 ]
