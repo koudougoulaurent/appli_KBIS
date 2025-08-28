@@ -6,9 +6,156 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from datetime import date
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.views import View
 
 from .models import Paiement
 from .serializers import PaiementSerializer, PaiementDetailSerializer
+from contrats.models import Contrat
+from proprietes.models import Locataire, Propriete
+
+# 🔍 API DE RECHERCHE RAPIDE DES CONTRATS
+@csrf_exempt
+def api_recherche_contrats_rapide(request):
+    """API pour la recherche rapide de contrats."""
+    if request.method == 'GET':
+        query = request.GET.get('q', '')
+        
+        if not query or len(query) < 2:
+            return JsonResponse({'resultats': []})
+        
+        # Recherche dans les contrats, locataires et propriétés
+        contrats = Contrat.objects.filter(
+            Q(numero_contrat__icontains=query) |
+            Q(locataire__nom__icontains=query) |
+            Q(locataire__prenom__icontains=query) |
+            Q(locataire__id__icontains=query) |
+            Q(propriete__adresse__icontains=query) |
+            Q(propriete__titre__icontains=query),
+            is_deleted=False
+        ).select_related('locataire', 'propriete')[:10]
+        
+        resultats = []
+        for contrat in contrats:
+            # Calculer un score de pertinence
+            score = 0
+            if query.lower() in contrat.numero_contrat.lower():
+                score += 100
+            if query.lower() in contrat.locataire.nom.lower():
+                score += 80
+            if query.lower() in contrat.locataire.prenom.lower():
+                score += 80
+            if query.lower() in contrat.propriete.adresse.lower():
+                score += 60
+            
+            resultats.append({
+                'id': contrat.pk,
+                'numero_contrat': contrat.numero_contrat,
+                'locataire_nom': contrat.locataire.get_nom_complet(),
+                'locataire_id': contrat.locataire.pk,
+                'propriete_adresse': contrat.propriete.adresse,
+                'propriete_titre': contrat.propriete.titre,
+                'score': score,
+                'loyer': float(contrat.loyer_mensuel) if contrat.loyer_mensuel else 0
+            })
+        
+        # Trier par score décroissant
+        resultats.sort(key=lambda x: x['score'], reverse=True)
+        
+        return JsonResponse({'resultats': resultats})
+    
+    return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+
+# 🧠 API DE CONTEXTE INTELLIGENT
+@csrf_exempt
+def api_contexte_intelligent_contrat(request, contrat_id):
+    """API pour récupérer le contexte intelligent d'un contrat."""
+    if request.method == 'GET':
+        try:
+            contrat = Contrat.objects.select_related(
+                'locataire', 'propriete', 'propriete__bailleur'
+            ).get(pk=contrat_id, is_deleted=False)
+            
+            # Récupérer l'historique des paiements (5 derniers mois)
+            from datetime import datetime, timedelta
+            date_limite = datetime.now() - timedelta(days=150)
+            
+            paiements_recents = Paiement.objects.filter(
+                contrat=contrat,
+                date_paiement__gte=date_limite,
+                is_deleted=False
+            ).order_by('-date_paiement')[:5]
+            
+            # Calculer le prochain mois de paiement
+            derniers_mois = [p.date_paiement.month for p in paiements_recents if p.date_paiement]
+            prochain_mois = None
+            mois_suggere = None
+            
+            if derniers_mois:
+                # Si il y a des paiements, calculer le mois suivant
+                dernier_mois = max(derniers_mois)
+                prochain_mois = (dernier_mois % 12) + 1
+                mois_suggere = f"Suivant le dernier paiement ({prochain_mois})"
+            else:
+                # Premier paiement : utiliser le mois actuel ou le mois de début de contrat
+                from datetime import datetime
+                mois_actuel = datetime.now().month
+                if contrat.date_debut:
+                    mois_debut = contrat.date_debut.month
+                    if mois_debut == mois_actuel:
+                        prochain_mois = mois_actuel
+                        mois_suggere = "Mois actuel (début de contrat)"
+                    else:
+                        prochain_mois = mois_debut
+                        mois_suggere = f"Mois de début de contrat ({mois_debut})"
+                else:
+                    prochain_mois = mois_actuel
+                    mois_suggere = "Mois actuel"
+            
+            contexte = {
+                'contrat': {
+                    'numero': contrat.numero_contrat,
+                    'date_debut': contrat.date_debut.strftime('%d/%m/%Y') if contrat.date_debut else None,
+                    'date_fin': contrat.date_fin.strftime('%d/%m/%Y') if contrat.date_fin else None,
+                    'montant_loyer': float(contrat.loyer_mensuel) if contrat.loyer_mensuel else 0,
+                    'charges': float(contrat.charges_mensuelles) if contrat.charges_mensuelles else 0
+                },
+                'locataire': {
+                    'nom_complet': contrat.locataire.get_nom_complet(),
+                    'telephone': contrat.locataire.telephone,
+                    'email': contrat.locataire.email
+                },
+                'propriete': {
+                    'adresse': contrat.propriete.adresse,
+                    'titre': contrat.propriete.titre,
+                    'type': str(contrat.propriete.type_propriete) if hasattr(contrat.propriete, 'type_propriete') else 'Non défini',
+                    'surface': contrat.propriete.surface
+                },
+                'paiements_recents': [
+                    {
+                        'date': p.date_paiement.strftime('%d/%m/%Y'),
+                        'montant': float(p.montant),
+                        'type': p.get_type_paiement_display(),
+                        'statut': p.get_statut_display()
+                    } for p in paiements_recents
+                ],
+                'prochain_mois_paiement': prochain_mois,
+                'mois_suggere': mois_suggere,
+                'total_charges': float(contrat.charges_mensuelles) if contrat.charges_mensuelles else 0,
+                'net_a_payer': float(contrat.loyer_mensuel) if contrat.loyer_mensuel else 0,
+                'est_premier_paiement': len(paiements_recents) == 0
+            }
+            
+            return JsonResponse(contexte)
+            
+        except Contrat.DoesNotExist:
+            return JsonResponse({'error': 'Contrat non trouvé'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
 
 
 class PaiementViewSet(viewsets.ModelViewSet):

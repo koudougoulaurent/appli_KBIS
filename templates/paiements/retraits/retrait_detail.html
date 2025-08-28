@@ -131,28 +131,46 @@
                     <div class="row g-3">
                         <div class="col-md-4">
                             <div class="text-center p-3 border rounded">
-                                <div class="text-success fw-bold fs-4">
-                                    {{ retrait.montant_loyers_bruts|floatformat:0|intcomma }} F CFA
-                                </div>
-                                <div class="text-muted">Loyers Bruts</div>
+                                {% if can_see_amounts %}
+                                    <div class="text-success fw-bold fs-4">
+                                        {{ retrait.montant_loyers_bruts|floatformat:0|intcomma }} F CFA
+                                    </div>
+                                    <div class="text-muted">Loyers Bruts</div>
+                                {% else %}
+                                    <div class="text-success fw-bold fs-4">***</div>
+                                    <div class="text-muted">Loyers Bruts</div>
+                                    <small class="text-muted">Montant confidentiel</small>
+                                {% endif %}
                             </div>
                         </div>
                         
                         <div class="col-md-4">
                             <div class="text-center p-3 border rounded">
-                                <div class="text-danger fw-bold fs-4">
-                                    -{{ retrait.montant_charges_deductibles|floatformat:0|intcomma }} F CFA
-                                </div>
-                                <div class="text-muted">Charges Déductibles</div>
+                                {% if can_see_amounts %}
+                                    <div class="text-danger fw-bold fs-4">
+                                        -{{ retrait.montant_charges_deductibles|floatformat:0|intcomma }} F CFA
+                                    </div>
+                                    <div class="text-muted">Charges Déductibles</div>
+                                {% else %}
+                                    <div class="text-danger fw-bold fs-4">***</div>
+                                    <div class="text-muted">Charges Déductibles</div>
+                                    <small class="text-muted">Montant confidentiel</small>
+                                {% endif %}
                             </div>
                         </div>
                         
                         <div class="col-md-4">
                             <div class="text-center p-3 border rounded bg-primary text-white">
-                                <div class="fw-bold fs-4">
-                                    {{ retrait.montant_net_a_payer|floatformat:0|intcomma }} F CFA
-                                </div>
-                                <div>Net à Payer</div>
+                                {% if can_see_amounts %}
+                                    <div class="fw-bold fs-4">
+                                        {{ retrait.montant_net_a_payer|floatformat:0|intcomma }} F CFA
+                                    </div>
+                                    <div>Net à Payer</div>
+                                {% else %}
+                                    <div class="fw-bold fs-4">***</div>
+                                    <div>Net à Payer</div>
+                                    <small class="text-muted">Montant confidentiel</small>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -196,7 +214,13 @@
                                         </a>
                                     </td>
                                     <td>{{ paiement.contrat.locataire.get_nom_complet }}</td>
-                                    <td class="text-end">{{ paiement.montant|floatformat:0|intcomma }} F CFA</td>
+                                    <td class="text-end">
+                                        {% if can_see_amounts %}
+                                            {{ paiement.montant|floatformat:0|intcomma }} F CFA
+                                        {% else %}
+                                            ***
+                                        {% endif %}
+                                    </td>
                                     <td>{{ paiement.date_paiement|date:"d/m/Y" }}</td>
                                     <td>
                                         <span class="badge bg-{{ paiement.get_statut_display_color }}">
@@ -237,7 +261,13 @@
                                 <tr>
                                     <td>{{ charge.libelle }}</td>
                                     <td>{{ charge.get_type_charge_display }}</td>
-                                    <td class="text-end">{{ charge.montant|floatformat:0|intcomma }} F CFA</td>
+                                    <td class="text-end">
+                                        {% if can_see_amounts %}
+                                            {{ charge.montant|floatformat:0|intcomma }} F CFA
+                                        {% else %}
+                                            ***
+                                        {% endif %}
+                                    </td>
                                     <td>{{ charge.date_charge|date:"d/m/Y" }}</td>
                                     <td>
                                         <span class="badge bg-{{ charge.get_statut_display_color }}">

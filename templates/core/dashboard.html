@@ -1,183 +1,16 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Tableau de Bord - Gestion Immobilière{% endblock %}
+{% block title %}GESTION IMMOBILIERE PRO - Gestion Immobilière{% endblock %}
 
 {% block content %}
-<style>
-    .dashboard-header {
-        background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 15px;
-        margin-bottom: 2rem;
-        box-shadow: 0 10px 25px rgba(30, 58, 138, 0.3);
-    }
-    
-    .stat-card {
-        border-radius: 15px;
-        border: none;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        margin-bottom: 1.5rem;
-    }
-    
-    .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
-    }
-    
-    .stat-card.primary {
-        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-        color: white;
-    }
-    
-    .stat-card.success {
-        background: linear-gradient(135deg, #166534 0%, #22c55e 100%);
-        color: white;
-    }
-    
-    .stat-card.danger {
-        background: linear-gradient(135deg, #991b1b 0%, #ef4444 100%);
-        color: white;
-    }
-    
-    .stat-card.warning {
-        background: linear-gradient(135deg, #92400e 0%, #f59e0b 100%);
-        color: white;
-    }
-    
-    .stat-number {
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    }
-    
-    .stat-label {
-        font-size: 1.1rem;
-        font-weight: 600;
-        opacity: 0.9;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-    
-    .stat-subtitle {
-        font-size: 0.9rem;
-        opacity: 0.8;
-        margin-top: 0.5rem;
-    }
-    
-    .stat-icon {
-        font-size: 3rem;
-        opacity: 0.8;
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    }
-    
-    .content-card {
-        background: white;
-        border-radius: 15px;
-        border: none;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-        margin-bottom: 2rem;
-    }
-    
-    .content-card .card-header {
-        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-        color: white;
-        border-radius: 15px 15px 0 0 !important;
-        border: none;
-        padding: 1.5rem;
-    }
-    
-    .content-card .card-header h6 {
-        font-weight: 700;
-        font-size: 1.2rem;
-        margin: 0;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-    }
-    
-    .content-card .card-body {
-        padding: 1.5rem;
-    }
-    
-    .list-group-item {
-        border: none;
-        border-bottom: 1px solid #e5e7eb;
-        padding: 1rem 0;
-        background: transparent;
-    }
-    
-    .list-group-item:last-child {
-        border-bottom: none;
-    }
-    
-    .badge {
-        font-size: 0.9rem;
-        font-weight: 600;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-    }
-    
-    .btn-custom {
-        border-radius: 10px;
-        font-weight: 600;
-        padding: 0.75rem 1.5rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        transition: all 0.3s ease;
-        border: none;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    }
-    
-    .btn-custom:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-    }
-    
-    .btn-primary-custom {
-        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-        color: white;
-    }
-    
-    .btn-success-custom {
-        background: linear-gradient(135deg, #166534 0%, #22c55e 100%);
-        color: white;
-    }
-    
-    .btn-danger-custom {
-        background: linear-gradient(135deg, #991b1b 0%, #ef4444 100%);
-        color: white;
-    }
-    
-    .btn-warning-custom {
-        background: linear-gradient(135deg, #92400e 0%, #f59e0b 100%);
-        color: white;
-    }
-    
-    .text-muted {
-        color: #6b7280 !important;
-        font-weight: 500;
-    }
-    
-    .h6 {
-        font-weight: 700;
-        color: #1f2937;
-    }
-    
-    .small {
-        font-weight: 500;
-    }
-</style>
-
-
 <div class="container-fluid" id="main-dashboard">
     <!-- En-tête du dashboard -->
-    <div class="dashboard-header">
+    <div class="dashboard-header" role="banner">
         <div class="row align-items-center">
             <div class="col-12">
                 <h1 class="h2 mb-2">
-                    <i class="bi bi-speedometer2 me-3"></i> Tableau de Bord
+                    <i class="bi bi-speedometer2 me-3" aria-hidden="true"></i> GESTION IMMOBILIERE PRO
                 </h1>
                 <p class="mb-0 opacity-75">Vue d'ensemble de votre gestion immobilière</p>
             </div>
@@ -185,19 +18,19 @@
     </div>
 
     <!-- Cartes de statistiques -->
-    <div class="row">
+    <div class="row" role="region" aria-label="Statistiques">
         <!-- Utilisateurs -->
         <div class="col-xl-3 col-md-6">
-            <div class="card stat-card primary">
+            <div class="stat-card primary" role="region" aria-labelledby="utilisateurs-label">
                 <div class="card-body text-center">
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="text-start">
                             <div class="stat-number" id="total-paiements">{{ total_users }}</div>
-                            <div class="stat-label">Utilisateurs</div>
+                            <div class="stat-label" id="utilisateurs-label">Utilisateurs</div>
                             <div class="stat-subtitle"><span id="paiements-valides">{{ active_users }}</span> actifs</div>
                         </div>
                         <div class="stat-icon">
-                            <i class="bi bi-people"></i>
+                            <i class="bi bi-people" aria-hidden="true"></i>
                         </div>
                     </div>
                 </div>
@@ -206,16 +39,16 @@
 
         <!-- Propriétés -->
         <div class="col-xl-3 col-md-6">
-            <div class="card stat-card success">
+            <div class="stat-card success" role="region" aria-labelledby="proprietes-label">
                 <div class="card-body text-center">
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="text-start">
                             <div class="stat-number" id="total-proprietes">{{ total_proprietes }}</div>
-                            <div class="stat-label">Propriétés</div>
+                            <div class="stat-label" id="proprietes-label">Propriétés</div>
                             <div class="stat-subtitle"><span id="proprietes-louees">{{ proprietes_disponibles }}</span> disponibles</div>
                         </div>
                         <div class="stat-icon">
-                            <i class="bi bi-house"></i>
+                            <i class="bi bi-house" aria-hidden="true"></i>
                         </div>
                     </div>
                 </div>
@@ -224,16 +57,16 @@
 
         <!-- Bailleurs -->
         <div class="col-xl-3 col-md-6">
-            <div class="card stat-card danger">
+            <div class="stat-card danger" role="region" aria-labelledby="bailleurs-label">
                 <div class="card-body text-center">
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="text-start">
                             <div class="stat-number" id="total-bailleurs">{{ total_bailleurs }}</div>
-                            <div class="stat-label">Bailleurs</div>
+                            <div class="stat-label" id="bailleurs-label">Bailleurs</div>
                             <div class="stat-subtitle">Propriétaires</div>
                         </div>
                         <div class="stat-icon">
-                            <i class="bi bi-person-badge"></i>
+                            <i class="bi bi-person-badge" aria-hidden="true"></i>
                         </div>
                     </div>
                 </div>
@@ -242,16 +75,16 @@
 
         <!-- Locataires -->
         <div class="col-xl-3 col-md-6">
-            <div class="card stat-card warning">
+            <div class="stat-card warning" role="region" aria-labelledby="locataires-label">
                 <div class="card-body text-center">
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="text-start">
                             <div class="stat-number" id="total-locataires">{{ total_locataires }}</div>
-                            <div class="stat-label">Locataires</div>
+                            <div class="stat-label" id="locataires-label">Locataires</div>
                             <div class="stat-subtitle">Actifs</div>
                         </div>
                         <div class="stat-icon">
-                            <i class="bi bi-person-check"></i>
+                            <i class="bi bi-person-check" aria-hidden="true"></i>
                         </div>
                     </div>
                 </div>
@@ -260,19 +93,19 @@
         
         <!-- Reçus -->
         <div class="col-xl-3 col-md-6">
-            <div class="card stat-card info">
+            <div class="stat-card info" role="region" aria-labelledby="recus-label">
                 <div class="card-body text-center">
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="text-start">
                             <div class="stat-number" id="total-recus">{{ total_recus }}</div>
-                            <div class="stat-label">Reçus</div>
+                            <div class="stat-label" id="recus-label">Reçus</div>
                             <div class="stat-subtitle">
                                 <span id="recus-valides">{{ recus_valides }}</span> valides,
                                 <span id="recus-imprimes">{{ recus_imprimes }}</span> imprimés
                             </div>
                         </div>
                         <div class="stat-icon">
-                            <i class="bi bi-receipt"></i>
+                            <i class="bi bi-receipt" aria-hidden="true"></i>
                         </div>
                     </div>
                 </div>
@@ -281,16 +114,16 @@
         
         <!-- Montant total des reçus -->
         <div class="col-xl-3 col-md-6">
-            <div class="card stat-card secondary">
+            <div class="stat-card secondary" role="region" aria-labelledby="montant-recus-label">
                 <div class="card-body text-center">
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="text-start">
                             <div class="stat-number" id="montant-total-recus">{{ montant_total_recus }} F CFA</div>
-                            <div class="stat-label">Montant Total Reçus</div>
+                            <div class="stat-label" id="montant-recus-label">Montant Total Reçus</div>
                             <div class="stat-subtitle">Tous reçus confondus</div>
                         </div>
                         <div class="stat-icon">
-                            <i class="bi bi-currency-exchange"></i>
+                            <i class="bi bi-currency-exchange" aria-hidden="true"></i>
                         </div>
                     </div>
                 </div>
@@ -302,10 +135,10 @@
     <div class="row">
         <!-- Top propriétés -->
         <div class="col-lg-6">
-            <div class="card content-card">
+            <div class="card" role="region" aria-labelledby="top-proprietes-heading">
                 <div class="card-header">
-                    <h6>
-                        <i class="bi bi-star me-2"></i> Top 5 des Propriétés
+                    <h6 id="top-proprietes-heading">
+                        <i class="bi bi-star me-2" aria-hidden="true"></i> Top 5 des Propriétés
                     </h6>
                 </div>
                 <div class="card-body">
@@ -332,10 +165,10 @@
 
         <!-- Statistiques par ville -->
         <div class="col-lg-6">
-            <div class="card content-card">
+            <div class="card" role="region" aria-labelledby="proprietes-ville-heading">
                 <div class="card-header">
-                    <h6>
-                        <i class="bi bi-geo-alt me-2"></i> Propriétés par Ville
+                    <h6 id="proprietes-ville-heading">
+                        <i class="bi bi-geo-alt me-2" aria-hidden="true"></i> Propriétés par Ville
                     </h6>
                 </div>
                 <div class="card-body">
@@ -359,42 +192,42 @@
     <!-- Actions rapides -->
     <div class="row">
         <div class="col-12">
-            <div class="card content-card">
+            <div class="card" role="region" aria-labelledby="actions-rapides-heading">
                 <div class="card-header">
-                    <h6>
-                        <i class="bi bi-lightning me-2"></i> Actions Rapides
+                    <h6 id="actions-rapides-heading">
+                        <i class="bi bi-lightning me-2" aria-hidden="true"></i> Actions Rapides
                     </h6>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-3 mb-3">
-                            <a href="{% url 'proprietes:ajouter' %}" class="btn btn-custom btn-primary-custom w-100">
-                                <i class="bi bi-plus-circle me-2"></i> Ajouter une Propriété
+                            <a href="{% url 'proprietes:ajouter' %}" class="btn btn-primary w-100" aria-label="Ajouter une propriété">
+                                <i class="bi bi-plus-circle me-2" aria-hidden="true"></i> Ajouter une Propriété
                             </a>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <a href="{% url 'core:intelligent_search' %}" class="btn btn-custom btn-primary-custom w-100">
-                                <i class="bi bi-search me-2"></i> Recherche Intelligente
+                            <a href="{% url 'core:intelligent_search' %}" class="btn btn-primary w-100" aria-label="Recherche intelligente">
+                                <i class="bi bi-search me-2" aria-hidden="true"></i> Recherche Intelligente
                             </a>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <a href="/admin/" class="btn btn-custom btn-warning-custom w-100">
-                                <i class="bi bi-gear me-2"></i> Administration
+                            <a href="/admin/" class="btn btn-warning w-100" aria-label="Administration">
+                                <i class="bi bi-gear me-2" aria-hidden="true"></i> Administration
                             </a>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <a href="{% url 'utilisateurs:profile' %}" class="btn btn-custom btn-success-custom w-100">
-                                <i class="bi bi-person me-2"></i> Mon Profil
+                            <a href="{% url 'utilisateurs:profile' %}" class="btn btn-success w-100" aria-label="Mon profil">
+                                <i class="bi bi-person me-2" aria-hidden="true"></i> Mon Profil
                             </a>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <a href="{% url 'paiements:tableau_bord_dashboard' %}" class="btn btn-custom btn-info-custom w-100">
-                                <i class="bi bi-graph-up me-2"></i> Tableaux de Bord
+                            <a href="{% url 'paiements:tableau_bord_dashboard' %}" class="btn btn-info w-100" aria-label="Tableaux de bord">
+                                <i class="bi bi-graph-up me-2" aria-hidden="true"></i> Tableaux de Bord
                             </a>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <a href="{% url 'core:configuration_entreprise_admin' %}" class="btn btn-custom btn-warning-custom w-100">
-                                <i class="bi bi-cog me-2"></i> Configuration Admin
+                            <a href="{% url 'core:configuration_entreprise_admin' %}" class="btn btn-warning w-100" aria-label="Configuration admin">
+                                <i class="bi bi-cog me-2" aria-hidden="true"></i> Configuration Admin
                             </a>
                         </div>
                     </div>
@@ -406,24 +239,24 @@
     <!-- Dashboards Avancés -->
     <div class="row">
         <div class="col-12">
-            <div class="card content-card">
+            <div class="card" role="region" aria-labelledby="dashboards-avances-heading">
                 <div class="card-header">
-                    <h6>
-                        <i class="bi bi-crown me-2"></i> Dashboards Avancés
+                    <h6 id="dashboards-avances-heading">
+                        <i class="bi bi-crown me-2" aria-hidden="true"></i> Dashboards Avancés
                     </h6>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <a href="{% url 'utilisateurs:dashboard_groupe' 'PRIVILEGE' %}" class="btn btn-custom w-100" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; font-size: 1.1rem; padding: 1rem;">
-                                <i class="bi bi-crown me-2"></i> 
+                            <a href="{% url 'utilisateurs:dashboard_groupe' 'PRIVILEGE' %}" class="btn btn-primary w-100" aria-label="Dashboard privilège">
+                                <i class="bi bi-crown me-2" aria-hidden="true"></i> 
                                 <strong>Dashboard PRIVILEGE</strong>
                                 <br><small class="opacity-75">Accès complet système</small>
                             </a>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <a href="{% url 'utilisateurs:dashboard_groupe' 'ADMINISTRATION' %}" class="btn btn-custom w-100" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; font-size: 1.1rem; padding: 1rem;">
-                                <i class="bi bi-building me-2"></i> 
+                            <a href="{% url 'utilisateurs:dashboard_groupe' 'ADMINISTRATION' %}" class="btn btn-success w-100" aria-label="Dashboard administration">
+                                <i class="bi bi-building me-2" aria-hidden="true"></i> 
                                 <strong>Dashboard ADMINISTRATION</strong>
                                 <br><small class="opacity-75">Gestion immobilière</small>
                             </a>
@@ -431,13 +264,13 @@
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <a href="{% url 'utilisateurs:dashboard_groupe' 'CONTROLES' %}" class="btn btn-custom w-100" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
-                                <i class="bi bi-shield-check me-2"></i> Dashboard CONTROLES
+                            <a href="{% url 'utilisateurs:dashboard_groupe' 'CONTROLES' %}" class="btn btn-warning w-100" aria-label="Dashboard contrôles">
+                                <i class="bi bi-shield-check me-2" aria-hidden="true"></i> Dashboard CONTROLES
                             </a>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <a href="{% url 'utilisateurs:dashboard_groupe' 'CAISSE' %}" class="btn btn-custom w-100" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white;">
-                                <i class="bi bi-cash-coin me-2"></i> Dashboard CAISSE
+                            <a href="{% url 'utilisateurs:dashboard_groupe' 'CAISSE' %}" class="btn btn-primary w-100" aria-label="Dashboard caisse">
+                                <i class="bi bi-cash-coin me-2" aria-hidden="true"></i> Dashboard CAISSE
                             </a>
                         </div>
                     </div>
@@ -449,31 +282,31 @@
     <!-- Gestion Documentaire et Financière -->
     <div class="row">
         <div class="col-12">
-            <div class="card content-card">
+            <div class="card" role="region" aria-labelledby="gestion-doc-fin-heading">
                 <div class="card-header">
-                    <h6>
-                        <i class="bi bi-files me-2"></i> Gestion Documentaire et Financière
+                    <h6 id="gestion-doc-fin-heading">
+                        <i class="bi bi-files me-2" aria-hidden="true"></i> Gestion Documentaire et Financière
                     </h6>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <a href="{% url 'proprietes:document_list' %}" class="btn btn-custom w-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 1.1rem; padding: 1rem;">
-                                <i class="bi bi-file-earmark-text me-2"></i> 
+                            <a href="{% url 'proprietes:document_list' %}" class="btn btn-primary w-100" aria-label="Gestion documentaire">
+                                <i class="bi bi-file-earmark-text me-2" aria-hidden="true"></i> 
                                 <strong>Documents</strong>
                                 <br><small class="opacity-75">Gestion documentaire</small>
                             </a>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <a href="{% url 'paiements:tableau_bord_list' %}" class="btn btn-custom w-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; font-size: 1.1rem; padding: 1rem;">
-                                <i class="bi bi-graph-up me-2"></i> 
+                            <a href="{% url 'paiements:tableau_bord_list' %}" class="btn btn-success w-100" aria-label="Suivi financier">
+                                <i class="bi bi-graph-up me-2" aria-hidden="true"></i> 
                                 <strong>Tableaux de Bord</strong>
                                 <br><small class="opacity-75">Suivi financier</small>
                             </a>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <a href="{% url 'proprietes:liste' %}" class="btn btn-custom w-100" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; font-size: 1.1rem; padding: 1rem;">
-                                <i class="bi bi-building me-2"></i> 
+                            <a href="{% url 'proprietes:liste' %}" class="btn btn-primary w-100" aria-label="Gestion immobilière">
+                                <i class="bi bi-building me-2" aria-hidden="true"></i> 
                                 <strong>Propriétés</strong>
                                 <br><small class="opacity-75">Gestion immobilière</small>
                             </a>

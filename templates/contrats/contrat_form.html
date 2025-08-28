@@ -573,7 +573,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Calculs
         const totalMensuel = loyer + charges;
-        const totalEntree = depot + avance + totalMensuel;
+        const totalEntree = depot + avance; // Seulement caution + avance, pas plus le loyer mensuel
         
         // Durée du contrat
         let dureeMois = 0;

@@ -88,8 +88,11 @@ class Contrat(models.Model):
     # Conditions de paiement
     jour_paiement = models.PositiveIntegerField(
         default=1,
+        blank=True,
+        null=True,
         validators=[MinValueValidator(1), MaxValueValidator(31)],
-        verbose_name=_("Jour de paiement")
+        verbose_name=_("Jour de paiement"),
+        help_text=_("Jour du mois pour le paiement du loyer (optionnel)")
     )
     mode_paiement = models.CharField(
         max_length=20,

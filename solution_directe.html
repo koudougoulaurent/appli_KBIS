@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Direct Interface Intelligente</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-warning { background-color: #ffc107; color: black; }
+        .btn-danger { background-color: #dc3545; color: white; }
+        #resultats { margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Direct Interface Intelligente</h1>
+    
+    <div class="test-section info">
+        <h3>📋 Instructions</h3>
+        <p>Cette page va tester directement votre interface intelligente. Suivez les étapes dans l'ordre.</p>
+    </div>
+
+    <div class="test-section">
+        <h3>🚀 ÉTAPE 1 : Test de l'API Directement</h3>
+        <button class="btn-primary" onclick="testAPIDirect()">Test API Direct</button>
+        <div id="resultat-api"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>🔍 ÉTAPE 2 : Test de l'Interface</h3>
+        <button class="btn-success" onclick="ouvrirInterface()">Ouvrir Interface Paiements</button>
+        <button class="btn-warning" onclick="testInterface()">Test Interface (si ouverte)</button>
+        <div id="resultat-interface"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>📊 Résultats Complets</h3>
+        <div id="resultats"></div>
+    </div>
+
+    <script>
+        function testAPIDirect() {
+            console.log('🧪 Test direct de l\'API...');
+            $('#resultat-api').html('<div class="info">🔄 Test en cours...</div>');
+            
+            // Test direct de l'API
+            fetch('/paiements/api/contexte-intelligent/contrat/1/')
+                .then(response => {
+                    console.log('📊 Status:', response.status);
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                })
+                .then(data => {
+                    console.log('✅ Données reçues:', data);
+                    if (data.success && data.data) {
+                        $('#resultat-api').html(`
+                            <div class="success">
+                                ✅ API FONCTIONNE !<br>
+                                📋 Contrat: ${data.data.contrat?.numero_contrat || 'N/A'}<br>
+                                👤 Locataire: ${data.data.locataire?.nom || 'N/A'} ${data.data.locataire?.prenom || 'N/A'}<br>
+                                🏠 Propriété: ${data.data.propriete?.adresse || 'N/A'}<br>
+                                💰 Loyer: ${data.data.contrat?.loyer_mensuel || 'N/A'} F CFA
+                            </div>
+                        `);
+                        ajouterResultat('API', 'SUCCÈS', 'L\'API fonctionne parfaitement');
+                    } else {
+                        $('#resultat-api').html(`
+                            <div class="error">
+                                ❌ API répond mais erreur: ${data.error || 'Erreur inconnue'}
+                            </div>
+                        `);
+                        ajouterResultat('API', 'ERREUR', data.error || 'Erreur inconnue');
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Erreur API:', error);
+                    $('#resultat-api').html(`
+                        <div class="error">
+                            ❌ Erreur API: ${error.message}<br>
+                            💡 Vérifiez que le serveur Django tourne sur http://127.0.0.1:8000/
+                        </div>
+                    `);
+                    ajouterResultat('API', 'ERREUR', error.message);
+                });
+        }
+
+        function ouvrirInterface() {
+            console.log('🌐 Ouverture de l\'interface...');
+            window.open('/paiements/ajouter/', '_blank');
+            $('#resultat-interface').html(`
+                <div class="info">
+                    🔗 Interface ouverte dans un nouvel onglet<br>
+                    📋 Sélectionnez un contrat et regardez la console (F12)
+                </div>
+            `);
+        }
+
+        function testInterface() {
+            console.log('🧪 Test de l\'interface...');
+            
+            // Vérifier si l'interface est ouverte
+            try {
+                if (window.opener && window.opener.location.href.includes('/paiements/ajouter/')) {
+                    // On est dans l'interface
+                    testInterfaceDirect();
+                } else {
+                    // On n'est pas dans l'interface
+                    $('#resultat-interface').html(`
+                        <div class="warning">
+                            ⚠️ Vous devez d'abord ouvrir l'interface des paiements<br>
+                            Cliquez sur "Ouvrir Interface Paiements" d'abord
+                        </div>
+                    `);
+                }
+            } catch (e) {
+                $('#resultat-interface').html(`
+                    <div class="warning">
+                        ⚠️ Ouvrez d'abord l'interface des paiements dans un autre onglet
+                    </div>
+                `);
+            }
+        }
+
+        function testInterfaceDirect() {
+            console.log('🎯 Test direct de l\'interface...');
+            
+            // Test des fonctions de l'interface
+            try {
+                if (typeof chargerContexteIntelligent === 'function') {
+                    console.log('✅ Fonction chargerContexteIntelligent disponible');
+                    chargerContexteIntelligent(1);
+                    ajouterResultat('Interface', 'SUCCÈS', 'Fonctions disponibles');
+                } else {
+                    console.log('❌ Fonction chargerContexteIntelligent non disponible');
+                    ajouterResultat('Interface', 'ERREUR', 'Fonctions JavaScript manquantes');
+                }
+            } catch (e) {
+                console.error('❌ Erreur test interface:', e);
+                ajouterResultat('Interface', 'ERREUR', e.message);
+            }
+        }
+
+        function ajouterResultat(categorie, statut, message) {
+            const couleur = statut === 'SUCCÈS' ? 'success' : 'error';
+            const icone = statut === 'SUCCÈS' ? '✅' : '❌';
+            
+            $('#resultats').append(`
+                <div class="${couleur}">
+                    ${icone} <strong>${categorie}:</strong> ${message}
+                </div>
+            `);
+        }
+
+        // Test automatique au chargement
+        $(document).ready(function() {
+            console.log('🚀 Page de test chargée');
+            ajouterResultat('Système', 'INFO', 'Page de test prête');
+        });
+    </script>
+</body>
+</html>

@@ -2,7 +2,7 @@
 {% load static %}
 {% load core_extras %}
 
-{% block title %}Dashboard Propriétés - Gestion Immobilière{% endblock %}
+{% block title %}GESTION IMMOBILIERE PRO - Propriétés{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -170,7 +170,7 @@
             <i class="bi bi-arrow-left me-2"></i>Retour au Dashboard Principal
         </a>
         <h1 class="display-4 fw-bold mb-0">
-            <i class="bi bi-house-door me-3"></i>Dashboard Propriétés
+            <i class="bi bi-house-door me-3"></i>GESTION IMMOBILIERE PRO - Propriétés
         </h1>
         <div style="width: 150px;"></div> <!-- Espaceur pour centrer le titre -->
     </div>
@@ -281,7 +281,7 @@
         <!-- Top propriétés -->
         <div class="card content-card">
             <div class="card-header">
-                <h6><i class="bi bi-star me-2"></i>Top 5 des Propriétés par Loyer</h6>
+                <h6><i class="bi bi-star me-2"></i>Top 5 des Propriétés par Activité</h6>
             </div>
             <div class="card-body">
                 {% if top_proprietes %}
@@ -294,8 +294,8 @@
                                 <span class="property-status status-{{ propriete.statut }} ms-2">{{ propriete.get_statut_display }}</span>
                             </div>
                             <div class="text-end">
-                                <div class="h5 mb-0 text-success">{{ propriete.loyer_actuel|floatformat:0 }} F CFA</div>
-                                <small class="text-muted">Loyer mensuel</small>
+                                <div class="h5 mb-0 text-success">{{ propriete.get_statut_display }}</div>
+                                <small class="text-muted">Statut</small>
                             </div>
                         </div>
                     </div>

@@ -168,6 +168,7 @@ class ContratForm(forms.ModelForm):
         # Rendre les champs optionnels
         self.fields['charges_mensuelles'].required = False
         self.fields['depot_garantie'].required = False
+        self.fields['jour_paiement'].required = False
         
         # Ajouter des classes CSS pour le style
         self.fields['loyer_mensuel'].widget.attrs.update({

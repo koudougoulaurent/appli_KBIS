@@ -1,163 +1,214 @@
 """
-Module d'optimisations pour améliorer les performances de l'application
+Module d'optimisations avancées pour améliorer les performances
+de l'application de gestion immobilière
 """
-from django.core.cache import cache
-from django.db.models import Count, Q
-from django.utils import timezone
-from functools import wraps
+
 import time
 import logging
+from functools import wraps
+from django.core.cache import cache
+from django.db import connection
+from django.conf import settings
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 
 logger = logging.getLogger(__name__)
 
-def cache_result(timeout=300):
-    """Décorateur pour mettre en cache le résultat d'une fonction"""
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            # Créer une clé de cache unique
-            cache_key = f"{func.__name__}_{hash(str(args) + str(kwargs))}"
-            
-            # Essayer de récupérer du cache
-            result = cache.get(cache_key)
-            if result is not None:
-                return result
-            
-            # Exécuter la fonction et mettre en cache
+def performance_monitor(func):
+    """Décorateur pour surveiller les performances des fonctions"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        start_queries = len(connection.queries)
+        
+        try:
             result = func(*args, **kwargs)
-            cache.set(cache_key, result, timeout)
             return result
+        finally:
+            end_time = time.time()
+            end_queries = len(connection.queries)
+            
+            execution_time = end_time - start_time
+            queries_count = end_queries - start_queries
+            
+            if execution_time > 0.5:  # Log si plus de 0.5s
+                logger.warning(
+                    f"Fonction lente: {func.__name__} - "
+                    f"Temps: {execution_time:.3f}s - "
+                    f"Requêtes: {queries_count}"
+                )
+            
+            # Mettre en cache les résultats lents
+            if execution_time > 1.0:
+                cache_key = f"slow_func_{func.__name__}_{hash(str(args) + str(kwargs))}"
+                cache.set(cache_key, result, 300)  # Cache 5 minutes
+    
+    return wrapper
+
+def query_optimizer(func):
+    """Décorateur pour optimiser les requêtes de base de données"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        # Vérifier le cache avant d'exécuter
+        cache_key = f"query_cache_{func.__name__}_{hash(str(args) + str(kwargs))}"
+        cached_result = cache.get(cache_key)
+        
+        if cached_result:
+            return cached_result
+        
+        # Exécuter la fonction
+        result = func(*args, **kwargs)
+        
+        # Mettre en cache le résultat
+        cache.set(cache_key, result, 1800)  # Cache 30 minutes
+        
+        return result
+    
+    return wrapper
+
+def clear_user_cache(user_id):
+    """Nettoyer le cache d'un utilisateur spécifique"""
+    try:
+        # Supprimer tous les caches liés à l'utilisateur
+        cache_keys_to_delete = [
+            f"user_profile_{user_id}",
+            f"user_modules_{user_id}",
+            f"group_permissions_{user_id}",
+            f"page_cache_*_{user_id}_*"
+        ]
+        
+        for pattern in cache_keys_to_delete:
+            if '*' in pattern:
+                # Pour les patterns avec wildcard, on ne peut pas les supprimer directement
+                # mais on peut nettoyer les clés connues
+                continue
+            cache.delete(pattern)
+        
+        logger.info(f"Cache nettoyé pour l'utilisateur {user_id}")
+    except Exception as e:
+        logger.error(f"Erreur lors du nettoyage du cache: {e}")
+
+def optimize_database_queries():
+    """Optimisations générales de la base de données"""
+    with connection.cursor() as cursor:
+        # Activer les optimisations SQLite
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute("PRAGMA cache_size=10000")
+        cursor.execute("PRAGMA temp_store=MEMORY")
+        cursor.execute("PRAGMA mmap_size=268435456")  # 256MB
+
+def get_cached_data(key, default=None, timeout=300):
+    """Récupérer des données en cache avec fallback"""
+    try:
+        cached_data = cache.get(key)
+        if cached_data is not None:
+            return cached_data
+        return default
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération du cache {key}: {e}")
+        return default
+
+def set_cached_data(key, data, timeout=300):
+    """Mettre des données en cache de manière sécurisée"""
+    try:
+        cache.set(key, data, timeout)
+        return True
+    except Exception as e:
+        logger.error(f"Erreur lors de la mise en cache de {key}: {e}")
+        return False
+
+def bulk_cache_operations(operations):
+    """Effectuer des opérations de cache en lot"""
+    results = []
+    for operation in operations:
+        try:
+            if operation['type'] == 'set':
+                cache.set(operation['key'], operation['value'], operation.get('timeout', 300))
+                results.append(True)
+            elif operation['type'] == 'delete':
+                cache.delete(operation['key'])
+                results.append(True)
+            elif operation['type'] == 'get':
+                value = cache.get(operation['key'])
+                results.append(value)
+        except Exception as e:
+            logger.error(f"Erreur lors de l'opération de cache {operation}: {e}")
+            results.append(False)
+    
+    return results
+
+# Optimisations spécifiques pour les vues
+def cache_page_optimized(timeout=300, key_prefix=''):
+    """Version optimisée du décorateur cache_page"""
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            # Créer une clé de cache unique
+            cache_key = f"{key_prefix}_{request.path}_{request.user.id if request.user.is_authenticated else 'anonymous'}"
+            
+            # Vérifier le cache
+            cached_response = cache.get(cache_key)
+            if cached_response:
+                return cached_response
+            
+            # Exécuter la vue
+            response = view_func(request, *args, **kwargs)
+            
+            # Mettre en cache seulement si la réponse est valide
+            if response.status_code == 200:
+                cache.set(cache_key, response, timeout)
+            
+            return response
         return wrapper
     return decorator
 
-def optimize_queryset(queryset, select_related=None, prefetch_related=None):
-    """Optimise un queryset avec select_related et prefetch_related"""
-    if select_related:
-        queryset = queryset.select_related(*select_related)
-    if prefetch_related:
-        queryset = queryset.prefetch_related(*prefetch_related)
-    return queryset
-
-def get_cached_stats(user_id=None, timeout=600):
-    """Récupère les statistiques mises en cache"""
-    cache_key = f"dashboard_stats_{user_id or 'global'}"
-    stats = cache.get(cache_key)
-    
-    if stats is None:
-        # Les stats seront calculées dans les vues
-        stats = {}
-        cache.set(cache_key, stats, timeout)
-    
-    return stats
-
-def clear_user_cache(user_id):
-    """Efface le cache spécifique à un utilisateur"""
-    cache_keys = [
-        f"dashboard_stats_{user_id}",
-        f"user_permissions_{user_id}",
-        f"user_modules_{user_id}",
-    ]
-    
-    for key in cache_keys:
-        cache.delete(key)
-
-class QueryOptimizer:
-    """Classe pour optimiser les requêtes de base de données"""
+# Optimisations pour les modèles
+class ModelOptimizer:
+    """Classe utilitaire pour optimiser les requêtes de modèles"""
     
     @staticmethod
-    def optimize_dashboard_queries():
-        """Optimise les requêtes du dashboard"""
-        from paiements.models import Paiement
-        from proprietes.models import Propriete, Locataire, Bailleur
-        from contrats.models import Contrat
-        
-        # Optimiser les requêtes de statistiques avec des annotations
-        paiements_stats = Paiement.objects.aggregate(
-            total=Count('id'),
-            valides=Count('id', filter=Q(statut='valide')),
-            en_attente=Count('id', filter=Q(statut='en_attente')),
-            refuses=Count('id', filter=Q(statut='refuse'))
-        )
-        
-        proprietes_stats = Propriete.objects.aggregate(
-            total=Count('id'),
-            louees=Count('id', filter=Q(disponible=False)),
-            disponibles=Count('id', filter=Q(disponible=True))
-        )
-        
-        contrats_stats = Contrat.objects.aggregate(
-            total=Count('id'),
-            actifs=Count('id', filter=Q(est_actif=True, est_resilie=False)),
-            expires=Count('id', filter=Q(est_resilie=True))
-        )
-        
-        return {
-            'paiements': paiements_stats,
-            'proprietes': proprietes_stats,
-            'contrats': contrats_stats
-        }
+    def prefetch_related_fields(model_class, fields):
+        """Précharger les champs liés pour éviter les requêtes N+1"""
+        return model_class.objects.select_related(*fields)
     
     @staticmethod
-    def optimize_recent_data_queries(limit=5):
-        """Optimise les requêtes pour les données récentes"""
-        from paiements.models import Paiement
+    def bulk_create_optimized(objs, batch_size=100):
+        """Créer des objets en lot de manière optimisée"""
+        from django.db import transaction
         
-        # Optimiser les paiements récents avec select_related
-        paiements_recents = Paiement.objects.select_related(
-            'contrat__locataire',
-            'contrat__propriete__bailleur'
-        ).order_by('-date_creation')[:limit]
-        
-        return {
-            'paiements_recents': paiements_recents
-        }
-
-class TemplateOptimizer:
-    """Classe pour optimiser le rendu des templates"""
+        with transaction.atomic():
+            for i in range(0, len(objs), batch_size):
+                batch = objs[i:i + batch_size]
+                model_class = type(batch[0])
+                model_class.objects.bulk_create(batch, ignore_conflicts=True)
     
     @staticmethod
-    def optimize_template_context(context, user):
-        """Optimise le contexte des templates"""
-        # Ajouter des informations utilisateur mises en cache
-        if user.is_authenticated:
-            user_cache_key = f"user_context_{user.id}"
-            user_context = cache.get(user_cache_key)
-            
-            if user_context is None:
-                user_context = {
-                    'user_groups': list(user.groups.values_list('name', flat=True)),
-                    'user_permissions': list(user.user_permissions.values_list('codename', flat=True)),
-                    'is_admin': user.is_superuser or user.groups.filter(name='Administrateurs').exists(),
-                }
-                cache.set(user_cache_key, user_context, 300)  # 5 minutes
-            
-            context.update(user_context)
+    def update_queryset_optimized(queryset, updates, batch_size=100):
+        """Mettre à jour un queryset de manière optimisée"""
+        from django.db import transaction
         
-        return context
+        with transaction.atomic():
+            for i in range(0, queryset.count(), batch_size):
+                batch = queryset[i:i + batch_size]
+                batch.update(**updates)
 
-def performance_monitor(func):
-    """Décorateur pour monitorer les performances des vues"""
-    @wraps(func)
-    def wrapper(request, *args, **kwargs):
-        start_time = time.time()
+# Configuration des optimisations
+def configure_performance_optimizations():
+    """Configurer toutes les optimisations de performance"""
+    try:
+        # Optimiser la base de données
+        optimize_database_queries()
         
-        # Exécuter la vue
-        response = func(request, *args, **kwargs)
+        # Configurer le cache
+        cache.set('performance_configured', True, 3600)
         
-        # Calculer le temps d'exécution
-        execution_time = time.time() - start_time
-        
-        # Logger les performances lentes
-        if execution_time > 1.0:  # Plus d'1 seconde
-            logger.warning(
-                f"Vue lente détectée: {func.__name__} - {execution_time:.2f}s - "
-                f"Utilisateur: {request.user.username if request.user.is_authenticated else 'Anonymous'} - "
-                f"URL: {request.path}"
-            )
-        
-        # Ajouter le temps d'exécution dans les headers de réponse
-        if hasattr(response, 'headers'):
-            response.headers['X-Execution-Time'] = f"{execution_time:.3f}s"
-        
-        return response
-    return wrapper
+        logger.info("Optimisations de performance configurées avec succès")
+        return True
+    except Exception as e:
+        logger.error(f"Erreur lors de la configuration des optimisations: {e}")
+        return False
+
+# Initialisation automatique
+if settings.DEBUG:
+    configure_performance_optimizations()

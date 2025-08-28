@@ -30,49 +30,43 @@ from .forms import TableauBordFinancierForm
 from .models import RetraitBailleur
 from .models import RecapMensuel
 from .services import generate_recap_pdf, generate_recap_pdf_batch
+try:
+    from devises.models import Devise
+except ImportError:
+    Devise = None
 
 
 @login_required
 def paiements_dashboard(request):
     """
-    Dashboard principal des paiements avec vue d'ensemble et accès contextuel aux listes
+    Dashboard principal des paiements SÉCURISÉ - SANS informations financières confidentielles
     """
-    # Statistiques générales
+    # Statistiques générales (NON confidentielles)
     total_paiements = Paiement.objects.filter(is_deleted=False).count()
     paiements_valides = Paiement.objects.filter(is_deleted=False, statut='valide').count()
     paiements_en_attente = Paiement.objects.filter(is_deleted=False, statut='en_attente').count()
     paiements_refuses = Paiement.objects.filter(is_deleted=False, statut='refuse').count()
     
-    # Montants
-    montant_total = Paiement.objects.filter(
-        is_deleted=False, 
-        statut='valide'
-    ).aggregate(total=Sum('montant'))['total'] or 0
+    # SUPPRIMER: Tous les montants financiers pour la confidentialité
+    # NE PAS calculer ou afficher de montants
     
-    montant_mois_courant = Paiement.objects.filter(
-        is_deleted=False,
-        statut='valide',
-        date_paiement__month=timezone.now().month,
-        date_paiement__year=timezone.now().year
-    ).aggregate(total=Sum('montant'))['total'] or 0
-    
-    # Top propriétés par revenus
-    top_proprietes_revenus = Paiement.objects.filter(
+    # Top propriétés par activité (NON par revenus)
+    top_proprietes_activite = Paiement.objects.filter(
         is_deleted=False,
         statut='valide'
     ).values(
         'contrat__propriete__titre', 
         'contrat__propriete__ville'
     ).annotate(
-        total=Sum('montant')
-    ).order_by('-total')[:5]
+        nombre_paiements=Count('id')  # Nombre de paiements, PAS les montants
+    ).order_by('-nombre_paiements')[:5]
     
-    # Paiements récents
+    # Paiements récents (SANS montants)
     paiements_recents = Paiement.objects.filter(
         is_deleted=False
     ).select_related('contrat__propriete', 'contrat__locataire').order_by('-date_paiement')[:5]
     
-    # Paiements nécessitant attention
+    # Paiements nécessitant attention (SANS montants)
     paiements_attention = Paiement.objects.filter(
         is_deleted=False
     ).filter(
@@ -81,23 +75,24 @@ def paiements_dashboard(request):
         Q(date_paiement__lt=timezone.now().date() - timedelta(days=30))
     ).select_related('contrat__propriete', 'contrat__locataire')[:5]
     
-    # Statistiques par mois (6 derniers mois)
+    # Statistiques par mois (6 derniers mois) - UNIQUEMENT le nombre de paiements
     mois_stats = []
     for i in range(6):
         date = timezone.now() - timedelta(days=30*i)
         mois = date.month
         annee = date.year
         
-        total_mois = Paiement.objects.filter(
+        nombre_paiements_mois = Paiement.objects.filter(
             is_deleted=False,
             statut='valide',
             date_paiement__month=mois,
             date_paiement__year=annee
-        ).aggregate(total=Sum('montant'))['total'] or 0
+        ).count()  # Nombre de paiements, PAS les montants
         
         mois_stats.append({
             'mois': date.strftime('%B %Y'),
-            'total': total_mois
+            'nombre_paiements': nombre_paiements_mois,  # Nombre, PAS montant
+            'activite': 'Élevée' if nombre_paiements_mois > 10 else 'Modérée' if nombre_paiements_mois > 5 else 'Faible'
         })
     
     mois_stats.reverse()
@@ -107,9 +102,8 @@ def paiements_dashboard(request):
         'paiements_valides': paiements_valides,
         'paiements_en_attente': paiements_en_attente,
         'paiements_refuses': paiements_refuses,
-        'montant_total': montant_total,
-        'montant_mois_courant': montant_mois_courant,
-        'top_proprietes_revenus': top_proprietes_revenus,
+        # SUPPRIMER: montant_total, montant_mois_courant
+        'top_proprietes_activite': top_proprietes_activite,  # Activité, PAS revenus
         'paiements_recents': paiements_recents,
         'paiements_attention': paiements_attention,
         'mois_stats': mois_stats,
@@ -179,51 +173,246 @@ paiement_detail = PaiementDetailView.as_view()
 
 @login_required
 def ajouter_paiement(request):
-    """Ajouter un nouveau paiement."""
-    # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'add')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
-        return redirect('paiements:paiement_list')
-    
+    """Ajouter un nouveau paiement avec contexte intelligent."""
     if request.method == 'POST':
         form = PaiementForm(request.POST)
         if form.is_valid():
-            paiement = form.save(commit=False)
-            paiement.save()
-            
-            # Générer automatiquement un reçu si le paiement est validé
-            if paiement.statut == 'valide':
-                try:
-                    paiement.generer_recu_automatique(request.user)
-                    messages.success(request, 'Paiement ajouté et reçu généré automatiquement!')
-                except Exception as e:
-                    messages.warning(request, f'Paiement ajouté mais erreur lors de la génération du reçu: {str(e)}')
-            else:
-                messages.success(request, 'Paiement ajouté avec succès!')
-            
-            # Log d'audit
-            AuditLog.objects.create(
-                content_type=ContentType.objects.get_for_model(Paiement),
-                object_id=paiement.pk,
-                action='CREATE',
-                old_data=None,
-                new_data={f.name: getattr(paiement, f.name) for f in paiement._meta.fields},
-                user=request.user,
-                ip_address=request.META.get('REMOTE_ADDR'),
-                user_agent=request.META.get('HTTP_USER_AGENT', '')
-            )
-            
-            return redirect('paiements:paiement_detail', pk=paiement.pk)
+            try:
+                paiement = form.save(commit=False)
+                paiement.cree_par = request.user
+                paiement.save()
+                
+                messages.success(request, f'Paiement {paiement.reference_paiement} créé avec succès!')
+                return redirect('paiements:liste')
+                
+            except Exception as e:
+                messages.error(request, f'Erreur lors de la création: {str(e)}')
     else:
         form = PaiementForm()
     
+    # Récupérer tous les contrats pour la sélection
+    contrats = Contrat.objects.filter(is_deleted=False).select_related('locataire', 'propriete')
+    
+    # Récupérer la devise de base
+    try:
+        devise_base = Devise.objects.filter(is_devise_base=True).first()
+    except:
+        devise_base = None
+    
     context = {
         'form': form,
-        'title': 'Ajouter un paiement',
+        'contrats': contrats,
+        'contrat_obj': None,
+        'total_charges_bailleur': 0,
+        'net_a_payer': 0,
+        'charges_bailleur': [],
+        'devise_base': devise_base,
+        'title': 'Ajouter un Paiement - Contexte Intelligent',
     }
     
-    return render(request, 'paiements/paiement_form.html', context)
+    return render(request, 'paiements/ajouter.html', context)
+
+@login_required
+def liste_paiements(request):
+    """Liste des paiements avec recherche et filtres."""
+    try:
+        # Récupérer tous les paiements non supprimés
+        paiements = Paiement.objects.filter(is_deleted=False).select_related(
+            'contrat__locataire', 'contrat__propriete', 'cree_par'
+        ).order_by('-date_creation')
+        
+        # Récupérer le paiement de test pour l'afficher en premier
+        paiement_test = Paiement.objects.filter(
+            reference_paiement__startswith='PAIEMENT-TEST',
+            is_deleted=False
+        ).first()
+        
+        # Recherche
+        query = request.GET.get('q', '')
+        if query:
+            paiements = paiements.filter(
+                Q(reference_paiement__icontains=query) |
+                Q(contrat__numero_contrat__icontains=query) |
+                Q(contrat__locataire__nom__icontains=query) |
+                Q(contrat__locataire__prenom__icontains=query) |
+                Q(contrat__propriete__adresse__icontains=query)
+            )
+        
+        # Filtres
+        statut_filter = request.GET.get('statut', '')
+        if statut_filter:
+            paiements = paiements.filter(statut=statut_filter)
+        
+        type_filter = request.GET.get('type_paiement', '')
+        if type_filter:
+            paiements = paiements.filter(type_paiement=type_filter)
+        
+        # Pagination
+        paginator = Paginator(paiements, 20)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        
+        context = {
+            'page_obj': page_obj,
+            'paiements': page_obj,
+            'paiement_test': paiement_test,  # Paiement de test pour validation
+            'statuts': Paiement.STATUT_CHOICES,
+            'types_paiement': Paiement.TYPE_PAIEMENT_CHOICES,
+            'query': query,
+            'statut_filter': statut_filter,
+            'type_filter': type_filter,
+            'title': 'Liste des Paiements'
+        }
+        
+        return render(request, 'paiements/liste.html', context)
+        
+    except Exception as e:
+        messages.error(request, f"Erreur lors du chargement des paiements: {str(e)}")
+        return render(request, 'paiements/liste.html', {'paiements': [], 'title': 'Liste des Paiements'})
+
+@login_required
+@require_POST
+def valider_paiement(request, pk):
+    """Valider un paiement."""
+    try:
+        paiement = get_object_or_404(Paiement, pk=pk, is_deleted=False)
+        
+        # Vérification des permissions simplifiée
+        if not request.user.is_authenticated:
+            return JsonResponse({
+                'success': False,
+                'error': 'Utilisateur non authentifié'
+            }, status=403)
+        
+        # Vérifier que l'utilisateur est dans un des groupes autorisés
+        user_groups = [group.name for group in request.user.groups.all()]
+        allowed_groups = ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE']
+        
+        if not any(group in user_groups for group in allowed_groups):
+            return JsonResponse({
+                'success': False,
+                'error': f'Permissions insuffisantes. Groupes requis: {", ".join(allowed_groups)}'
+            }, status=403)
+        
+        # Vérifier que le paiement n'est pas déjà validé
+        if paiement.statut == 'valide':
+            return JsonResponse({
+                'success': False,
+                'error': 'Ce paiement est déjà validé'
+            }, status=400)
+        
+        # Valider le paiement
+        ancien_statut = paiement.statut
+        paiement.statut = 'valide'
+        paiement.valide_par = request.user
+        paiement.date_encaissement = timezone.now().date()
+        paiement.save()
+        
+        message_succes = '✅ Paiement validé avec succès!'
+        messages.success(request, message_succes)
+        
+        return JsonResponse({
+            'success': True,
+            'message': message_succes,
+            'paiement_id': paiement.pk,
+            'statut': paiement.statut
+        })
+        
+    except Exception as e:
+        error_message = f'Erreur lors de la validation: {str(e)}'
+        messages.error(request, error_message)
+        return JsonResponse({
+            'success': False,
+            'error': error_message
+        }, status=500)
+
+@login_required
+@require_POST
+def refuser_paiement(request, pk):
+    """Refuser un paiement."""
+    try:
+        paiement = get_object_or_404(Paiement, pk=pk, is_deleted=False)
+        
+        # Vérification des permissions simplifiée
+        if not request.user.is_authenticated:
+            return JsonResponse({
+                'success': False,
+                'error': 'Utilisateur non authentifié'
+            }, status=403)
+        
+        # Vérifier que l'utilisateur est dans un des groupes autorisés
+        user_groups = [group.name for group in request.user.groups.all()]
+        allowed_groups = ['PRIVILEGE', 'ADMINISTRATION']
+        
+        if not any(group in user_groups for group in allowed_groups):
+            return JsonResponse({
+                'success': False,
+                'error': f'Permissions insuffisantes. Groupes requis: {", ".join(allowed_groups)}'
+            }, status=403)
+        
+        # Vérifier que le paiement n'est pas déjà validé
+        if paiement.statut == 'valide':
+            return JsonResponse({
+                'success': False,
+                'error': 'Impossible de refuser un paiement déjà validé'
+            }, status=400)
+        
+        # Refuser le paiement
+        ancien_statut = paiement.statut
+        paiement.statut = 'refuse'
+        paiement.save()
+        
+        message_succes = '❌ Paiement refusé avec succès'
+        messages.success(request, message_succes)
+        
+        return JsonResponse({
+            'success': True,
+            'message': message_succes,
+            'paiement_id': paiement.pk,
+            'statut': paiement.statut
+        })
+        
+    except Exception as e:
+        error_message = f'Erreur lors du refus: {str(e)}'
+        messages.error(request, error_message)
+        return JsonResponse({
+            'success': False,
+            'error': error_message
+        }, status=500)
+
+@login_required
+@require_POST
+def supprimer_paiement(request, pk):
+    """Supprimer un paiement (suppression logique)."""
+    paiement = get_object_or_404(Paiement, pk=pk)
+    
+    # Vérification des permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'delete')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:paiement_detail', pk=pk)
+    
+    # Suppression logique
+    old_data = {f.name: getattr(paiement, f.name) for f in paiement._meta.fields}
+    paiement.is_deleted = True
+    paiement.deleted_at = timezone.now()
+    paiement.deleted_by = request.user
+    paiement.save()
+    
+    # Log d'audit
+    AuditLog.objects.create(
+        content_type=ContentType.objects.get_for_model(Paiement),
+        object_id=paiement.pk,
+        action='DELETE',
+        old_data=old_data,
+        new_data=None,
+        user=request.user,
+        ip_address=request.META.get('REMOTE_ADDR'),
+        user_agent=request.META.get('HTTP_USER_AGENT', '')
+    )
+    
+    messages.success(request, 'Paiement supprimé avec succès (suppression logique).')
+    return redirect('paiements:paiement_list')
 
 
 @login_required
@@ -280,76 +469,6 @@ def modifier_paiement(request, pk):
     }
     
     return render(request, 'paiements/paiement_form.html', context)
-
-
-@login_required
-@require_POST
-def supprimer_paiement(request, pk):
-    """Supprimer un paiement (suppression logique)."""
-    paiement = get_object_or_404(Paiement, pk=pk)
-    
-    # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'delete')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
-        return redirect('paiements:paiement_detail', pk=pk)
-    
-    # Suppression logique
-    old_data = {f.name: getattr(paiement, f.name) for f in paiement._meta.fields}
-    paiement.is_deleted = True
-    paiement.deleted_at = timezone.now()
-    paiement.deleted_by = request.user
-    paiement.save()
-    
-    # Log d'audit
-    AuditLog.objects.create(
-        content_type=ContentType.objects.get_for_model(Paiement),
-        object_id=paiement.pk,
-        action='DELETE',
-        old_data=old_data,
-        new_data=None,
-        user=request.user,
-        ip_address=request.META.get('REMOTE_ADDR'),
-        user_agent=request.META.get('HTTP_USER_AGENT', '')
-    )
-    
-    messages.success(request, 'Paiement supprimé avec succès (suppression logique).')
-    return redirect('paiements:paiement_list')
-
-
-@login_required
-@require_POST
-def valider_paiement(request, pk):
-    """Valider un paiement."""
-    paiement = get_object_or_404(Paiement, pk=pk)
-    
-    # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'modify')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
-        return redirect('paiements:paiement_detail', pk=pk)
-    
-    old_data = {f.name: getattr(paiement, f.name) for f in paiement._meta.fields}
-    paiement.statut = 'valide'
-    paiement.date_validation = timezone.now()
-    paiement.validé_par = request.user
-    paiement.save()
-    
-    # Log d'audit
-    new_data = {f.name: getattr(paiement, f.name) for f in paiement._meta.fields}
-    AuditLog.objects.create(
-        content_type=ContentType.objects.get_for_model(Paiement),
-        object_id=paiement.pk,
-        action='UPDATE',
-        old_data=old_data,
-        new_data=new_data,
-        user=request.user,
-        ip_address=request.META.get('REMOTE_ADDR'),
-        user_agent=request.META.get('HTTP_USER_AGENT', '')
-    )
-    
-    messages.success(request, 'Paiement validé avec succès.')
-    return redirect('paiements:paiement_detail', pk=pk)
 
 
 # Vues pour les charges déductibles
@@ -535,7 +654,7 @@ def ajouter_retrait(request):
 
 @login_required
 def detail_retrait(request, pk):
-    """Afficher le détail d'un retrait bailleur."""
+    """Afficher le détail d'un retrait bailleur SÉCURISÉ."""
     # Vérification des permissions
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
     if not permissions['allowed']:
@@ -557,8 +676,12 @@ def detail_retrait(request, pk):
         is_deleted=False
     )
     
+    # Vérifier si l'utilisateur peut voir les montants (PRIVILEGE uniquement)
+    can_see_amounts = check_group_permissions(request.user, ['PRIVILEGE'], 'view')['allowed']
+    
     context = get_context_with_entreprise_config({
         'retrait': retrait,
+        'can_see_amounts': can_see_amounts,  # Flag pour le template
         'title': f'Détails du Retrait #{retrait.id}'
     })
     
@@ -1108,9 +1231,35 @@ def imprimer_recap_mensuel(request, recap_id):
 
 @login_required
 def liste_retraits_bailleur(request):
-    """Liste des retraits bailleur (placeholder)."""
-    messages.warning(request, 'Fonctionnalité des retraits bailleur en cours de développement.')
-    return redirect('paiements:liste')
+    """Liste des retraits bailleur SÉCURISÉE."""
+    # Vérification des permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:dashboard')
+    
+    # Récupérer tous les retraits avec relations
+    retraits = RetraitBailleur.objects.filter(
+        is_deleted=False
+    ).select_related(
+        'bailleur', 'cree_par', 'valide_par', 'paye_par'
+    ).order_by('-date_creation')
+    
+    # Vérifier si l'utilisateur peut voir les montants (PRIVILEGE uniquement)
+    can_see_amounts = check_group_permissions(request.user, ['PRIVILEGE'], 'view')['allowed']
+    
+    # Pagination
+    paginator = Paginator(retraits, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = get_context_with_entreprise_config({
+        'retraits': page_obj,
+        'can_see_amounts': can_see_amounts,
+        'title': 'Liste des Retraits Bailleur'
+    })
+    
+    return render(request, 'paiements/retraits/retrait_liste_securisee.html', context)
 
 @login_required
 def paiement_caution_avance_create(request):

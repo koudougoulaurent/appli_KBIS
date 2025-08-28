@@ -274,19 +274,19 @@
     </div>
 </div>
 
-<!-- Montants -->
+<!-- Indicateurs d'activité (NON confidentiels) -->
 <div class="row mb-4">
     <div class="col-xl-6 col-md-6">
         <div class="card stat-card secondary">
             <div class="card-body text-center">
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="text-start">
-                        <div class="stat-number">{{ montant_total|floatformat:0 }} F CFA</div>
-                        <div class="stat-label">Montant Total</div>
-                        <div class="stat-subtitle">Tous paiements validés</div>
+                        <div class="stat-number">{{ paiements_valides|default:"0" }}</div>
+                        <div class="stat-label">Paiements Validés</div>
+                        <div class="stat-subtitle">Total des paiements confirmés</div>
                     </div>
                     <div class="stat-icon">
-                        <i class="bi bi-currency-exchange"></i>
+                        <i class="bi bi-check-circle"></i>
                     </div>
                 </div>
             </div>
@@ -298,12 +298,12 @@
             <div class="card-body text-center">
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="text-start">
-                        <div class="stat-number">{{ montant_mois_courant|floatformat:0 }} F CFA</div>
-                        <div class="stat-label">Mois Courant</div>
-                        <div class="stat-subtitle">Paiements du mois</div>
+                        <div class="stat-number">{{ paiements_en_attente|default:"0" }}</div>
+                        <div class="stat-label">En Attente</div>
+                        <div class="stat-subtitle">Paiements à traiter</div>
                     </div>
                     <div class="stat-icon">
-                        <i class="bi bi-calendar-month"></i>
+                        <i class="bi bi-clock"></i>
                     </div>
                 </div>
             </div>
@@ -357,8 +357,8 @@
                                 <small class="text-muted">{{ prop.propriete__ville|default:"Ville non renseignée" }}</small>
                             </div>
                             <div class="text-end">
-                                <div class="h5 mb-0 text-success">{{ prop.total|floatformat:0 }} F CFA</div>
-                                <small class="text-muted">Total des revenus</small>
+                                <div class="h5 mb-0 text-success">{{ prop.nombre_paiements|default:"0" }} paiements</div>
+                                <small class="text-muted">Nombre de paiements</small>
                             </div>
                         </div>
                     </div>
@@ -390,7 +390,7 @@
                                 <span class="payment-status status-{{ paiement.statut }} ms-2">{{ paiement.get_statut_display }}</span>
                             </div>
                             <div class="text-end">
-                                <div class="h6 mb-0 text-success">{{ paiement.montant|floatformat:0 }} F CFA</div>
+                                <div class="h6 mb-0 text-success">{{ paiement.get_statut_display }}</div>
                                 <small class="text-muted">{{ paiement.date_paiement|date:"d/m/Y" }}</small>
                             </div>
                         </div>
@@ -420,7 +420,7 @@
                                 <span class="payment-status status-{{ paiement.statut }} ms-2">{{ paiement.get_statut_display }}</span>
                             </div>
                             <div class="text-end">
-                                <div class="h6 mb-0 text-warning">{{ paiement.montant|floatformat:0 }} F CFA</div>
+                                <div class="h6 mb-0 text-warning">{{ paiement.get_statut_display }}</div>
                                 <small class="text-muted">{{ paiement.date_paiement|date:"d/m/Y" }}</small>
                             </div>
                         </div>
@@ -440,7 +440,7 @@
     <div class="col-12">
         <div class="card content-card">
             <div class="card-header">
-                <h6><i class="bi bi-graph-up me-2"></i>Évolution des Revenus (6 derniers mois)</h6>
+                <h6><i class="bi bi-graph-up me-2"></i>Évolution de l'Activité (6 derniers mois)</h6>
             </div>
             <div class="card-body">
                 <div class="chart-container">
@@ -462,8 +462,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const data = {
         labels: [{% for stat in mois_stats %}'{{ stat.mois }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
         datasets: [{
-                            label: 'Revenus (F CFA)',
-            data: [{% for stat in mois_stats %}{{ stat.total }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                            label: 'Nombre de Paiements',
+            data: [{% for stat in mois_stats %}{{ stat.nombre_paiements }}{% if not forloop.last %}, {% endif %}{% endfor %}],
             backgroundColor: 'rgba(6, 182, 212, 0.2)',
             borderColor: 'rgba(6, 182, 212, 1)',
             borderWidth: 3,
@@ -488,7 +488,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return value.toLocaleString() + ' F CFA';
+                            return value.toLocaleString() + ' paiements';
                         }
                     }
                 }

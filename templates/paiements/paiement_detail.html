@@ -546,14 +546,18 @@
         
         {% if paiement.statut == 'en_attente' %}
         <a href="#" onclick="validerPaiement({{ paiement.pk }})" class="btn-action btn-success">
-            <i class="bi bi-check-circle me-2"></i>Valider le paiement
+            <i class="bi bi-check-circle me-2"></i>✅ Valider le Paiement
+        </a>
+        
+        <a href="#" onclick="refuserPaiement({{ paiement.pk }})" class="btn-action btn-danger">
+            <i class="bi bi-x-circle me-2"></i>❌ Refuser le Paiement
         </a>
         {% endif %}
         
-        {% if paiement.statut == 'en_attente' %}
-        <a href="#" onclick="annulerPaiement({{ paiement.pk }})" class="btn-action btn-danger">
-            <i class="bi bi-x-circle me-2"></i>Annuler
-        </a>
+        {% if paiement.statut == 'valide' %}
+        <span class="badge bg-success fs-6">
+            <i class="bi bi-check-circle me-2"></i>Paiement Validé
+        </span>
         {% endif %}
         {% endif %}
         

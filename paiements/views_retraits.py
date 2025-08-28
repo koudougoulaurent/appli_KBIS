@@ -55,15 +55,25 @@ def retrait_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Statistiques
+    # Vérifier si l'utilisateur peut voir les montants (PRIVILEGE uniquement)
+    from core.utils import check_group_permissions
+    can_see_amounts = check_group_permissions(request.user, ['PRIVILEGE'], 'view')['allowed']
+    
+    # Statistiques (NON confidentielles)
     stats = {
         'total_retraits': RetraitBailleur.objects.count(),
-        'total_montant': RetraitBailleur.objects.aggregate(
-            total=Sum('montant_net_a_payer')
-        )['total'] or 0,
         'retraits_en_attente': RetraitBailleur.objects.filter(statut='en_attente').count(),
         'retraits_payes': RetraitBailleur.objects.filter(statut='paye').count(),
+        'retraits_valides': RetraitBailleur.objects.filter(statut='valide').count(),
     }
+    
+    # Montant total (conditionnel selon les permissions)
+    if can_see_amounts:
+        stats['total_montant'] = RetraitBailleur.objects.aggregate(
+            total=Sum('montant_net_a_payer')
+        )['total'] or 0
+    else:
+        stats['total_montant'] = None  # Masqué pour la confidentialité
     
     # Bailleurs pour le filtre
     bailleurs = Bailleur.objects.all().order_by('nom')
@@ -80,6 +90,7 @@ def retrait_list(request):
         'stats': stats,
         'bailleurs': bailleurs,
         'filtres': filtres,
+        'can_see_amounts': can_see_amounts,  # Flag pour le template
     }
     
     return render(request, 'paiements/retraits/retrait_list.html', context)

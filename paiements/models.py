@@ -343,6 +343,14 @@ class Paiement(models.Model):
     date_modification = models.DateTimeField(auto_now=True, verbose_name=_("Date de modification"))
     notes = models.TextField(blank=True, verbose_name=_("Notes"))
     
+    # Libellé du paiement
+    libelle = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name=_("Libellé du paiement"),
+        help_text=_("Description ou motif du paiement")
+    )
+    
     # Relations
     cree_par = models.ForeignKey(
         Utilisateur,
@@ -512,15 +520,27 @@ class Paiement(models.Model):
     
     def generer_recu_automatique(self, utilisateur):
         """Génère automatiquement un reçu de paiement."""
-        # Vérifier si un reçu existe déjà
-        if not hasattr(self, 'recu'):
-            from .models import Recu
-            Recu.objects.create(
-                paiement=self,
-                genere_automatiquement=True,
-                valide=True,
-                valide_par=utilisateur
-            )
+        try:
+            # Vérifier si un reçu existe déjà
+            if not hasattr(self, 'recu') or not self.recu:
+                from .models import Recu
+                import uuid
+                
+                # Générer un numéro de reçu unique
+                numero_recu = f"RECU-{self.reference_paiement}-{uuid.uuid4().hex[:8].upper()}"
+                
+                Recu.objects.create(
+                    paiement=self,
+                    numero_recu=numero_recu,
+                    template_utilise='standard',
+                    format_impression='A4',
+                    valide=True,
+                    genere_automatiquement=True
+                )
+                return True
+        except Exception as e:
+            print(f"Erreur lors de la génération du reçu: {e}")
+            return False
     
     def peut_etre_annule(self):
         """Vérifie si le paiement peut être annulé."""
@@ -2544,33 +2564,33 @@ class Recu(models.Model):
         return dict(self._meta.get_field('format_impression').choices)[self.format_impression]
 
 
-# Signaux Django pour la génération automatique des reçus
-from django.db.models.signals import post_save
-from django.dispatch import receiver
+# Signaux Django pour la génération automatique des reçus (TEMPORAIREMENT DÉSACTIVÉS)
+# from django.db.models.signals import post_save
+# from django.dispatch import receiver
 
-@receiver(post_save, sender=Paiement)
-def generer_recu_automatique(sender, instance, created, **kwargs):
-    """Génère automatiquement un reçu lors de la création d'un paiement."""
-    if created and instance.statut == 'valide':
-        # Créer le reçu automatiquement
-        Recu.objects.create(
-            paiement=instance,
-            genere_automatiquement=True,
-            valide=True
-        )
+# @receiver(post_save, sender=Paiement)
+# def generer_recu_automatique(sender, instance, created, **kwargs):
+#     """Génère automatiquement un reçu lors de la création d'un paiement."""
+#     if created and instance.statut == 'valide':
+#         # Créer le reçu automatiquement
+#         Recu.objects.create(
+#             paiement=instance,
+#             genere_automatiquement=True,
+#             valide=True
+#         )
 
-@receiver(post_save, sender=Paiement)
-def generer_recu_apres_validation(sender, instance, created, **kwargs):
-    """Génère automatiquement un reçu lors de la validation d'un paiement."""
-    if not created and instance.statut == 'valide':
-        # Vérifier si un reçu existe déjà
-        if not hasattr(instance, 'recu'):
-            # Créer le reçu automatiquement
-            Recu.objects.create(
-                paiement=instance,
-                genere_automatiquement=True,
-                valide=True
-            )
+# @receiver(post_save, sender=Paiement)
+# def generer_recu_apres_validation(sender, instance, created, **kwargs):
+#     """Génère automatiquement un reçu lors de la validation d'un paiement."""
+#     if not created and instance.statut == 'valide':
+#         # Vérifier si un reçu existe déjà
+#         if not hasattr(instance, 'recu'):
+#             # Créer le reçu automatiquement
+#             Recu.objects.create(
+#                 paiement=instance,
+#                 genere_automatiquement=True,
+#                 valide=True
+#             )
 
 # Méthode pour générer un reçu manuellement si nécessaire
 def generer_recu_manuel(paiement, utilisateur):

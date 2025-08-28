@@ -1,160 +1,144 @@
-# ProjetImo - Application de Gestion Immobilière
+# Application de Gestion Immobilière
 
 ## Description
-Application Django complète pour la gestion immobilière, incluant la gestion des propriétés, contrats, paiements, utilisateurs et notifications.
+Cette application de gestion immobilière permet de gérer les propriétés, les bailleurs, les locataires, les contrats, les paiements et les rapports financiers.
 
-## Fonctionnalités principales
-- **Gestion des propriétés** : Ajout, modification, suppression de biens immobiliers
-- **Gestion des contrats** : Création et suivi des contrats de location/vente
-- **Gestion des paiements** : Suivi des loyers, charges et autres paiements
-- **Gestion des utilisateurs** : Système d'authentification et de gestion des droits
-- **Notifications** : Système de notifications automatiques
-- **API REST** : Interface programmatique pour l'intégration
-- **Interface web** : Dashboard moderne et responsive avec Bootstrap
+## Configuration de l'environnement
 
-## Technologies utilisées
-- **Backend** : Django 4.2+, Python 3.8+
-- **Frontend** : HTML5, CSS3, JavaScript, Bootstrap 5
-- **Base de données** : SQLite (développement), PostgreSQL/MySQL (production)
-- **API** : Django REST Framework
-- **Authentification** : Système d'authentification Django personnalisé
+### Méthode 1: Installation automatique (recommandée)
 
-## Installation
+#### Pour Windows
+1. Double-cliquez sur le fichier `install.bat` ou exécutez-le depuis l'invite de commandes
+2. Suivez les instructions à l'écran
 
-### Prérequis
+#### Pour macOS/Linux
+1. Rendez le script exécutable : `chmod +x install.sh`
+2. Exécutez le script : `./install.sh`
+
+### Méthode 2: Installation manuelle
+
+#### Prérequis
 - Python 3.8 ou supérieur
 - pip (gestionnaire de paquets Python)
-- Git
 
-### Installation locale
+#### Installation des dépendances
+Pour plus de détails sur l'installation des dépendances, consultez le fichier [README-INSTALLATION.md](README-INSTALLATION.md).
+
+### Installation de Django
+
+1. **Créer un environnement virtuel** (recommandé):
 ```bash
-# Cloner le repository
-git clone <url-du-repo>
-cd projetImo
-
-# Créer un environnement virtuel
 python -m venv venv
+```
 
-# Activer l'environnement virtuel
-# Windows
+2. **Activer l'environnement virtuel**:
+- Sur Windows:
+```bash
 venv\Scripts\activate
-# Linux/Mac
+```
+- Sur macOS/Linux:
+```bash
 source venv/bin/activate
+```
 
-# Installer les dépendances
+3. **Installer Django et les dépendances**:
+```bash
 pip install -r requirements.txt
+```
 
-# Effectuer les migrations
-python manage.py makemigrations
+### Configuration de l'application
+
+1. **Configurer la base de données**:
+```bash
 python manage.py migrate
+```
 
-# Créer un superutilisateur
+2. **Créer un superutilisateur** (optionnel mais recommandé):
+```bash
 python manage.py createsuperuser
+```
 
-# Lancer le serveur de développement
+3. **Collecter les fichiers statiques**:
+```bash
+python manage.py collectstatic
+```
+
+## Exécution de l'application
+
+### Méthode 1: Démarrage automatique (recommandée)
+
+#### Pour Windows
+1. Double-cliquez sur le fichier `start.bat` ou exécutez-le depuis l'invite de commandes
+2. L'application sera accessible à l'adresse http://127.0.0.1:8000/
+
+#### Pour macOS/Linux
+1. Rendez le script exécutable : `chmod +x start.sh`
+2. Exécutez le script : `./start.sh`
+3. L'application sera accessible à l'adresse http://127.0.0.1:8000/
+
+### Méthode 2: Démarrage manuel
+
+#### Démarrer le serveur de développement
+```bash
 python manage.py runserver
 ```
 
+L'application sera accessible à l'adresse http://127.0.0.1:8000/
+
+### Accès à l'interface d'administration
+L'interface d'administration est accessible à l'adresse http://127.0.0.1:8000/admin/
+
 ## Structure du projet
-```
-projetImo/
-├── bailleurs/          # Gestion des bailleurs
-├── contrats/           # Gestion des contrats
-├── core/               # Fonctionnalités principales
-├── gestion_immobiliere/ # Configuration Django
-├── notifications/      # Système de notifications
-├── paiements/          # Gestion des paiements
-├── proprietes/         # Gestion des propriétés
-├── utilisateurs/       # Gestion des utilisateurs
-├── static/             # Fichiers statiques (CSS, JS, images)
-├── templates/          # Templates HTML
-├── media/              # Fichiers uploadés par les utilisateurs
-└── manage.py           # Script de gestion Django
-```
 
-## Configuration
+- `bailleurs/` - Gestion des bailleurs
+- `contrats/` - Gestion des contrats de location
+- `core/` - Fonctionnalités centrales de l'application
+- `gestion_immobiliere/` - Configuration principale du projet
+- `notifications/` - Gestion des notifications
+- `paiements/` - Gestion des paiements et rapports financiers
+- `proprietes/` - Gestion des propriétés immobilières
+- `static/` - Fichiers statiques (CSS, JavaScript, images)
+- `templates/` - Templates HTML
+- `utilisateurs/` - Gestion des utilisateurs et des groupes
 
-### Variables d'environnement
-Créer un fichier `.env` à la racine du projet :
-```env
-DEBUG=True
-SECRET_KEY=votre-clé-secrète
-DATABASE_URL=sqlite:///db.sqlite3
-ALLOWED_HOSTS=localhost,127.0.0.1
-```
+## Améliorations récentes
 
-### Base de données
-- **Développement** : SQLite (par défaut)
-- **Production** : PostgreSQL ou MySQL recommandés
+### Design et présentation
+- Simplification du design avec réduction des dégradés
+- Palette de couleurs unifiée avec de meilleurs contrastes
+- Système de design complet avec variables CSS
 
-## Utilisation
+### Performance
+- Réduction des animations non essentielles
+- Fichier CSS minifié pour de meilleurs performances
+- Optimisation des fichiers statiques
 
-### Accès à l'application
-- **Interface web** : http://localhost:8000
-- **Admin Django** : http://localhost:8000/admin
-- **API REST** : http://localhost:8000/api/
+### Accessibilité
+- Amélioration des contrastes pour respecter les normes WCAG
+- Ajout d'attributs ARIA dans les templates
+- Navigation clavier améliorée
 
-### Création d'un utilisateur
-1. Accéder à l'interface d'administration
-2. Créer un nouvel utilisateur
-3. Assigner les permissions appropriées
+### Expérience utilisateur
+- Indicateur de chargement global
+- Messages de feedback améliorés
+- Navigation simplifiée
 
-## Développement
+## Dépannage
 
-### Ajout de nouvelles fonctionnalités
-1. Créer les modèles dans l'app appropriée
-2. Effectuer les migrations
-3. Créer les vues et templates
-4. Ajouter les URLs
-5. Tester les fonctionnalités
+### Erreur "ModuleNotFoundError: No module named 'django'"
+Cette erreur signifie que Django n'est pas installé ou que l'environnement virtuel n'est pas activé.
 
-### Tests
+Solution:
+1. Vérifier que l'environnement virtuel est activé
+2. Installer Django avec `pip install django`
+
+### Problèmes de base de données
+Si vous rencontrez des problèmes avec la base de données:
 ```bash
-# Lancer tous les tests
-python manage.py test
-
-# Lancer les tests d'une app spécifique
-python manage.py test utilisateurs
+python manage.py migrate
 ```
 
-### Code style
-- Suivre les conventions PEP 8
-- Utiliser des noms de variables et fonctions descriptifs
-- Ajouter des docstrings pour les classes et méthodes
-- Commenter le code complexe
-
-## Déploiement
-
-### Production
-1. Modifier `DEBUG=False` dans les paramètres
-2. Configurer une base de données de production
-3. Collecter les fichiers statiques : `python manage.py collectstatic`
-4. Configurer un serveur web (Nginx, Apache)
-5. Utiliser Gunicorn ou uWSGI comme serveur WSGI
-
-### Docker (optionnel)
+### Problèmes de fichiers statiques
+Si les styles CSS ne s'affichent pas correctement:
 ```bash
-# Construire l'image
-docker build -t projetimo .
-
-# Lancer le conteneur
-docker run -p 8000:8000 projetimo
-```
-
-## Contribution
-1. Fork le projet
-2. Créer une branche pour votre fonctionnalité
-3. Commiter vos changements
-4. Pousser vers la branche
-5. Ouvrir une Pull Request
-
-## Licence
-Ce projet est sous licence MIT. Voir le fichier LICENSE pour plus de détails.
-
-## Support
-Pour toute question ou problème :
-- Ouvrir une issue sur GitHub
-- Contacter l'équipe de développement
-
-## Changelog
-Voir le fichier CHANGELOG.md pour l'historique des versions. 
+python manage.py collectstatic

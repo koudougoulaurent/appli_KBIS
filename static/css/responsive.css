@@ -1,4 +1,4 @@
-/* ===== RESPONSIVE DESIGN AMÉLIORÉ ===== */
+/* ===== RESPONSIVE DESIGN OPTIMISÉ ===== */
 
 /* Variables pour les breakpoints */
 :root {
@@ -12,7 +12,7 @@
 
 /* ===== MOBILE FIRST APPROACH ===== */
 
-/* Base mobile (jusqu'à 576px) */
+/* Base mobile (jusqu'à 575.98px) */
 @media (max-width: 575.98px) {
     /* Navigation mobile */
     .navbar {
@@ -37,8 +37,8 @@
         height: 100vh;
         z-index: 1050;
         transition: left 0.3s ease;
-        background: rgba(255, 255, 255, 0.98);
-        backdrop-filter: blur(10px);
+        background: var(--white);
+        box-shadow: var(--shadow-lg);
     }
     
     .sidebar.show {
@@ -65,7 +65,7 @@
     .main-content {
         margin: 0.5rem;
         padding: 1rem;
-        border-radius: 10px;
+        border-radius: var(--border-radius-md);
     }
     
     /* Cartes de statistiques mobile */
@@ -146,7 +146,7 @@
     }
     
     .modal-content {
-        border-radius: 10px;
+        border-radius: var(--border-radius-md);
     }
     
     /* Pagination mobile */
@@ -427,25 +427,25 @@
     }
     
     body {
-        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+        background-color: #1a1a1a;
         color: #ffffff;
     }
     
     .main-content,
     .sidebar,
     .navbar {
-        background: rgba(26, 26, 26, 0.95);
+        background: #2d2d2d;
         color: #ffffff;
     }
     
     .card {
-        background: rgba(45, 45, 45, 0.95);
+        background: #3d3d3d;
         color: #ffffff;
     }
     
     .form-control,
     .form-select {
-        background: rgba(45, 45, 45, 0.95);
+        background: #3d3d3d;
         color: #ffffff;
         border-color: #555;
     }
@@ -529,10 +529,10 @@
     .table-responsive .table tbody tr {
         display: block;
         margin-bottom: 1rem;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-md);
         padding: 1rem;
-        background: white;
+        background: var(--white);
     }
     
     .table-responsive .table tbody td {
@@ -556,14 +556,14 @@
     }
     
     .input-group-text {
-        border-radius: 8px 8px 0 0;
-        border-right: 2px solid var(--primary-color);
+        border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
+        border-right: 1px solid var(--primary-color);
         border-bottom: none;
     }
     
     .input-group .form-control {
-        border-radius: 0 0 8px 8px;
-        border-left: 2px solid #e2e8f0;
+        border-radius: 0 0 var(--border-radius-md) var(--border-radius-md);
+        border-left: 1px solid var(--border-color);
     }
 }
 
@@ -624,4 +624,4 @@
     .btn-group .btn {
         min-height: 38px;
     }
-} 
+}

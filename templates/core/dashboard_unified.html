@@ -2,7 +2,7 @@
 {% load static %}
 {% load core_extras %}
 
-{% block title %}Dashboard Principal - Gestion Immobilière{% endblock %}
+{% block title %}GESTION IMMOBILIERE PRO - Gestion Immobilière{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -169,7 +169,7 @@
 {% block content %}
 <div class="dashboard-header text-center">
     <h1 class="display-4 fw-bold mb-3">
-        <i class="bi bi-speedometer2 me-3"></i>Dashboard Principal
+        <i class="bi bi-speedometer2 me-3"></i>GESTION IMMOBILIERE PRO
     </h1>
     <p class="lead mb-0">Vue d'ensemble complète de votre gestion immobilière</p>
 </div>
@@ -303,20 +303,23 @@
                 <a href="{% url 'paiements:retraits_liste' %}" class="quick-action-btn warning">
                     <i class="bi bi-bank me-1"></i>Retraits
                 </a>
+                <a href="{% url 'paiements:dashboard_intelligent' %}" class="quick-action-btn success">
+                    <i class="bi bi-magic me-1"></i>Retraits Intelligents
+                </a>
 
             </div>
             <div class="module-stats">
                 <div class="row">
                     <div class="col-6">
                         <div class="stat-card text-center">
-                            <div class="stat-number">{{ paiements_mois|default:"0" }}</div>
-                            <div class="stat-label">Ce Mois</div>
+                            <div class="stat-number">{{ total_paiements|default:"0" }}</div>
+                            <div class="stat-label">Total</div>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="stat-card text-center">
-                            <div class="stat-number">{{ total_paiements|default:"0" }}</div>
-                            <div class="stat-label">Total</div>
+                            <div class="stat-number">-</div>
+                            <div class="stat-label">Informations confidentielles</div>
                         </div>
                     </div>
                 </div>

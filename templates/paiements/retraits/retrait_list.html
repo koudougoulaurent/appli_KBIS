@@ -31,6 +31,16 @@
         </div>
     </div>
 
+    <!-- Message de sécurité -->
+    {% if not can_see_amounts %}
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <i class="bi bi-shield-check me-2"></i>
+        <strong>Protection des données :</strong> Les montants financiers sont masqués pour protéger la confidentialité. 
+        Seuls les utilisateurs PRIVILEGE peuvent voir les montants exacts.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
     <!-- Statistiques simples -->
     <div class="row mb-4">
         <div class="col-md-3">
@@ -45,7 +55,12 @@
             <div class="card bg-success text-white">
                 <div class="card-body">
                     <h5>Montant Total</h5>
-                    <h2>{{ stats.total_montant|default:0|floatformat:0|intcomma }} F CFA</h2>
+                    {% if can_see_amounts %}
+                        <h2>{{ stats.total_montant|default:0|floatformat:0|intcomma }} F CFA</h2>
+                    {% else %}
+                        <h2>***</h2>
+                        <small>Confidentiel</small>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -161,23 +176,38 @@
                                 </span>
                             </td>
                             <td class="text-end">
-                                <span class="fw-bold text-success">
-                                    {{ retrait.montant_loyers_bruts|floatformat:0|intcomma }} F CFA
-                                </span>
-                            </td>
-                            <td class="text-end">
-                                {% if retrait.montant_charges_deductibles > 0 %}
-                                <span class="text-danger">
-                                    -{{ retrait.montant_charges_deductibles|floatformat:0|intcomma }} F CFA
-                                </span>
+                                {% if can_see_amounts %}
+                                    <span class="fw-bold text-success">
+                                        {{ retrait.montant_loyers_bruts|floatformat:0|intcomma }} F CFA
+                                    </span>
                                 {% else %}
-                                <span class="text-muted">0 F CFA</span>
+                                    <span class="fw-bold text-muted">***</span>
+                                    <br><small class="text-muted">Confidentiel</small>
                                 {% endif %}
                             </td>
                             <td class="text-end">
-                                <span class="fw-bold text-primary fs-6">
-                                    {{ retrait.montant_net_a_payer|floatformat:0|intcomma }} F CFA
-                                </span>
+                                {% if can_see_amounts %}
+                                    {% if retrait.montant_charges_deductibles > 0 %}
+                                    <span class="text-danger">
+                                        -{{ retrait.montant_charges_deductibles|floatformat:0|intcomma }} F CFA
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">0 F CFA</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">***</span>
+                                    <br><small class="text-muted">Confidentiel</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if can_see_amounts %}
+                                    <span class="fw-bold text-primary fs-6">
+                                        {{ retrait.montant_net_a_payer|floatformat:0|intcomma }} F CFA
+                                    </span>
+                                {% else %}
+                                    <span class="fw-bold text-muted">***</span>
+                                    <br><small class="text-muted">Confidentiel</small>
+                                {% endif %}
                             </td>
                             <td>
                                 <span class="badge bg-{% if retrait.statut == 'paye' %}success{% elif retrait.statut == 'valide' %}info{% elif retrait.statut == 'en_attente' %}warning{% else %}danger{% endif %}">

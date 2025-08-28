@@ -82,28 +82,18 @@ class ProprieteListView(PrivilegeButtonsMixin, IntelligentListView):
         context['proprietes_disponibles'] = Propriete.objects.filter(disponible=True).count()
         context['proprietes_en_travaux'] = Propriete.objects.filter(etat='mauvais').count()
         
-        # Revenus totaux (propriétés louées)
-        from django.db.models import Sum
-        revenus_totaux = Propriete.objects.filter(
+        # SUPPRIMER: Calculs financiers pour la confidentialité
+        # NE PAS afficher de revenus ou valeurs de patrimoine
+        
+        # Indicateurs d'activité non confidentiels
+        context['proprietes_actives'] = Propriete.objects.filter(
             disponible=False,
-            loyer_actuel__isnull=False
-        ).aggregate(
-            total=Sum('loyer_actuel')
-        )['total'] or 0
+            contrats__est_actif=True
+        ).distinct().count()
         
-        # Valeur totale du patrimoine
-        valeur_patrimoine = Propriete.objects.filter(
-            prix_achat__isnull=False
-        ).aggregate(
-            total=Sum('prix_achat')
-        )['total'] or 0
-        
-        devise_active = getattr(self.request, 'devise_active', None)
-        devise_base = Devise.objects.get(code='XOF')
-        
-        # Conversion des montants/statistiques
-        context['revenus_totaux'] = convertir_montant(revenus_totaux, devise_base, devise_active)
-        context['valeur_patrimoine'] = convertir_montant(valeur_patrimoine, devise_base, devise_active)
+        context['proprietes_avec_documents'] = Propriete.objects.filter(
+            documents__isnull=False
+        ).distinct().count()
         
         return context
 
@@ -2064,11 +2054,12 @@ def proprietes_dashboard(request):
         etat='a_renover'
     ).count()
     
-    # Top propriétés par loyer
+    # Top propriétés par activité (NON par loyer pour la confidentialité)
     top_proprietes = Propriete.objects.filter(
-        is_deleted=False, 
-        loyer_actuel__isnull=False
-    ).order_by('-loyer_actuel')[:5]
+        is_deleted=False
+    ).annotate(
+        nombre_contrats=Count('contrats', filter=Q(contrats__est_actif=True))
+    ).order_by('-nombre_contrats')[:5]
     
     # Propriétés par ville
     proprietes_par_ville = Propriete.objects.filter(

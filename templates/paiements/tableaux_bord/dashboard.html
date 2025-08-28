@@ -1,7 +1,8 @@
-{% extends 'base_dashboard.html' %}
+{% extends 'base.html' %}
 {% load static %}
+{% load core_extras %}
 
-{% block title %}{{ title }} - {{ config.nom_entreprise|default:"Gestion Immobilière" }}{% endblock %}
+{% block title %}GESTION IMMOBILIERE PRO - Paiements{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.css">
@@ -79,27 +80,18 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- Section héro -->
-    <div class="hero-section">
-        <h1 class="display-4 mb-3">
-            <i class="bi bi-graph-up me-3"></i>
-            Dashboard des Tableaux de Bord Financiers
+<div class="dashboard-header text-center">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <a href="{% url 'core:dashboard' %}" class="btn btn-outline-light">
+            <i class="bi bi-arrow-left me-2"></i>Retour au Dashboard Principal
+        </a>
+        <h1 class="display-4 fw-bold mb-0">
+            <i class="bi bi-credit-card me-3"></i>GESTION IMMOBILIERE PRO - Paiements
         </h1>
-        <p class="lead mb-4">
-            Analysez vos performances immobilières et prenez des décisions éclairées
-        </p>
-        <div class="d-flex justify-content-center gap-3">
-            <a href="{% url 'paiements:tableau_bord_create' %}" class="btn btn-light btn-lg">
-                <i class="bi bi-plus-circle me-2"></i>
-                Nouveau Tableau de Bord
-            </a>
-            <a href="{% url 'paiements:tableau_bord_list' %}" class="btn btn-outline-light btn-lg">
-                <i class="bi bi-list me-2"></i>
-                Voir Tous
-            </a>
-        </div>
+        <div style="width: 150px;"></div> <!-- Espaceur pour centrer le titre -->
     </div>
+    <p class="lead mb-0">Vue d'ensemble et gestion de vos paiements et loyers</p>
+</div>
 
     <!-- Vue d'ensemble des statistiques -->
     <div class="stats-overview">

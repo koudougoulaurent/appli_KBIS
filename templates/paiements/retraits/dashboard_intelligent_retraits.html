@@ -1,0 +1,390 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card.border-primary { border-left-color: #0d6efd; }
+    .stat-card.border-success { border-left-color: #198754; }
+    .stat-card.border-warning { border-left-color: #ffc107; }
+    .stat-card.border-danger { border-left-color: #dc3545; }
+    .stat-card.border-info { border-left-color: #0dcaf0; }
+    
+    .bailleur-card {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .bailleur-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .priority-high { border-left: 4px solid #dc3545; }
+    .priority-normal { border-left: 4px solid #198754; }
+    
+    .alert-item {
+        transition: all 0.3s ease;
+    }
+    
+    .alert-item:hover {
+        background-color: rgba(0,0,0,0.02);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-speedometer2 text-primary me-2"></i>
+                        {{ title }}
+                    </h1>
+                    <p class="text-muted mb-0">{{ subtitle }}</p>
+                </div>
+                <div>
+                    <a href="{% url 'paiements:retrait_intelligent_create' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-2"></i>
+                        Nouveau Retrait
+                    </a>
+                    <a href="{% url 'paiements:retraits_liste' %}" class="btn btn-outline-secondary ms-2">
+                        <i class="bi bi-list me-2"></i>
+                        Liste des Retraits
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques globales -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card border-primary h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Bailleurs
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats.total_bailleurs }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-people-fill fa-2x text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card border-success h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Total Retraits
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats.total_retraits }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-arrow-up-circle fa-2x text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card border-warning h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                En Attente
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats.total_retraits_en_attente }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-clock-history fa-2x text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card border-info h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Taux de Traitement
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {% if stats.total_retraits > 0 %}
+                                    {{ stats.total_retraits_en_attente|floatformat:0 }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-percent fa-2x text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Bailleurs nécessitant attention -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Bailleurs Nécessitant Attention
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if bailleurs_attention %}
+                        <div class="row">
+                            {% for item in bailleurs_attention %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card bailleur-card priority-{{ item.priorite }}" 
+                                         onclick="window.location.href='{% url 'paiements:contexte_bailleur_rapide' item.bailleur.id %}'">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title mb-0">
+                                                    {{ item.bailleur.get_nom_complet }}
+                                                </h6>
+                                                <span class="badge {% if item.priorite == 'haute' %}bg-danger{% else %}bg-success{% endif %}">
+                                                    {{ item.priorite|title }}
+                                                </span>
+                                            </div>
+                                            
+                                            <div class="row text-center">
+                                                <div class="col-4">
+                                                    <small class="text-muted">Propriétés</small>
+                                                    <div class="fw-bold text-primary">
+                                                        {{ item.contexte.proprietes.total_proprietes }}
+                                                    </div>
+                                                </div>
+                                                <div class="col-4">
+                                                    <small class="text-muted">Contrats</small>
+                                                    <div class="fw-bold text-success">
+                                                        {{ item.contexte.contrats_actifs.total_contrats }}
+                                                    </div>
+                                                </div>
+                                                <div class="col-4">
+                                                    <small class="text-muted">Alertes</small>
+                                                    <div class="fw-bold text-danger">
+                                                        {{ item.contexte.alertes|length }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            {% if item.contexte.alertes %}
+                                                <div class="mt-2">
+                                                    {% for alerte in item.contexte.alertes|slice:":2" %}
+                                                        <small class="text-muted d-block">
+                                                            <i class="bi bi-exclamation-circle me-1"></i>
+                                                            {{ alerte.message|truncatechars:50 }}
+                                                        </small>
+                                                    {% endfor %}
+                                                    {% if item.contexte.alertes|length > 2 %}
+                                                        <small class="text-muted">
+                                                            +{{ item.contexte.alertes|length|add:"-2" }} autres alertes...
+                                                        </small>
+                                                    {% endif %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-check-circle text-success fa-3x mb-3"></i>
+                            <p class="text-muted mb-0">Aucun bailleur ne nécessite d'attention particulière.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Bailleurs avec retraits en attente -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-clock-history me-2"></i>
+                        Retraits en Attente
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if bailleurs_retraits_attente %}
+                        {% for item in bailleurs_retraits_attente %}
+                            <div class="alert alert-info alert-dismissible fade show mb-2">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="alert-heading mb-1">
+                                            {{ item.bailleur.get_nom_complet }}
+                                        </h6>
+                                        <small class="text-muted">
+                                            Montant net: {{ item.calculs.montant_net_a_payer|floatformat:0 }} XOF
+                                        </small>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                                <div class="mt-2">
+                                    <a href="{% url 'paiements:retrait_intelligent_create' %}?bailleur={{ item.bailleur.id }}" 
+                                       class="btn btn-sm btn-outline-info">
+                                        <i class="bi bi-plus-lg me-1"></i>
+                                        Créer Retrait
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="bi bi-check-circle text-success fa-2x mb-2"></i>
+                            <p class="text-muted mb-0">Aucun retrait en attente.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions rapides -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-lightning me-2"></i>
+                        Actions Rapides
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'paiements:retrait_intelligent_create' %}" class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                                <i class="bi bi-plus-circle fa-2x mb-2"></i>
+                                <span>Nouveau Retrait</span>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'paiements:recherche_bailleurs_intelligente' %}" class="btn btn-outline-info w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                                <i class="bi bi-search fa-2x mb-2"></i>
+                                <span>Rechercher Bailleur</span>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'paiements:retraits_liste' %}" class="btn btn-outline-success w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                                <i class="bi bi-list-ul fa-2x mb-2"></i>
+                                <span>Liste des Retraits</span>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="#" class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                                <i class="bi bi-graph-up fa-2x mb-2"></i>
+                                <span>Rapports</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informations système -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Informations Système
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary">Fonctionnalités Intelligentes</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-check-circle text-success me-2"></i>Contexte automatique des bailleurs</li>
+                                <li><i class="bi bi-check-circle text-success me-2"></i>Suggestions de montants intelligentes</li>
+                                <li><i class="bi bi-check-circle text-success me-2"></i>Calculs automatiques des charges</li>
+                                <li><i class="bi bi-check-circle text-success me-2"></i>Alertes et notifications</li>
+                                <li><i class="bi bi-check-circle text-success me-2"></i>Historique des retraits</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-primary">Comment utiliser</h6>
+                            <ol class="list-unstyled">
+                                <li class="mb-2">1. Sélectionnez un bailleur dans le formulaire</li>
+                                <li class="mb-2">2. Le système charge automatiquement le contexte</li>
+                                <li class="mb-2">3. Appliquez les suggestions ou saisissez manuellement</li>
+                                <li class="mb-2">4. Validez et créez le retrait</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialisation des composants Bootstrap
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialiser les tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+        
+        // Initialiser les popovers
+        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Popover(popoverTriggerEl);
+        });
+    });
+    
+    // Fonction pour rafraîchir le dashboard
+    function refreshDashboard() {
+        location.reload();
+    }
+    
+    // Auto-refresh toutes les 5 minutes
+    setInterval(refreshDashboard, 300000);
+</script>
+{% endblock %}

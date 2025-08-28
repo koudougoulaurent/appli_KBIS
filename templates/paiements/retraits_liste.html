@@ -22,6 +22,16 @@
         </div>
     </div>
 
+    <!-- Message de sécurité -->
+    {% if not can_see_amounts %}
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <i class="bi bi-shield-check me-2"></i>
+        <strong>Protection des données :</strong> Les montants financiers sont masqués pour protéger la confidentialité. 
+        Seuls les utilisateurs PRIVILEGE peuvent voir les montants exacts.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
     <!-- Filtres et recherche -->
     <div class="card mb-4">
         <div class="card-header">
@@ -70,6 +80,8 @@
                     <input type="date" name="date_fin" id="date_fin" class="form-control" 
                            value="{{ request.GET.date_fin }}">
                 </div>
+                <!-- Filtres de montant supprimés pour la confidentialité -->
+                {% if can_see_amounts %}
                 <div class="col-md-3">
                     <label for="montant_min" class="form-label">Montant min (F CFA)</label>
                     <input type="number" name="montant_min" id="montant_min" class="form-control" 
@@ -80,6 +92,7 @@
                     <input type="number" name="montant_max" id="montant_max" class="form-control" 
                            value="{{ request.GET.montant_max }}" step="0.01" min="0">
                 </div>
+                {% endif %}
                 <div class="col-12">
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-search"></i> Filtrer
@@ -114,8 +127,14 @@
         </div>
         <div class="col-md-3">
             <div class="stat-card info">
-                <div class="stat-number">{{ montant_total }} F CFA</div>
-                <div class="stat-label">Montant Total</div>
+                {% if can_see_amounts %}
+                    <div class="stat-number">{{ stats.total_montant|floatformat:0|intcomma }} F CFA</div>
+                    <div class="stat-label">Montant Total</div>
+                {% else %}
+                    <div class="stat-number">***</div>
+                    <div class="stat-label">Montant Total</div>
+                    <small class="text-muted">Confidentiel</small>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -174,7 +193,12 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="fw-bold text-success">{{ retrait.montant }} F CFA</span>
+                                    {% if can_see_amounts %}
+                                        <span class="fw-bold text-success">{{ retrait.montant_net_a_payer|floatformat:0|intcomma }} F CFA</span>
+                                    {% else %}
+                                        <span class="fw-bold text-muted">***</span>
+                                        <br><small class="text-muted">Montant confidentiel</small>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <span class="badge bg-info">{{ retrait.get_type_retrait_display }}</span>

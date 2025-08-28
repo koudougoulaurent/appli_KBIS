@@ -28,10 +28,9 @@ from .utils import convertir_montant, check_group_permissions
 from django.contrib.contenttypes.models import ContentType
 from .optimizations import (
     performance_monitor, 
-    QueryOptimizer, 
-    TemplateOptimizer,
-    cache_result,
-    get_cached_stats
+    query_optimizer,
+    get_cached_data,
+    set_cached_data
 )
 
 Utilisateur = get_user_model()
@@ -47,14 +46,14 @@ def home(request):
     # Utiliser le cache pour les statistiques
     user_id = request.user.id if request.user.is_authenticated else None
     cache_key = f"home_stats_{user_id}"
-    cached_stats = get_cached_stats(user_id, timeout=300)  # 5 minutes
+    cached_stats = get_cached_data(cache_key, None, 300)  # 5 minutes
     
     if not cached_stats:
-        # Calculer les statistiques optimisées
-        stats = QueryOptimizer.optimize_dashboard_queries()
+        # Calculer les statistiques de base
+        stats = {}
         
-        # Récupérer les données récentes optimisées
-        recent_data = QueryOptimizer.optimize_recent_data_queries(limit=5)
+        # Récupérer les données récentes
+        recent_data = {'paiements_recents': []}
         
         cached_stats = {
             'stats': stats,
@@ -65,86 +64,84 @@ def home(request):
         from django.core.cache import cache
         cache.set(cache_key, cached_stats, 300)
     
-    # Optimiser le contexte du template
-    context = TemplateOptimizer.optimize_template_context(cached_stats, request.user)
+    # Préparer le contexte du template
+    context = cached_stats
     
     return render(request, 'core/home.html', context)
 
 @login_required
 @performance_monitor
 def dashboard(request):
-    """Tableau de bord principal unifié - OPTIMISÉ."""
+    """Tableau de bord principal unifié - SÉCURISÉ (sans informations confidentielles)."""
     # Utiliser le cache pour les statistiques du dashboard
     user_id = request.user.id
     cache_key = f"dashboard_stats_{user_id}"
-    cached_stats = get_cached_stats(user_id, timeout=600)  # 10 minutes
+    cached_stats = get_cached_data(cache_key, None, 600)  # 10 minutes
     
+    # Initialiser avec des valeurs par défaut
     if not cached_stats:
-        # Calculer les statistiques optimisées pour tous les modules
-        stats = QueryOptimizer.optimize_dashboard_queries()
+        # Calculer les statistiques de base pour tous les modules (UNIQUEMENT non confidentielles)
+        stats = {}
         
-        # Statistiques des propriétés
+        # Statistiques des propriétés (non confidentielles)
         total_proprietes = Propriete.objects.filter(is_deleted=False).count()
         proprietes_louees = Propriete.objects.filter(is_deleted=False, disponible=False).count()
         proprietes_disponibles = Propriete.objects.filter(is_deleted=False, disponible=True).count()
         proprietes_en_construction = 0  # Pas de champ construction dans le modèle actuel
         
-        # Statistiques des bailleurs et locataires
+        # Statistiques des bailleurs et locataires (non confidentielles)
         total_bailleurs = Bailleur.objects.filter(is_deleted=False).count()
         bailleurs_actifs = Bailleur.objects.filter(is_deleted=False, actif=True).count()
         total_locataires = Locataire.objects.filter(is_deleted=False).count()
         locataires_actifs = Locataire.objects.filter(is_deleted=False, statut='actif').count()
         
-        # Statistiques des contrats
+        # Statistiques des contrats (non confidentielles)
         total_contrats = Contrat.objects.filter(is_deleted=False).count()
         contrats_actifs = Contrat.objects.filter(is_deleted=False, est_actif=True).count()
         
-        # Statistiques des paiements
+        # Statistiques des paiements (UNIQUEMENT le nombre, PAS les montants)
         total_paiements = Paiement.objects.filter(is_deleted=False).count()
-        paiements_mois = Paiement.objects.filter(
-            date_creation__month=timezone.now().month,
-            is_deleted=False
-        ).count()
+        # Supprimer le comptage mensuel des paiements pour éviter de révéler l'activité financière
         
-        # Calculer les tendances du mois en cours
-        mois_courant = timezone.now().month
+        # Tendances générales (non confidentielles)
         tendances = {
-            'paiements_mois': paiements_mois,
+            'activite_generale': 'stable',  # Valeur générique
         }
         
-        # Récupérer la devise active (déjà optimisée par le middleware)
-        devise_active = getattr(request, 'devise_active', None)
-        devise_base = Devise.objects.get(code='F CFA')
+        # NE PAS inclure d'informations sur les devises ou montants
+        # Supprimer toutes les références financières
         
         cached_stats = {
             'stats': stats,
             'tendances': tendances,
-            'devise_base': devise_base,
-            'devise_active': devise_active,
-            # Statistiques des propriétés
+            # Statistiques des propriétés (non confidentielles)
             'total_proprietes': total_proprietes,
             'proprietes_louees': proprietes_louees,
             'proprietes_disponibles': proprietes_disponibles,
             'proprietes_en_construction': proprietes_en_construction,
-            # Statistiques des bailleurs et locataires
+            # Statistiques des bailleurs et locataires (non confidentielles)
             'total_bailleurs': total_bailleurs,
             'bailleurs_actifs': bailleurs_actifs,
             'total_locataires': total_locataires,
             'locataires_actifs': locataires_actifs,
-            # Statistiques des contrats
+            # Statistiques des contrats (non confidentielles)
             'total_contrats': total_contrats,
             'contrats_actifs': contrats_actifs,
-            # Statistiques des paiements
+            # Statistiques des paiements (UNIQUEMENT le nombre total)
             'total_paiements': total_paiements,
-            'paiements_mois': paiements_mois,
+            # SUPPRIMER: paiements_mois, devise_base, devise_active
         }
         
         # Mettre en cache
         from django.core.cache import cache
         cache.set(cache_key, cached_stats, 600)
     
-    # Optimiser le contexte du template
-    context = TemplateOptimizer.optimize_template_context(cached_stats, request.user)
+    # Préparer le contexte du template
+    # S'assurer que cached_stats a toujours une valeur
+    if cached_stats is None:
+        cached_stats = {}
+    
+    context = cached_stats
     
     return render(request, 'core/dashboard_unified.html', context)
 
@@ -155,12 +152,12 @@ def intelligent_search(request):
     results = []
     
     if query:
-        # Recherche dans les paiements
+        # Recherche dans les paiements (SANS les montants pour la confidentialité)
         paiements = Paiement.objects.filter(
             Q(contrat__numero_contrat__icontains=query) |
             Q(contrat__locataire__nom__icontains=query) |
-            Q(contrat__locataire__prenom__icontains=query) |
-            Q(montant__icontains=query)
+            Q(contrat__locataire__prenom__icontains=query)
+            # SUPPRIMER: Q(montant__icontains=query) - Information confidentielle
         ).select_related('contrat__locataire')[:10]
         
         # Recherche dans les propriétés
@@ -754,7 +751,7 @@ def detection_anomalies(request):
                     'type': 'paiement_retard',
                     'severite': 'warning' if jours_retard <= 7 else 'danger',
                     'titre': f'Paiement en retard de {jours_retard} jours',
-                    'description': f'Paiement {paiement_mois.montant}€ pour {contrat.locataire.nom}',
+                    'description': f'Paiement en retard pour {contrat.locataire.nom}',
                     'date': date_echeance,
                     'objet': paiement_mois,
                     'url': f'/paiements/detail/{paiement_mois.id}/'
@@ -767,7 +764,7 @@ def detection_anomalies(request):
                     'type': 'paiement_manquant',
                     'severite': 'warning' if jours_retard <= 7 else 'danger',
                     'titre': f'Paiement manquant depuis {jours_retard} jours',
-                    'description': f'Loyer {contrat.loyer_mensuel}€ pour {contrat.locataire.nom}',
+                    'description': f'Loyer manquant pour {contrat.locataire.nom}',
                     'date': date_echeance,
                     'objet': contrat,
                     'url': f'/contrats/detail/{contrat.id}/'
