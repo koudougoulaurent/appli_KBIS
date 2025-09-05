@@ -194,3 +194,5 @@ logs/
 .pytest_cache/
 .coverage
 htmlcov/
+db.sqlite3
+db.sqlite3-*
