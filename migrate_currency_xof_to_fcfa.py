@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Script de migration pour changer la devise de XOF vers F CFA
+Script de migration pour changer la devise de F CFA vers F CFA
 Ce script met à jour la base de données et les références
 """
 
@@ -18,9 +18,9 @@ from django.core.management import call_command
 
 def migrate_currency_xof_to_fcfa():
     """
-    Migre la devise XOF vers F CFA dans la base de données
+    Migre la devise F CFA vers F CFA dans la base de données
     """
-    print("🔄 Début de la migration XOF → F CFA...")
+    print("🔄 Début de la migration F CFA → F CFA...")
     
     try:
         with transaction.atomic():
@@ -40,14 +40,14 @@ def migrate_currency_xof_to_fcfa():
             else:
                 print(f"✅ Devise F CFA mise à jour")
             
-            # 2. Désactiver l'ancienne devise XOF si elle existe
+            # 2. Désactiver l'ancienne devise F CFA si elle existe
             try:
-                devise_xof = Devise.objects.get(code='XOF')
+                devise_xof = Devise.objects.get(code='F CFA')
                 devise_xof.actif = False
                 devise_xof.save()
-                print(f"✅ Devise XOF désactivée")
+                print(f"✅ Devise F CFA désactivée")
             except Devise.DoesNotExist:
-                print(f"ℹ️  Devise XOF n'existait pas")
+                print(f"ℹ️  Devise F CFA n'existait pas")
             
             # 3. Mettre à jour la devise active par défaut
             # Cette mise à jour sera gérée par les settings Django
@@ -79,7 +79,7 @@ def main():
     """
     Fonction principale de migration
     """
-    print("🚀 Migration de la devise XOF vers F CFA")
+    print("🚀 Migration de la devise F CFA vers F CFA")
     print("=" * 50)
     
     # 1. Migration de la base de données
@@ -95,7 +95,7 @@ def main():
     print("✅ Migration terminée!")
     print("\n📋 Actions effectuées:")
     print("   • Devise F CFA créée/mise à jour")
-    print("   • Devise XOF désactivée")
+    print("   • Devise F CFA désactivée")
     print("   • Configuration mise à jour")
     print("\n⚠️  Actions requises:")
     print("   • Redémarrer le serveur Django")

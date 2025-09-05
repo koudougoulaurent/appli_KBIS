@@ -244,7 +244,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='devise',
             name='code',
-            field=models.CharField(help_text='Code ISO 4217 (ex: EUR, USD, XOF)', max_length=3, unique=True, verbose_name='Code devise'),
+            field=models.CharField(help_text='Code ISO 4217 (ex: EUR, USD, F CFA)', max_length=3, unique=True, verbose_name='Code devise'),
         ),
         migrations.AlterField(
             model_name='devise',

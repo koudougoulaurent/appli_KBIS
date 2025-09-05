@@ -69,7 +69,7 @@
                     <form method="post">
                         {% csrf_token %}
                         
-                        <div class="form-group">
+                        <div class="form-group mb-3">
                             <label for="mois_recap" class="form-label">
                                 <strong>Mois à traiter :</strong>
                             </label>
@@ -81,6 +81,21 @@
                             </select>
                             <small class="form-text text-muted">
                                 Sélectionnez le mois pour lequel vous souhaitez générer les récapitulatifs.
+                            </small>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="bailleur_id" class="form-label">
+                                <strong>Bailleur à traiter :</strong>
+                            </label>
+                            <select class="form-select" id="bailleur_id" name="bailleur_id">
+                                <option value="tous">-- Tous les bailleurs --</option>
+                                {% for bailleur in bailleurs_actifs %}
+                                <option value="{{ bailleur.id }}">{{ bailleur.get_nom_complet }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">
+                                Sélectionnez un bailleur spécifique ou laissez "Tous les bailleurs" pour traiter tous les bailleurs actifs.
                             </small>
                         </div>
 

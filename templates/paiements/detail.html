@@ -80,8 +80,20 @@
                     </div>
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong>Propriété:</strong></div>
-                        <div class="col-sm-8">{{ paiement.contrat.propriete.adresse }}</div>
+                        <div class="col-sm-8">
+                            {{ paiement.contrat.propriete.nom }}<br>
+                            <span class="text-muted">Adresse: {{ paiement.contrat.propriete.adresse }}</span>
+                        </div>
                     </div>
+                    {% if paiement.contrat.unite_locative %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Unité locative:</strong></div>
+                        <div class="col-sm-8">
+                            {{ paiement.contrat.unite_locative.nom }}<br>
+                            <span class="text-muted">Type: {{ paiement.contrat.unite_locative.type_unite }} | Surface: {{ paiement.contrat.unite_locative.surface }} m²</span>
+                        </div>
+                    </div>
+                    {% endif %}
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong>Locataire:</strong></div>
                         <div class="col-sm-8">{{ paiement.contrat.locataire.nom }} {{ paiement.contrat.locataire.prenom }}</div>

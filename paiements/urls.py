@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views, views_retraits, views_recapitulatifs, api_intelligente_retraits
+from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives
 
 app_name = 'paiements'
 
@@ -26,19 +26,25 @@ urlpatterns = [
     # URLs manquantes pour compatibilité avec les templates existants
     path('recus/', views.liste_recus, name='recus_liste'),
     
+    # URLs pour la validation des paiements
+    path('paiement/<int:pk>/valider/', views_validation.valider_paiement, name='valider_paiement'),
+    path('paiement/<int:pk>/refuser/', views_validation.refuser_paiement, name='refuser_paiement'),
+    path('paiement/<int:pk>/annuler/', views_validation.annuler_paiement, name='annuler_paiement'),
+    path('paiement/<int:pk>/actions/', views_validation.paiement_actions_ajax, name='paiement_actions_ajax'),
+    
     # RÉCAPITULATIFS MENSUELS - NOUVEAU SYSTÈME COMPLET
     # Redirection de l'ancien système vers le nouveau pour compatibilité
     path('recaps-mensuels/', views_recapitulatifs.liste_recapitulatifs, name='liste_recaps_mensuels'),
     path('recaps-mensuels/creer/', views_recapitulatifs.creer_recapitulatif, name='creer_recap_mensuel'),
-    path('recaps-mensuels/<int:recap_id>/', views_recapitulatifs.detail_recapitulatif, name='detail_recap_mensuel'),
-    path('recaps-mensuels/<int:recap_id>/valider/', views_recapitulatifs.valider_recapitulatif, name='valider_recap_mensuel'),
-    path('recaps-mensuels/<int:recap_id>/marquer-envoye/', views_recapitulatifs.envoyer_recapitulatif, name='marquer_recap_envoye'),
-    path('recaps-mensuels/<int:recap_id>/marquer-paye/', views_recapitulatifs.marquer_paye_recapitulatif, name='marquer_recap_paye'),
-    path('recaps-mensuels/<int:recap_id>/imprimer/', views_recapitulatifs.apercu_recapitulatif, name='imprimer_recap_mensuel'),
+    path('recaps-mensuels/<int:recapitulatif_id>/', views_recapitulatifs.detail_recapitulatif, name='detail_recap_mensuel'),
+    path('recaps-mensuels/<int:recapitulatif_id>/valider/', views_recapitulatifs.valider_recapitulatif, name='valider_recap_mensuel'),
+    path('recaps-mensuels/<int:recapitulatif_id>/marquer-envoye/', views_recapitulatifs.envoyer_recapitulatif, name='marquer_recap_envoye'),
+    path('recaps-mensuels/<int:recapitulatif_id>/marquer-paye/', views_recapitulatifs.marquer_paye_recapitulatif, name='marquer_recap_paye'),
+    path('recaps-mensuels/<int:recapitulatif_id>/imprimer/', views_recapitulatifs.apercu_recapitulatif, name='imprimer_recap_mensuel'),
     
     # NOUVELLES FONCTIONNALITÉS AVANCÉES pour l'ancien système
-    path('recaps-mensuels/<int:recap_id>/pdf/', views_recapitulatifs.telecharger_pdf_recapitulatif, name='telecharger_pdf_recap_mensuel'),
-    path('recaps-mensuels/<int:recap_id>/apercu/', views_recapitulatifs.apercu_recapitulatif, name='apercu_recap_mensuel'),
+    path('recaps-mensuels/<int:recapitulatif_id>/pdf/', views_recapitulatifs.telecharger_pdf_recapitulatif, name='telecharger_pdf_recap_mensuel'),
+    path('recaps-mensuels/<int:recapitulatif_id>/apercu/', views_recapitulatifs.apercu_recapitulatif, name='apercu_recap_mensuel'),
     path('recaps-mensuels/statistiques/', views_recapitulatifs.statistiques_recapitulatifs, name='statistiques_recaps_mensuels'),
     path('recaps-mensuels/generer-automatique/', views_recapitulatifs.generer_recapitulatif_automatique, name='generer_recap_automatique'),
     
@@ -46,7 +52,10 @@ urlpatterns = [
     path('recaps-mensuels-automatiques/', views.liste_recaps_mensuels, name='liste_recaps_mensuels_auto'),
     path('recaps-mensuels-automatiques/creer/', views.creer_recap_mensuel, name='creer_recap_mensuel_auto'),
     path('recaps-mensuels-automatiques/creer/<int:bailleur_id>/', views.creer_recap_mensuel_bailleur, name='creer_recap_mensuel_bailleur'),
+    path('recaps-mensuels-automatiques/creer-avec-detection/<int:bailleur_id>/', views.creer_recap_avec_detection_auto, name='creer_recap_avec_detection_auto'),
     path('recaps-mensuels-automatiques/<int:recap_id>/', views.detail_recap_mensuel, name='detail_recap_mensuel_auto'),
+    path('recaps-mensuels-automatiques/<int:recap_id>/pdf-detaille/', views.generer_pdf_recap_detaille_paysage, name='generer_pdf_recap_detaille_paysage'),
+    path('recaps-mensuels-automatiques/<int:recap_id>/creer-retrait/', views.creer_retrait_depuis_recap, name='creer_retrait_depuis_recap'),
     path('recaps-mensuels-automatiques/generer/', views.generer_recap_mensuel_automatique, name='generer_recap_mensuel_automatique'),
     
     # Tableau de bord spécialisé
@@ -62,6 +71,17 @@ urlpatterns = [
     path('charges/', views.charge_deductible_list, name='charge_deductible_list'),
     path('charges/ajouter/', views.ajouter_charge_deductible, name='ajouter_charge_deductible'),
     path('charges/modifier/<int:pk>/', views.modifier_charge_deductible, name='modifier_charge_deductible'),
+    
+    # URLs pour la gestion avancée des charges
+    path('charges-avancees/', views_charges_avancees.liste_charges_avancees, name='liste_charges_avancees'),
+    path('charges-avancees/creer/', views_charges_avancees.creer_charge_avancee, name='creer_charge_avancee'),
+    path('charges-avancees/creer/<int:bailleur_id>/', views_charges_avancees.creer_charge_avancee, name='creer_charge_avancee_bailleur'),
+    path('charges-avancees/modifier/<int:charge_id>/', views_charges_avancees.modifier_charge_avancee, name='modifier_charge_avancee'),
+    path('charges-avancees/detail/<int:charge_id>/', views_charges_avancees.detail_charge_avancee, name='detail_charge_avancee'),
+    path('charges-avancees/valider/', views_charges_avancees.valider_charges, name='valider_charges'),
+    path('charges-avancees/dashboard/<int:bailleur_id>/', views_charges_avancees.dashboard_charges_bailleur, name='dashboard_charges_bailleur'),
+    path('charges-avancees/rapport/', views_charges_avancees.rapport_charges, name='rapport_charges'),
+    path('api/charges-bailleur/<int:bailleur_id>/', views_charges_avancees.api_charges_bailleur, name='api_charges_bailleur'),
     
     # API pour les données des paiements
     path('api/data/', views.api_paiements_data, name='api_paiements_data'),
@@ -125,6 +145,21 @@ urlpatterns = [
     path('recapitulatifs/<int:recapitulatif_id>/apercu/', views_recapitulatifs.apercu_recapitulatif, name='apercu_recapitulatif'),
     path('recapitulatifs/statistiques/', views_recapitulatifs.statistiques_recapitulatifs, name='statistiques_recapitulatifs'),
     path('recapitulatifs/generer-automatique/', views_recapitulatifs.generer_recapitulatif_automatique, name='generer_recapitulatif_automatique'),
+    
+    # URLs pour les reçus de récapitulatifs
+    path('recus-recapitulatifs/', views_recus.liste_recus_recapitulatifs, name='liste_recus_recapitulatifs'),
+    path('recus-recapitulatifs/statistiques/', views_recus.statistiques_recus_recapitulatifs, name='statistiques_recus_recapitulatifs'),
+    path('recus-recapitulatifs/creer/<int:recapitulatif_id>/', views_recus.creer_recu_recapitulatif, name='creer_recu_recapitulatif'),
+    path('recus-recapitulatifs/<int:pk>/', views_recus.detail_recu_recapitulatif, name='detail_recu_recapitulatif'),
+    path('recus-recapitulatifs/<int:pk>/apercu/', views_recus.apercu_recu_recapitulatif, name='apercu_recu_recapitulatif'),
+    path('recus-recapitulatifs/<int:pk>/imprimer/', views_recus.imprimer_recu_recapitulatif, name='imprimer_recu_recapitulatif'),
+    path('recus-recapitulatifs/<int:pk>/marquer-envoye/', views_recus.marquer_recu_envoye, name='marquer_recu_envoye'),
+    path('recus-recapitulatifs/<int:pk>/valider/', views_recus.valider_recu_recapitulatif, name='valider_recu_recapitulatif'),
+    
+    # URLs pour les reçus GESTIMMOB
+    path('recus-recapitulatifs/<int:pk>/apercu-gestimmob/', views_recus.apercu_recu_recapitulatif_gestimmob, name='apercu_recu_recapitulatif_gestimmob'),
+    path('recus-recapitulatifs/<int:pk>/imprimer-gestimmob/', views_recus.imprimer_recu_recapitulatif_gestimmob, name='imprimer_recu_recapitulatif_gestimmob'),
+    path('recus-recapitulatifs/creer-gestimmob/<int:recapitulatif_id>/', views_recus.creer_recu_gestimmob_recapitulatif, name='creer_recu_gestimmob_recapitulatif'),
 
     # URLs pour la génération PDF
     path('recaps-mensuels-automatiques/<int:recap_id>/pdf/', views.generer_pdf_recap_mensuel, name='generer_pdf_recap_mensuel'),
@@ -137,6 +172,7 @@ urlpatterns = [
     
     # 🔍 API DE RECHERCHE INTELLIGENTE
     path('api/recherche-rapide/', api_views.api_recherche_contrats_rapide, name='api_recherche_rapide'),
+    path('api/recherche-bailleur/', api_views.api_recherche_bailleur, name='api_recherche_bailleur'),
     path('api/contexte-intelligent/contrat/<int:contrat_id>/', api_views.api_contexte_intelligent_contrat, name='api_contexte_intelligent'),
     # 🚀 API INTELLIGENTE DES RETRAITS - NOUVEAU !
     path('api/contexte-bailleur/<int:bailleur_id>/', api_intelligente_retraits.APIContexteIntelligentRetraits.as_view(), name='api_contexte_bailleur'),
@@ -145,4 +181,11 @@ urlpatterns = [
     path('api/retraits-intelligents/contexte-rapide/<int:bailleur_id>/', api_intelligente_retraits.api_contexte_rapide_retrait, name='api_retraits_intelligents_contexte_rapide'),
     path('api/retraits-intelligents/historique/<int:bailleur_id>/', api_intelligente_retraits.api_historique_retraits, name='api_retraits_intelligents_historique'),
     path('api/retraits-intelligents/alertes/<int:bailleur_id>/', api_intelligente_retraits.api_alertes_retrait, name='api_retraits_intelligents_alertes'),
+
+    # ✅ SYSTÈME DES UNITÉS LOCATIVES
+    path('unites-locatives/rapport/<int:bailleur_id>/', views_unites_locatives.rapport_unites_locatives, name='rapport_unites_locatives'),
+    path('unites-locatives/retrait/creer/<int:bailleur_id>/', views_unites_locatives.creer_retrait_avec_unites, name='creer_retrait_avec_unites'),
+    path('unites-locatives/retrait/detail/<int:retrait_id>/', views_unites_locatives.detail_retrait_avec_unites, name='detail_retrait_avec_unites'),
+    path('unites-locatives/api/donnees/<int:bailleur_id>/', views_unites_locatives.api_donnees_unites_locatives, name='api_donnees_unites_locatives'),
+    path('unites-locatives/export/excel/<int:bailleur_id>/', views_unites_locatives.export_rapport_unites_excel, name='export_rapport_unites_excel'),
 ]

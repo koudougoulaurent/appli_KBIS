@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Script pour remplacer automatiquement tous les "XOF" par "F CFA" dans les templates HTML
+Script pour remplacer automatiquement tous les "F CFA" par "F CFA" dans les templates HTML
 """
 
 import os
@@ -8,19 +8,19 @@ import re
 from pathlib import Path
 
 def replace_xof_in_file(file_path):
-    """Remplace XOF par F CFA dans un fichier"""
+    """Remplace F CFA par F CFA dans un fichier"""
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
         # Compter les occurrences avant remplacement
-        count_before = content.count('XOF')
+        count_before = content.count('F CFA')
         
         if count_before == 0:
             return 0
         
-        # Remplacer XOF par F CFA
-        content = content.replace('XOF', 'F CFA')
+        # Remplacer F CFA par F CFA
+        content = content.replace('F CFA', 'F CFA')
         
         # Écrire le fichier modifié
         with open(file_path, 'w', encoding='utf-8') as f:
@@ -29,7 +29,7 @@ def replace_xof_in_file(file_path):
         # Compter les occurrences après remplacement
         count_after = content.count('F CFA')
         
-        print(f"✅ {file_path}: {count_before} XOF → {count_after} F CFA")
+        print(f"✅ {file_path}: {count_before} F CFA → {count_after} F CFA")
         return count_before
         
     except Exception as e:
@@ -37,8 +37,8 @@ def replace_xof_in_file(file_path):
         return 0
 
 def replace_xof_in_templates():
-    """Remplace XOF par F CFA dans tous les templates HTML"""
-    print("🔄 Remplacement automatique de XOF vers F CFA dans les templates...")
+    """Remplace F CFA par F CFA dans tous les templates HTML"""
+    print("🔄 Remplacement automatique de F CFA vers F CFA dans les templates...")
     
     # Dossier des templates
     templates_dir = Path('templates')
@@ -60,12 +60,12 @@ def replace_xof_in_templates():
     print(f"\n📊 Résumé:")
     print(f"   • Fichiers modifiés: {files_modified}")
     print(f"   • Total remplacements: {total_replacements}")
-    print(f"   • XOF → F CFA: {total_replacements}")
+    print(f"   • F CFA → F CFA: {total_replacements}")
     
     return total_replacements
 
 def replace_xof_in_static_files():
-    """Remplace XOF par F CFA dans les fichiers statiques (CSS, JS)"""
+    """Remplace F CFA par F CFA dans les fichiers statiques (CSS, JS)"""
     print("\n🔄 Remplacement dans les fichiers statiques...")
     
     static_dir = Path('static')
@@ -93,7 +93,7 @@ def replace_xof_in_static_files():
 
 def main():
     """Fonction principale"""
-    print("🚀 Remplacement automatique XOF → F CFA")
+    print("🚀 Remplacement automatique F CFA → F CFA")
     print("=" * 50)
     
     # 1. Templates HTML
@@ -107,7 +107,7 @@ def main():
     
     print(f"\n" + "=" * 50)
     print(f"✅ Remplacement terminé!")
-    print(f"📊 Total global: {total} remplacements XOF → F CFA")
+    print(f"📊 Total global: {total} remplacements F CFA → F CFA")
     
     if total > 0:
         print(f"\n⚠️  Actions recommandées:")

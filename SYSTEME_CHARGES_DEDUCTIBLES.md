@@ -162,11 +162,11 @@ Traçabilité complète pour bailleur et locataire
 ### Scénario : Réparation Plomberie
 
 1. **Le locataire signale une fuite** et fait appel à un plombier en urgence
-2. **Coût de la réparation :** 150 XOF (facture PL-2024-001)
+2. **Coût de la réparation :** 150 F CFA (facture PL-2024-001)
 3. **Saisie de la charge :**
    ```
    Libellé: "Réparation fuite robinet cuisine"
-   Montant: 150.00 XOF
+   Montant: 150.00 F CFA
    Type: Réparation
    Fournisseur: "Plomberie Express"
    Facture: "PL-2024-001"
@@ -176,14 +176,14 @@ Traçabilité complète pour bailleur et locataire
 
 5. **Lors du paiement du loyer suivant :**
    ```
-   Loyer mensuel: 800 XOF
-   Charges déduites: -150 XOF
-   Montant net à payer: 650 XOF
+   Loyer mensuel: 800 F CFA
+   Charges déduites: -150 F CFA
+   Montant net à payer: 650 F CFA
    ```
 
 6. **Reçu généré automatiquement** avec détail des charges
 
-7. **Le bailleur reçoit :** 650 XOF (au lieu de 800 XOF)
+7. **Le bailleur reçoit :** 650 F CFA (au lieu de 800 F CFA)
 
 ---
 

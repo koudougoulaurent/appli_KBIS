@@ -186,3 +186,38 @@ def replace_underscores(value):
     if value:
         return value.replace('_', ' ').title()
     return value
+
+@register.filter
+def format_currency_fcfa(value, show_decimals=True):
+    """
+    Formate un montant en F CFA selon les standards du Franc CFA
+    Usage : {{ montant|format_currency_fcfa }}
+    """
+    from core.utils import format_currency_fcfa as format_func
+    return format_func(value, show_decimals)
+
+@register.filter
+def pluralize(value):
+    """
+    Ajoute un 's' si la valeur est supérieure à 1
+    Usage : {{ count }} unité{{ count|pluralize }}
+    """
+    try:
+        return 's' if int(value) > 1 else ''
+    except (ValueError, TypeError):
+        return ''
+
+@register.filter
+def ordinal(value):
+    """
+    Convertit un nombre en ordinal (1er, 2ème, etc.)
+    Usage : {{ etage|ordinal }}
+    """
+    try:
+        num = int(value)
+        if num == 1:
+            return 'er'
+        else:
+            return 'ème'
+    except (ValueError, TypeError):
+        return ''

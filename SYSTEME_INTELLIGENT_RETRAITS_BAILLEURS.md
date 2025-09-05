@@ -191,10 +191,10 @@ path('retraits/recherche-intelligente/', views.recherche_bailleurs_intelligente,
 1. **Sélectionner le bailleur** "Jean Dupont"
 2. **Système charge automatiquement :**
    - 3 propriétés (total: 250m²)
-   - 2 contrats actifs (loyer total: 150,000 XOF)
-   - 5 paiements ce mois (total: 150,000 XOF)
-   - 2 charges en attente (total: 25,000 XOF)
-   - Calcul automatique : 150,000 - 25,000 = **125,000 XOF**
+   - 2 contrats actifs (loyer total: 150,000 F CFA)
+   - 5 paiements ce mois (total: 150,000 F CFA)
+   - 2 charges en attente (total: 25,000 F CFA)
+   - Calcul automatique : 150,000 - 25,000 = **125,000 F CFA**
 3. **Suggestion appliquée automatiquement**
 4. **Retrait créé en 30 secondes !**
 

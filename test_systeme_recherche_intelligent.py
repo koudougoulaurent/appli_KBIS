@@ -24,7 +24,7 @@ def test_search_engine():
     # Test 1: Analyse de requêtes
     print("\n1. Test d'analyse de requêtes intelligentes")
     test_queries = [
-        "appartement 2 pièces à Paris moins de 800 XOF",
+        "appartement 2 pièces à Paris moins de 800 F CFA",
         "maison avec jardin à Lyon",
         "studio étudiant pas cher",
         "appartement de standing urgent",

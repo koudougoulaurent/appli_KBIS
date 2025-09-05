@@ -1,152 +1,160 @@
 {% extends 'base_dashboard.html' %}
 {% load static %}
-{% load i18n %}
+{% load crispy_forms_tags %}
 
-{% block title %}{{ page_title }}{% endblock %}
+{% block title %}{{ page_title }} - Gestion Immobilière{% endblock %}
 
 {% block extra_css %}
 <style>
-    .form-card {
-        background: #f8f9fa;
-        border-radius: 10px;
-        padding: 2rem;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    .form-header {
+    .period-info {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
+        padding: 1rem;
         border-radius: 10px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-    }
-    .form-header h3 {
-        color: white;
-        margin-bottom: 0.5rem;
-    }
-    .form-group {
         margin-bottom: 1.5rem;
     }
-    .btn-action {
-        padding: 0.75rem 2rem;
+    
+    .period-info h5 {
+        margin-bottom: 0.5rem;
         font-weight: 600;
-        border-radius: 8px;
+    }
+    
+    .period-info p {
+        margin-bottom: 0;
+        opacity: 0.9;
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-section h6 {
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #ecf0f1;
+    }
+    
+    .type-explanation {
+        background: #f8f9fa;
+        border-left: 4px solid #007bff;
+        padding: 1rem;
+        margin-top: 1rem;
+        border-radius: 0 5px 5px 0;
+    }
+    
+    .type-explanation h6 {
+        color: #007bff;
+        margin-bottom: 0.5rem;
+    }
+    
+    .type-explanation ul {
+        margin-bottom: 0;
+        padding-left: 1.5rem;
+    }
+    
+    .type-explanation li {
+        margin-bottom: 0.25rem;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- En-tête -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-0">
-                <i class="bi bi-{{ page_icon }}"></i>
-                {{ page_title }}
-            </h1>
-            <p class="text-muted">
-                Créer un nouveau récapitulatif mensuel pour tous les bailleurs
-            </p>
-        </div>
-        <div>
-            <a href="{% url 'paiements:liste_recapitulatifs' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Retour à la liste
-            </a>
-        </div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="bi bi-{{ page_icon }} text-primary"></i>
+        {{ page_title }}
+    </h1>
+    <div class="btn-group" role="group">
+        <a href="{% url 'paiements:liste_recapitulatifs' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Retour à la liste
+        </a>
     </div>
+</div>
 
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="form-card">
-                <div class="form-header">
-                    <h3><i class="bi bi-plus-circle"></i> Nouveau Récapitulatif</h3>
-                    <p class="mb-0">Remplissez les informations pour créer un récapitulatif mensuel</p>
+<!-- Information sur la période -->
+<div class="period-info" id="periodInfo">
+    <h5><i class="bi bi-calendar3"></i> Sélection de la période</h5>
+    <p id="periodDescription">Choisissez le type de récapitulatif et la période de référence pour générer automatiquement les calculs.</p>
+</div>
+
+<!-- Formulaire principal -->
+<div class="form-section">
+    <h6><i class="bi bi-file-earmark-text"></i> Informations du récapitulatif</h6>
+    
+    <form method="post" id="recapitulatifForm">
+        {% csrf_token %}
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    {{ form.bailleur|as_crispy_field }}
                 </div>
-
-                <form method="post" class="needs-validation" novalidate>
-                    {% csrf_token %}
-                    
-                    <div class="form-group">
-                        <label for="{{ form.bailleur.id_for_label }}" class="form-label">
-                            <i class="bi bi-person"></i> Bailleur *
-                        </label>
-                        {{ form.bailleur }}
-                        {% if form.bailleur.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.bailleur.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                        <div class="form-text">Sélectionnez le bailleur pour lequel créer ce récapitulatif</div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="{{ form.mois_recapitulatif.id_for_label }}" class="form-label">
-                                    <i class="bi bi-calendar"></i> Mois du récapitulatif *
-                                </label>
-                                {{ form.mois_recapitulatif }}
-                                {% if form.mois_recapitulatif.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.mois_recapitulatif.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                                <div class="form-text">Sélectionnez le mois de référence pour ce récapitulatif</div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="{{ form.type_recapitulatif.id_for_label }}" class="form-label">
-                                    <i class="bi bi-file-earmark-text"></i> Type de récapitulatif *
-                                </label>
-                                {{ form.type_recapitulatif }}
-                                {% if form.type_recapitulatif.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.type_recapitulatif.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                                <div class="form-text">Choisissez le type de récapitulatif à générer</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="{{ form.notes.id_for_label }}" class="form-label">
-                            <i class="bi bi-chat-text"></i> Notes et observations
-                        </label>
-                        {{ form.notes }}
-                        {% if form.notes.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.notes.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                        <div class="form-text">Ajoutez des notes ou observations sur ce récapitulatif</div>
-                    </div>
-
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle"></i>
-                        <strong>Information :</strong> Ce récapitulatif sera créé avec le statut "En préparation". 
-                        Vous pourrez ensuite le valider et l'envoyer aux bailleurs une fois les calculs vérifiés.
-                    </div>
-
-                    <div class="d-flex justify-content-between">
-                        <a href="{% url 'paiements:liste_recapitulatifs' %}" class="btn btn-outline-secondary btn-action">
-                            <i class="bi bi-x-circle"></i> Annuler
-                        </a>
-                        <button type="submit" class="btn btn-primary btn-action">
-                            <i class="bi bi-check-circle"></i> Créer le récapitulatif
-                        </button>
-                    </div>
-                </form>
             </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    {{ form.mois_recapitulatif|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    {{ form.type_recapitulatif|as_crispy_field }}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    {{ form.notes|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Explication du type sélectionné -->
+        <div class="type-explanation" id="typeExplanation" style="display: none;">
+            <h6 id="typeTitle">Type de récapitulatif</h6>
+            <ul id="typeDetails">
+                <!-- Contenu dynamique -->
+            </ul>
+        </div>
+        
+        <div class="d-flex justify-content-between mt-4">
+            <a href="{% url 'paiements:liste_recapitulatifs' %}" class="btn btn-secondary">
+                <i class="bi bi-x-circle"></i> Annuler
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> Créer le récapitulatif
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Aide contextuelle -->
+<div class="form-section">
+    <h6><i class="bi bi-info-circle"></i> Aide</h6>
+    <div class="row">
+        <div class="col-md-6">
+            <h6 class="text-primary">Types de récapitulatifs</h6>
+            <ul class="list-unstyled">
+                <li><strong>📅 Mensuel :</strong> Calcul sur 1 mois</li>
+                <li><strong>📊 Trimestriel :</strong> Calcul sur 3 mois</li>
+                <li><strong>📈 Annuel :</strong> Calcul sur 12 mois</li>
+                <li><strong>⚡ Exceptionnel :</strong> Période personnalisée</li>
+            </ul>
+        </div>
+        <div class="col-md-6">
+            <h6 class="text-success">Calculs automatiques</h6>
+            <ul class="list-unstyled">
+                <li>• Loyers bruts × période</li>
+                <li>• Charges déductibles × période</li>
+                <li>• Charges bailleur pour la période</li>
+                <li>• Montant net à payer</li>
+            </ul>
         </div>
     </div>
 </div>
@@ -154,21 +162,117 @@
 
 {% block extra_js %}
 <script>
-// Validation du formulaire
-(function() {
-    'use strict';
-    window.addEventListener('load', function() {
-        var forms = document.getElementsByClassName('needs-validation');
-        var validation = Array.prototype.filter.call(forms, function(form) {
-            form.addEventListener('submit', function(event) {
-                if (form.checkValidity() === false) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                }
-                form.classList.add('was-validated');
-            }, false);
-        });
-    }, false);
-})();
+document.addEventListener('DOMContentLoaded', function() {
+    const typeSelect = document.getElementById('id_type_recapitulatif');
+    const periodInfo = document.getElementById('periodInfo');
+    const periodDescription = document.getElementById('periodDescription');
+    const typeExplanation = document.getElementById('typeExplanation');
+    const typeTitle = document.getElementById('typeTitle');
+    const typeDetails = document.getElementById('typeDetails');
+    
+    const typeExplanations = {
+        'mensuel': {
+            title: 'Récapitulatif Mensuel',
+            description: 'Calcul des loyers et charges pour 1 mois',
+            details: [
+                'Loyers bruts = loyer mensuel × 1',
+                'Charges déductibles = charges mensuelles × 1',
+                'Période : 1 mois complet',
+                'Idéal pour : Suivi mensuel standard'
+            ]
+        },
+        'trimestriel': {
+            title: 'Récapitulatif Trimestriel',
+            description: 'Calcul des loyers et charges pour 3 mois',
+            details: [
+                'Loyers bruts = loyer mensuel × 3',
+                'Charges déductibles = charges mensuelles × 3',
+                'Période : 3 mois (trimestre)',
+                'Idéal pour : Bilans trimestriels'
+            ]
+        },
+        'annuel': {
+            title: 'Récapitulatif Annuel',
+            description: 'Calcul des loyers et charges pour 12 mois',
+            details: [
+                'Loyers bruts = loyer mensuel × 12',
+                'Charges déductibles = charges mensuelles × 12',
+                'Période : 12 mois (année complète)',
+                'Idéal pour : Bilans annuels'
+            ]
+        },
+        'exceptionnel': {
+            title: 'Récapitulatif Exceptionnel',
+            description: 'Calcul pour une période personnalisée',
+            details: [
+                'Loyers bruts = loyer mensuel × 1',
+                'Charges déductibles = charges mensuelles × 1',
+                'Période : 1 mois (référence)',
+                'Idéal pour : Situations particulières'
+            ]
+        }
+    };
+    
+    function updatePeriodLabel() {
+        const selectedType = typeSelect.value;
+        
+        if (selectedType && typeExplanations[selectedType]) {
+            const explanation = typeExplanations[selectedType];
+            
+            // Mettre à jour la description
+            periodDescription.textContent = explanation.description;
+            
+            // Afficher l'explication détaillée
+            typeTitle.textContent = explanation.title;
+            typeDetails.innerHTML = explanation.details.map(detail => `<li>${detail}</li>`).join('');
+            typeExplanation.style.display = 'block';
+            
+            // Mettre à jour le style de la période
+            periodInfo.className = 'period-info';
+            if (selectedType === 'trimestriel') {
+                periodInfo.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+            } else if (selectedType === 'annuel') {
+                periodInfo.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
+            } else if (selectedType === 'exceptionnel') {
+                periodInfo.style.background = 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)';
+            }
+        } else {
+            typeExplanation.style.display = 'none';
+        }
+    }
+    
+    // Écouter les changements
+    typeSelect.addEventListener('change', updatePeriodLabel);
+    
+    // Initialiser au chargement
+    updatePeriodLabel();
+    
+    // Validation du formulaire
+    document.getElementById('recapitulatifForm').addEventListener('submit', function(e) {
+        const bailleur = document.getElementById('id_bailleur').value;
+        const mois = document.getElementById('id_mois_recapitulatif').value;
+        const type = document.getElementById('id_type_recapitulatif').value;
+        
+        if (!bailleur || !mois || !type) {
+            e.preventDefault();
+            alert('Veuillez remplir tous les champs obligatoires.');
+            return false;
+        }
+        
+        // Confirmation avec détails
+        const typeText = typeSelect.options[typeSelect.selectedIndex].text;
+        const confirmation = confirm(
+            `Confirmer la création du récapitulatif ?\n\n` +
+            `Type : ${typeText}\n` +
+            `Mois de référence : ${mois}\n\n` +
+            `Les calculs seront effectués automatiquement selon la période sélectionnée.`
+        );
+        
+        if (!confirmation) {
+            e.preventDefault();
+            return false;
+        }
+    });
+});
 </script>
 {% endblock %}

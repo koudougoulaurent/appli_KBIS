@@ -41,7 +41,7 @@ def test_configuration_entreprise():
             'site_web': 'https://www.immobilier-plus.fr',
             'siret': '987 654 321 00098',
             'numero_licence': '987654321',
-            'capital_social': '50 000 XOF',
+            'capital_social': '50 000 F CFA',
             'forme_juridique': 'SAS',
             'logo_url': 'https://example.com/logo.png',
             'couleur_principale': '#1a5f7a',

@@ -1,7 +1,8 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
-from .models import Propriete, Bailleur, Locataire, TypeBien, ChargesBailleur, Photo, Document, Piece, PieceContrat
+from django.db import models
+from .models import Propriete, Bailleur, Locataire, TypeBien, ChargesBailleur, Photo, Document, Piece, PieceContrat, UniteLocative, ReservationUnite
 from core.widgets import UniqueIdField, ReadOnlyUniqueIdWidget
 from django.core.validators import RegexValidator
 import re
@@ -34,7 +35,7 @@ class ProprieteForm(forms.ModelForm):
     
     # Champs pour les documents requis de la propriété
     acte_propriete = forms.FileField(
-        required=True,
+        required=False,
         label=_('Acte de propriété'),
         help_text=_('Acte de propriété ou titre de propriété (PDF, JPG, PNG)'),
         widget=forms.FileInput(attrs={
@@ -44,7 +45,7 @@ class ProprieteForm(forms.ModelForm):
     )
     
     diagnostic_energetique = forms.FileField(
-        required=True,
+        required=False,
         label=_('Diagnostic énergétique'),
         help_text=_('Diagnostic de performance énergétique (DPE) (PDF, JPG, PNG)'),
         widget=forms.FileInput(attrs={
@@ -128,7 +129,7 @@ class ProprieteForm(forms.ModelForm):
             }),
             'surface': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'placeholder': '75.5',
+                'placeholder': '75.5 (optionnel)',
                 'step': '0.01',
                 'min': '0'
             }),
@@ -194,9 +195,9 @@ class ProprieteForm(forms.ModelForm):
             'parking': _('Parking'),
             'balcon': _('Balcon'),
             'jardin': _('Jardin'),
-            'prix_achat': _('Prix d\'achat (XOF)'),
-            'loyer_actuel': _('Loyer actuel (XOF)'),
-            'charges_locataire': _('Charges locataire (XOF)'),
+            'prix_achat': _('Prix d\'achat (F CFA)'),
+            'loyer_actuel': _('Loyer actuel (F CFA)'),
+            'charges_locataire': _('Charges locataire (F CFA)'),
             'etat': _('État du bien'),
             'disponible': _('Disponible à la location'),
             'notes': _('Notes'),
@@ -217,6 +218,10 @@ class ProprieteForm(forms.ModelForm):
         self.fields['type_bien'].empty_label = "Sélectionnez un type de bien"
         self.fields['bailleur'].empty_label = "Sélectionnez un bailleur"
         self.fields['etat'].empty_label = "Sélectionnez l'état"
+        
+        # S'assurer que le queryset des types de biens est correct
+        from .models import TypeBien
+        self.fields['type_bien'].queryset = TypeBien.objects.all()
         
         # Rendre le champ charges_locataire optionnel
         self.fields['charges_locataire'].required = False
@@ -422,7 +427,7 @@ class ChargesBailleurForm(forms.ModelForm):
             'titre': _('Titre de la charge'),
             'description': _('Description détaillée'),
             'type_charge': _('Type de charge'),
-            'montant': _('Montant (XOF)'),
+            'montant': _('Montant (F CFA)'),
             'date_charge': _('Date de la charge'),
             'date_echeance': _('Date d\'échéance'),
             'priorite': _('Priorité'),
@@ -431,7 +436,7 @@ class ChargesBailleurForm(forms.ModelForm):
             'propriete': _('Sélectionnez la propriété concernée par cette charge'),
             'titre': _('Donnez un titre clair à cette charge'),
             'description': _('Décrivez en détail la nature de cette charge'),
-            'montant': _('Montant de la charge en XOF'),
+            'montant': _('Montant de la charge en F CFA'),
             'date_charge': _('Date à laquelle cette charge a été effectuée'),
             'date_echeance': _('Date limite pour le paiement de cette charge'),
             'priorite': _('Niveau de priorité pour le remboursement'),
@@ -509,7 +514,7 @@ class ChargesBailleurDeductionForm(forms.Form):
         max_digits=10,
         decimal_places=2,
         min_value=0.01,
-        label=_('Montant à déduire (XOF)'),
+        label=_('Montant à déduire (F CFA)'),
         help_text=_('Montant à déduire du loyer pour rembourser les charges bailleur'),
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
@@ -550,7 +555,7 @@ class ChargesBailleurDeductionForm(forms.Form):
             montant_max = min(loyer_total, charges_en_cours)
             
             self.fields['montant_deduction'].widget.attrs['max'] = str(montant_max)
-            self.fields['montant_deduction'].help_text = f'Montant maximum déductible : {montant_max} XOF'
+            self.fields['montant_deduction'].help_text = f'Montant maximum déductible : {montant_max} F CFA'
 
     def clean_montant_deduction(self):
         """Validation du montant de déduction."""
@@ -575,7 +580,6 @@ class BailleurForm(forms.ModelForm):
     # Validation personnalisée pour le téléphone
     telephone = forms.CharField(
         max_length=20,
-        validators=[validate_phone_french],
         widget=forms.TextInput(attrs={
             'class': 'form-control',
             'placeholder': '01 23 45 67 89'
@@ -771,11 +775,77 @@ class BailleurForm(forms.ModelForm):
         """Validation du téléphone."""
         telephone = self.cleaned_data.get('telephone')
         if telephone:
-            # Suppression des espaces et caractères spéciaux
-            tel_clean = ''.join(filter(str.isdigit, telephone))
-            if len(tel_clean) < 8:
+            # Nettoyer le numéro (supprimer espaces, tirets, points)
+            clean_number = re.sub(r'[\s\-\.]', '', telephone)
+            
+            # Vérifier que c'est bien des chiffres (avec éventuellement + au début)
+            if not re.match(r'^\+?[0-9]+$', clean_number):
+                raise ValidationError(_('Le numéro de téléphone ne peut contenir que des chiffres et éventuellement un + au début.'))
+            
+            # Vérifier la longueur minimale (8 chiffres)
+            digits_only = re.sub(r'^\+', '', clean_number)
+            if len(digits_only) < 8:
                 raise ValidationError(_('Le numéro de téléphone doit contenir au moins 8 chiffres.'))
+            
+            # Vérifier la longueur maximale (15 chiffres selon les standards internationaux)
+            if len(digits_only) > 15:
+                raise ValidationError(_('Le numéro de téléphone ne peut pas dépasser 15 chiffres.'))
+            
+            # Formater le numéro pour un affichage cohérent
+            if clean_number.startswith('0') and len(digits_only) == 10:
+                # Format français : 01 23 45 67 89
+                formatted = f"{clean_number[:2]} {clean_number[2:4]} {clean_number[4:6]} {clean_number[6:8]} {clean_number[8:10]}"
+                return formatted
+            elif clean_number.startswith('33') and len(digits_only) == 11:
+                # Format international français : +33 1 23 45 67 89
+                formatted = f"+{clean_number[:2]} {clean_number[2:3]} {clean_number[3:5]} {clean_number[5:7]} {clean_number[7:9]} {clean_number[9:11]}"
+                return formatted
+            elif clean_number.startswith('+'):
+                # Déjà en format international, garder tel quel
+                return clean_number
+            else:
+                # Format local, garder tel quel
+                return telephone
+                
         return telephone
+
+    def clean_telephone_mobile(self):
+        """Validation du téléphone mobile."""
+        telephone_mobile = self.cleaned_data.get('telephone_mobile')
+        if telephone_mobile:
+            # Nettoyer le numéro (supprimer espaces, tirets, points)
+            clean_number = re.sub(r'[\s\-\.]', '', telephone_mobile)
+            
+            # Vérifier que c'est bien des chiffres (avec éventuellement + au début)
+            if not re.match(r'^\+?[0-9]+$', clean_number):
+                raise ValidationError(_('Le numéro de téléphone mobile ne peut contenir que des chiffres et éventuellement un + au début.'))
+            
+            # Vérifier la longueur minimale (8 chiffres)
+            digits_only = re.sub(r'^\+', '', clean_number)
+            if len(digits_only) < 8:
+                raise ValidationError(_('Le numéro de téléphone mobile doit contenir au moins 8 chiffres.'))
+            
+            # Vérifier la longueur maximale (15 chiffres selon les standards internationaux)
+            if len(digits_only) > 15:
+                raise ValidationError(_('Le numéro de téléphone mobile ne peut pas dépasser 15 chiffres.'))
+            
+            # Formater le numéro pour un affichage cohérent
+            if clean_number.startswith('0') and len(digits_only) == 10:
+                # Format français : 06 12 34 56 78
+                formatted = f"{clean_number[:2]} {clean_number[2:4]} {clean_number[4:6]} {clean_number[6:8]} {clean_number[8:10]}"
+                return formatted
+            elif clean_number.startswith('33') and len(digits_only) == 11:
+                # Format international français : +33 6 12 34 56 78
+                formatted = f"+{clean_number[:2]} {clean_number[2:3]} {clean_number[3:5]} {clean_number[5:7]} {clean_number[7:9]} {clean_number[9:11]}"
+                return formatted
+            elif clean_number.startswith('+'):
+                # Déjà en format international, garder tel quel
+                return clean_number
+            else:
+                # Format local, garder tel quel
+                return telephone_mobile
+                
+        return telephone_mobile
 
 
 class LocataireForm(forms.ModelForm):
@@ -924,7 +994,7 @@ class LocataireForm(forms.ModelForm):
         required=False,
         max_digits=10,
         decimal_places=2,
-        label=_('Revenus mensuels du garant (XOF)'),
+        label=_('Revenus mensuels du garant (F CFA)'),
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
             'placeholder': 'Revenus mensuels du garant (optionnel)',
@@ -1150,7 +1220,7 @@ class LocataireForm(forms.ModelForm):
             'pays': _('Pays'),
             'profession': _('Profession'),
             'employeur': _('Employeur'),
-            'revenus_mensuels': _('Revenus mensuels (XOF)'),
+            'revenus_mensuels': _('Revenus mensuels (F CFA)'),
             'statut': _('Statut'),
             # Labels pour les champs du garant
             'garant_civilite': _('Civilité du garant'),
@@ -1160,7 +1230,7 @@ class LocataireForm(forms.ModelForm):
             'garant_email': _('Email du garant'),
             'garant_profession': _('Profession du garant'),
             'garant_employeur': _('Employeur du garant'),
-            'garant_revenus_mensuels': _('Revenus mensuels du garant (XOF)'),
+            'garant_revenus_mensuels': _('Revenus mensuels du garant (F CFA)'),
             'garant_adresse': _('Adresse du garant'),
             'garant_code_postal': _('Code postal du garant'),
             'garant_ville': _('Ville du garant'),
@@ -1596,7 +1666,10 @@ class DocumentSearchForm(forms.Form):
     )
     
     propriete = forms.ModelChoiceField(
-        queryset=Propriete.objects.filter(disponible=True),
+        queryset=Propriete.objects.filter(
+            models.Q(disponible=True) |
+            models.Q(unites_locatives__statut='disponible', unites_locatives__is_deleted=False)
+        ).distinct(),
         required=False,
         empty_label="Toutes les propriétés",
         widget=forms.Select(attrs={
@@ -1619,6 +1692,225 @@ class DocumentSearchForm(forms.Form):
             'type': 'date'
         })
     )
+
+
+class UniteRechercheForm(forms.Form):
+    """Formulaire de recherche avancée pour les unités locatives."""
+    
+    search = forms.CharField(
+        required=False,
+        label="Recherche générale",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Numéro d\'unité, nom, propriété...',
+            'id': 'search-input'
+        }),
+        help_text="Recherchez par numéro d'unité, nom, propriété ou description"
+    )
+    
+    propriete = forms.ModelChoiceField(
+        queryset=Propriete.objects.filter(is_deleted=False),
+        required=False,
+        empty_label="Toutes les propriétés",
+        label="Propriété",
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'propriete-select'
+        })
+    )
+    
+    bailleur = forms.ModelChoiceField(
+        queryset=Bailleur.objects.filter(is_deleted=False),
+        required=False,
+        empty_label="Tous les bailleurs",
+        label="Bailleur",
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'bailleur-select'
+        })
+    )
+    
+    statut = forms.ChoiceField(
+        choices=[('', 'Tous les statuts')] + UniteLocative.STATUT_CHOICES,
+        required=False,
+        label="Statut",
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'statut-select'
+        })
+    )
+    
+    type_unite = forms.ChoiceField(
+        choices=[('', 'Tous les types')] + UniteLocative.TYPE_UNITE_CHOICES,
+        required=False,
+        label="Type d'unité",
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'type-unite-select'
+        })
+    )
+    
+    etage_min = forms.IntegerField(
+        required=False,
+        label="Étage minimum",
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ex: 0'
+        })
+    )
+    
+    etage_max = forms.IntegerField(
+        required=False,
+        label="Étage maximum",
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ex: 5'
+        })
+    )
+    
+    loyer_min = forms.DecimalField(
+        required=False,
+        label="Loyer minimum (€)",
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': '0',
+            'step': '0.01'
+        })
+    )
+    
+    loyer_max = forms.DecimalField(
+        required=False,
+        label="Loyer maximum (€)",
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': '5000',
+            'step': '0.01'
+        })
+    )
+    
+    surface_min = forms.DecimalField(
+        required=False,
+        label="Surface minimum (m²)",
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': '0',
+            'step': '0.01'
+        })
+    )
+    
+    surface_max = forms.DecimalField(
+        required=False,
+        label="Surface maximum (m²)",
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': '200',
+            'step': '0.01'
+        })
+    )
+    
+    nombre_pieces_min = forms.IntegerField(
+        required=False,
+        label="Nombre de pièces min",
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': '1'
+        })
+    )
+    
+    nombre_pieces_max = forms.IntegerField(
+        required=False,
+        label="Nombre de pièces max",
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': '10'
+        })
+    )
+    
+    # Équipements
+    meuble = forms.ChoiceField(
+        choices=[('', 'Peu importe'), ('true', 'Meublé'), ('false', 'Non meublé')],
+        required=False,
+        label="Meublé",
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
+    
+    balcon = forms.ChoiceField(
+        choices=[('', 'Peu importe'), ('true', 'Avec balcon'), ('false', 'Sans balcon')],
+        required=False,
+        label="Balcon/Terrasse",
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
+    
+    parking_inclus = forms.ChoiceField(
+        choices=[('', 'Peu importe'), ('true', 'Parking inclus'), ('false', 'Sans parking')],
+        required=False,
+        label="Parking",
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
+    
+    climatisation = forms.ChoiceField(
+        choices=[('', 'Peu importe'), ('true', 'Climatisé'), ('false', 'Non climatisé')],
+        required=False,
+        label="Climatisation",
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
+    
+    date_disponibilite_debut = forms.DateField(
+        required=False,
+        label="Disponible à partir du",
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        })
+    )
+    
+    date_disponibilite_fin = forms.DateField(
+        required=False,
+        label="Disponible jusqu'au",
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        })
+    )
+    
+    # Options d'affichage
+    tri = forms.ChoiceField(
+        choices=[
+            ('numero_unite', 'Numéro d\'unité'),
+            ('loyer_mensuel', 'Loyer croissant'),
+            ('-loyer_mensuel', 'Loyer décroissant'),
+            ('surface', 'Surface croissante'),
+            ('-surface', 'Surface décroissante'),
+            ('propriete__titre', 'Propriété'),
+            ('etage', 'Étage'),
+            ('date_creation', 'Date de création'),
+        ],
+        initial='numero_unite',
+        label="Trier par",
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Optimisation des requêtes
+        self.fields['propriete'].queryset = Propriete.objects.filter(
+            is_deleted=False
+        ).select_related('bailleur').order_by('titre')
+        
+        self.fields['bailleur'].queryset = Bailleur.objects.filter(
+            is_deleted=False
+        ).order_by('nom', 'prenom')
 
 
 class PieceSelectionForm(forms.Form):
@@ -1904,4 +2196,5 @@ class ContratPiecesForm(forms.Form):
         return cleaned_data 
 
 
- 
+# Import des formulaires pour les unités locatives
+from .forms_unites import UniteLocativeForm, ReservationUniteForm, FiltreUniteForm, RapportOccupationForm

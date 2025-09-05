@@ -54,9 +54,9 @@ def test_statistiques_caisse():
     # Paiements en attente
     stats_attente = Paiement.objects.filter(statut='en_attente').count()
     
-    print(f"✅ Paiements du mois ({mois_courant}/{annee_courante}): {stats_paiements['total_paiements'] or 0} XOF")
-    print(f"✅ Retraits du mois: {stats_retraits['total_retraits'] or 0} XOF")
-    print(f"✅ Cautions en cours: {stats_cautions['total_cautions'] or 0} XOF")
+    print(f"✅ Paiements du mois ({mois_courant}/{annee_courante}): {stats_paiements['total_paiements'] or 0} F CFA")
+    print(f"✅ Retraits du mois: {stats_retraits['total_retraits'] or 0} F CFA")
+    print(f"✅ Cautions en cours: {stats_cautions['total_cautions'] or 0} F CFA")
     print(f"✅ Paiements en attente: {stats_attente}")
     
     return {
@@ -204,9 +204,9 @@ def main():
     print("=" * 60)
     
     print(f"💰 CAISSE:")
-    print(f"   - Paiements du mois: {stats_caisse['paiements_mois']} XOF")
-    print(f"   - Retraits du mois: {stats_caisse['retraits_mois']} XOF")
-    print(f"   - Cautions en cours: {stats_caisse['cautions_cours']} XOF")
+    print(f"   - Paiements du mois: {stats_caisse['paiements_mois']} F CFA")
+    print(f"   - Retraits du mois: {stats_caisse['retraits_mois']} F CFA")
+    print(f"   - Cautions en cours: {stats_caisse['cautions_cours']} F CFA")
     print(f"   - Paiements en attente: {stats_caisse['paiements_attente']}")
     
     print(f"\n🏠 ADMINISTRATION:")

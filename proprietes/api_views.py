@@ -6,7 +6,10 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Count, Avg, Sum
 from django.db.models.functions import Coalesce
 
-from .models import Bailleur, Locataire, TypeBien, Propriete
+from .models import (
+    Bailleur, Locataire, TypeBien, Propriete, ChargeCommune, 
+    RepartitionChargeCommune, Piece, AccesEspacePartage
+)
 from .serializers import (
     BailleurSerializer, BailleurListSerializer,
     LocataireSerializer, LocataireListSerializer,
@@ -80,7 +83,7 @@ class BailleurViewSet(viewsets.ModelViewSet):
     def proprietes(self, request, pk=None):
         """Récupérer les propriétés d'un bailleur"""
         bailleur = self.get_object()
-        proprietes = bailleur.propriete_set.all()
+        proprietes = bailleur.proprietes.all()
         serializer = ProprieteListSerializer(proprietes, many=True)
         return Response(serializer.data)
     
@@ -379,4 +382,201 @@ class ProprieteViewSet(viewsets.ModelViewSet):
             loyer_actuel__lte=prix_max
         )
         serializer = ProprieteListSerializer(proprietes, many=True)
-        return Response(serializer.data) 
+        return Response(serializer.data)
+
+
+class ChargeCommuneViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet pour la gestion des charges communes
+    """
+    queryset = ChargeCommune.objects.all()
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['propriete', 'type_charge', 'type_repartition', 'active']
+    search_fields = ['nom', 'description', 'propriete__titre']
+    ordering_fields = ['nom', 'montant_mensuel', 'date_debut']
+    ordering = ['-date_creation']
+    
+    def get_serializer_class(self):
+        # Pour l'instant, utilisons un serializer basique
+        from rest_framework import serializers
+        
+        class ChargeCommuneSerializer(serializers.ModelSerializer):
+            propriete_nom = serializers.CharField(source='propriete.titre', read_only=True)
+            type_charge_display = serializers.CharField(source='get_type_charge_display', read_only=True)
+            type_repartition_display = serializers.CharField(source='get_type_repartition_display', read_only=True)
+            
+            class Meta:
+                model = ChargeCommune
+                fields = '__all__'
+        
+        return ChargeCommuneSerializer
+    
+    @action(detail=True, methods=['post'])
+    def calculer_repartition(self, request, pk=None):
+        """Calcule la répartition d'une charge commune."""
+        charge = self.get_object()
+        date_reference = request.data.get('date_reference')
+        
+        if date_reference:
+            from datetime import datetime
+            try:
+                date_reference = datetime.strptime(date_reference, '%Y-%m-%d').date()
+            except ValueError:
+                return Response(
+                    {'error': 'Format de date invalide. Utilisez YYYY-MM-DD'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        repartition = charge.calculer_repartition(date_reference)
+        
+        # Formater les données pour la réponse
+        repartition_data = []
+        for piece_contrat_id, data in repartition.items():
+            piece_contrat = data['piece_contrat']
+            repartition_data.append({
+                'piece_contrat_id': piece_contrat_id,
+                'piece_nom': piece_contrat.piece.nom,
+                'locataire_nom': f"{piece_contrat.contrat.locataire.nom} {piece_contrat.contrat.locataire.prenom}",
+                'montant': data['montant'],
+                'base_calcul': data['base_calcul']
+            })
+        
+        return Response({
+            'charge': charge.nom,
+            'montant_total': float(charge.montant_mensuel),
+            'type_repartition': charge.get_type_repartition_display(),
+            'repartition': repartition_data,
+            'total_reparti': sum(data['montant'] for data in repartition.values())
+        })
+    
+    @action(detail=False, methods=['post'])
+    def calculer_charges_propriete(self, request):
+        """Calcule toutes les charges d'une propriété pour un mois donné."""
+        from .services import GestionChargesCommunesService
+        
+        propriete_id = request.data.get('propriete_id')
+        mois = request.data.get('mois')
+        annee = request.data.get('annee')
+        
+        if not all([propriete_id, mois, annee]):
+            return Response(
+                {'error': 'propriete_id, mois et annee sont requis'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            resultats = GestionChargesCommunesService.calculer_charges_mensuelles(
+                propriete_id, mois, annee
+            )
+            return Response(resultats)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['post'])
+    def appliquer_charges_propriete(self, request):
+        """Applique les charges calculées aux contrats d'une propriété."""
+        from .services import GestionChargesCommunesService
+        
+        propriete_id = request.data.get('propriete_id')
+        mois = request.data.get('mois')
+        annee = request.data.get('annee')
+        
+        if not all([propriete_id, mois, annee]):
+            return Response(
+                {'error': 'propriete_id, mois et annee sont requis'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            resultats = GestionChargesCommunesService.appliquer_charges_aux_contrats(
+                propriete_id, mois, annee
+            )
+            return Response(resultats)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class PieceViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet pour la gestion des pièces
+    """
+    queryset = Piece.objects.all()
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['propriete', 'type_piece', 'statut', 'est_espace_partage']
+    search_fields = ['nom', 'description', 'propriete__titre']
+    ordering_fields = ['nom', 'surface', 'date_creation']
+    ordering = ['propriete', 'type_piece', 'nom']
+    
+    def get_serializer_class(self):
+        from rest_framework import serializers
+        
+        class PieceSerializer(serializers.ModelSerializer):
+            propriete_nom = serializers.CharField(source='propriete.titre', read_only=True)
+            type_piece_display = serializers.CharField(source='get_type_piece_display', read_only=True)
+            statut_display = serializers.CharField(source='get_statut_display', read_only=True)
+            espaces_partages_count = serializers.SerializerMethodField()
+            contrats_actifs_count = serializers.SerializerMethodField()
+            
+            class Meta:
+                model = Piece
+                fields = '__all__'
+            
+            def get_espaces_partages_count(self, obj):
+                return obj.get_espaces_partages_accessibles().count()
+            
+            def get_contrats_actifs_count(self, obj):
+                return obj.contrats.filter(est_actif=True, est_resilie=False).count()
+        
+        return PieceSerializer
+    
+    @action(detail=True, methods=['get'])
+    def espaces_partages(self, request, pk=None):
+        """Retourne les espaces partagés accessibles depuis cette pièce."""
+        piece = self.get_object()
+        espaces = piece.get_espaces_partages_accessibles()
+        
+        serializer = self.get_serializer(espaces, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
+    def cout_acces_espaces(self, request, pk=None):
+        """Calcule le coût d'accès aux espaces partagés pour cette pièce."""
+        piece = self.get_object()
+        date_reference = request.query_params.get('date_reference')
+        
+        if date_reference:
+            from datetime import datetime
+            try:
+                date_reference = datetime.strptime(date_reference, '%Y-%m-%d').date()
+            except ValueError:
+                return Response(
+                    {'error': 'Format de date invalide. Utilisez YYYY-MM-DD'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        cout_info = piece.calculer_cout_acces_espaces_partages(date_reference)
+        return Response(cout_info)
+    
+    @action(detail=True, methods=['get'])
+    def peut_etre_louee(self, request, pk=None):
+        """Vérifie si cette pièce peut être louée individuellement."""
+        piece = self.get_object()
+        peut_etre_louee = piece.peut_etre_louee_individuellement()
+        
+        espaces_essentiels = piece.get_espaces_partages_accessibles().filter(
+            type_piece__in=['cuisine', 'salle_bain']
+        )
+        
+        return Response({
+            'peut_etre_louee': peut_etre_louee,
+            'espaces_essentiels_accessibles': list(espaces_essentiels.values('nom', 'type_piece')),
+            'est_espace_partage': piece.est_espace_partage
+        }) 

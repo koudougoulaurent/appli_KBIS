@@ -90,7 +90,7 @@ class PerformanceTester:
             'dashboard_stats_1',
             'user_permissions_1',
             'user_modules_1',
-            'devise_XOF'
+            'devise_F CFA'
         ]
         
         for key in cache_keys:

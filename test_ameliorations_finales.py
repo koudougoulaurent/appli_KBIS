@@ -71,7 +71,7 @@ def test_ameliorations_finales():
             print(f"   ✅ Données des propriétés disponibles : {len(form.proprietes_data)} propriétés")
             
             for prop_id, prop_data in form.proprietes_data.items():
-                print(f"      - ID {prop_id}: {prop_data['titre']} - Loyer: {prop_data['loyer']} XOF")
+                print(f"      - ID {prop_id}: {prop_data['titre']} - Loyer: {prop_data['loyer']} F CFA")
         else:
             print("   ❌ Données des propriétés non disponibles")
         
@@ -96,7 +96,7 @@ def test_ameliorations_finales():
         
         if proprietes_disponibles.exists():
             for prop in proprietes_disponibles:
-                print(f"      - {prop.titre} (ID: {prop.id}) - Loyer: {prop.loyer_actuel} XOF")
+                print(f"      - {prop.titre} (ID: {prop.id}) - Loyer: {prop.loyer_actuel} F CFA")
         
         # 6. Test de validation et sauvegarde
         print("\n6. Test de validation et sauvegarde...")

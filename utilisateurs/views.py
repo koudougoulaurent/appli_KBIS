@@ -29,7 +29,6 @@ def connexion_groupes(request):
     
     if request.method == 'POST':
         groupe_nom = request.POST.get('groupe')
-        
         if groupe_nom:
             try:
                 groupe = GroupeTravail.objects.get(nom=groupe_nom, actif=True)
@@ -40,7 +39,6 @@ def connexion_groupes(request):
                 messages.error(request, f"Le groupe {groupe_nom} n'existe pas ou n'est pas actif.")
         else:
             messages.error(request, "Veuillez sélectionner un groupe de travail.")
-    
     # Récupérer tous les groupes actifs
     groupes = GroupeTravail.objects.filter(actif=True).order_by('nom')
     

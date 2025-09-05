@@ -69,7 +69,7 @@ def test_payment_overdue_detection():
     for contrat in overdue_contracts:
         print(f"  - Contrat {contrat.numero_contrat}: {contrat.propriete.titre}")
         print(f"    Locataire: {contrat.locataire.nom} {contrat.locataire.prenom}")
-        print(f"    Loyer: {contrat.loyer_mensuel} XOF")
+        print(f"    Loyer: {contrat.loyer_mensuel} F CFA")
     
     return len(overdue_contracts)
 

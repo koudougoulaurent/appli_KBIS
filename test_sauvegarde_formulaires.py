@@ -126,7 +126,7 @@ def test_sauvegarde_formulaires():
         )
         print(f"✅ Locataire sauvegardé: {locataire.nom} {locataire.prenom}")
         print(f"   - Email: {locataire.email}")
-        print(f"   - Salaire: {locataire.salaire_mensuel} XOF")
+        print(f"   - Salaire: {locataire.salaire_mensuel} F CFA")
         print(f"   - IBAN: {locataire.iban}")
     except Exception as e:
         print(f"❌ Erreur sauvegarde locataire: {e}")
@@ -162,7 +162,7 @@ def test_sauvegarde_formulaires():
         print(f"✅ Propriété sauvegardée: {propriete.titre}")
         print(f"   - Adresse: {propriete.adresse}")
         print(f"   - Surface: {propriete.surface}m²")
-        print(f"   - Loyer: {propriete.loyer_actuel} XOF")
+        print(f"   - Loyer: {propriete.loyer_actuel} F CFA")
         print(f"   - Bailleur: {propriete.bailleur.nom}")
     except Exception as e:
         print(f"❌ Erreur sauvegarde propriété: {e}")
@@ -189,7 +189,7 @@ def test_sauvegarde_formulaires():
         print(f"✅ Contrat sauvegardé: {contrat.numero_contrat}")
         print(f"   - Propriété: {contrat.propriete.titre}")
         print(f"   - Locataire: {contrat.locataire.nom}")
-        print(f"   - Loyer: {contrat.loyer_mensuel} XOF")
+        print(f"   - Loyer: {contrat.loyer_mensuel} F CFA")
         print(f"   - Date début: {contrat.date_debut}")
     except Exception as e:
         print(f"❌ Erreur sauvegarde contrat: {e}")
@@ -209,7 +209,7 @@ def test_sauvegarde_formulaires():
             notes='Paiement du loyer de janvier 2025'
         )
         print(f"✅ Paiement sauvegardé: {paiement.reference_virement}")
-        print(f"   - Montant: {paiement.montant} XOF")
+        print(f"   - Montant: {paiement.montant} F CFA")
         print(f"   - Date: {paiement.date_paiement}")
         print(f"   - Statut: {paiement.statut}")
     except Exception as e:
@@ -300,12 +300,12 @@ def test_sauvegarde_formulaires():
         # Mettre à jour le locataire
         locataire.salaire_mensuel = Decimal('5000.00')
         locataire.save()
-        print(f"✅ Salaire locataire mis à jour: {locataire.salaire_mensuel} XOF")
+        print(f"✅ Salaire locataire mis à jour: {locataire.salaire_mensuel} F CFA")
         
         # Mettre à jour la propriété
         propriete.loyer_actuel = Decimal('1900.00')
         propriete.save()
-        print(f"✅ Loyer propriété mis à jour: {propriete.loyer_actuel} XOF")
+        print(f"✅ Loyer propriété mis à jour: {propriete.loyer_actuel} F CFA")
         
     except Exception as e:
         print(f"❌ Erreur mise à jour: {e}")

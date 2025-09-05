@@ -2,6 +2,10 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views, api_views
 from .views import contrat_list, quittance_list, etat_lieux_list
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from . import views, api_views
+from .views import contrat_list, quittance_list, etat_lieux_list
 
 app_name = 'contrats'
 
@@ -13,6 +17,7 @@ router.register(r'api/etats-lieux', api_views.EtatLieuxViewSet)
 router.register(r'api/cautions', api_views.CautionViewSet, basename='caution')
 
 urlpatterns = [
+    # Autocomplete intelligent désactivé (DAL non compatible)
     # Dashboard principal des contrats
     path('', views.contrats_dashboard, name='dashboard'),
     
@@ -41,6 +46,9 @@ urlpatterns = [
     
     # URLs pour les contrats orphelins
     path('orphelins/', views.contrats_orphelins, name='orphelins'),
+    
+    # Vue d'occupation des propriétés
+    path('occupation-propriete/<int:propriete_id>/', views.occupation_propriete, name='occupation_propriete'),
 
     # URLs pour la gestion des cautions et avances
     path('cautions/', views.liste_contrats_caution, name='liste_contrats_caution'),

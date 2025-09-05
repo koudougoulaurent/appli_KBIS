@@ -37,7 +37,7 @@ def liste_recapitulatifs(request):
     # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
     if not request.user.groups.filter(name='PRIVILEGE').exists():
         messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('login')
+        return redirect('utilisateurs:connexion_groupes')
     
     # Filtres
     mois = request.GET.get('mois')
@@ -90,7 +90,7 @@ def creer_recapitulatif(request):
     # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
     if not request.user.groups.filter(name='PRIVILEGE').exists():
         messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('login')
+        return redirect('utilisateurs:connexion_groupes')
     
     if request.method == 'POST':
         form = RecapitulatifMensuelBailleurForm(request.POST)
@@ -126,7 +126,7 @@ def detail_recapitulatif(request, recapitulatif_id):
     # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
     if not request.user.groups.filter(name='PRIVILEGE').exists():
         messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('login')
+        return redirect('utilisateurs:connexion_groupes')
     
     recapitulatif = get_object_or_404(RecapitulatifMensuelBailleur, pk=recapitulatif_id)
     
@@ -156,7 +156,7 @@ def valider_recapitulatif(request, recapitulatif_id):
     # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
     if not request.user.groups.filter(name='PRIVILEGE').exists():
         messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('login')
+        return redirect('utilisateurs:connexion_groupes')
     
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
@@ -199,7 +199,7 @@ def envoyer_recapitulatif(request, recapitulatif_id):
     # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
     if not request.user.groups.filter(name='PRIVILEGE').exists():
         messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('login')
+        return redirect('utilisateurs:connexion_groupes')
     
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
@@ -242,7 +242,7 @@ def marquer_paye_recapitulatif(request, recapitulatif_id):
     # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
     if not request.user.groups.filter(name='PRIVILEGE').exists():
         messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('login')
+        return redirect('utilisateurs:connexion_groupes')
     
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
@@ -285,7 +285,7 @@ def telecharger_pdf_recapitulatif(request, recapitulatif_id):
     # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
     if not request.user.groups.filter(name='PRIVILEGE').exists():
         messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('login')
+        return redirect('utilisateurs:connexion_groupes')
     
     recapitulatif = get_object_or_404(RecapitulatifMensuelBailleur, pk=recapitulatif_id)
     
@@ -317,7 +317,7 @@ def apercu_recapitulatif(request, recapitulatif_id):
     # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
     if not request.user.groups.filter(name='PRIVILEGE').exists():
         messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('login')
+        return redirect('utilisateurs:connexion_groupes')
     
     recapitulatif = get_object_or_404(RecapitulatifMensuelBailleur, pk=recapitulatif_id)
     totaux = recapitulatif.calculer_totaux_bailleur()
@@ -339,15 +339,32 @@ def statistiques_recapitulatifs(request):
     # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
     if not request.user.groups.filter(name='PRIVILEGE').exists():
         messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('login')
+        return redirect('utilisateurs:connexion_groupes')
     
     # Statistiques par mois
     stats_mensuelles = RecapitulatifMensuelBailleur.objects.values('mois_recapitulatif').annotate(
-        nombre=Count('id'),
-        total_loyers=Sum('total_loyers_bruts'),
-        total_charges=Sum('total_charges_deductibles'),
-        total_net=Sum('total_net_a_payer')
+        nombre=Count('id')
     ).order_by('-mois_recapitulatif')[:12]
+    
+    # Calculer les totaux pour chaque mois
+    for stat in stats_mensuelles:
+        mois = stat['mois_recapitulatif']
+        recapitulatifs_mois = RecapitulatifMensuelBailleur.objects.filter(mois_recapitulatif=mois)
+        
+        from decimal import Decimal
+        total_loyers = Decimal('0')
+        total_charges = Decimal('0')
+        total_net = Decimal('0')
+        
+        for recap in recapitulatifs_mois:
+            totaux = recap.calculer_totaux_globaux()
+            total_loyers += totaux['total_loyers_bruts']
+            total_charges += totaux['total_charges_deductibles']
+            total_net += totaux['total_net_a_payer']
+        
+        stat['total_loyers'] = total_loyers
+        stat['total_charges'] = total_charges
+        stat['total_net'] = total_net
     
     # Statistiques par statut
     stats_statut = RecapitulatifMensuelBailleur.objects.values('statut').annotate(
@@ -377,7 +394,7 @@ def generer_recapitulatif_automatique(request):
     # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
     if not request.user.groups.filter(name='PRIVILEGE').exists():
         messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('login')
+        return redirect('utilisateurs:connexion_groupes')
     
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})

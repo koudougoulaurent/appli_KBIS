@@ -76,9 +76,9 @@ def calculer_statistiques_reelles():
     }
     
     print(f"💰 CAISSE:")
-    print(f"   - Paiements du mois: {stats_caisse['paiements_mois']} XOF")
-    print(f"   - Retraits du mois: {stats_caisse['retraits_mois']} XOF")
-    print(f"   - Cautions en cours: {stats_caisse['cautions_cours']} XOF")
+    print(f"   - Paiements du mois: {stats_caisse['paiements_mois']} F CFA")
+    print(f"   - Retraits du mois: {stats_caisse['retraits_mois']} F CFA")
+    print(f"   - Cautions en cours: {stats_caisse['cautions_cours']} F CFA")
     print(f"   - Paiements en attente: {stats_caisse['paiements_attente']}")
     
     print(f"\n🏠 ADMINISTRATION:")

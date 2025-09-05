@@ -323,7 +323,7 @@ class PaymentOverdueService:
         """Formater le message SMS"""
         montant = contrat.loyer_mensuel or 0
         return (
-            f"URGENT: Votre loyer de {montant} XOF pour {contrat.propriete.titre} "
+            f"URGENT: Votre loyer de {montant} F CFA pour {contrat.propriete.titre} "
             f"est en retard depuis le {overdue_date.strftime('%d/%m/%Y')}. "
             f"Veuillez régulariser rapidement. "
             f"Contact: {getattr(settings, 'COMPANY_PHONE', '')}"

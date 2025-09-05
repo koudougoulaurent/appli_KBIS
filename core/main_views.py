@@ -20,7 +20,7 @@ import os
 
 from .models import ConfigurationEntreprise, TemplateRecu, Devise, AuditLog
 from paiements.models import Paiement
-from proprietes.models import Propriete, Locataire, Bailleur
+from proprietes.models import Propriete, Locataire, Bailleur, UniteLocative
 from contrats.models import Contrat
 from utilisateurs.models import Utilisateur
 from .forms import ConfigurationEntrepriseForm
@@ -86,7 +86,11 @@ def dashboard(request):
         # Statistiques des propriétés (non confidentielles)
         total_proprietes = Propriete.objects.filter(is_deleted=False).count()
         proprietes_louees = Propriete.objects.filter(is_deleted=False, disponible=False).count()
-        proprietes_disponibles = Propriete.objects.filter(is_deleted=False, disponible=True).count()
+        proprietes_disponibles = Propriete.objects.filter(
+            Q(is_deleted=False) &
+            (Q(disponible=True) |
+             Q(unites_locatives__statut='disponible', unites_locatives__is_deleted=False))
+        ).distinct().count()
         proprietes_en_construction = 0  # Pas de champ construction dans le modèle actuel
         
         # Statistiques des bailleurs et locataires (non confidentielles)
@@ -102,6 +106,19 @@ def dashboard(request):
         # Statistiques des paiements (UNIQUEMENT le nombre, PAS les montants)
         total_paiements = Paiement.objects.filter(is_deleted=False).count()
         # Supprimer le comptage mensuel des paiements pour éviter de révéler l'activité financière
+        
+        # Statistiques des unités locatives (nouveau système)
+        total_unites = UniteLocative.objects.filter(is_deleted=False).count()
+        unites_disponibles = UniteLocative.objects.filter(is_deleted=False, statut='disponible').count()
+        unites_occupees = UniteLocative.objects.filter(is_deleted=False, statut='occupee').count()
+        unites_reservees = UniteLocative.objects.filter(is_deleted=False, statut='reservee').count()
+        
+        unites_stats = {
+            'total': total_unites,
+            'disponibles': unites_disponibles,
+            'occupees': unites_occupees,
+            'reservees': unites_reservees
+        } if total_unites > 0 else None
         
         # Tendances générales (non confidentielles)
         tendances = {
@@ -129,6 +146,8 @@ def dashboard(request):
             'contrats_actifs': contrats_actifs,
             # Statistiques des paiements (UNIQUEMENT le nombre total)
             'total_paiements': total_paiements,
+            # Statistiques des unités locatives
+            'unites_stats': unites_stats,
             # SUPPRIMER: paiements_mois, devise_base, devise_active
         }
         

@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load humanize %}
 {% load core_extras %}
 
 {% block title %}Dashboard Paiements - Gestion Immobilière{% endblock %}
@@ -311,6 +312,151 @@
     </div>
 </div>
 
+<!-- Section Récapitulatifs et Paiements Bailleurs -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card content-card">
+            <div class="card-header bg-gradient-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-cash-coin me-2"></i>
+                    Récapitulatifs et Paiements Bailleurs
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Statistiques des récapitulatifs -->
+                    <div class="col-md-3">
+                        <div class="text-center p-3 border rounded">
+                            <div class="h4 text-primary mb-1">{{ recaps_valides|default:"0" }}</div>
+                            <div class="text-muted">Récaps Validés</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 border rounded">
+                            <div class="h4 text-success mb-1">{{ recaps_payes|default:"0" }}</div>
+                            <div class="text-muted">Récaps Payés</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 border rounded">
+                            <div class="h4 text-warning mb-1">{{ retraits_en_attente|default:"0" }}</div>
+                            <div class="text-muted">Retraits En Attente</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-3 border rounded">
+                            <div class="h4 text-info mb-1">{{ montant_total_a_payer|default:"0"|floatformat:0|intcomma }} F CFA</div>
+                            <div class="text-muted">Total à Payer</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr class="my-4">
+                
+                <!-- Actions rapides pour les récapitulatifs -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary mb-3">
+                            <i class="bi bi-calendar-month me-2"></i>
+                            Gestion des Récapitulatifs
+                        </h6>
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'paiements:liste_bailleurs_recaps' %}" class="btn btn-outline-primary">
+                                <i class="bi bi-list-ul me-2"></i>
+                                Liste des Bailleurs avec Récaps
+                            </a>
+                            <a href="{% url 'paiements:tableau_bord_recaps_mensuels' %}" class="btn btn-outline-info">
+                                <i class="bi bi-graph-up me-2"></i>
+                                Tableau de Bord Récaps
+                            </a>
+                            <a href="{% url 'paiements:creer_recap_mensuel_auto' %}" class="btn btn-outline-success">
+                                <i class="bi bi-plus-circle me-2"></i>
+                                Créer un Récapitulatif
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-success mb-3">
+                            <i class="bi bi-cash-coin me-2"></i>
+                            Paiements Bailleurs
+                        </h6>
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'paiements:liste_retraits_bailleur' %}" class="btn btn-outline-success">
+                                <i class="bi bi-bank me-2"></i>
+                                Gérer les Retraits
+                            </a>
+                            <a href="{% url 'paiements:retrait_ajouter' %}" class="btn btn-outline-warning">
+                                <i class="bi bi-plus-circle me-2"></i>
+                                Créer un Retrait Manuel
+                            </a>
+                            <button class="btn btn-outline-info" onclick="showQuickPaymentModal()">
+                                <i class="bi bi-lightning me-2"></i>
+                                Paiement Rapide
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Récapitulatifs récents -->
+                {% if recaps_recents %}
+                <hr class="my-4">
+                <h6 class="text-primary mb-3">
+                    <i class="bi bi-clock-history me-2"></i>
+                    Récapitulatifs Récents
+                </h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Bailleur</th>
+                                <th>Mois</th>
+                                <th>Montant</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for recap in recaps_recents %}
+                            <tr>
+                                <td>{{ recap.bailleur.get_nom_complet }}</td>
+                                <td>{{ recap.mois_recap|date:"F Y" }}</td>
+                                <td class="fw-bold text-success">{{ recap.total_net_a_payer|floatformat:0|intcomma }} F CFA</td>
+                                <td>
+                                    {% if recap.statut == 'valide' %}
+                                        <span class="badge bg-success">Validé</span>
+                                    {% elif recap.statut == 'paye' %}
+                                        <span class="badge bg-info">Payé</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">{{ recap.get_statut_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'paiements:detail_recap_mensuel_auto' recap_id=recap.id %}" 
+                                           class="btn btn-outline-primary btn-sm" title="Voir le détail">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        {% if recap.statut == 'valide' and recap.total_net_a_payer > 0 %}
+                                        <button type="button" class="btn btn-outline-success btn-sm" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#modalPaiementRapide{{ recap.id }}"
+                                                title="Payer le bailleur">
+                                            <i class="bi bi-cash-coin"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Actions rapides et contenu principal -->
 <div class="row">
     <!-- Actions rapides -->
@@ -500,4 +646,228 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endif %}
+
+<!-- Modals de Paiement Rapide pour les récapitulatifs récents -->
+{% if recaps_recents %}
+{% for recap in recaps_recents %}
+{% if recap.statut == 'valide' and recap.total_net_a_payer > 0 %}
+<div class="modal fade" id="modalPaiementRapide{{ recap.id }}" tabindex="-1" aria-labelledby="modalPaiementRapideLabel{{ recap.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="modalPaiementRapideLabel{{ recap.id }}">
+                    <i class="bi bi-cash-coin me-2"></i>
+                    Paiement Rapide - {{ recap.bailleur.get_nom_complet }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Informations du récapitulatif -->
+                <div class="alert alert-info">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Informations du Récapitulatif
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Bailleur :</strong> {{ recap.bailleur.get_nom_complet }}<br>
+                            <strong>Mois :</strong> {{ recap.mois_recap|date:"F Y" }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Loyers Bruts :</strong> {{ recap.total_loyers_bruts|floatformat:0|intcomma }} F CFA<br>
+                            <strong>Charges :</strong> {{ recap.total_charges_deductibles|floatformat:0|intcomma }} F CFA<br>
+                            <strong class="text-success">Net à Payer :</strong> <span class="h5 text-success">{{ recap.total_net_a_payer|floatformat:0|intcomma }} F CFA</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulaire de paiement -->
+                <form id="formPaiementRapide{{ recap.id }}" method="post" action="{% url 'paiements:creer_retrait_depuis_recap' recap_id=recap.id %}">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="mode_retrait_rapide{{ recap.id }}" class="form-label">
+                                    <i class="bi bi-credit-card me-1"></i>
+                                    Mode de Paiement
+                                </label>
+                                <select name="mode_retrait" id="mode_retrait_rapide{{ recap.id }}" class="form-select" required>
+                                    <option value="">-- Sélectionner un mode --</option>
+                                    <option value="virement" selected>Virement bancaire</option>
+                                    <option value="cheque">Chèque</option>
+                                    <option value="especes">Espèces</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="reference_retrait_rapide{{ recap.id }}" class="form-label">
+                                    <i class="bi bi-hash me-1"></i>
+                                    Référence
+                                </label>
+                                <input type="text" name="reference_retrait" id="reference_retrait_rapide{{ recap.id }}" 
+                                       class="form-control" placeholder="Référence du paiement (optionnel)">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="observations_rapide{{ recap.id }}" class="form-label">
+                            <i class="bi bi-chat-text me-1"></i>
+                            Observations
+                        </label>
+                        <textarea name="observations" id="observations_rapide{{ recap.id }}" class="form-control" rows="3" 
+                                  placeholder="Observations sur ce paiement...">{{ recap.mois_recap|date:"F Y" }} - Paiement basé sur le récapitulatif mensuel</textarea>
+                    </div>
+                    
+                    <!-- Résumé du paiement -->
+                    <div class="alert alert-success">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-check-circle me-2"></i>
+                            Résumé du Paiement
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <strong>Bailleur :</strong><br>
+                                {{ recap.bailleur.get_nom_complet }}
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Mois :</strong><br>
+                                {{ recap.mois_recap|date:"F Y" }}
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Montant :</strong><br>
+                                <span class="h5 text-success">{{ recap.total_net_a_payer|floatformat:0|intcomma }} F CFA</span>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-2"></i>
+                    Annuler
+                </button>
+                <button type="button" class="btn btn-success" onclick="confirmerPaiementRapide{{ recap.id }}()">
+                    <i class="bi bi-cash-coin me-2"></i>
+                    Confirmer le Paiement
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-générer une référence si virement sélectionné
+    const modeSelect{{ recap.id }} = document.getElementById('mode_retrait_rapide{{ recap.id }}');
+    const referenceInput{{ recap.id }} = document.getElementById('reference_retrait_rapide{{ recap.id }}');
+    const observationsInput{{ recap.id }} = document.getElementById('observations_rapide{{ recap.id }}');
+    
+    if (modeSelect{{ recap.id }} && referenceInput{{ recap.id }}) {
+        // Fonction pour générer une référence unique
+        function generateReference{{ recap.id }}() {
+            const now = new Date();
+            const random = Math.random().toString(36).substr(2, 4).toUpperCase();
+            return `VIR-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${random}`;
+        }
+        
+        // Fonction pour mettre à jour les observations selon le mode
+        function updateObservations{{ recap.id }}() {
+            const mode = modeSelect{{ recap.id }}.value;
+            const mois = '{{ recap.mois_recap|date:"F Y" }}';
+            const bailleur = '{{ recap.bailleur.get_nom_complet }}';
+            
+            if (mode === 'virement') {
+                observationsInput{{ recap.id }}.value = `${mois} - Paiement par virement bancaire pour ${bailleur}`;
+            } else if (mode === 'cheque') {
+                observationsInput{{ recap.id }}.value = `${mois} - Paiement par chèque pour ${bailleur}`;
+            } else if (mode === 'especes') {
+                observationsInput{{ recap.id }}.value = `${mois} - Paiement en espèces pour ${bailleur}`;
+            }
+        }
+        
+        modeSelect{{ recap.id }}.addEventListener('change', function() {
+            const mode = this.value;
+            
+            // Auto-générer la référence pour les virements
+            if (mode === 'virement' && !referenceInput{{ recap.id }}.value) {
+                referenceInput{{ recap.id }}.value = generateReference{{ recap.id }}();
+            } else if (mode !== 'virement') {
+                referenceInput{{ recap.id }}.value = '';
+            }
+            
+            // Mettre à jour les observations
+            updateObservations{{ recap.id }}();
+        });
+        
+        // Initialisation
+        if (modeSelect{{ recap.id }}.value === 'virement' && !referenceInput{{ recap.id }}.value) {
+            referenceInput{{ recap.id }}.value = generateReference{{ recap.id }}();
+        }
+        updateObservations{{ recap.id }}();
+    }
+});
+
+function confirmerPaiementRapide{{ recap.id }}() {
+    const mode = document.getElementById('mode_retrait_rapide{{ recap.id }}').value;
+    const reference = document.getElementById('reference_retrait_rapide{{ recap.id }}').value;
+    
+    if (!mode) {
+        alert('Veuillez sélectionner un mode de paiement.');
+        document.getElementById('mode_retrait_rapide{{ recap.id }}').focus();
+        return false;
+    }
+    
+    if ((mode === 'virement' || mode === 'cheque') && !reference.trim()) {
+        alert('Veuillez saisir une référence pour ce mode de paiement.');
+        document.getElementById('reference_retrait_rapide{{ recap.id }}').focus();
+        return false;
+    }
+    
+    // Confirmation avec plus de détails
+    const montant = '{{ recap.total_net_a_payer|floatformat:2 }}';
+    const bailleur = '{{ recap.bailleur.get_nom_complet }}';
+    const mois = '{{ recap.mois_recap|date:"F Y" }}';
+    const modeText = mode === 'virement' ? 'Virement bancaire' : 
+                    mode === 'cheque' ? 'Chèque' : 'Espèces';
+    
+    const message = `Confirmer le paiement ?\n\n` +
+                   `Bailleur: ${bailleur}\n` +
+                   `Mois: ${mois}\n` +
+                   `Montant: ${montant} F CFA\n` +
+                   `Mode: ${modeText}` +
+                   (reference ? `\nRéférence: ${reference}` : '');
+    
+    if (confirm(message)) {
+        // Afficher un indicateur de chargement
+        const submitBtn = document.querySelector('button[onclick="confirmerPaiementRapide{{ recap.id }}()"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Création en cours...';
+        submitBtn.disabled = true;
+        
+        // Soumettre le formulaire
+        document.getElementById('formPaiementRapide{{ recap.id }}').submit();
+    }
+}
+</script>
+{% endif %}
+{% endfor %}
+{% endif %}
+
+<script>
+function showQuickPaymentModal() {
+    // Trouver le premier modal de paiement rapide disponible
+    const modals = document.querySelectorAll('[id^="modalPaiementRapide"]');
+    if (modals.length > 0) {
+        // Ouvrir le premier modal disponible
+        const modal = new bootstrap.Modal(modals[0]);
+        modal.show();
+    } else {
+        // Si aucun modal n'est disponible, rediriger vers la liste des bailleurs
+        window.location.href = "{% url 'paiements:liste_bailleurs_recaps' %}";
+    }
+}
+</script>
 {% endblock %}

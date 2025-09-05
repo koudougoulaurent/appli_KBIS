@@ -153,8 +153,8 @@ def test_final_etat6():
             date_demande__year=datetime.now().year
         ).aggregate(total=Sum('montant'))['total'] or 0
         
-        print(f"✅ Paiements du mois: {paiements_mois} XOF")
-        print(f"✅ Retraits du mois: {retraits_mois} XOF")
+        print(f"✅ Paiements du mois: {paiements_mois} F CFA")
+        print(f"✅ Retraits du mois: {retraits_mois} F CFA")
         print(f"✅ Paiements en attente: {Paiement.objects.filter(statut='en_attente').count()}")
         
     except Exception as e:

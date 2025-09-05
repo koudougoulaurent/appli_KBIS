@@ -219,6 +219,51 @@
                 </div>
             </div>
             {% endif %}
+            
+            <!-- Liste des unités locatives -->
+            {% if propriete.unites_locatives.all %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-building"></i> Unités Locatives</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Numéro</th>
+                                    <th>Nom</th>
+                                    <th>Type</th>
+                                    <th>Statut</th>
+                                    <th>Loyer</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for unite in propriete.unites_locatives.all %}
+                                <tr>
+                                    <td>{{ unite.numero_unite }}</td>
+                                    <td>{{ unite.nom }}</td>
+                                    <td>{{ unite.get_type_unite_display }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if unite.statut == 'disponible' %}success{% elif unite.statut == 'occupee' %}danger{% elif unite.statut == 'reservee' %}warning{% elif unite.statut == 'en_renovation' %}info{% else %}secondary{% endif %}">
+                                            {{ unite.get_statut_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ unite.get_loyer_total|floatformat:0 }} F CFA</td>
+                                    <td>
+                                        <a href="{% url 'proprietes:unite_detail' unite.pk %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> Voir
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Sidebar -->
@@ -273,6 +318,19 @@
                         </a>
                         <a href="{% url 'proprietes:gestion_pieces' propriete.pk %}" class="btn btn-outline-primary">
                             <i class="bi bi-grid-3x3-gap"></i> Gestion des Pièces
+                        </a>
+                        
+                        <!-- Bouton pour le dashboard des unités locatives (grandes propriétés) -->
+                        {% if propriete.est_grande_propriete %}
+                        <a href="{% url 'proprietes:dashboard_propriete' propriete.pk %}" class="btn btn-success">
+                            <i class="fas fa-building"></i> Dashboard Unités Locatives
+                            <span class="badge bg-light text-success ms-1">{{ propriete.get_nombre_unites_locatives }}</span>
+                        </a>
+                        {% endif %}
+                        
+                        <!-- Bouton pour créer une nouvelle unité locative -->
+                        <a href="{% url 'proprietes:unite_create_propriete' propriete.pk %}" class="btn btn-outline-success">
+                            <i class="fas fa-plus"></i> Nouvelle Unité Locative
                         </a>
                         <a href="{% url 'proprietes:photo_gallery' propriete.pk %}" class="btn btn-outline-info">
                             <i class="bi bi-images"></i> Galerie Photos

@@ -68,6 +68,147 @@ def api_recherche_contrats_rapide(request):
     
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
 
+# 🔍 API DE RECHERCHE DE BAILLEUR
+@csrf_exempt
+def api_recherche_bailleur(request):
+    """API pour rechercher un bailleur par nom ou numéro et récupérer toutes ses informations."""
+    if request.method == 'GET':
+        query = request.GET.get('q', '').strip()
+        
+        if not query:
+            return JsonResponse({
+                'success': False,
+                'error': 'Terme de recherche requis'
+            }, status=400)
+        
+        try:
+            from proprietes.models import Bailleur
+            from contrats.models import Contrat
+            from .models import RetraitBailleur
+            
+            # Recherche du bailleur (nom, prénom, numéro, email)
+            bailleur = Bailleur.objects.filter(
+                Q(nom__icontains=query) |
+                Q(prenom__icontains=query) |
+                Q(numero_bailleur__icontains=query) |
+                Q(email__icontains=query) |
+                Q(telephone__icontains=query)
+            ).filter(actif=True).first()
+            
+            if not bailleur:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Aucun bailleur trouvé avec ces critères'
+                }, status=404)
+            
+            # Récupérer toutes les propriétés louées du bailleur
+            proprietes_louees = Propriete.objects.filter(
+                bailleur=bailleur,
+                disponible=False
+            ).select_related('bailleur')
+            
+            # Récupérer les contrats actifs
+            contrats_actifs = Contrat.objects.filter(
+                propriete__bailleur=bailleur,
+                est_actif=True
+            ).select_related('propriete', 'locataire')
+            
+            # Calculer le total des loyers bruts
+            total_loyers_bruts = contrats_actifs.aggregate(
+                total=Sum('loyer_mensuel')
+            )['total'] or 0
+            
+            # Récupérer les retraits précédents
+            retraits_precedents = RetraitBailleur.objects.filter(
+                bailleur=bailleur
+            ).order_by('-date_demande')[:10]
+            
+            # Préparer les données des propriétés
+            proprietes_data = []
+            for propriete in proprietes_louees:
+                contrat_actuel = contrats_actifs.filter(propriete=propriete).first()
+                
+                propriete_info = {
+                    'id': propriete.id,
+                    'titre': propriete.titre,
+                    'adresse': propriete.adresse,
+                    'ville': propriete.ville,
+                    'code_postal': propriete.code_postal,
+                    'type_propriete': propriete.type_bien.nom if propriete.type_bien else 'Non défini',
+                    'disponibilite': 'Occupée' if not propriete.disponible else 'Disponible',
+                    'loyer_mensuel': float(contrat_actuel.loyer_mensuel) if contrat_actuel else 0,
+                    'locataire': {
+                        'nom': contrat_actuel.locataire.nom if contrat_actuel and contrat_actuel.locataire else None,
+                        'prenom': contrat_actuel.locataire.prenom if contrat_actuel and contrat_actuel.locataire else None,
+                        'email': contrat_actuel.locataire.email if contrat_actuel and contrat_actuel.locataire else None,
+                        'telephone': contrat_actuel.locataire.telephone if contrat_actuel and contrat_actuel.locataire else None
+                    } if contrat_actuel else None,
+                    'date_debut_bail': contrat_actuel.date_debut.strftime('%d/%m/%Y') if contrat_actuel and contrat_actuel.date_debut else None,
+                    'date_fin_bail': contrat_actuel.date_fin.strftime('%d/%m/%Y') if contrat_actuel and contrat_actuel.date_fin else None
+                }
+                proprietes_data.append(propriete_info)
+            
+            # Préparer les données des retraits précédents
+            retraits_data = []
+            for retrait in retraits_precedents:
+                retrait_info = {
+                    'id': retrait.id,
+                    'mois_retrait': retrait.mois_retrait.strftime('%B %Y') if retrait.mois_retrait else 'Date non définie',
+                    'montant_loyers_bruts': float(retrait.montant_loyers_bruts) if retrait.montant_loyers_bruts else 0,
+                    'montant_charges_deductibles': float(retrait.montant_charges_deductibles) if retrait.montant_charges_deductibles else 0,
+                    'montant_net_a_payer': float(retrait.montant_net_a_payer) if retrait.montant_net_a_payer else 0,
+                    'date_demande': retrait.date_demande.strftime('%d/%m/%Y') if retrait.date_demande else 'Date non définie',
+                    'statut': retrait.get_statut_display() if hasattr(retrait, 'get_statut_display') else 'Non défini',
+                    'type_retrait': retrait.get_type_retrait_display() if hasattr(retrait, 'get_type_retrait_display') else 'Non défini'
+                }
+                retraits_data.append(retrait_info)
+            
+            # Réponse complète
+            response_data = {
+                'success': True,
+                'bailleur': {
+                    'id': bailleur.id,
+                    'nom': bailleur.nom,
+                    'prenom': bailleur.prenom,
+                    'numero_bailleur': bailleur.numero_bailleur,
+                    'email': bailleur.email,
+                    'telephone': bailleur.telephone,
+                    'adresse': bailleur.adresse,
+                    'ville': bailleur.ville,
+                    'code_postal': bailleur.code_postal,
+                    'date_inscription': bailleur.date_creation.strftime('%d/%m/%Y') if bailleur.date_creation else None
+                },
+                'proprietes': {
+                    'total': proprietes_louees.count(),
+                    'liste': proprietes_data
+                },
+                'loyers': {
+                    'total_mensuel': float(total_loyers_bruts),
+                    'total_annuel': float(total_loyers_bruts * 12)
+                },
+                'retraits': {
+                    'total': retraits_precedents.count(),
+                    'liste': retraits_data,
+                    'dernier_retrait': retraits_data[0] if retraits_data else None
+                },
+                'mois_retrait_suivant': 'Date non définie',  # À implémenter si nécessaire
+                'statistiques': {
+                    'nombre_proprietes': proprietes_louees.count(),
+                    'nombre_contrats_actifs': contrats_actifs.count(),
+                    'moyenne_loyer': float(total_loyers_bruts / proprietes_louees.count()) if proprietes_louees.count() > 0 else 0
+                }
+            }
+            
+            return JsonResponse(response_data)
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Erreur lors de la recherche : {str(e)}'
+            }, status=500)
+    
+    return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+
 # 🧠 API DE CONTEXTE INTELLIGENT
 @csrf_exempt
 def api_contexte_intelligent_contrat(request, contrat_id):

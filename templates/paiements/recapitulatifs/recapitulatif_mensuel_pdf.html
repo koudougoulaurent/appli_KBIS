@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Récapitulatif Mensuel - {{ recapitulatif.bailleur.nom }} {{ recapitulatif.bailleur.prenom }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 20px;
+        }
+        
+        .header h1 {
+            color: #007bff;
+            font-size: 24px;
+            margin: 0;
+        }
+        
+        .header h2 {
+            color: #666;
+            font-size: 18px;
+            margin: 10px 0 0 0;
+        }
+        
+        .info-section {
+            margin-bottom: 25px;
+        }
+        
+        .info-section h3 {
+            background-color: #f8f9fa;
+            padding: 10px;
+            margin: 0 0 15px 0;
+            border-left: 4px solid #007bff;
+            font-size: 14px;
+        }
+        
+        .info-grid {
+            display: table;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        
+        .info-row {
+            display: table-row;
+        }
+        
+        .info-label {
+            display: table-cell;
+            font-weight: bold;
+            padding: 5px 10px 5px 0;
+            width: 30%;
+        }
+        
+        .info-value {
+            display: table-cell;
+            padding: 5px 0;
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .table th,
+        .table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        
+        .table .text-right {
+            text-align: right;
+        }
+        
+        .totals-section {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+        }
+        
+        .totals-section h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .total-row:last-child {
+            border-bottom: none;
+            font-weight: bold;
+            font-size: 14px;
+            color: #007bff;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .status-valide {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-en_preparation {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-envoye {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+        
+        .status-paye {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <!-- En-tête -->
+    <div class="header">
+        <h1>RÉCAPITULATIF MENSUEL</h1>
+        <h2>{{ recapitulatif.get_type_recapitulatif_display }} - {{ recapitulatif.mois_recapitulatif|date:"F Y" }}</h2>
+    </div>
+    
+    <!-- Informations du bailleur -->
+    <div class="info-section">
+        <h3>Informations du Bailleur</h3>
+        <div class="info-grid">
+            <div class="info-row">
+                <div class="info-label">Nom complet :</div>
+                <div class="info-value">{{ recapitulatif.bailleur.nom }} {{ recapitulatif.bailleur.prenom }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Numéro bailleur :</div>
+                <div class="info-value">{{ recapitulatif.bailleur.numero_bailleur }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Email :</div>
+                <div class="info-value">{{ recapitulatif.bailleur.email }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Téléphone :</div>
+                <div class="info-value">{{ recapitulatif.bailleur.telephone }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Adresse :</div>
+                <div class="info-value">{{ recapitulatif.bailleur.adresse }}, {{ recapitulatif.bailleur.ville }}</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Informations du récapitulatif -->
+    <div class="info-section">
+        <h3>Informations du Récapitulatif</h3>
+        <div class="info-grid">
+            <div class="info-row">
+                <div class="info-label">Mois de référence :</div>
+                <div class="info-value">{{ recapitulatif.mois_recapitulatif|date:"F Y" }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Type :</div>
+                <div class="info-value">{{ recapitulatif.get_type_recapitulatif_display }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Statut :</div>
+                <div class="info-value">
+                    <span class="status-badge status-{{ recapitulatif.statut }}">
+                        {{ recapitulatif.get_statut_display }}
+                    </span>
+                </div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Date de création :</div>
+                <div class="info-value">{{ recapitulatif.date_creation|date:"d/m/Y H:i" }}</div>
+            </div>
+            {% if recapitulatif.date_validation %}
+            <div class="info-row">
+                <div class="info-label">Date de validation :</div>
+                <div class="info-value">{{ recapitulatif.date_validation|date:"d/m/Y H:i" }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Détails des propriétés et loyers -->
+    <div class="info-section">
+        <h3>Détails des Propriétés et Loyers</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Propriété</th>
+                    <th>Adresse</th>
+                    <th>Locataire</th>
+                    <th>Loyer Mensuel</th>
+                    <th>Charges Déductibles</th>
+                    <th>Net à Payer</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for detail in totaux.details_proprietes %}
+                <tr>
+                    <td>{{ detail.propriete.titre }}</td>
+                    <td>{{ detail.propriete.adresse }}</td>
+                    <td>
+                        {% if detail.locataire %}
+                            {{ detail.locataire.nom }} {{ detail.locataire.prenom }}
+                        {% else %}
+                            Non défini
+                        {% endif %}
+                    </td>
+                    <td class="text-right">{{ detail.loyer_mensuel|floatformat:0 }} F CFA</td>
+                    <td class="text-right">{{ detail.total_charges_bailleur|floatformat:0 }} F CFA</td>
+                    <td class="text-right">{{ detail.montant_net_a_payer|floatformat:0 }} F CFA</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Totaux -->
+    <div class="totals-section">
+        <h3>Récapitulatif Financier</h3>
+        <div class="total-row">
+            <span>Total des loyers bruts :</span>
+            <span>{{ totaux.total_loyers_bruts|floatformat:0 }} F CFA</span>
+        </div>
+        <div class="total-row">
+            <span>Total des charges déductibles :</span>
+            <span>{{ totaux.total_charges_deductibles|floatformat:0 }} F CFA</span>
+        </div>
+        <div class="total-row">
+            <span>Montant net à payer :</span>
+            <span>{{ totaux.montant_net_a_payer|floatformat:0 }} F CFA</span>
+        </div>
+    </div>
+    
+    <!-- Notes -->
+    {% if recapitulatif.notes %}
+    <div class="info-section">
+        <h3>Notes et Observations</h3>
+        <p>{{ recapitulatif.notes }}</p>
+    </div>
+    {% endif %}
+    
+    <!-- Pied de page -->
+    <div class="footer">
+        <p>Document généré le {{ date_generation|date:"d/m/Y à H:i" }}</p>
+        <p>Récapitulatif ID: {{ recapitulatif.id }} | Version: {{ recapitulatif.version }}</p>
+        {% if recapitulatif.hash_securite %}
+        <p>Hash de sécurité: {{ recapitulatif.hash_securite }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>

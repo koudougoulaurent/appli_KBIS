@@ -85,6 +85,18 @@
             <a href="{% url 'paiements:telecharger_pdf_recapitulatif' recapitulatif.pk %}" class="btn btn-success">
                 <i class="bi bi-download"></i> Télécharger PDF
             </a>
+            {% if not recapitulatif.recu %}
+            <a href="{% url 'paiements:creer_recu_recapitulatif' recapitulatif.pk %}" class="btn btn-primary">
+                <i class="bi bi-receipt"></i> Créer Reçu Standard
+            </a>
+            <a href="{% url 'paiements:creer_recu_gestimmob_recapitulatif' recapitulatif.pk %}" class="btn btn-warning">
+                <i class="bi bi-file-earmark-pdf"></i> Créer Reçu GESTIMMOB
+            </a>
+            {% else %}
+            <a href="{% url 'paiements:detail_recu_recapitulatif' recapitulatif.recu.pk %}" class="btn btn-primary">
+                <i class="bi bi-receipt"></i> Voir Reçu
+            </a>
+            {% endif %}
         </div>
     </div>
 
@@ -223,7 +235,7 @@
                 <div class="col-md-3">
                     <div class="text-center p-3">
                         <div class="h4 text-info">{{ totaux.total_loyers_bruts|floatformat:0 }} F CFA</div>
-                        <div class="text-muted">Loyers bruts</div>
+                        <div class="text-muted">Loyers attendus</div>
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -266,14 +278,17 @@
                     </div>
                     <div class="col-md-6">
                         <small class="text-muted">Loyer mensuel</small>
-                        <div class="fw-bold">{{ propriete_detail.contrat.loyer|floatformat:0 }} F CFA</div>
+                        <div class="fw-bold">{{ propriete_detail.contrat.loyer_mensuel|floatformat:0 }} F CFA</div>
                     </div>
                 </div>
                 
                 <div class="row">
                     <div class="col-md-3">
-                        <small class="text-muted">Loyers perçus</small>
+                        <small class="text-muted">Loyers attendus</small>
                         <div class="fw-bold">{{ propriete_detail.loyers_bruts|floatformat:0 }} F CFA</div>
+                        {% if propriete_detail.loyers_percus %}
+                        <small class="text-muted">Perçus: {{ propriete_detail.loyers_percus|floatformat:0 }} F CFA</small>
+                        {% endif %}
                     </div>
                     <div class="col-md-3">
                         <small class="text-muted">Charges déductibles</small>

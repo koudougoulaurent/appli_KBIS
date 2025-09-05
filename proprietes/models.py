@@ -1,10 +1,10 @@
 from django.db import models
 from django.conf import settings
-from django.core.exceptions import ValidationError
+
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 from .managers import NonDeletedManager
-import uuid
+
 
 class TypeBien(models.Model):
     """Modèle pour les types de biens immobiliers."""
@@ -18,6 +18,30 @@ class TypeBien(models.Model):
     
     def __str__(self):
         return self.nom
+    
+    def necessite_unites_locatives(self):
+        """
+        Détermine si ce type de bien nécessite généralement des unités locatives.
+        Basé sur des mots-clés dans le nom du type de bien.
+        """
+        nom_lower = self.nom.lower()
+        
+        # Types de biens qui nécessitent généralement des unités locatives
+        mots_cles_unites = [
+            'immeuble', 'building', 'résidence', 'complexe', 'centre commercial',
+            'centre d\'affaires', 'tour', 'ensemble immobilier', 'copropriété',
+            'parc d\'activités', 'zone industrielle', 'campus', 'cité', 'village',
+            'lotissement', 'ensemble', 'bloc', 'bâtiment', 'structure'
+        ]
+        
+        return any(mot_cle in nom_lower for mot_cle in mots_cles_unites)
+    
+    def get_suggestion_unites(self):
+        """Retourne un message de suggestion pour la création d'unités."""
+        if self.necessite_unites_locatives():
+            return f"Ce type de bien ({self.nom}) contient généralement plusieurs unités locatives. " \
+                   f"Souhaitez-vous créer des unités locatives pour cette propriété ?"
+        return None
 
 
 class Bailleur(models.Model):
@@ -344,7 +368,10 @@ class Propriete(models.Model):
     surface = models.DecimalField(
         max_digits=8,
         decimal_places=2,
-        verbose_name=_("Surface (m²)")
+        blank=True,
+        null=True,
+        verbose_name=_("Surface (m²)"),
+        help_text=_("Surface en mètres carrés (optionnel)")
     )
     nombre_pieces = models.PositiveIntegerField(verbose_name=_("Nombre de pièces"))
     nombre_chambres = models.PositiveIntegerField(verbose_name=_("Nombre de chambres"))
@@ -374,6 +401,8 @@ class Propriete(models.Model):
         max_digits=10,
         decimal_places=2,
         default=0,
+        null=True,
+        blank=True,
         verbose_name=_("Charges locataire")
     )
     
@@ -420,9 +449,139 @@ class Propriete(models.Model):
     def get_absolute_url(self):
         return reverse('proprietes:detail', kwargs={'pk': self.pk})
     
+    def necessite_unites_locatives(self):
+        """
+        Détermine si cette propriété nécessite des unités locatives.
+        Basé sur le type de bien et les caractéristiques de la propriété.
+        """
+        # Vérifier d'abord le type de bien
+        if self.type_bien.necessite_unites_locatives():
+            return True
+        
+        # Vérifier les caractéristiques de la propriété
+        # Grande surface ou nombreuses pièces peuvent indiquer plusieurs unités
+        if self.surface and self.surface > 200:  # Plus de 200m²
+            return True
+        
+        if self.nombre_pieces > 8:  # Plus de 8 pièces
+            return True
+        
+        return False
+    
+    def get_suggestion_creation_unites(self):
+        """Retourne un message de suggestion personnalisé pour cette propriété."""
+        if self.necessite_unites_locatives():
+            suggestions = []
+            
+            # Suggestion basée sur le type
+            type_suggestion = self.type_bien.get_suggestion_unites()
+            if type_suggestion:
+                suggestions.append(type_suggestion)
+            
+            # Suggestions basées sur les caractéristiques
+            if self.surface and self.surface > 200:
+                suggestions.append(f"Avec {self.surface}m², cette propriété pourrait être divisée en plusieurs unités.")
+            
+            if self.nombre_pieces > 8:
+                suggestions.append(f"Avec {self.nombre_pieces} pièces, vous pourriez créer plusieurs unités locatives.")
+            
+            return " ".join(suggestions)
+        
+        return None
+    
     def get_loyer_total(self):
         """Retourne le loyer total (loyer + charges)."""
-        return self.loyer_actuel + self.charges_locataire
+        loyer = self.loyer_actuel or 0
+        charges = self.charges_locataire or 0
+        return loyer + charges
+    
+    def get_nombre_unites_locatives(self):
+        """Retourne le nombre d'unités locatives dans cette propriété."""
+        return self.unites_locatives.filter(is_deleted=False).count()
+    
+    def get_unites_disponibles(self):
+        """Retourne les unités locatives disponibles."""
+        return self.unites_locatives.filter(
+            statut='disponible',
+            is_deleted=False
+        )
+    
+    def get_unites_occupees(self):
+        """Retourne les unités locatives occupées."""
+        return self.unites_locatives.filter(
+            statut='occupee',
+            is_deleted=False
+        )
+    
+    def get_taux_occupation_global(self):
+        """Calcule le taux d'occupation global de la propriété."""
+        total_unites = self.get_nombre_unites_locatives()
+        if total_unites == 0:
+            return 0
+        unites_occupees = self.get_unites_occupees().count()
+        return round((unites_occupees / total_unites) * 100, 2)
+    
+    def get_revenus_mensuels_potentiels(self):
+        """Calcule les revenus mensuels potentiels de toutes les unités."""
+        from django.db.models import Sum
+        revenus = self.unites_locatives.filter(
+            is_deleted=False
+        ).aggregate(
+            total_loyers=Sum('loyer_mensuel'),
+            total_charges=Sum('charges_mensuelles')
+        )
+        
+        loyers_total = revenus['total_loyers'] or 0
+        charges_total = revenus['total_charges'] or 0
+        return loyers_total + charges_total
+    
+    def get_revenus_mensuels_actuels(self):
+        """Calcule les revenus mensuels actuels (unités occupées seulement)."""
+        from django.db.models import Sum
+        revenus = self.unites_locatives.filter(
+            statut='occupee',
+            is_deleted=False
+        ).aggregate(
+            total_loyers=Sum('loyer_mensuel'),
+            total_charges=Sum('charges_mensuelles')
+        )
+        
+        loyers_total = revenus['total_loyers'] or 0
+        charges_total = revenus['total_charges'] or 0
+        return loyers_total + charges_total
+    
+    def est_grande_propriete(self):
+        """Détermine si c'est une grande propriété (plus de 5 unités)."""
+        return self.get_nombre_unites_locatives() > 5
+    
+    def get_statistiques_unites(self):
+        """Retourne des statistiques détaillées sur les unités."""
+        from django.db.models import Count, Sum, Avg
+        
+        stats = self.unites_locatives.filter(is_deleted=False).aggregate(
+            total_unites=Count('id'),
+            unites_disponibles=Count('id', filter=models.Q(statut='disponible')),
+            unites_occupees=Count('id', filter=models.Q(statut='occupee')),
+            unites_reservees=Count('id', filter=models.Q(statut='reservee')),
+            unites_renovation=Count('id', filter=models.Q(statut='en_renovation')),
+            surface_totale=Sum('surface'),
+            loyer_moyen=Avg('loyer_mensuel'),
+            revenus_potentiels=Sum('loyer_mensuel') + Sum('charges_mensuelles')
+        )
+        
+        if stats['total_unites'] > 0:
+            stats['taux_occupation'] = round(
+                (stats['unites_occupees'] / stats['total_unites']) * 100, 2
+            )
+        else:
+            stats['taux_occupation'] = 0
+            
+        return stats
+    
+    def get_taux_occupation_global(self):
+        """Calcule le taux d'occupation global de la propriété."""
+        stats = self.get_statistiques_unites()
+        return stats.get('taux_occupation', 0)
 
 
 class Photo(models.Model):
@@ -702,7 +861,7 @@ class ChargesBailleur(models.Model):
                 instance_id=self.id,
                 action='deduction_retrait',
                 utilisateur=self.cree_par,
-                description=f'Déduction de {montant_deduit} XOF du retrait mensuel',
+                description=f'Déduction de {montant_deduit} F CFA du retrait mensuel',
                 donnees_avant={},
                 donnees_apres={
                     'montant_deja_deduit': str(self.montant_deja_deduit),
@@ -770,7 +929,7 @@ class ChargesBailleurRetrait(models.Model):
         ordering = ['-date_deduction']
     
     def __str__(self):
-        return f"{self.charge_bailleur.titre} - {self.retrait_bailleur} - {self.montant_deduit} XOF"
+        return f"{self.charge_bailleur.titre} - {self.retrait_bailleur} - {self.montant_deduit} F CFA"
     
     def get_absolute_url(self):
         return reverse('proprietes:detail_charge_bailleur', kwargs={'pk': self.charge_bailleur.pk})
@@ -927,6 +1086,413 @@ class Document(models.Model):
         return False
 
 
+class UniteLocative(models.Model):
+    """Modèle pour gérer les unités locatives (appartements, bureaux, etc.) dans les grandes propriétés."""
+    
+    TYPE_UNITE_CHOICES = [
+        ('appartement', 'Appartement'),
+        ('studio', 'Studio'),
+        ('bureau', 'Bureau'),
+        ('local_commercial', 'Local commercial'),
+        ('chambre', 'Chambre meublée'),
+        ('parking', 'Place de parking'),
+        ('cave', 'Cave/Débarras'),
+        ('autre', 'Autre'),
+    ]
+    
+    STATUT_CHOICES = [
+        ('disponible', 'Disponible'),
+        ('occupee', 'Occupée'),
+        ('reservee', 'Réservée'),
+        ('en_renovation', 'En rénovation'),
+        ('hors_service', 'Hors service'),
+    ]
+    
+    # Informations de base
+    propriete = models.ForeignKey(
+        Propriete,
+        on_delete=models.CASCADE,
+        related_name='unites_locatives',
+        verbose_name=_("Propriété")
+    )
+    bailleur = models.ForeignKey(
+        Bailleur,
+        on_delete=models.PROTECT,
+        related_name='unites_locatives',
+        blank=True,
+        null=True,
+        verbose_name=_("Bailleur"),
+        help_text=_("Bailleur spécifique pour cette unité (optionnel, par défaut celui de la propriété)")
+    )
+    numero_unite = models.CharField(
+        max_length=20,
+        verbose_name=_("Numéro d'unité"),
+        help_text=_("Ex: Apt 101, Bureau 205, Chambre A12")
+    )
+    nom = models.CharField(
+        max_length=100, 
+        verbose_name=_("Nom de l'unité"),
+        help_text=_("Nom descriptif de l'unité")
+    )
+    type_unite = models.CharField(
+        max_length=20,
+        choices=TYPE_UNITE_CHOICES,
+        verbose_name=_("Type d'unité")
+    )
+    
+    # Caractéristiques physiques
+    etage = models.IntegerField(
+        blank=True, 
+        null=True, 
+        verbose_name=_("Étage"),
+        help_text=_("Numéro d'étage (0 pour RDC, -1 pour sous-sol)")
+    )
+    surface = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        verbose_name=_("Surface (m²)")
+    )
+    nombre_pieces = models.PositiveIntegerField(
+        default=1,
+        verbose_name=_("Nombre de pièces")
+    )
+    nombre_chambres = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Nombre de chambres")
+    )
+    nombre_salles_bain = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Nombre de salles de bain")
+    )
+    
+    # Équipements et caractéristiques
+    meuble = models.BooleanField(default=False, verbose_name=_("Meublé"))
+    balcon = models.BooleanField(default=False, verbose_name=_("Balcon/Terrasse"))
+    parking_inclus = models.BooleanField(default=False, verbose_name=_("Parking inclus"))
+    climatisation = models.BooleanField(default=False, verbose_name=_("Climatisation"))
+    internet_inclus = models.BooleanField(default=False, verbose_name=_("Internet inclus"))
+    
+    # Informations financières
+    loyer_mensuel = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0.00,
+        verbose_name=_("Loyer mensuel")
+    )
+    charges_mensuelles = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        verbose_name=_("Charges mensuelles")
+    )
+    caution_demandee = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0.00,
+        verbose_name=_("Caution demandée")
+    )
+    
+    # État et disponibilité
+    statut = models.CharField(
+        max_length=20,
+        choices=STATUT_CHOICES,
+        default='disponible',
+        verbose_name=_("Statut")
+    )
+    date_disponibilite = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name=_("Date de disponibilité")
+    )
+    
+    # Informations complémentaires
+    description = models.TextField(
+        blank=True, 
+        verbose_name=_("Description"),
+        help_text=_("Description détaillée de l'unité")
+    )
+    notes_privees = models.TextField(
+        blank=True, 
+        verbose_name=_("Notes privées"),
+        help_text=_("Notes internes non visibles par les locataires")
+    )
+    
+    # Métadonnées
+    date_creation = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de création"))
+    date_modification = models.DateTimeField(auto_now=True, verbose_name=_("Date de modification"))
+    is_deleted = models.BooleanField(default=False, verbose_name=_("Supprimé logiquement"))
+    
+    class Meta:
+        verbose_name = _("Unité locative")
+        verbose_name_plural = _("Unités locatives")
+        ordering = ['propriete', 'etage', 'numero_unite']
+        unique_together = ['propriete', 'numero_unite']
+    
+    objects = NonDeletedManager()
+    
+    def __str__(self):
+        return f"{self.numero_unite} - {self.propriete.titre}"
+    
+    def get_absolute_url(self):
+        return reverse('proprietes:unite_detail', kwargs={'pk': self.pk})
+    
+    def get_loyer_total(self):
+        """Retourne le loyer total (loyer + charges)."""
+        loyer = self.loyer_mensuel or 0
+        charges = self.charges_mensuelles or 0
+        return loyer + charges
+    
+    def get_loyer_total_formatted(self):
+        """Retourne le loyer total formaté."""
+        from core.utils import format_currency_fcfa
+        return format_currency_fcfa(self.get_loyer_total())
+    
+    def est_disponible(self, date_debut=None, date_fin=None):
+        """Vérifie si l'unité est disponible pour une période donnée."""
+        if self.statut not in ['disponible', 'reservee']:
+            return False
+        
+        from django.utils import timezone
+        from contrats.models import Contrat
+        
+        if not date_debut:
+            date_debut = timezone.now().date()
+        if not date_fin:
+            date_fin = date_debut + timezone.timedelta(days=365)
+        
+        # Vérifier les contrats actifs qui se chevauchent
+        contrats_conflictuels = Contrat.objects.filter(
+            unite_locative=self,
+            est_actif=True,
+            est_resilie=False,
+            date_debut__lt=date_fin,
+            date_fin__gt=date_debut
+        ).exists()
+        
+        return not contrats_conflictuels
+    
+    def get_contrat_actuel(self):
+        """Retourne le contrat actuel de cette unité."""
+        from contrats.models import Contrat
+        from django.utils import timezone
+        
+        return Contrat.objects.filter(
+            unite_locative=self,
+            est_actif=True,
+            est_resilie=False,
+            date_debut__lte=timezone.now().date(),
+            date_fin__gte=timezone.now().date()
+        ).first()
+    
+    def get_locataire_actuel(self):
+        """Retourne le locataire actuel de cette unité."""
+        contrat = self.get_contrat_actuel()
+        return contrat.locataire if contrat else None
+    
+    def get_bailleur_effectif(self):
+        """Retourne le bailleur effectif (celui de l'unité ou celui de la propriété)."""
+        return self.bailleur if self.bailleur else self.propriete.bailleur
+    
+    def get_revenus_potentiels_annuels(self):
+        """Calcule les revenus potentiels annuels."""
+        return self.get_loyer_total() * 12
+    
+    def get_taux_occupation(self):
+        """Calcule le taux d'occupation de l'unité sur les 12 derniers mois."""
+        from contrats.models import Contrat
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Période d'analyse : 12 derniers mois
+        fin_periode = timezone.now().date()
+        debut_periode = fin_periode - timedelta(days=365)
+        
+        # Récupérer tous les contrats qui se chevauchent avec cette période
+        contrats = Contrat.objects.filter(
+            unite_locative=self,
+            date_debut__lt=fin_periode,
+            date_fin__gt=debut_periode
+        )
+        
+        if not contrats.exists():
+            return 0.0
+        
+        # Calculer les jours d'occupation
+        jours_occupes = 0
+        for contrat in contrats:
+            # Calculer l'intersection entre le contrat et la période d'analyse
+            debut_effectif = max(contrat.date_debut, debut_periode)
+            fin_effective = min(contrat.date_fin, fin_periode)
+            
+            if debut_effectif < fin_effective:
+                jours_occupes += (fin_effective - debut_effectif).days
+        
+        # Éviter le double comptage en cas de contrats qui se chevauchent
+        jours_occupes = min(jours_occupes, 365)
+        
+        return round((jours_occupes / 365) * 100, 1)
+    
+    def get_duree_moyenne_occupation(self):
+        """Calcule la durée moyenne d'occupation en mois."""
+        from contrats.models import Contrat
+        from django.db.models import Avg
+        from django.utils import timezone
+        
+        # Récupérer les contrats terminés pour calculer la durée moyenne
+        contrats_termines = Contrat.objects.filter(
+            unite_locative=self,
+            est_resilie=True
+        ).exclude(date_fin__isnull=True)
+        
+        if not contrats_termines.exists():
+            # Si pas de contrats terminés, calculer avec le contrat actuel
+            contrat_actuel = self.get_contrat_actuel()
+            if contrat_actuel:
+                duree_actuelle = (timezone.now().date() - contrat_actuel.date_debut).days
+                return round(duree_actuelle / 30.44, 1)  # Conversion en mois
+            return 0.0
+        
+        # Calculer la durée moyenne des contrats terminés
+        durees = []
+        for contrat in contrats_termines:
+            duree_jours = (contrat.date_fin - contrat.date_debut).days
+            durees.append(duree_jours / 30.44)  # Conversion en mois
+        
+        if durees:
+            return round(sum(durees) / len(durees), 1)
+        
+        return 0.0
+
+
+class ReservationUnite(models.Model):
+    """Modèle pour gérer les réservations d'unités locatives."""
+    
+    STATUT_CHOICES = [
+        ('en_attente', 'En attente'),
+        ('confirmee', 'Confirmée'),
+        ('annulee', 'Annulée'),
+        ('expiree', 'Expirée'),
+        ('convertie_contrat', 'Convertie en contrat'),
+    ]
+    
+    # Informations de base
+    unite_locative = models.ForeignKey(
+        UniteLocative,
+        on_delete=models.CASCADE,
+        related_name='reservations',
+        verbose_name=_("Unité locative")
+    )
+    locataire_potentiel = models.ForeignKey(
+        Locataire,
+        on_delete=models.CASCADE,
+        related_name='reservations',
+        verbose_name=_("Locataire potentiel")
+    )
+    
+    # Dates
+    date_reservation = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Date de réservation")
+    )
+    date_debut_souhaitee = models.DateField(
+        verbose_name=_("Date de début souhaitée")
+    )
+    date_fin_prevue = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name=_("Date de fin prévue")
+    )
+    date_expiration = models.DateTimeField(
+        verbose_name=_("Date d'expiration de la réservation"),
+        help_text=_("Date limite pour confirmer la réservation")
+    )
+    
+    # Informations financières
+    montant_reservation = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        verbose_name=_("Montant de réservation"),
+        help_text=_("Montant versé pour réserver l'unité")
+    )
+    
+    # Statut et notes
+    statut = models.CharField(
+        max_length=20,
+        choices=STATUT_CHOICES,
+        default='en_attente',
+        verbose_name=_("Statut")
+    )
+    notes = models.TextField(
+        blank=True,
+        verbose_name=_("Notes"),
+        help_text=_("Notes sur la réservation")
+    )
+    
+    # Métadonnées
+    date_creation = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de création"))
+    date_modification = models.DateTimeField(auto_now=True, verbose_name=_("Date de modification"))
+    cree_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("Créé par")
+    )
+    is_deleted = models.BooleanField(default=False, verbose_name=_("Supprimé logiquement"))
+    
+    class Meta:
+        verbose_name = _("Réservation d'unité")
+        verbose_name_plural = _("Réservations d'unités")
+        ordering = ['-date_reservation']
+    
+    objects = NonDeletedManager()
+    
+    def __str__(self):
+        return f"Réservation {self.unite_locative.numero_unite} - {self.locataire_potentiel.nom}"
+    
+    def est_active(self):
+        """Vérifie si la réservation est encore active."""
+        from django.utils import timezone
+        return (
+            self.statut in ['en_attente', 'confirmee'] and
+            self.date_expiration > timezone.now()
+        )
+    
+    def est_expiree(self):
+        """Vérifie si la réservation a expiré."""
+        from django.utils import timezone
+        return self.date_expiration <= timezone.now()
+    
+    def peut_etre_convertie_en_contrat(self):
+        """Vérifie si la réservation peut être convertie en contrat."""
+        return self.statut == 'confirmee' and self.est_active()
+    
+    def save(self, *args, **kwargs):
+        # Mettre à jour le statut si expiré
+        if self.est_expiree() and self.statut in ['en_attente', 'confirmee']:
+            self.statut = 'expiree'
+        
+        # Mettre à jour le statut de l'unité si nécessaire
+        if self.statut == 'confirmee' and self.unite_locative.statut == 'disponible':
+            self.unite_locative.statut = 'reservee'
+            self.unite_locative.save()
+        elif self.statut in ['annulee', 'expiree'] and self.unite_locative.statut == 'reservee':
+            # Vérifier s'il n'y a pas d'autres réservations actives
+            autres_reservations = ReservationUnite.objects.filter(
+                unite_locative=self.unite_locative,
+                statut__in=['en_attente', 'confirmee']
+            ).exclude(pk=self.pk).exists()
+            
+            if not autres_reservations:
+                self.unite_locative.statut = 'disponible'
+                self.unite_locative.save()
+        
+        super().save(*args, **kwargs)
+
+
 class Piece(models.Model):
     """Modèle pour gérer les pièces individuelles d'une propriété."""
     TYPE_PIECE_CHOICES = [
@@ -959,6 +1525,15 @@ class Piece(models.Model):
         related_name='pieces',
         verbose_name=_("Propriété")
     )
+    unite_locative = models.ForeignKey(
+        UniteLocative,
+        on_delete=models.CASCADE,
+        related_name='pieces',
+        blank=True,
+        null=True,
+        verbose_name=_("Unité locative"),
+        help_text=_("Unité locative à laquelle appartient cette pièce (optionnel)")
+    )
     nom = models.CharField(max_length=100, verbose_name=_("Nom de la pièce"))
     type_piece = models.CharField(
         max_length=20,
@@ -986,6 +1561,29 @@ class Piece(models.Model):
         verbose_name=_("Statut")
     )
     description = models.TextField(blank=True, verbose_name=_("Description"))
+    
+    # Gestion des espaces partagés
+    est_espace_partage = models.BooleanField(
+        default=False,
+        verbose_name=_("Espace partagé"),
+        help_text=_("Cochez si cette pièce est un espace partagé (cuisine, salon commun, etc.)")
+    )
+    acces_inclus_dans_pieces = models.ManyToManyField(
+        'self',
+        through='AccesEspacePartage',
+        symmetrical=False,
+        related_name='espaces_partages_accessibles',
+        blank=True,
+        verbose_name=_("Accès depuis les pièces"),
+        help_text=_("Pièces qui ont accès à cet espace partagé")
+    )
+    cout_acces_mensuel = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Coût d'accès mensuel"),
+        help_text=_("Coût mensuel pour l'accès à cet espace partagé (si applicable)")
+    )
     
     # Métadonnées
     date_creation = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de création"))
@@ -1107,6 +1705,76 @@ class Piece(models.Model):
             'taux_occupation': round(taux_occupation, 2),
             'contrats_actifs': contrats.filter(est_actif=True, est_resilie=False).count()
         }
+    
+    def get_espaces_partages_accessibles(self):
+        """Retourne les espaces partagés accessibles depuis cette pièce."""
+        if self.est_espace_partage:
+            return Piece.objects.none()  # Un espace partagé n'a pas accès à d'autres espaces
+        
+        return Piece.objects.filter(
+            acces_depuis_pieces__piece_privee=self,
+            acces_depuis_pieces__actif=True,
+            est_espace_partage=True
+        ).distinct()
+    
+    def get_pieces_avec_acces(self):
+        """Retourne les pièces qui ont accès à cet espace partagé."""
+        if not self.est_espace_partage:
+            return Piece.objects.none()  # Seuls les espaces partagés peuvent avoir des accès
+        
+        return Piece.objects.filter(
+            acces_espaces_partages__espace_partage=self,
+            acces_espaces_partages__actif=True
+        ).distinct()
+    
+    def calculer_cout_acces_espaces_partages(self, date_reference=None):
+        """Calcule le coût total des accès aux espaces partagés pour cette pièce."""
+        from django.utils import timezone
+        
+        if not date_reference:
+            date_reference = timezone.now().date()
+        
+        acces = AccesEspacePartage.objects.filter(
+            piece_privee=self,
+            actif=True,
+            date_debut_acces__lte=date_reference
+        ).filter(
+            models.Q(date_fin_acces__isnull=True) |
+            models.Q(date_fin_acces__gte=date_reference)
+        )
+        
+        cout_total = 0
+        details_couts = []
+        
+        for acces_obj in acces:
+            cout_acces = acces_obj.get_cout_total_mensuel()
+            cout_total += cout_acces
+            
+            if cout_acces > 0:
+                details_couts.append({
+                    'espace': acces_obj.espace_partage.nom,
+                    'cout': cout_acces,
+                    'inclus': acces_obj.acces_inclus
+                })
+        
+        return {
+            'cout_total': cout_total,
+            'details': details_couts
+        }
+    
+    def peut_etre_louee_individuellement(self):
+        """Vérifie si cette pièce peut être louée individuellement."""
+        if self.est_espace_partage:
+            return False  # Les espaces partagés ne peuvent pas être loués individuellement
+        
+        # Vérifier si la pièce a accès aux espaces essentiels (cuisine, salle de bain)
+        espaces_accessibles = self.get_espaces_partages_accessibles()
+        types_espaces_accessibles = set(espaces_accessibles.values_list('type_piece', flat=True))
+        
+        # Au minimum, accès à une cuisine et une salle de bain
+        espaces_essentiels = {'cuisine', 'salle_bain'}
+        
+        return espaces_essentiels.issubset(types_espaces_accessibles)
 
 
 class PieceContrat(models.Model):
@@ -1194,3 +1862,358 @@ class PieceContrat(models.Model):
         loyer = self.loyer_piece or 0
         charges = self.charges_piece or 0
         return loyer + charges
+
+
+class ChargeCommune(models.Model):
+    """Modèle pour gérer les charges communes d'une propriété."""
+    
+    TYPE_REPARTITION_CHOICES = [
+        ('surface', 'Répartition par surface'),
+        ('nb_occupants', 'Répartition par nombre d\'occupants'),
+        ('equipartition', 'Répartition équitable'),
+        ('personnalisee', 'Répartition personnalisée'),
+    ]
+    
+    TYPE_CHARGE_CHOICES = [
+        ('electricite', 'Électricité'),
+        ('eau', 'Eau'),
+        ('gaz', 'Gaz'),
+        ('internet', 'Internet'),
+        ('entretien', 'Entretien'),
+        ('assurance', 'Assurance'),
+        ('taxes', 'Taxes'),
+        ('gardiennage', 'Gardiennage'),
+        ('nettoyage', 'Nettoyage'),
+        ('autre', 'Autre'),
+    ]
+    
+    # Informations de base
+    propriete = models.ForeignKey(
+        Propriete,
+        on_delete=models.CASCADE,
+        related_name='charges_communes',
+        verbose_name=_("Propriété")
+    )
+    nom = models.CharField(max_length=100, verbose_name=_("Nom de la charge"))
+    type_charge = models.CharField(
+        max_length=20,
+        choices=TYPE_CHARGE_CHOICES,
+        verbose_name=_("Type de charge")
+    )
+    description = models.TextField(blank=True, verbose_name=_("Description"))
+    
+    # Montant et répartition
+    montant_mensuel = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name=_("Montant mensuel total")
+    )
+    type_repartition = models.CharField(
+        max_length=20,
+        choices=TYPE_REPARTITION_CHOICES,
+        default='equipartition',
+        verbose_name=_("Type de répartition")
+    )
+    
+    # Périodes d'application
+    date_debut = models.DateField(verbose_name=_("Date de début"))
+    date_fin = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name=_("Date de fin")
+    )
+    
+    # Statut
+    active = models.BooleanField(default=True, verbose_name=_("Active"))
+    
+    # Métadonnées
+    date_creation = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de création"))
+    date_modification = models.DateTimeField(auto_now=True, verbose_name=_("Date de modification"))
+    is_deleted = models.BooleanField(default=False, verbose_name=_("Supprimé logiquement"))
+    
+    objects = NonDeletedManager()
+    
+    class Meta:
+        verbose_name = _("Charge commune")
+        verbose_name_plural = _("Charges communes")
+        ordering = ['-date_creation']
+    
+    def __str__(self):
+        return f"{self.nom} - {self.propriete.titre}"
+    
+    def est_active(self, date_reference=None):
+        """Vérifie si la charge est active à une date donnée."""
+        from django.utils import timezone
+        
+        if not self.active:
+            return False
+        
+        if not date_reference:
+            date_reference = timezone.now().date()
+        
+        if self.date_debut > date_reference:
+            return False
+        
+        if self.date_fin and self.date_fin < date_reference:
+            return False
+        
+        return True
+    
+    def calculer_repartition(self, date_reference=None):
+        """
+        Calcule la répartition de cette charge entre les locataires de pièces.
+        Retourne un dictionnaire avec les montants par contrat/pièce.
+        """
+        from django.utils import timezone
+        
+        if not date_reference:
+            date_reference = timezone.now().date()
+        
+        if not self.est_active(date_reference):
+            return {}
+        
+        # Récupérer les pièces occupées à cette date
+        pieces_occupees = PieceContrat.objects.filter(
+            piece__propriete=self.propriete,
+            actif=True,
+            date_debut_occupation__lte=date_reference,
+            contrat__est_actif=True,
+            contrat__est_resilie=False
+        ).filter(
+            models.Q(date_fin_occupation__isnull=True) |
+            models.Q(date_fin_occupation__gte=date_reference)
+        ).select_related('piece', 'contrat', 'contrat__locataire')
+        
+        if not pieces_occupees.exists():
+            return {}
+        
+        repartition = {}
+        
+        if self.type_repartition == 'equipartition':
+            # Répartition équitable
+            montant_par_piece = float(self.montant_mensuel) / pieces_occupees.count()
+            for piece_contrat in pieces_occupees:
+                repartition[piece_contrat.id] = {
+                    'piece_contrat': piece_contrat,
+                    'montant': montant_par_piece,
+                    'base_calcul': 'équipartition'
+                }
+        
+        elif self.type_repartition == 'surface':
+            # Répartition par surface
+            surface_totale = sum(
+                float(pc.piece.surface) if pc.piece.surface else 0 
+                for pc in pieces_occupees
+            )
+            
+            if surface_totale > 0:
+                for piece_contrat in pieces_occupees:
+                    surface_piece = float(piece_contrat.piece.surface) if piece_contrat.piece.surface else 0
+                    proportion = surface_piece / surface_totale
+                    montant = float(self.montant_mensuel) * proportion
+                    repartition[piece_contrat.id] = {
+                        'piece_contrat': piece_contrat,
+                        'montant': montant,
+                        'base_calcul': f'surface ({surface_piece} m²)'
+                    }
+        
+        elif self.type_repartition == 'nb_occupants':
+            # Répartition par nombre d'occupants (1 par contrat pour simplifier)
+            nb_occupants = pieces_occupees.count()
+            montant_par_occupant = float(self.montant_mensuel) / nb_occupants
+            for piece_contrat in pieces_occupees:
+                repartition[piece_contrat.id] = {
+                    'piece_contrat': piece_contrat,
+                    'montant': montant_par_occupant,
+                    'base_calcul': '1 occupant'
+                }
+        
+        return repartition
+    
+    def get_montant_pour_piece_contrat(self, piece_contrat, date_reference=None):
+        """Retourne le montant de cette charge pour une pièce-contrat spécifique."""
+        repartition = self.calculer_repartition(date_reference)
+        return repartition.get(piece_contrat.id, {}).get('montant', 0)
+
+
+class RepartitionChargeCommune(models.Model):
+    """Modèle pour stocker les répartitions calculées des charges communes."""
+    
+    charge_commune = models.ForeignKey(
+        ChargeCommune,
+        on_delete=models.CASCADE,
+        related_name='repartitions',
+        verbose_name=_("Charge commune")
+    )
+    piece_contrat = models.ForeignKey(
+        PieceContrat,
+        on_delete=models.CASCADE,
+        related_name='charges_communes_reparties',
+        verbose_name=_("Pièce-Contrat")
+    )
+    
+    # Montants
+    montant_calcule = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name=_("Montant calculé")
+    )
+    montant_ajuste = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        verbose_name=_("Montant ajusté manuellement")
+    )
+    
+    # Période d'application
+    mois = models.PositiveIntegerField(verbose_name=_("Mois"))
+    annee = models.PositiveIntegerField(verbose_name=_("Année"))
+    
+    # Informations de calcul
+    base_calcul = models.CharField(
+        max_length=100,
+        verbose_name=_("Base de calcul")
+    )
+    date_calcul = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de calcul"))
+    
+    # Statut
+    applique = models.BooleanField(default=False, verbose_name=_("Appliqué au contrat"))
+    date_application = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name=_("Date d'application")
+    )
+    
+    class Meta:
+        verbose_name = _("Répartition charge commune")
+        verbose_name_plural = _("Répartitions charges communes")
+        unique_together = ['charge_commune', 'piece_contrat', 'mois', 'annee']
+        ordering = ['-annee', '-mois']
+    
+    def __str__(self):
+        return f"{self.charge_commune.nom} - {self.piece_contrat} - {self.mois}/{self.annee}"
+    
+    def get_montant_final(self):
+        """Retourne le montant final (ajusté si disponible, sinon calculé)."""
+        return self.montant_ajuste if self.montant_ajuste is not None else self.montant_calcule
+
+
+class AccesEspacePartage(models.Model):
+    """Modèle pour gérer les accès aux espaces partagés depuis les pièces privées."""
+    
+    piece_privee = models.ForeignKey(
+        Piece,
+        on_delete=models.CASCADE,
+        related_name='acces_espaces_partages',
+        verbose_name=_("Pièce privée")
+    )
+    espace_partage = models.ForeignKey(
+        Piece,
+        on_delete=models.CASCADE,
+        related_name='acces_depuis_pieces',
+        verbose_name=_("Espace partagé")
+    )
+    
+    # Conditions d'accès
+    acces_inclus = models.BooleanField(
+        default=True,
+        verbose_name=_("Accès inclus"),
+        help_text=_("L'accès à cet espace est-il inclus dans le loyer de la pièce ?")
+    )
+    cout_supplementaire = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Coût supplémentaire mensuel"),
+        help_text=_("Coût supplémentaire mensuel pour l'accès (si non inclus)")
+    )
+    
+    # Restrictions d'usage
+    heures_acces_debut = models.TimeField(
+        blank=True,
+        null=True,
+        verbose_name=_("Heure de début d'accès"),
+        help_text=_("Heure de début d'accès autorisé (optionnel)")
+    )
+    heures_acces_fin = models.TimeField(
+        blank=True,
+        null=True,
+        verbose_name=_("Heure de fin d'accès"),
+        help_text=_("Heure de fin d'accès autorisé (optionnel)")
+    )
+    jours_acces = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_("Jours d'accès"),
+        help_text=_("Jours de la semaine autorisés (ex: Lun-Ven, Weekend, etc.)")
+    )
+    
+    # Dates d'activation
+    date_debut_acces = models.DateField(verbose_name=_("Date de début d'accès"))
+    date_fin_acces = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name=_("Date de fin d'accès")
+    )
+    
+    # Statut
+    actif = models.BooleanField(default=True, verbose_name=_("Actif"))
+    
+    # Métadonnées
+    date_creation = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de création"))
+    date_modification = models.DateTimeField(auto_now=True, verbose_name=_("Date de modification"))
+    
+    class Meta:
+        verbose_name = _("Accès espace partagé")
+        verbose_name_plural = _("Accès espaces partagés")
+        unique_together = ['piece_privee', 'espace_partage']
+        ordering = ['-date_creation']
+    
+    def __str__(self):
+        return f"{self.piece_privee.nom} → {self.espace_partage.nom}"
+    
+    def est_actif(self, date_reference=None):
+        """Vérifie si l'accès est actif à une date donnée."""
+        from django.utils import timezone
+        
+        if not self.actif:
+            return False
+        
+        if not date_reference:
+            date_reference = timezone.now().date()
+        
+        if self.date_debut_acces > date_reference:
+            return False
+        
+        if self.date_fin_acces and self.date_fin_acces < date_reference:
+            return False
+        
+        return True
+    
+    def get_cout_total_mensuel(self):
+        """Retourne le coût total mensuel pour cet accès."""
+        cout_base = float(self.espace_partage.cout_acces_mensuel) if self.espace_partage.cout_acces_mensuel else 0
+        cout_supplementaire = float(self.cout_supplementaire) if self.cout_supplementaire else 0
+        
+        if self.acces_inclus:
+            return cout_supplementaire  # Seul le coût supplémentaire est facturé
+        else:
+            return cout_base + cout_supplementaire  # Coût total
+    
+    def clean(self):
+        """Validation personnalisée."""
+        from django.core.exceptions import ValidationError
+        
+        if self.piece_privee == self.espace_partage:
+            raise ValidationError("Une pièce ne peut pas avoir accès à elle-même.")
+        
+        if not self.espace_partage.est_espace_partage:
+            raise ValidationError("L'espace de destination doit être marqué comme espace partagé.")
+        
+        if self.piece_privee.est_espace_partage:
+            raise ValidationError("Une pièce marquée comme espace partagé ne peut pas avoir d'accès à d'autres espaces.")
+    
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)

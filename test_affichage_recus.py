@@ -292,7 +292,7 @@ def main():
         print(f"\n📊 Statistiques:")
         print(f"   - Paiement créé: ID {paiement.id}")
         print(f"   - Reçu généré: {recu.numero_recu}")
-        print(f"   - Montant: {paiement.montant} XOF")
+        print(f"   - Montant: {paiement.montant} F CFA")
         print(f"   - Statut reçu: {'Validé' if recu.valide else 'En attente'}")
         
         print("\n🚀 Le système d'affichage des reçus fonctionne parfaitement!")

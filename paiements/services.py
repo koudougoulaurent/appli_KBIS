@@ -192,7 +192,7 @@ class PDFGeneratorService:
         
         # Tableau des totaux
         data = [
-            ['Description', 'Montant (€)'],
+            ['Description', 'Montant (F CFA)'],
             ['Total des loyers bruts', f"{self.recap.total_loyers_bruts:.2f}"],
             ['Total des charges déductibles', f"{self.recap.total_charges_deductibles:.2f}"],
             ['', ''],
@@ -223,7 +223,7 @@ class PDFGeneratorService:
         story.append(Paragraph("DÉTAILS DES PROPRIÉTÉS", self.styles['CustomSubtitle']))
         
         # Récupérer les propriétés actives du bailleur
-        proprietes_actives = self.recap.bailleur.propriete_set.filter(
+        proprietes_actives = self.recap.bailleur.proprietes.filter(
             contrats__est_actif=True,
             contrats__est_resilie=False
         ).distinct()
@@ -241,11 +241,11 @@ class PDFGeneratorService:
                         self.styles['CustomNormal']
                     ))
                     story.append(Paragraph(
-                        f"<b>Loyer mensuel:</b> {contrat_actif.loyer_mensuel:.2f} €",
+                        f"<b>Loyer mensuel:</b> {contrat_actif.loyer_mensuel:.0f} F CFA",
                         self.styles['CustomNormal']
                     ))
                     story.append(Paragraph(
-                        f"<b>Charges mensuelles:</b> {contrat_actif.charges_mensuelles:.2f} €",
+                        f"<b>Charges mensuelles:</b> {contrat_actif.charges_mensuelles:.0f} F CFA",
                         self.styles['CustomNormal']
                     ))
                     story.append(Spacer(1, 10))
@@ -267,9 +267,9 @@ class PDFGeneratorService:
         # Tableau des garanties
         data = [
             ['Type de garantie', 'Montant requis', 'Montant versé', 'Statut'],
-            ['Cautions', f"{self.recap.total_cautions_requises:.2f} €", f"{self.recap.total_cautions_versees:.2f} €", 
+            ['Cautions', f"{self.recap.total_cautions_requises:.0f} F CFA", f"{self.recap.total_cautions_versees:.0f} F CFA", 
              "✅ Suffisant" if self.recap.total_cautions_versees >= self.recap.total_cautions_requises else "❌ Insuffisant"],
-            ['Avances', f"{self.recap.total_avances_requises:.2f} €", f"{self.recap.total_avances_versees:.2f} €",
+            ['Avances', f"{self.recap.total_avances_requises:.0f} F CFA", f"{self.recap.total_avances_versees:.0f} F CFA",
              "✅ Suffisant" if self.recap.total_avances_versees >= self.recap.total_avances_requises else "❌ Insuffisant"]
         ]
         

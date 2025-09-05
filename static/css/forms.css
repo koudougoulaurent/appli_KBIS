@@ -57,6 +57,12 @@
     background: var(--white);
     color: var(--dark-color);
     font-weight: var(--font-weight-normal);
+    box-shadow: var(--shadow-sm);
+}
+
+.form-control:hover, .form-select:hover {
+    border-color: var(--primary-light);
+    box-shadow: var(--shadow-md);
 }
 
 .form-control:focus, .form-select:focus {
@@ -152,6 +158,15 @@
     font-weight: var(--font-weight-medium);
     transition: all 0.3s ease;
     border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn:hover {
+    box-shadow: var(--shadow-md);
 }
 
 .btn i {
@@ -165,8 +180,8 @@
 
 .btn-primary:hover {
     background-color: var(--primary-dark);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
 }
 
 .btn-success {
@@ -176,8 +191,8 @@
 
 .btn-success:hover {
     background-color: var(--success-dark);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
 }
 
 .btn-warning {
@@ -187,8 +202,8 @@
 
 .btn-warning:hover {
     background-color: var(--warning-dark);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
 }
 
 .btn-secondary {
@@ -198,8 +213,8 @@
 
 .btn-secondary:hover {
     background-color: #475569;
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
 }
 
 .btn-outline-primary {
@@ -211,8 +226,8 @@
 .btn-outline-primary:hover {
     background-color: var(--primary-color);
     color: var(--white);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
 }
 
 .btn-outline-secondary {
@@ -224,8 +239,8 @@
 .btn-outline-secondary:hover {
     background-color: var(--secondary-color);
     color: var(--white);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
 }
 
 .help-section {

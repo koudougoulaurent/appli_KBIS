@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reçu de Récapitulatif - {{ recu.numero_recu }}</title>
+    <style>
+        /* Styles pour impression A4 Paysage */
+        @page {
+            size: A4 landscape;
+            margin: 1.5cm;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #333;
+            background: white;
+        }
+        
+        /* En-tête principal */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2cm;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 1cm;
+        }
+        
+        .logo-section {
+            flex: 1;
+        }
+        
+        .logo {
+            font-size: 24pt;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 0.5cm;
+        }
+        
+        .entreprise-info {
+            font-size: 10pt;
+            color: #666;
+            line-height: 1.3;
+        }
+        
+        .document-info {
+            text-align: right;
+            flex: 1;
+        }
+        
+        .document-title {
+            font-size: 20pt;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 0.5cm;
+            text-transform: uppercase;
+        }
+        
+        .document-subtitle {
+            font-size: 12pt;
+            color: #666;
+            margin-bottom: 0.3cm;
+        }
+        
+        .document-number {
+            font-size: 11pt;
+            color: #333;
+            font-weight: bold;
+        }
+        
+        /* Section bailleur */
+        .bailleur-section {
+            margin-bottom: 1.5cm;
+            padding: 1cm;
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+        }
+        
+        .section-title {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 0.5cm;
+            text-transform: uppercase;
+        }
+        
+        .bailleur-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1cm;
+        }
+        
+        .info-group {
+            margin-bottom: 0.5cm;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #555;
+            font-size: 10pt;
+        }
+        
+        .info-value {
+            color: #333;
+            font-size: 11pt;
+            margin-top: 0.2cm;
+        }
+        
+        /* Section récapitulatif */
+        .recapitulatif-section {
+            margin-bottom: 1.5cm;
+        }
+        
+        .recap-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 1cm;
+            margin-top: 0.5cm;
+        }
+        
+        .recap-item {
+            text-align: center;
+            padding: 0.8cm;
+            background: #fff;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+        }
+        
+        .recap-value {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 0.3cm;
+        }
+        
+        .recap-label {
+            font-size: 10pt;
+            color: #666;
+            text-transform: uppercase;
+        }
+        
+        .recap-item.primary { border-color: #3498db; }
+        .recap-item.success { border-color: #27ae60; }
+        .recap-item.warning { border-color: #f39c12; }
+        .recap-item.danger { border-color: #e74c3c; }
+        
+        /* Tableau des propriétés */
+        .proprietes-section {
+            margin-bottom: 1.5cm;
+        }
+        
+        .proprietes-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.5cm;
+            font-size: 10pt;
+        }
+        
+        .proprietes-table th {
+            background: #2c3e50;
+            color: white;
+            padding: 0.5cm;
+            text-align: left;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .proprietes-table td {
+            padding: 0.4cm;
+            border-bottom: 1px solid #ddd;
+            vertical-align: top;
+        }
+        
+        .proprietes-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .proprietes-table tr:hover {
+            background: #e3f2fd;
+        }
+        
+        /* Section totaux */
+        .totaux-section {
+            margin-bottom: 1.5cm;
+            padding: 1cm;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .totaux-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1cm;
+            margin-top: 0.5cm;
+        }
+        
+        .total-item {
+            text-align: center;
+            padding: 0.8cm;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .total-value {
+            font-size: 18pt;
+            font-weight: bold;
+            margin-bottom: 0.3cm;
+        }
+        
+        .total-label {
+            font-size: 11pt;
+            color: #666;
+            text-transform: uppercase;
+        }
+        
+        .total-item.loyers .total-value { color: #3498db; }
+        .total-item.charges .total-value { color: #f39c12; }
+        .total-item.net .total-value { color: #27ae60; }
+        
+        /* Pied de page */
+        .footer {
+            margin-top: 2cm;
+            padding-top: 1cm;
+            border-top: 2px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        
+        .signature-section {
+            text-align: center;
+            flex: 1;
+        }
+        
+        .signature-line {
+            border-bottom: 1px solid #333;
+            width: 6cm;
+            margin: 0 auto 0.3cm;
+            height: 1cm;
+        }
+        
+        .signature-label {
+            font-size: 10pt;
+            color: #666;
+        }
+        
+        .document-info-footer {
+            text-align: right;
+            flex: 1;
+            font-size: 9pt;
+            color: #666;
+        }
+        
+        .hash-info {
+            margin-top: 0.5cm;
+            font-size: 8pt;
+            color: #999;
+            font-family: monospace;
+        }
+        
+        /* Responsive pour impression */
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+        }
+        
+        /* Styles pour les statuts */
+        .statut-badge {
+            display: inline-block;
+            padding: 0.2cm 0.5cm;
+            border-radius: 4px;
+            font-size: 9pt;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .statut-valide { background: #d4edda; color: #155724; }
+        .statut-imprime { background: #cce5ff; color: #004085; }
+        .statut-envoye { background: #fff3cd; color: #856404; }
+        .statut-archive { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <!-- En-tête principal -->
+    <div class="header">
+        <div class="logo-section">
+            <div class="logo">RENTILA</div>
+            <div class="entreprise-info">
+                <strong>Agence Immobilière Professionnelle</strong><br>
+                123 Avenue de la République<br>
+                Ouagadougou, Burkina Faso<br>
+                Tél: +226 25 30 60 70<br>
+                Email: contact@rentila.bf<br>
+                Site: www.rentila.bf
+            </div>
+        </div>
+        
+        <div class="document-info">
+            <div class="document-title">Reçu de Récapitulatif</div>
+            <div class="document-subtitle">{{ recu.get_type_recu_display }}</div>
+            <div class="document-number">N° {{ recu.numero_recu }}</div>
+            <div style="margin-top: 0.5cm;">
+                <span class="statut-badge statut-{{ recu.statut }}">
+                    {{ recu.get_statut_display }}
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Section bailleur -->
+    <div class="bailleur-section">
+        <div class="section-title">Informations du Bailleur</div>
+        <div class="bailleur-info">
+            <div>
+                <div class="info-group">
+                    <div class="info-label">Nom complet</div>
+                    <div class="info-value">{{ recu.recapitulatif.bailleur.get_nom_complet }}</div>
+                </div>
+                <div class="info-group">
+                    <div class="info-label">Téléphone</div>
+                    <div class="info-value">{{ recu.recapitulatif.bailleur.telephone|default:"Non renseigné" }}</div>
+                </div>
+                <div class="info-group">
+                    <div class="info-label">Email</div>
+                    <div class="info-value">{{ recu.recapitulatif.bailleur.email|default:"Non renseigné" }}</div>
+                </div>
+            </div>
+            <div>
+                <div class="info-group">
+                    <div class="info-label">Adresse</div>
+                    <div class="info-value">{{ recu.recapitulatif.bailleur.adresse|default:"Non renseignée" }}</div>
+                </div>
+                <div class="info-group">
+                    <div class="info-label">Ville</div>
+                    <div class="info-value">{{ recu.recapitulatif.bailleur.ville|default:"Non renseignée" }}</div>
+                </div>
+                <div class="info-group">
+                    <div class="info-label">Code postal</div>
+                    <div class="info-value">{{ recu.recapitulatif.bailleur.code_postal|default:"Non renseigné" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Section récapitulatif -->
+    <div class="recapitulatif-section">
+        <div class="section-title">Récapitulatif Mensuel - {{ recu.recapitulatif.mois_recapitulatif|date:"F Y" }}</div>
+        <div class="recap-grid">
+            <div class="recap-item primary">
+                <div class="recap-value">{{ totaux.nombre_proprietes }}</div>
+                <div class="recap-label">Propriétés Louées</div>
+            </div>
+            <div class="recap-item success">
+                <div class="recap-value">{{ totaux.total_loyers_bruts|floatformat:0 }} F CFA</div>
+                <div class="recap-label">Loyers Attendus</div>
+            </div>
+            <div class="recap-item warning">
+                <div class="recap-value">{{ totaux.total_charges_deductibles|floatformat:0 }} F CFA</div>
+                <div class="recap-label">Charges Déductibles</div>
+            </div>
+            <div class="recap-item danger">
+                <div class="recap-value">{{ totaux.total_net_a_payer|floatformat:0 }} F CFA</div>
+                <div class="recap-label">Montant Net</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tableau des propriétés -->
+    <div class="proprietes-section">
+        <div class="section-title">Détail des Propriétés</div>
+        <table class="proprietes-table">
+            <thead>
+                <tr>
+                    <th>Propriété</th>
+                    <th>Unité locative</th>
+                    <th>Contrat</th>
+                    <th>Locataire</th>
+                    <th>Bailleur</th>
+                    <th>Loyer Mensuel</th>
+                    <th>Charges</th>
+                    <th>Loyers Attendus</th>
+                    <th>Charges Déductibles</th>
+                    <th>Montant Net</th>
+                    <th>Période</th>
+                    <th>Mode paiement</th>
+                    <th>Statut</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for detail in totaux.details_proprietes %}
+                <tr>
+                    <td>
+                        <strong>{{ detail.propriete.nom }}</strong><br>
+                        <span class="text-muted">Adresse: {{ detail.propriete.adresse }}</span><br>
+                        <small>{{ detail.propriete.ville }}</small>
+                    </td>
+                    <td>
+                        {% if detail.unite_locative %}
+                            <strong>{{ detail.unite_locative.nom }}</strong><br>
+                            <span class="text-muted">Type: {{ detail.unite_locative.type_unite }} | Surface: {{ detail.unite_locative.surface }} m²</span>
+                        {% else %}
+                            <span class="text-muted">Aucune unité</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <strong>N° {{ detail.contrat.numero_contrat }}</strong><br>
+                        <span class="text-muted">Début: {{ detail.contrat.date_debut|date:"d/m/Y" }}<br>Fin: {{ detail.contrat.date_fin|date:"d/m/Y" }}</span>
+                    </td>
+                    <td>{{ detail.locataire.get_nom_complet }}</td>
+                    <td>{{ detail.propriete.bailleur.get_nom_complet }}</td>
+                    <td>{{ detail.contrat.loyer_mensuel|floatformat:0 }} F CFA</td>
+                    <td>{{ detail.contrat.charges_mensuelles|floatformat:0 }} F CFA</td>
+                    <td>{{ detail.loyers_bruts|floatformat:0 }} F CFA</td>
+                    <td>{{ detail.charges_deductibles|floatformat:0 }} F CFA</td>
+                    <td><strong>{{ detail.montant_net|floatformat:0 }} F CFA</strong></td>
+                    <td>{{ detail.periode|default:recu.recapitulatif.mois_recapitulatif|date:"F Y" }}</td>
+                    <td>{{ detail.mode_paiement|default:"-" }}</td>
+                    <td>
+                        <span class="statut-badge statut-{{ detail.statut|default:recu.statut }}">
+                            {{ detail.get_statut_display|default:recu.get_statut_display }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Section totaux -->
+    <div class="totaux-section">
+        <div class="section-title">Résumé Financier</div>
+        <div class="totaux-grid">
+            <div class="total-item loyers">
+                <div class="total-value">{{ totaux.total_loyers_bruts|floatformat:0 }} F CFA</div>
+                <div class="total-label">Total Loyers Attendus</div>
+            </div>
+            <div class="total-item charges">
+                <div class="total-value">{{ totaux.total_charges_deductibles|floatformat:0 }} F CFA</div>
+                <div class="total-label">Total Charges Déductibles</div>
+            </div>
+            <div class="total-item net">
+                <div class="total-value">{{ totaux.total_net_a_payer|floatformat:0 }} F CFA</div>
+                <div class="total-label">Montant Net à Payer</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pied de page -->
+    <div class="footer">
+        <div class="signature-section">
+            <div class="signature-line"></div>
+            <div class="signature-label">Signature du Gestionnaire</div>
+        </div>
+        
+        <div class="document-info-footer">
+            <div><strong>Date d'émission:</strong> {{ recu.date_creation|date:"d/m/Y H:i" }}</div>
+            {% if recu.date_impression %}
+            <div><strong>Date d'impression:</strong> {{ recu.date_impression|date:"d/m/Y H:i" }}</div>
+            {% endif %}
+            {% if recu.imprime_par %}
+            <div><strong>Imprimé par:</strong> {{ recu.imprime_par.get_full_name }}</div>
+            {% endif %}
+            <div><strong>Template:</strong> {{ recu.get_template_utilise_display }}</div>
+            <div><strong>Format:</strong> {{ recu.get_format_impression_display }}</div>
+            {% if recu.hash_securite %}
+            <div class="hash-info">
+                <strong>Hash de sécurité:</strong> {{ recu.hash_securite|slice:":16" }}...
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Notes -->
+    {% if recu.notes %}
+    <div style="margin-top: 1cm; padding: 0.5cm; background: #fff3cd; border-left: 4px solid #ffc107; font-size: 10pt;">
+        <strong>Notes:</strong> {{ recu.notes }}
+    </div>
+    {% endif %}
+</body>
+</html>

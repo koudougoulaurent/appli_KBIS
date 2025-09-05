@@ -35,7 +35,7 @@ def test_recus_simple():
     # Vérifier quelques reçus
     print(f"\n📄 EXEMPLES DE REÇUS:")
     for i, recu in enumerate(Recu.objects.all()[:5], 1):
-        print(f"   {i}. {recu.numero_recu} - Paiement ID: {recu.paiement.id} - {recu.paiement.montant} XOF")
+        print(f"   {i}. {recu.numero_recu} - Paiement ID: {recu.paiement.id} - {recu.paiement.montant} F CFA")
     
     # Vérifier qu'il n'y a plus de paiements sans reçus
     paiements_sans_recus = Paiement.objects.filter(recu__isnull=True).count()

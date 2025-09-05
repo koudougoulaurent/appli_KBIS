@@ -18,8 +18,15 @@
     <div class="row mb-4">
         <div class="col-md-2">
             <div class="stat-card primary">
+                <div class="stat-number">{{ propriete.nombre_pieces }}</div>
+                <div class="stat-label">Pièces Réelles</div>
+                <div class="stat-icon"><i class="bi bi-house-door"></i></div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card primary">
                 <div class="stat-number">{{ stats.total_pieces }}</div>
-                <div class="stat-label">Total Pièces</div>
+                <div class="stat-label">Pièces Créées</div>
                 <div class="stat-icon"><i class="bi bi-grid-3x3-gap"></i></div>
             </div>
         </div>
@@ -75,9 +82,15 @@
                         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#creerPiecesAutoModal">
                             <i class="bi bi-magic"></i> Créer Automatiquement
                         </button>
-                        <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#planifierRenovationModal">
-                            <i class="bi bi-tools"></i> Planifier Rénovation
-                        </button>
+                        {% if pieces.exists %}
+                            <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#planifierRenovationModal">
+                                <i class="bi bi-tools"></i> Planifier Rénovation
+                            </button>
+                        {% else %}
+                            <button class="btn btn-info" disabled title="Aucune pièce disponible">
+                                <i class="bi bi-tools"></i> Planifier Rénovation
+                            </button>
+                        {% endif %}
                         <button class="btn btn-warning" onclick="exporterPieces()">
                             <i class="bi bi-download"></i> Exporter
                         </button>
@@ -262,7 +275,7 @@
                 <h5 class="modal-title">Créer une nouvelle pièce</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{% url 'proprietes:creer_piece' propriete.pk %}">
+            <form method="POST" action="{% url 'proprietes:creer_piece' propriete.pk %}" id="creerPieceForm">
                 {% csrf_token %}
                 <div class="modal-body">
                     <div class="row">
@@ -333,10 +346,16 @@
             <div class="modal-body">
                 <p>Cette action va créer automatiquement les pièces suivantes basées sur les caractéristiques de la propriété :</p>
                 <ul>
-                    <li><strong>{{ propriete.nombre_chambres }} chambre(s)</strong></li>
-                    <li><strong>1 salon</strong> (si applicable)</li>
+                    {% if propriete.nombre_chambres > 0 %}
+                        <li><strong>{{ propriete.nombre_chambres }} chambre(s)</strong></li>
+                    {% endif %}
+                    {% if propriete.nombre_pieces > propriete.nombre_chambres %}
+                        <li><strong>1 salon</strong></li>
+                    {% endif %}
                     <li><strong>1 cuisine</strong></li>
-                    <li><strong>{{ propriete.nombre_salles_bain }} salle(s) de bain</strong></li>
+                    {% if propriete.nombre_salles_bain > 0 %}
+                        <li><strong>{{ propriete.nombre_salles_bain }} salle(s) de bain</strong></li>
+                    {% endif %}
                     <li><strong>1 toilettes</strong></li>
                     <li><strong>1 couloir</strong></li>
                     {% if propriete.balcon %}<li><strong>1 balcon</strong></li>{% endif %}
@@ -370,17 +389,26 @@
             <form method="POST" action="{% url 'proprietes:planifier_renovation' propriete.pk %}">
                 {% csrf_token %}
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Pièces à rénover *</label>
-                        <select name="pieces" class="form-select" multiple required>
-                            {% for piece in pieces %}
-                                {% if piece.statut == 'disponible' %}
-                                    <option value="{{ piece.pk }}">{{ piece.nom }} ({{ piece.get_type_piece_display }})</option>
-                                {% endif %}
-                            {% endfor %}
-                        </select>
-                        <div class="form-text">Sélectionnez les pièces à mettre en rénovation</div>
-                    </div>
+                    {% with pieces_disponibles=pieces|dictsort:"nom" %}
+                        {% if pieces_disponibles %}
+                            <div class="mb-3">
+                                <label class="form-label">Pièces à rénover *</label>
+                                <select name="pieces" class="form-select" multiple required>
+                                    {% for piece in pieces_disponibles %}
+                                        {% if piece.statut == 'disponible' %}
+                                            <option value="{{ piece.pk }}">{{ piece.nom }} ({{ piece.get_type_piece_display }})</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Sélectionnez les pièces à mettre en rénovation</div>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                Aucune pièce disponible pour la rénovation. Veuillez d'abord créer des pièces.
+                            </div>
+                        {% endif %}
+                    {% endwith %}
                     <div class="mb-3">
                         <label class="form-label">Date de début de rénovation *</label>
                         <input type="date" name="date_debut_renovation" class="form-control" required>
@@ -396,7 +424,13 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-warning">Planifier la rénovation</button>
+                    {% with pieces_disponibles=pieces|dictsort:"nom" %}
+                        {% if pieces_disponibles %}
+                            <button type="submit" class="btn btn-warning">Planifier la rénovation</button>
+                        {% else %}
+                            <button type="button" class="btn btn-warning" disabled>Planifier la rénovation</button>
+                        {% endif %}
+                    {% endwith %}
                 </div>
             </form>
         </div>
@@ -414,7 +448,24 @@ function modifierPiece(pieceId) {
 }
 
 function louerPiece(pieceId) {
-    window.location.href = `/contrats/creer/?piece=${pieceId}`;
+    window.location.href = `/contrats/ajouter/?piece=${pieceId}`;
+}
+
+// Fonction pour obtenir le cookie CSRF
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 
 function libererPiece(pieceId) {
@@ -422,7 +473,7 @@ function libererPiece(pieceId) {
         fetch(`/proprietes/piece/${pieceId}/liberer/`, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'X-CSRFToken': getCookie('csrftoken'),
             },
         })
         .then(response => response.json())
@@ -444,8 +495,40 @@ function exporterPieces() {
     window.location.href = `/proprietes/${propriete.pk}/pieces/export/`;
 }
 
-// Mise à jour dynamique des pièces disponibles lors du changement de propriété
+// Validation du formulaire de création de pièce
 document.addEventListener('DOMContentLoaded', function() {
+    const creerPieceForm = document.getElementById('creerPieceForm');
+    if (creerPieceForm) {
+        creerPieceForm.addEventListener('submit', function(e) {
+            const nom = creerPieceForm.querySelector('input[name="nom"]').value.trim();
+            const typePiece = creerPieceForm.querySelector('select[name="type_piece"]').value;
+            
+            if (!nom) {
+                alert('Veuillez entrer un nom pour la pièce.');
+                e.preventDefault();
+                return false;
+            }
+            
+            if (!typePiece) {
+                alert('Veuillez sélectionner un type de pièce.');
+                e.preventDefault();
+                return false;
+            }
+            
+            // Validation de la surface si renseignée
+            const surfaceInput = creerPieceForm.querySelector('input[name="surface"]');
+            if (surfaceInput && surfaceInput.value) {
+                const surface = parseFloat(surfaceInput.value);
+                if (isNaN(surface) || surface <= 0) {
+                    alert('Veuillez entrer une surface valide (nombre positif).');
+                    e.preventDefault();
+                    return false;
+                }
+            }
+        });
+    }
+    
+    // Mise à jour dynamique des pièces disponibles lors du changement de propriété
     const proprieteSelect = document.querySelector('select[name="propriete"]');
     if (proprieteSelect) {
         proprieteSelect.addEventListener('change', function() {
@@ -464,6 +547,25 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                     });
             }
+        });
+    }
+    
+    // Soumission automatique du formulaire de filtres lors d'un changement
+    const filtresForm = document.querySelector('form.row.g-3');
+    if (filtresForm) {
+        const filtresInputs = filtresForm.querySelectorAll('select, input');
+        filtresInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                // Pour les champs de texte, attendre un peu avant de soumettre
+                if (this.type === 'text') {
+                    clearTimeout(this.timer);
+                    this.timer = setTimeout(() => {
+                        filtresForm.submit();
+                    }, 500);
+                } else {
+                    filtresForm.submit();
+                }
+            });
         });
     }
 });

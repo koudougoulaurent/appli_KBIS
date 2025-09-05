@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views
+from . import views, api_views, views_unites
 from .views import ajouter_charge_bailleur_rapide
 
 # Router pour l'API
@@ -8,6 +8,8 @@ router = DefaultRouter()
 router.register(r'api/proprietes', api_views.ProprieteViewSet, basename='propriete')
 router.register(r'api/bailleurs', api_views.BailleurViewSet, basename='bailleur')
 router.register(r'api/locataires', api_views.LocataireViewSet, basename='locataire')
+router.register(r'api/charges-communes', api_views.ChargeCommuneViewSet, basename='charge-commune')
+router.register(r'api/pieces', api_views.PieceViewSet, basename='piece')
 
 app_name = 'proprietes'
 
@@ -74,6 +76,20 @@ urlpatterns = [
     path('documents/<int:pk>/supprimer/', views.document_delete, name='document_delete'),
     path('documents/<int:pk>/telecharger/', views.document_download, name='document_download'),
     
+    # URLs pour le visualiseur universel
+    path('documents/<int:pk>/viewer/', views.DocumentViewerView.as_view(), name='document_viewer'),
+    path('documents/<int:pk>/viewer/<str:viewer_type>/', views.DocumentViewerView.as_view(), name='document_viewer_typed'),
+    path('documents/<int:pk>/content/', views.document_content_view, name='document_content_view'),
+    path('documents/<int:pk>/pdf-viewer/', views.document_pdf_viewer, name='document_pdf_viewer'),
+    path('documents/<int:pk>/proxy/', views.document_secure_proxy, name='document_secure_proxy'),
+    
+    # URLs de debug et vues simplifiées
+    path('documents/<int:pk>/debug/', views.document_debug_info, name='document_debug_info'),
+    path('documents/<int:pk>/test-download/', views.document_test_download, name='document_test_download'),
+    path('documents/<int:pk>/simple-download/', views.simple_document_download, name='simple_document_download'),
+    path('documents/<int:pk>/simple-view/', views.simple_document_view, name='simple_document_view'),
+    path('documents/test-page/', views.document_test_page, name='document_test_page'),
+    
     # URLs pour les formulaires spécialisés
     path('formulaires/diagnostics/', views.diagnostic_form_view, name='diagnostic_form'),
     path('formulaires/assurances/', views.assurance_form_view, name='assurance_form'),
@@ -94,6 +110,28 @@ urlpatterns = [
     # URLs API pour les pièces
     path('api/<int:propriete_id>/pieces-disponibles/', views.api_pieces_disponibles, name='api_pieces_disponibles'),
     path('api/verifier-disponibilite/', views.api_verifier_disponibilite, name='api_verifier_disponibilite'),
+    
+    # URLs pour les unités locatives
+    path('unites/', views_unites.UniteLocativeListView.as_view(), name='unites_liste'),
+    path('unites/recherche/', views_unites.recherche_unites, name='recherche_unites'),
+    path('unites/ajouter/', views_unites.unite_create, name='unite_create'),
+    path('unites/ajouter/<int:propriete_id>/', views_unites.unite_create, name='unite_create_propriete'),
+    path('unites/<int:pk>/', views_unites.unite_detail, name='unite_detail'),
+    path('unites/<int:pk>/detail-complet/', views_unites.unite_detail_complet, name='unite_detail_complet'),
+    path('unites/<int:pk>/modifier/', views_unites.unite_edit, name='unite_edit'),
+    
+    # Tableau de bord pour grandes propriétés
+    path('<int:propriete_id>/dashboard/', views_unites.tableau_bord_propriete, name='dashboard_propriete'),
+    
+    # Réservations
+    path('unites/<int:unite_id>/reserver/', views_unites.reservation_create, name='reservation_create'),
+    path('reservations/<int:reservation_id>/convertir-en-contrat/', views_unites.convertir_reservation_en_contrat, name='convertir_reservation_en_contrat'),
+    
+    # APIs pour les unités
+    path('api/unites-disponibles/', views_unites.api_unites_disponibles, name='api_unites_disponibles'),
+    path('api/recherche-unites-live/', views_unites.api_recherche_unites_live, name='api_recherche_unites_live'),
+    path('api/statistiques-recherche/', views_unites.api_statistiques_recherche, name='api_statistiques_recherche'),
+    path('api/statistiques-propriete/<int:propriete_id>/', views_unites.api_statistiques_propriete, name='api_statistiques_propriete'),
     
     # URLs API REST
     path('api/', include(router.urls)),

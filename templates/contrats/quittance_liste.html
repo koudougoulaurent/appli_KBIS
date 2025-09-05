@@ -256,19 +256,19 @@
             <div class="col-md-3">
                 <div class="stat-card">
                     <div class="stat-number">{{ montant_total_loyers|floatformat:0|intcomma }}</div>
-                    <div class="stat-label">Total des loyers (€)</div>
+                    <div class="stat-label">Total des loyers (F CFA)</div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="stat-card">
                     <div class="stat-number">{{ montant_total_charges|floatformat:0|intcomma }}</div>
-                    <div class="stat-label">Total des charges (€)</div>
+                    <div class="stat-label">Total des charges (F CFA)</div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="stat-card">
                     <div class="stat-number">{{ montant_total_tcc|floatformat:0|intcomma }}</div>
-                    <div class="stat-label">Total TCC (€)</div>
+                    <div class="stat-label">Total TCC (F CFA)</div>
                 </div>
             </div>
         </div>
@@ -308,7 +308,7 @@
                     </div>
                     
                     <div class="quittance-amount">
-                        <div class="amount-value">{{ quittance.montant_total|floatformat:2 }} €</div>
+                        <div class="amount-value">{{ quittance.montant_total|floatformat:0|intcomma }} F CFA</div>
                         <div class="amount-label">Montant total</div>
                     </div>
                     

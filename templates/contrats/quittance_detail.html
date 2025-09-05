@@ -480,22 +480,22 @@
                 <div class="rent-info">
                     <div class="rent-info-item">
                         <span class="rent-info-label">Loyer:</span>
-                        <span class="rent-info-value">{{ quittance.montant_loyer|floatformat:2 }} €</span>
+                        <span class="rent-info-value">{{ quittance.montant_loyer|floatformat:0|intcomma }} F CFA</span>
                     </div>
                     <div class="rent-info-item">
                         <span class="rent-info-label">Charges:</span>
-                        <span class="rent-info-value">{{ quittance.montant_charges|floatformat:2 }} €</span>
+                        <span class="rent-info-value">{{ quittance.montant_charges|floatformat:0|intcomma }} F CFA</span>
                     </div>
                     <div class="rent-info-item">
                         <span class="rent-info-label">Total:</span>
-                        <span class="rent-info-value">{{ quittance.get_montant_total|floatformat:2 }} €</span>
+                        <span class="rent-info-value">{{ quittance.get_montant_total|floatformat:0|intcomma }} F CFA</span>
                     </div>
                 </div>
             </div>
 
             <!-- Montant principal -->
             <div class="amount-section">
-                <div class="amount-value">{{ quittance.get_montant_total|floatformat:2 }} €</div>
+                <div class="amount-value">{{ quittance.get_montant_total|floatformat:0|intcomma }} F CFA</div>
                 <div class="amount-label">Montant total du loyer</div>
             </div>
 

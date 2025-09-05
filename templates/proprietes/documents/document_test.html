@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Test de Documents{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2>🔧 Test des Documents</h2>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>📄 Document 9 - Test Direct</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Actions de test disponibles :</strong></p>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="/proprietes/documents/9/debug/" 
+                           class="btn btn-info" target="_blank">
+                            🔍 Diagnostic du Document
+                        </a>
+                        
+                        <a href="/proprietes/documents/9/test-download/" 
+                           class="btn btn-warning" target="_blank">
+                            🧪 Test de Téléchargement
+                        </a>
+                        
+                        <a href="/proprietes/documents/9/simple-download/" 
+                           class="btn btn-success" target="_blank">
+                            ⬇️ Téléchargement Simple
+                        </a>
+                        
+                        <a href="/proprietes/documents/9/simple-view/" 
+                           class="btn btn-primary" target="_blank">
+                            👁️ Visualisation Simple
+                        </a>
+                        
+                        <hr>
+                        
+                        <a href="/proprietes/documents/9/viewer/" 
+                           class="btn btn-dark" target="_blank">
+                            🎨 Visualiseur Complet
+                        </a>
+                        
+                        <a href="/proprietes/documents/9/" 
+                           class="btn btn-secondary">
+                            📋 Page Détail
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>📊 Informations Système</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Utilisateur :</strong> {{ user.username }}</p>
+                    <p><strong>Groupe :</strong> 
+                        {% if user.groupe_travail %}
+                            {{ user.groupe_travail.nom }}
+                        {% else %}
+                            Aucun groupe
+                        {% endif %}
+                    </p>
+                    <p><strong>Privilégié :</strong> 
+                        {% if user.groupe_travail.nom == 'PRIVILEGE' %}
+                            ✅ Oui
+                        {% else %}
+                            ❌ Non
+                        {% endif %}
+                    </p>
+                    
+                    <hr>
+                    
+                    <h6>🔗 URLs de Test</h6>
+                    <div class="small">
+                        <p><code>/proprietes/documents/9/debug/</code></p>
+                        <p><code>/proprietes/documents/9/simple-download/</code></p>
+                        <p><code>/proprietes/documents/9/simple-view/</code></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col">
+            <div class="alert alert-info">
+                <h5>💡 Instructions de Test</h5>
+                <ol>
+                    <li><strong>Diagnostic :</strong> Cliquez sur "Diagnostic du Document" pour voir les informations détaillées</li>
+                    <li><strong>Test Download :</strong> Vérifie si le fichier est accessible</li>
+                    <li><strong>Téléchargement Simple :</strong> Téléchargement direct sans complexité</li>
+                    <li><strong>Visualisation Simple :</strong> Affichage direct pour les images</li>
+                    <li><strong>Visualiseur Complet :</strong> Interface avancée avec tous les formats</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

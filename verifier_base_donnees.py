@@ -108,7 +108,7 @@ def verifier_base_donnees():
     print(f"✅ {paiements.count()} paiements trouvés")
     
     total_paiements = paiements.aggregate(total=models.Sum('montant'))['total'] or 0
-    print(f"   Total des paiements: {total_paiements} XOF")
+    print(f"   Total des paiements: {total_paiements} F CFA")
     
     # Test 8: Vérifier les retraits
     print("\n💸 Test 8: Retraits")
@@ -118,7 +118,7 @@ def verifier_base_donnees():
     print(f"✅ {retraits.count()} retraits trouvés")
     
     total_retraits = retraits.aggregate(total=models.Sum('montant'))['total'] or 0
-    print(f"   Total des retraits: {total_retraits} XOF")
+    print(f"   Total des retraits: {total_retraits} F CFA")
     
     # Test 9: Vérifier l'intégrité des données
     print("\n🔗 Test 9: Intégrité des données")

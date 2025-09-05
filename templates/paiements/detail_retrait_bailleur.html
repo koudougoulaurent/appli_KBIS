@@ -47,6 +47,18 @@
                                     <span class="badge bg-info">{{ retrait.get_type_retrait_display }}</span>
                                 </td>
                             </tr>
+                            {% if retrait.recap_lie %}
+                            <tr>
+                                <td><strong>Récapitulatif lié :</strong></td>
+                                <td>
+                                    <a href="{% url 'paiements:detail_recap_mensuel_auto' recap_id=retrait.recap_lie.id %}" 
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-file-earmark-text me-1"></i>
+                                        Voir le Récapitulatif
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endif %}
                             <tr>
                                 <td><strong>Mode :</strong></td>
                                 <td>

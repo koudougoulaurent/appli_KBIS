@@ -141,12 +141,11 @@ class PaiementForm(forms.ModelForm):
         # Validation spécifique selon le type de paiement
         if contrat and type_paiement and montant:
             if type_paiement == 'loyer' and montant != contrat.loyer_mensuel:
-                # Avertissement si le montant du loyer ne correspond pas
-                pass  # On peut ajouter une validation plus stricte si nécessaire
-            
+                self.add_error('montant', _('Le montant doit être égal au loyer mensuel du contrat sélectionné.'))
             elif type_paiement == 'caution' and montant != contrat.caution:
-                # Avertissement si le montant de la caution ne correspond pas
-                pass  # On peut ajouter une validation plus stricte si nécessaire
+                self.add_error('montant', _('Le montant doit être égal à la caution du contrat sélectionné.'))
+            elif type_paiement == 'avance_loyer' and hasattr(contrat, 'avance_loyer') and montant != contrat.avance_loyer:
+                self.add_error('montant', _('Le montant doit être égal à l’avance de loyer du contrat sélectionné.'))
         
         # Validation des informations de paiement selon le mode
         if mode_paiement == 'cheque' and not numero_cheque:
@@ -474,7 +473,7 @@ class GestionChargesBailleurForm(forms.Form):
         max_digits=10,
         decimal_places=2,
         min_value=0.01,
-        label=_('Montant à déduire (XOF)'),
+        label=_('Montant à déduire (F CFA)'),
         help_text=_('Montant à déduire du retrait mensuel'),
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
@@ -515,7 +514,7 @@ class GestionChargesBailleurForm(forms.Form):
             
             # Personnaliser l'affichage des charges
             self.fields['charge_bailleur'].label_from_instance = lambda obj: (
-                f"{obj.titre} - {obj.propriete.adresse} - {obj.montant_restant} XOF restant"
+                f"{obj.titre} - {obj.propriete.adresse} - {obj.montant_restant} F CFA restant"
             )
     
     def clean(self):
@@ -592,7 +591,7 @@ class TableauBordFinancierForm(forms.ModelForm):
             }),
             'devise': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'XOF'
+                'placeholder': 'F CFA'
             }),
             'couleur_theme': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -659,7 +658,7 @@ class TableauBordFinancierForm(forms.ModelForm):
         # Valeurs par défaut
         if not self.instance.pk:
             self.fields['actif'].initial = True
-            self.fields['devise'].initial = 'XOF'
+            self.fields['devise'].initial = 'F CFA'
             self.fields['couleur_theme'].initial = '#007bff'
             self.fields['afficher_revenus'].initial = True
             self.fields['afficher_charges'].initial = True
@@ -724,15 +723,18 @@ class RecapitulatifMensuelBailleurForm(forms.ModelForm):
         ]
         widgets = {
             'bailleur': forms.Select(attrs={
-                'class': 'form-control',
-                'placeholder': 'Sélectionnez le bailleur'
+                'class': 'form-select',
+                'required': True
             }),
             'mois_recapitulatif': forms.DateInput(attrs={
                 'class': 'form-control',
-                'type': 'date'
+                'type': 'date',
+                'required': True
             }),
             'type_recapitulatif': forms.Select(attrs={
-                'class': 'form-control'
+                'class': 'form-select',
+                'required': True,
+                'onchange': 'updatePeriodLabel()'
             }),
             'notes': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -740,9 +742,33 @@ class RecapitulatifMensuelBailleurForm(forms.ModelForm):
                 'placeholder': 'Notes et observations sur ce récapitulatif...'
             })
         }
+        labels = {
+            'bailleur': _('Bailleur'),
+            'mois_recapitulatif': _('Mois de référence'),
+            'type_recapitulatif': _('Type de récapitulatif'),
+            'notes': _('Notes et observations')
+        }
+        help_texts = {
+            'mois_recapitulatif': _('Mois de référence pour le calcul du récapitulatif'),
+            'type_recapitulatif': _('Période couverte par le récapitulatif'),
+            'notes': _('Informations complémentaires sur ce récapitulatif')
+        }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+        # Filtrer les bailleurs actifs
+        self.fields['bailleur'].queryset = Bailleur.objects.filter(
+            is_deleted=False
+        ).order_by('nom', 'prenom')
+        
+        # Personnaliser les choix du type de récapitulatif
+        self.fields['type_recapitulatif'].choices = [
+            ('mensuel', '📅 Mensuel - 1 mois'),
+            ('trimestriel', '📊 Trimestriel - 3 mois'),
+            ('annuel', '📈 Annuel - 12 mois'),
+            ('exceptionnel', '⚡ Exceptionnel - Période personnalisée'),
+        ]
         
         # Définir le mois actuel par défaut
         if not self.instance.pk:
@@ -750,22 +776,27 @@ class RecapitulatifMensuelBailleurForm(forms.ModelForm):
             mois_actuel = timezone.now().replace(day=1)
             self.fields['mois_recapitulatif'].initial = mois_actuel
     
-    def clean_mois_recapitulatif(self):
-        """Validation du mois du récapitulatif."""
-        mois = self.cleaned_data['mois_recapitulatif']
+    def clean(self):
+        cleaned_data = super().clean()
+        bailleur = cleaned_data.get('bailleur')
+        mois_recapitulatif = cleaned_data.get('mois_recapitulatif')
+        type_recapitulatif = cleaned_data.get('type_recapitulatif')
         
-        # Vérifier qu'il n'y a pas déjà un récapitulatif pour ce mois
-        if not self.instance.pk:
-            type_recap = self.cleaned_data.get('type_recapitulatif', 'mensuel')
-            if RecapitulatifMensuelBailleur.objects.filter(
-                mois_recapitulatif=mois,
-                type_recapitulatif=type_recap
-            ).exists():
+        if bailleur and mois_recapitulatif and type_recapitulatif:
+            # Vérifier s'il existe déjà un récapitulatif pour cette combinaison
+            existing_recap = RecapitulatifMensuelBailleur.objects.filter(
+                bailleur=bailleur,
+                mois_recapitulatif=mois_recapitulatif,
+                type_recapitulatif=type_recapitulatif
+            ).exclude(pk=self.instance.pk if self.instance else None)
+            
+            if existing_recap.exists():
                 raise forms.ValidationError(
-                    f"Un récapitulatif {type_recap} existe déjà pour {mois.strftime('%B %Y')}"
+                    f"Un récapitulatif {type_recapitulatif} existe déjà pour "
+                    f"{bailleur.get_nom_complet()} - {mois_recapitulatif.strftime('%B %Y')}"
                 )
         
-        return mois
+        return cleaned_data
 
 
 class RecapitulatifMensuelValidationForm(forms.Form):

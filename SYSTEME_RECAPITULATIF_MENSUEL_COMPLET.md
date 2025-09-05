@@ -149,10 +149,10 @@ Date de génération : 27/01/2025 10:00
 RÉSUMÉ GLOBAL
 - Nombre de bailleurs : 12
 - Nombre de propriétés : 45
-- Total loyers bruts : 2,450,000 XOF
-- Total charges déductibles : 180,000 XOF
-- Total charges bailleur : 320,000 XOF
-- Total net à payer : 1,950,000 XOF
+- Total loyers bruts : 2,450,000 F CFA
+- Total charges déductibles : 180,000 F CFA
+- Total charges bailleur : 320,000 F CFA
+- Total net à payer : 1,950,000 F CFA
 
 ================================================================================
 
@@ -160,33 +160,33 @@ DÉTAILS PAR BAILLEUR
 
 1. BAILLEUR : M. KONAN Jean
    Propriétés : 3
-   Total loyers : 180,000 XOF
-   Charges déductibles : 15,000 XOF
-   Charges bailleur : 25,000 XOF
-   Montant net dû : 140,000 XOF
+   Total loyers : 180,000 F CFA
+   Charges déductibles : 15,000 F CFA
+   Charges bailleur : 25,000 F CFA
+   Montant net dû : 140,000 F CFA
 
    Détail des propriétés :
-   ├── Appartement Rue 12 - 75,000 XOF
-   ├── Villa Zone 4 - 65,000 XOF
-   └── Studio Centre - 40,000 XOF
+   ├── Appartement Rue 12 - 75,000 F CFA
+   ├── Villa Zone 4 - 65,000 F CFA
+   └── Studio Centre - 40,000 F CFA
 
 2. BAILLEUR : Mme TRAORE Fatou
    Propriétés : 2
-   Total loyers : 120,000 XOF
-   Charges déductibles : 8,000 XOF
-   Charges bailleur : 12,000 XOF
-   Montant net dû : 100,000 XOF
+   Total loyers : 120,000 F CFA
+   Charges déductibles : 8,000 F CFA
+   Charges bailleur : 12,000 F CFA
+   Montant net dû : 100,000 F CFA
 
    Détail des propriétés :
-   ├── Maison Quartier Nord - 80,000 XOF
-   └── Appartement Zone Sud - 40,000 XOF
+   ├── Maison Quartier Nord - 80,000 F CFA
+   └── Appartement Zone Sud - 40,000 F CFA
 
 [... autres bailleurs ...]
 
 ================================================================================
 
 TOTAL GÉNÉRAL
-Montant total dû aux bailleurs : 1,950,000 XOF
+Montant total dû aux bailleurs : 1,950,000 F CFA
 
 ================================================================================
 

@@ -50,7 +50,7 @@ def verifier_etat_recus():
     if paiements_sans_recus > 0:
         print(f"   Derniers paiements sans reçus:")
         for paiement in Paiement.objects.filter(recu__isnull=True)[:5]:
-            print(f"   • ID: {paiement.id} - {paiement.montant} XOF - {paiement.date_paiement} - Contrat: {paiement.contrat.numero_contrat}")
+            print(f"   • ID: {paiement.id} - {paiement.montant} F CFA - {paiement.date_paiement} - Contrat: {paiement.contrat.numero_contrat}")
     
     return nb_paiements, nb_recus, paiements_sans_recus
 

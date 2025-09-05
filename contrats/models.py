@@ -39,29 +39,25 @@ class Contrat(models.Model):
     # Informations financières
     loyer_mensuel = models.CharField(
         max_length=20,
-        blank=True,
+        default='0',
         verbose_name=_("Loyer mensuel"),
-        help_text=_("Sera automatiquement rempli à partir de la propriété sélectionnée")
+        help_text=_("Sera automatiquement rempli à partir de la propriété ou unité locative sélectionnée")
     )
     charges_mensuelles = models.CharField(
         max_length=20,
-        blank=True,
-        null=True,
-        default="0.00",
+        default='0',
         verbose_name=_("Charges mensuelles")
     )
     
     # Gestion des cautions et avances
     depot_garantie = models.CharField(
         max_length=20,
-        blank=True,
-        null=True,
-        default="0.00",
+        default='0',
         verbose_name=_("Dépôt de garantie ou Caution")
     )
     avance_loyer = models.CharField(
         max_length=20,
-        default="0.00",
+        default='0',
         verbose_name=_("Avance de loyer")
     )
     
@@ -129,8 +125,18 @@ class Contrat(models.Model):
         'proprietes.Piece',
         through='proprietes.PieceContrat',
         related_name='contrats',
+        blank=True,
         verbose_name=_("Pièces louées"),
         help_text=_("Pièces spécifiques louées dans ce contrat")
+    )
+    unite_locative = models.ForeignKey(
+        'proprietes.UniteLocative',
+        on_delete=models.PROTECT,
+        related_name='contrats',
+        blank=True,
+        null=True,
+        verbose_name=_("Unité locative"),
+        help_text=_("Unité locative louée (pour les grandes propriétés)")
     )
     cree_par = models.ForeignKey(
         Utilisateur,
@@ -158,7 +164,13 @@ class Contrat(models.Model):
     
     def get_loyer_total(self):
         """Retourne le loyer total (loyer + charges)."""
-        return self.loyer_mensuel + self.charges_mensuelles
+        from decimal import Decimal
+        try:
+            loyer = Decimal(self.loyer_mensuel) if self.loyer_mensuel else Decimal('0')
+            charges = Decimal(self.charges_mensuelles) if self.charges_mensuelles else Decimal('0')
+            return str(loyer + charges)
+        except (ValueError, TypeError):
+            return '0'
     
     def get_loyer_mensuel_formatted(self):
         """Retourne le loyer mensuel formaté en F CFA"""
@@ -187,7 +199,13 @@ class Contrat(models.Model):
     
     def get_total_caution_avance(self):
         """Retourne le total caution + avance."""
-        return self.depot_garantie + self.avance_loyer
+        from decimal import Decimal
+        try:
+            caution = Decimal(self.depot_garantie) if self.depot_garantie else Decimal('0')
+            avance = Decimal(self.avance_loyer) if self.avance_loyer else Decimal('0')
+            return caution + avance
+        except (ValueError, TypeError):
+            return Decimal('0')
     
     def get_total_caution_avance_formatted(self):
         """Retourne le total caution + avance formaté en F CFA"""
@@ -298,6 +316,32 @@ class Contrat(models.Model):
         pieces = self.get_pieces_louees()
         return sum(piece.get_loyer_total() for piece in pieces)
     
+    def get_type_location(self):
+        """
+        Retourne le type de location : 'unite_complete', 'pieces_individuelles' ou 'propriete_complete'.
+        """
+        if self.unite_locative:
+            return 'unite_complete'
+        elif self.pieces_contrat.filter(actif=True).exists():
+            return 'pieces_individuelles'
+        else:
+            return 'propriete_complete'
+    
+    def get_description_location(self):
+        """
+        Retourne une description lisible du type de location.
+        """
+        type_location = self.get_type_location()
+        
+        if type_location == 'unite_complete':
+            return f"Unité locative : {self.unite_locative.nom}"
+        elif type_location == 'pieces_individuelles':
+            pieces = self.get_pieces_louees()
+            noms_pieces = [piece.piece.nom for piece in pieces]
+            return f"Pièces : {', '.join(noms_pieces)}"
+        else:
+            return f"Propriété complète : {self.propriete.titre}"
+    
     def save(self, *args, **kwargs):
         """Override save pour générer automatiquement le numéro de contrat et calculer les montants par défaut."""
         if not self.numero_contrat:
@@ -305,12 +349,24 @@ class Contrat(models.Model):
             import uuid
             self.numero_contrat = f"CTR-{uuid.uuid4().hex[:8].upper()}"
         
-        # Calculer automatiquement le dépôt de garantie et l'avance si non spécifiés
-        if self.depot_garantie == 0:
-            self.depot_garantie = self.loyer_mensuel * 3  # 3 mois de caution
+        # Validation : éviter unité locative ET pièces simultanément
+        self._valider_coherence_unite_pieces()
         
-        if self.avance_loyer == 0:
-            self.avance_loyer = self.loyer_mensuel  # 1 mois d'avance
+        # Calculer automatiquement le dépôt de garantie et l'avance si non spécifiés
+        from decimal import Decimal
+        try:
+            loyer_decimal = Decimal(self.loyer_mensuel) if self.loyer_mensuel else Decimal('0')
+            if self.depot_garantie == "0.00" or not self.depot_garantie:
+                self.depot_garantie = str(loyer_decimal * 3)  # 3 mois de caution
+            
+            if self.avance_loyer == "0.00" or not self.avance_loyer:
+                self.avance_loyer = str(loyer_decimal)  # 1 mois d'avance
+        except (ValueError, TypeError):
+            # En cas d'erreur de conversion, utiliser des valeurs par défaut
+            if not self.depot_garantie:
+                self.depot_garantie = "0.00"
+            if not self.avance_loyer:
+                self.avance_loyer = "0.00"
         
         # Gérer la disponibilité de la propriété
         self._gestion_disponibilite_propriete()
@@ -369,6 +425,33 @@ class Contrat(models.Model):
         
         super().delete(*args, **kwargs)
     
+    def _valider_coherence_unite_pieces(self):
+        """
+        Valide qu'un contrat ne peut pas avoir simultanément une unité locative 
+        ET des pièces spécifiques sélectionnées.
+        """
+        from django.core.exceptions import ValidationError
+        
+        # Si le contrat a une unité locative ET des pièces assignées
+        if self.unite_locative and self.pk:
+            # Vérifier s'il y a des pièces assignées via PieceContrat
+            pieces_assignees = self.pieces_contrat.filter(actif=True).exists()
+            if pieces_assignees:
+                raise ValidationError(
+                    _("Un contrat ne peut pas avoir simultanément une unité locative "
+                      "ET des pièces spécifiques. Veuillez choisir soit l'unité complète, "
+                      "soit des pièces individuelles.")
+                )
+        
+        # Validation supplémentaire : si des pièces sont assignées, pas d'unité locative
+        if self.pk and not self.unite_locative:
+            pieces_assignees = self.pieces_contrat.filter(actif=True).exists()
+            if pieces_assignees and hasattr(self, '_unite_locative_temp') and self._unite_locative_temp:
+                raise ValidationError(
+                    _("Ce contrat a déjà des pièces spécifiques assignées. "
+                      "Impossible d'assigner une unité locative complète.")
+                )
+    
     def marquer_caution_payee(self, date_paiement=None):
         """Marque la caution comme payée."""
         self.caution_payee = True
@@ -415,20 +498,17 @@ class Quittance(models.Model):
         verbose_name=_("Contrat")
     )
     mois = models.DateField(verbose_name=_("Mois concerné"))
-    montant_loyer = models.DecimalField(
-        max_digits=8,
-        decimal_places=2,
+    montant_loyer = models.CharField(
+        max_length=20,
         verbose_name=_("Montant loyer")
     )
-    montant_charges = models.DecimalField(
-        max_digits=8,
-        decimal_places=2,
-        default=0,
+    montant_charges = models.CharField(
+        max_length=20,
+        default='0',
         verbose_name=_("Montant charges")
     )
-    montant_total = models.DecimalField(
-        max_digits=8,
-        decimal_places=2,
+    montant_total = models.CharField(
+        max_length=20,
         verbose_name=_("Montant total")
     )
     
@@ -452,8 +532,15 @@ class Quittance(models.Model):
     
     def save(self, *args, **kwargs):
         """Override save pour calculer le montant total et générer le numéro."""
+        from decimal import Decimal
+        # S'assurer que montant_total est calculé
         if not self.montant_total:
-            self.montant_total = self.montant_loyer + self.montant_charges
+            try:
+                loyer = Decimal(self.montant_loyer) if self.montant_loyer else Decimal('0')
+                charges = Decimal(self.montant_charges) if self.montant_charges else Decimal('0')
+                self.montant_total = str(loyer + charges)
+            except (ValueError, TypeError):
+                self.montant_total = '0'
         
         if not self.numero_quittance:
             # Générer un numéro de quittance unique
@@ -861,10 +948,9 @@ class ResiliationContrat(models.Model):
         default=False,
         verbose_name=_("Caution remboursée")
     )
-    montant_remboursement = models.DecimalField(
-        max_digits=8,
-        decimal_places=2,
-        default=0,
+    montant_remboursement = models.CharField(
+        max_length=20,
+        default='0',
         verbose_name=_("Montant du remboursement")
     )
     date_remboursement = models.DateField(
@@ -954,6 +1040,6 @@ class ResiliationContrat(models.Model):
         return self.statut == 'validee'
     
     def get_montant_remboursement_formatted(self):
-        """Retourne le montant de remboursement formaté en XOF"""
+        """Retourne le montant de remboursement formaté en F CFA"""
         from core.utils import format_currency_fcfa
         return format_currency_fcfa(self.montant_remboursement)

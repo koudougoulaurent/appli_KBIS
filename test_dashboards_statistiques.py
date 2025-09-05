@@ -81,9 +81,9 @@ def test_dashboards_statistiques():
     
     print(f"\n💰 STATISTIQUES FINANCIÈRES (Mois {mois_courant}/{annee_courante})")
     print("-" * 40)
-    print(f"💳 Paiements du mois: {paiements_mois} XOF")
-    print(f"💸 Retraits du mois: {retraits_mois} XOF")
-    print(f"🏦 Cautions en cours: {cautions_cours} XOF")
+    print(f"💳 Paiements du mois: {paiements_mois} F CFA")
+    print(f"💸 Retraits du mois: {retraits_mois} F CFA")
+    print(f"🏦 Cautions en cours: {cautions_cours} F CFA")
     print(f"⏳ Paiements en attente: {paiements_attente}")
     
     # Données immobilières

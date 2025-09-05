@@ -442,17 +442,31 @@
             <div class="quittance-section">
                 <div class="section-header">
                     <i class="bi bi-house"></i>
-                    <h5>Propriété</h5>
+                    <h5>Propriété & Unité locative</h5>
                 </div>
                 <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">Adresse</span>
-                        <span class="info-value">{{ quittance.get_propriete.adresse }}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Ville</span>
-                        <span class="info-value">{{ quittance.get_propriete.ville }}</span>
-                    </div>
+                    {% with prop=quittance.get_propriete %}
+                        <div class="info-item">
+                            <span class="info-label">Numéro propriété</span>
+                            <span class="info-value">{{ prop.numero_propriete|default:"-" }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Titre</span>
+                            <span class="info-value">{{ prop.titre|default:"-" }}</span>
+                        </div>
+                    {% endwith %}
+                    {% if quittance.get_unite_locative %}
+                        {% with unite=quittance.get_unite_locative %}
+                        <div class="info-item">
+                            <span class="info-label">Unité locative</span>
+                            <span class="info-value">{{ unite.nom|default:"-" }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Type</span>
+                            <span class="info-value">{{ unite.type_unite|default:"-" }}</span>
+                        </div>
+                        {% endwith %}
+                    {% endif %}
                 </div>
             </div>
 
@@ -475,6 +489,25 @@
                     <div class="payment-info-item">
                         <span class="payment-info-label">Date:</span>
                         <span class="payment-info-value">{{ quittance.paiement.date_paiement|date:"d/m/Y" }}</span>
+                    </div>
+                    <div class="payment-info-item">
+                        <span class="payment-info-label">Montant payé:</span>
+                        <span class="payment-info-value">{{ quittance.paiement.get_montant_formatted }}</span>
+                    </div>
+                    <div class="payment-info-item">
+                        <span class="payment-info-label">Contrat:</span>
+                        <span class="payment-info-value">N° {{ quittance.paiement.contrat.numero_contrat }}</span>
+                    </div>
+                    <div class="payment-info-item">
+                        <!-- Bailleur supprimé, non affiché sur la quittance -->
+                    </div>
+                    <div class="payment-info-item">
+                        <span class="payment-info-label">Période:</span>
+                        <span class="payment-info-value">{{ quittance.paiement.periode|default:quittance.paiement.date_paiement|date:"F Y" }}</span>
+                    </div>
+                    <div class="payment-info-item">
+                        <span class="payment-info-label">Statut:</span>
+                        <span class="payment-info-value">{{ quittance.get_statut_display }}</span>
                     </div>
                 </div>
             </div>

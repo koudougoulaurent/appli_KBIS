@@ -3,6 +3,8 @@ from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.urls import reverse
+from decimal import Decimal
 from contrats.models import Contrat
 from proprietes.managers import NonDeletedManager
 from django.conf import settings
@@ -153,11 +155,11 @@ class ChargeDeductible(models.Model):
         ordering = ['-date_charge']
     
     def __str__(self):
-        return f"{self.libelle} - {self.contrat.numero_contrat} - {self.montant} XOF"
+        return f"{self.libelle} - {self.contrat.numero_contrat} - {self.montant} F CFA"
     
     def get_montant_formatted(self):
         """Retourne le montant formaté avec la devise."""
-        return f"{self.montant} XOF"
+        return f"{self.montant} F CFA"
     
     def get_statut_display_color(self):
         """Retourne la couleur CSS pour le statut."""
@@ -368,6 +370,49 @@ class Paiement(models.Model):
         related_name='paiements_valides',
         verbose_name=_("Validé par")
     )
+    date_validation = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date de validation")
+    )
+    
+    # Champs pour le refus
+    refuse_par = models.ForeignKey(
+        Utilisateur,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiements_refuses',
+        verbose_name=_("Refusé par")
+    )
+    date_refus = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date de refus")
+    )
+    raison_refus = models.TextField(
+        blank=True,
+        verbose_name=_("Raison du refus")
+    )
+    
+    # Champs pour l'annulation
+    annule_par = models.ForeignKey(
+        Utilisateur,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiements_annules',
+        verbose_name=_("Annulé par")
+    )
+    date_annulation = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date d'annulation")
+    )
+    raison_annulation = models.TextField(
+        blank=True,
+        verbose_name=_("Raison de l'annulation")
+    )
     
     is_deleted = models.BooleanField(default=False, verbose_name='Supprimé logiquement')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Date de suppression')
@@ -382,7 +427,7 @@ class Paiement(models.Model):
         ordering = ['-date_paiement', '-date_creation']
     
     def __str__(self):
-        return f"Paiement {self.reference_paiement} - {self.contrat.numero_contrat} - {self.montant} XOF"
+        return f"Paiement {self.reference_paiement} - {self.contrat.numero_contrat} - {self.montant} F CFA"
     
     def save(self, *args, **kwargs):
         if not self.reference_paiement:
@@ -441,15 +486,15 @@ class Paiement(models.Model):
     
     def get_montant_formatted(self):
         """Retourne le montant formaté avec la devise."""
-        return f"{self.montant} XOF"
+        return f"{self.montant} F CFA"
     
     def get_montant_net_formatted(self):
         """Retourne le montant net formaté avec la devise."""
-        return f"{self.montant_net_paye} XOF"
+        return f"{self.montant_net_paye} F CFA"
     
     def get_montant_charges_formatted(self):
         """Retourne le montant des charges formaté avec la devise."""
-        return f"{self.montant_charges_deduites} XOF"
+        return f"{self.montant_charges_deduites} F CFA"
     
     def get_statut_display_color(self):
         """Retourne la couleur CSS pour le statut."""
@@ -575,6 +620,12 @@ class Paiement(models.Model):
 
 
 class QuittancePaiement(models.Model):
+    def get_unite_locative(self):
+        """Retourne l'unité locative associée à cette quittance (via le contrat du paiement)."""
+        contrat = getattr(self.paiement, 'contrat', None)
+        if contrat and hasattr(contrat, 'unite_locative'):
+            return contrat.unite_locative
+        return None
     """Modèle pour les quittances de paiement générées automatiquement."""
     
     # Numéro unique de la quittance
@@ -810,6 +861,17 @@ class RetraitBailleur(models.Model):
     date_modification = models.DateTimeField(auto_now=True, verbose_name=_("Date de modification"))
     notes = models.TextField(blank=True, verbose_name=_("Notes"))
     
+    # Liaison avec le récapitulatif
+    recap_lie = models.ForeignKey(
+        'RecapMensuel',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='retraits_lies',
+        verbose_name=_("Récapitulatif lié"),
+        help_text=_("Récapitulatif mensuel à l'origine de ce retrait")
+    )
+    
     # Relations
     cree_par = models.ForeignKey(
         Utilisateur,
@@ -942,7 +1004,7 @@ class RetraitBailleur(models.Model):
         ]
     
     def __str__(self):
-        return f"Retrait {self.bailleur} - {self.mois_retrait.strftime('%B %Y')} - {self.montant_net_a_payer} XOF"
+        return f"Retrait {self.bailleur} - {self.mois_retrait.strftime('%B %Y')} - {self.montant_net_a_payer} F CFA"
     
     def save(self, *args, **kwargs):
         """Override save pour calculer automatiquement le montant net et générer le hash de sécurité."""
@@ -1190,7 +1252,7 @@ class RetraitBailleur(models.Model):
             
             # Créer un log d'audit
             self.creer_log_audit('ajout_charge', self.cree_par, 
-                                f"Charge '{charge_bailleur.titre}' ajoutée pour {montant_effectivement_deduit} XOF")
+                                f"Charge '{charge_bailleur.titre}' ajoutée pour {montant_effectivement_deduit} F CFA")
             
             return True
             
@@ -1245,7 +1307,7 @@ class RetraitBailleur(models.Model):
             
             # Créer un log d'audit
             self.creer_log_audit('retrait_charge', self.cree_par, 
-                                f"Charge '{charge_bailleur.titre}' retirée ({montant_deduit} XOF)")
+                                f"Charge '{charge_bailleur.titre}' retirée ({montant_deduit} F CFA)")
             
             return True
             
@@ -1348,7 +1410,7 @@ class RetraitBailleur(models.Model):
             
             return {
                 'success': True,
-                'message': f'{charges_appliquees} charges appliquées pour un total de {calcul["total_charges"]} XOF',
+                'message': f'{charges_appliquees} charges appliquées pour un total de {calcul["total_charges"]} F CFA',
                 'charges_appliquees': charges_appliquees,
                 'total_applique': calcul['total_charges']
             }
@@ -1550,7 +1612,7 @@ class RecuRetrait(models.Model):
     
     def get_montant_formatted(self):
         """Retourne le montant formaté."""
-        return f"{self.get_montant_total()} XOF"
+        return f"{self.get_montant_total()} F CFA"
     
     def get_date_retrait(self):
         """Retourne la date du retrait."""
@@ -1647,7 +1709,7 @@ class TableauBordFinancier(models.Model):
     )
     devise = models.CharField(
         max_length=10,
-        default='XOF',
+        default='F CFA',
         verbose_name=_("Devise"),
         help_text=_("Devise utilisée pour les montants")
     )
@@ -1832,6 +1894,113 @@ class TableauBordFinancier(models.Model):
 Retrait = RetraitBailleur
 
 
+class DetailRetraitUnite(models.Model):
+    """Détails d'un retrait par unité locative."""
+    
+    retrait = models.ForeignKey(
+        RetraitBailleur,
+        on_delete=models.CASCADE,
+        related_name='details_unites',
+        verbose_name=_("Retrait")
+    )
+    unite_locative = models.ForeignKey(
+        'proprietes.UniteLocative',
+        on_delete=models.PROTECT,
+        related_name='details_retraits',
+        verbose_name=_("Unité locative")
+    )
+    contrat = models.ForeignKey(
+        'contrats.Contrat',
+        on_delete=models.PROTECT,
+        related_name='details_retraits',
+        verbose_name=_("Contrat")
+    )
+    
+    # Montants spécifiques à cette unité
+    loyer_theorique = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name=_("Loyer théorique de l'unité")
+    )
+    charges_theoriques = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Charges théoriques de l'unité")
+    )
+    paiements_recus = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name=_("Paiements effectivement reçus")
+    )
+    charges_deductibles = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Charges déductibles de l'unité")
+    )
+    revenus_nets_unite = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name=_("Revenus nets de l'unité")
+    )
+    
+    # Informations de performance
+    taux_paiement = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Taux de paiement (%)")
+    )
+    statut_paiement = models.CharField(
+        max_length=20,
+        choices=[
+            ('complet', 'Complet'),
+            ('partiel', 'Partiel'),
+            ('impaye', 'Impayé'),
+            ('avance', 'Avance'),
+        ],
+        default='complet',
+        verbose_name=_("Statut de paiement")
+    )
+    
+    # Métadonnées
+    date_creation = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(
+        blank=True,
+        verbose_name=_("Notes spécifiques à cette unité")
+    )
+    
+    class Meta:
+        verbose_name = _("Détail retrait par unité")
+        verbose_name_plural = _("Détails retraits par unités")
+        unique_together = ['retrait', 'unite_locative']
+        ordering = ['unite_locative__numero_unite']
+    
+    def __str__(self):
+        return f"Détail {self.retrait} - Unité {self.unite_locative.numero_unite}"
+    
+    def get_rentabilite_unite(self):
+        """Calcule la rentabilité de l'unité pour cette période."""
+        if self.loyer_theorique > 0:
+            return (self.revenus_nets_unite / self.loyer_theorique) * 100
+        return 0
+    
+    def is_unite_rentable(self):
+        """Vérifie si l'unité est rentable."""
+        return self.revenus_nets_unite > 0
+    
+    def get_statut_color(self):
+        """Retourne la couleur associée au statut de paiement."""
+        colors = {
+            'complet': 'success',
+            'partiel': 'warning',
+            'impaye': 'danger',
+            'avance': 'info'
+        }
+        return colors.get(self.statut_paiement, 'secondary')
+
+
 class RecapMensuel(models.Model):
     """Récapitulatif mensuel pour un bailleur."""
     
@@ -1904,15 +2073,16 @@ class RecapMensuel(models.Model):
     def calculer_totaux(self):
         """Calcule automatiquement tous les totaux et vérifie les garanties financières."""
         from django.db.models import Sum, Count
+        from decimal import Decimal
         
         # Calculer les totaux des loyers (basés sur les contrats actifs, pas les paiements reçus)
-        total_loyers = 0
-        total_charges = 0
+        total_loyers = Decimal('0')
+        total_charges = Decimal('0')
         nombre_proprietes = 0
         nombre_contrats = 0
         
         # Récupérer toutes les propriétés du bailleur avec contrats actifs
-        proprietes_actives = self.bailleur.propriete_set.filter(
+        proprietes_actives = self.bailleur.proprietes.filter(
             contrats__est_actif=True,
             contrats__est_resilie=False
         ).distinct()
@@ -1924,9 +2094,28 @@ class RecapMensuel(models.Model):
             if contrat_actif:
                 nombre_contrats += 1
                 # Loyer mensuel du contrat (pas besoin d'attendre le paiement)
-                total_loyers += contrat_actif.loyer_mensuel
+                # Conversion sécurisée en Decimal
+                loyer_mensuel = contrat_actif.loyer_mensuel
+                if isinstance(loyer_mensuel, str):
+                    try:
+                        loyer_mensuel = Decimal(loyer_mensuel)
+                    except (ValueError, TypeError):
+                        loyer_mensuel = Decimal('0')
+                elif loyer_mensuel is None:
+                    loyer_mensuel = Decimal('0')
+                total_loyers += loyer_mensuel
+                
                 # Charges mensuelles du contrat
-                total_charges += contrat_actif.charges_mensuelles
+                # Conversion sécurisée en Decimal
+                charges_mensuelles = contrat_actif.charges_mensuelles
+                if isinstance(charges_mensuelles, str):
+                    try:
+                        charges_mensuelles = Decimal(charges_mensuelles)
+                    except (ValueError, TypeError):
+                        charges_mensuelles = Decimal('0')
+                elif charges_mensuelles is None:
+                    charges_mensuelles = Decimal('0')
+                total_charges += charges_mensuelles
         
         # Mettre à jour les totaux
         self.total_loyers_bruts = total_loyers
@@ -1943,14 +2132,15 @@ class RecapMensuel(models.Model):
     def calculer_garanties_financieres(self):
         """Calcule et vérifie si les garanties financières sont suffisantes."""
         from django.db.models import Sum
+        from decimal import Decimal
         
-        total_cautions_requises = 0
-        total_avances_requises = 0
-        total_cautions_versees = 0
-        total_avances_versees = 0
+        total_cautions_requises = Decimal('0')
+        total_avances_requises = Decimal('0')
+        total_cautions_versees = Decimal('0')
+        total_avances_versees = Decimal('0')
         
         # Récupérer toutes les propriétés du bailleur avec contrats actifs
-        proprietes_actives = self.bailleur.propriete_set.filter(
+        proprietes_actives = self.bailleur.proprietes.filter(
             contrats__est_actif=True,
             contrats__est_resilie=False
         ).distinct()
@@ -1959,8 +2149,19 @@ class RecapMensuel(models.Model):
             contrat_actif = propriete.contrats.filter(est_actif=True).first()
             if contrat_actif:
                 # Calculer les garanties requises (caution + avance)
-                caution_requise = contrat_actif.loyer_mensuel  # Généralement 1 mois de loyer
-                avance_requise = contrat_actif.loyer_mensuel   # Généralement 1 mois de loyer
+                # Conversion sécurisée en Decimal
+                caution_requise = contrat_actif.loyer_mensuel
+                if isinstance(caution_requise, str):
+                    try:
+                        caution_requise = Decimal(caution_requise)
+                    except (ValueError, TypeError):
+                        caution_requise = Decimal('0')
+                elif caution_requise is None:
+                    caution_requise = Decimal('0')
+                else:
+                    caution_requise = Decimal(str(caution_requise))
+                
+                avance_requise = caution_requise  # Généralement 1 mois de loyer
                 
                 total_cautions_requises += caution_requise
                 total_avances_requises += avance_requise
@@ -1975,6 +2176,17 @@ class RecapMensuel(models.Model):
                     type_paiement='avance',
                     statut='valide'
                 ).aggregate(total=Sum('montant'))['total'] or 0
+                
+                # Conversion sécurisée des paiements
+                if paiements_caution is None:
+                    paiements_caution = Decimal('0')
+                else:
+                    paiements_caution = Decimal(str(paiements_caution))
+                
+                if paiements_avance is None:
+                    paiements_avance = Decimal('0')
+                else:
+                    paiements_avance = Decimal(str(paiements_avance))
                 
                 total_cautions_versees += paiements_caution
                 total_avances_versees += paiements_avance
@@ -2010,6 +2222,103 @@ class RecapMensuel(models.Model):
                 return f"{statut_base} - Prêt pour paiement"
         
         return statut_base
+    
+    @classmethod
+    def get_prochain_mois_recap_pour_bailleur(cls, bailleur):
+        """
+        Détermine automatiquement le prochain mois de récapitulatif pour un bailleur
+        basé sur le dernier récapitulatif existant.
+        
+        Args:
+            bailleur: Instance du modèle Bailleur
+            
+        Returns:
+            date: Date du prochain mois de récapitulatif (1er du mois)
+        """
+        from datetime import date, timedelta
+        from dateutil.relativedelta import relativedelta
+        
+        # Récupérer le dernier récapitulatif pour ce bailleur
+        dernier_recap = cls.objects.filter(
+            bailleur=bailleur,
+            is_deleted=False
+        ).order_by('-mois_recap').first()
+        
+        if dernier_recap:
+            # Si un récapitulatif existe, prendre le mois suivant
+            prochain_mois = dernier_recap.mois_recap + relativedelta(months=1)
+        else:
+            # Si aucun récapitulatif n'existe, commencer par le mois actuel
+            prochain_mois = date.today().replace(day=1)
+        
+        return prochain_mois
+    
+    @classmethod
+    def get_dernier_mois_recap_pour_bailleur(cls, bailleur):
+        """
+        Récupère le dernier mois de récapitulatif pour un bailleur.
+        
+        Args:
+            bailleur: Instance du modèle Bailleur
+            
+        Returns:
+            date or None: Date du dernier mois de récapitulatif ou None si aucun
+        """
+        dernier_recap = cls.objects.filter(
+            bailleur=bailleur,
+            is_deleted=False
+        ).order_by('-mois_recap').first()
+        
+        return dernier_recap.mois_recap if dernier_recap else None
+    
+    @classmethod
+    def get_mois_recap_suggere_pour_bailleur(cls, bailleur):
+        """
+        Suggère le mois de récapitulatif pour un bailleur en fonction de différents critères :
+        1. Le mois suivant le dernier récapitulatif
+        2. Le mois actuel si aucun récapitulatif n'existe
+        3. Le mois actuel si le dernier récapitulatif est antérieur au mois actuel
+        
+        Args:
+            bailleur: Instance du modèle Bailleur
+            
+        Returns:
+            dict: Dictionnaire contenant le mois suggéré et des informations contextuelles
+        """
+        from datetime import date
+        from dateutil.relativedelta import relativedelta
+        
+        mois_actuel = date.today().replace(day=1)
+        dernier_mois = cls.get_dernier_mois_recap_pour_bailleur(bailleur)
+        
+        if dernier_mois is None:
+            # Aucun récapitulatif existant
+            mois_suggere = mois_actuel
+            raison = "Aucun récapitulatif existant - suggestion du mois actuel"
+        elif dernier_mois < mois_actuel:
+            # Le dernier récapitulatif est antérieur au mois actuel
+            mois_suggere = mois_actuel
+            raison = f"Dernier récapitulatif ({dernier_mois.strftime('%B %Y')}) antérieur au mois actuel"
+        else:
+            # Le dernier récapitulatif est récent, suggérer le mois suivant
+            mois_suggere = dernier_mois + relativedelta(months=1)
+            raison = f"Mois suivant le dernier récapitulatif ({dernier_mois.strftime('%B %Y')})"
+        
+        # Vérifier si un récapitulatif existe déjà pour le mois suggéré
+        recap_existant = cls.objects.filter(
+            bailleur=bailleur,
+            mois_recap=mois_suggere,
+            is_deleted=False
+        ).exists()
+        
+        return {
+            'mois_suggere': mois_suggere,
+            'raison': raison,
+            'dernier_mois': dernier_mois,
+            'mois_actuel': mois_actuel,
+            'recap_existant': recap_existant,
+            'mois_suggere_formate': mois_suggere.strftime('%B %Y')
+        }
 
 
 class RecapitulatifMensuelBailleur(models.Model):
@@ -2161,8 +2470,54 @@ class RecapitulatifMensuelBailleur(models.Model):
         
         return totaux
     
+    def get_periode_calcul(self):
+        """Retourne les dates de début et fin selon le type de récapitulatif."""
+        from datetime import datetime, timedelta
+        from dateutil.relativedelta import relativedelta
+        
+        date_debut = self.mois_recapitulatif.replace(day=1)
+        
+        if self.type_recapitulatif == 'mensuel':
+            date_fin = date_debut + relativedelta(months=1) - timedelta(days=1)
+        elif self.type_recapitulatif == 'trimestriel':
+            # Calculer le trimestre
+            trimestre = (date_debut.month - 1) // 3 + 1
+            mois_debut_trimestre = (trimestre - 1) * 3 + 1
+            date_debut = date_debut.replace(month=mois_debut_trimestre)
+            date_fin = date_debut + relativedelta(months=3) - timedelta(days=1)
+        elif self.type_recapitulatif == 'annuel':
+            date_debut = date_debut.replace(month=1)
+            date_fin = date_debut.replace(month=12, day=31)
+        else:  # exceptionnel - utiliser le mois sélectionné
+            date_fin = date_debut + relativedelta(months=1) - timedelta(days=1)
+        
+        return date_debut, date_fin
+    
+    def get_multiplicateur_periode(self):
+        """Retourne le multiplicateur selon la période pour les loyers."""
+        if self.type_recapitulatif == 'mensuel':
+            return 1
+        elif self.type_recapitulatif == 'trimestriel':
+            return 3
+        elif self.type_recapitulatif == 'annuel':
+            return 12
+        else:  # exceptionnel
+            return 1
+    
+    def get_libelle_periode(self):
+        """Retourne le libellé de la période selon le type."""
+        if self.type_recapitulatif == 'mensuel':
+            return f"Mensuel - {self.mois_recapitulatif.strftime('%B %Y')}"
+        elif self.type_recapitulatif == 'trimestriel':
+            trimestre = (self.mois_recapitulatif.month - 1) // 3 + 1
+            return f"Trimestriel T{trimestre} - {self.mois_recapitulatif.year}"
+        elif self.type_recapitulatif == 'annuel':
+            return f"Annuel - {self.mois_recapitulatif.year}"
+        else:  # exceptionnel
+            return f"Exceptionnel - {self.mois_recapitulatif.strftime('%B %Y')}"
+
     def calculer_details_bailleur(self, bailleur):
-        """Calcule les détails complets pour un bailleur spécifique."""
+        """Calcule les détails complets pour un bailleur spécifique selon la période."""
         from proprietes.models import ChargesBailleur
         from django.db.models import Sum
         
@@ -2172,15 +2527,23 @@ class RecapitulatifMensuelBailleur(models.Model):
             contrats__est_actif=True
         ).distinct()
         
+        from decimal import Decimal
         details = {
             'bailleur': bailleur,
             'nombre_proprietes': proprietes_louees.count(),
             'proprietes_details': [],
-            'total_loyers_bruts': 0,
-            'total_charges_deductibles': 0,
-            'total_charges_bailleur': 0,
-            'montant_net_a_payer': 0
+            'total_loyers_bruts': Decimal('0'),
+            'total_charges_deductibles': Decimal('0'),
+            'total_charges_bailleur': Decimal('0'),
+            'montant_net_a_payer': Decimal('0'),
+            'periode': self.get_libelle_periode(),
+            'type_periode': self.type_recapitulatif,
+            'multiplicateur': self.get_multiplicateur_periode()
         }
+        
+        # Obtenir les dates de la période
+        date_debut, date_fin = self.get_periode_calcul()
+        multiplicateur = self.get_multiplicateur_periode()
         
         for propriete in proprietes_louees:
             # Contrat actif de la propriété
@@ -2188,45 +2551,76 @@ class RecapitulatifMensuelBailleur(models.Model):
             if not contrat_actif:
                 continue
             
-            # Loyers perçus pour ce mois
-            loyers_mois = Paiement.objects.filter(
+            # CORRECTION : Utiliser le loyer mensuel du contrat au lieu des paiements reçus
+            # Conversion sécurisée en Decimal
+            loyer_mensuel_contrat = contrat_actif.loyer_mensuel
+            if isinstance(loyer_mensuel_contrat, str):
+                try:
+                    loyer_mensuel_contrat = Decimal(loyer_mensuel_contrat)
+                except (ValueError, TypeError):
+                    loyer_mensuel_contrat = Decimal('0')
+            elif loyer_mensuel_contrat is None:
+                loyer_mensuel_contrat = Decimal('0')
+            
+            # Calculer les loyers selon la période
+            loyers_bruts = loyer_mensuel_contrat * multiplicateur
+            
+            # Loyers perçus pour la période (pour information)
+            loyers_percus_periode = Paiement.objects.filter(
                 contrat=contrat_actif,
-                date_paiement__year=self.mois_recapitulatif.year,
-                date_paiement__month=self.mois_recapitulatif.month,
+                date_paiement__range=[date_debut, date_fin],
                 statut='valide'
             ).aggregate(total=Sum('montant'))['total'] or 0
             
-            # Charges déductibles (locataire)
-            charges_deductibles = ChargeDeductible.objects.filter(
+            # Charges déductibles (locataire) - basées sur le contrat
+            charges_mensuelles_contrat = contrat_actif.charges_mensuelles
+            if isinstance(charges_mensuelles_contrat, str):
+                try:
+                    charges_mensuelles_contrat = Decimal(charges_mensuelles_contrat)
+                except (ValueError, TypeError):
+                    charges_mensuelles_contrat = Decimal('0')
+            elif charges_mensuelles_contrat is None:
+                charges_mensuelles_contrat = Decimal('0')
+            
+            # Calculer les charges selon la période
+            charges_contrat_periode = charges_mensuelles_contrat * multiplicateur
+            
+            # Charges déductibles supplémentaires pour la période
+            charges_deductibles_supplementaires = ChargeDeductible.objects.filter(
                 contrat__propriete=propriete,
-                date_charge__year=self.mois_recapitulatif.year,
-                date_charge__month=self.mois_recapitulatif.month,
+                date_charge__range=[date_debut, date_fin],
                 statut='validee'
             ).aggregate(total=Sum('montant'))['total'] or 0
             
-            # Charges bailleur
+            # Total des charges déductibles
+            charges_deductibles = charges_contrat_periode + charges_deductibles_supplementaires
+            
+            # Charges bailleur pour la période
             charges_bailleur = ChargesBailleur.objects.filter(
                 propriete=propriete,
-                date_charge__year=self.mois_recapitulatif.year,
-                date_charge__month=self.mois_recapitulatif.month,
+                date_charge__range=[date_debut, date_fin],
                 statut__in=['en_attente', 'deduite_retrait']
             ).aggregate(total=Sum('montant_restant'))['total'] or 0
             
             # Calcul du montant net pour cette propriété
-            montant_net_propriete = loyers_mois - charges_deductibles - charges_bailleur
+            montant_net_propriete = loyers_bruts - charges_deductibles - charges_bailleur
             
             propriete_detail = {
                 'propriete': propriete,
                 'contrat': contrat_actif,
-                'loyers_bruts': loyers_mois,
+                'loyers_bruts': loyers_bruts,
+                'loyers_percus': loyers_percus_periode,  # Pour information
                 'charges_deductibles': charges_deductibles,
                 'charges_bailleur': charges_bailleur,
                 'montant_net': montant_net_propriete,
-                'locataire': contrat_actif.locataire
+                'locataire': contrat_actif.locataire,
+                'loyer_mensuel_base': loyer_mensuel_contrat,
+                'charges_mensuelles_base': charges_mensuelles_contrat,
+                'multiplicateur': multiplicateur
             }
             
             details['proprietes_details'].append(propriete_detail)
-            details['total_loyers_bruts'] += loyers_mois
+            details['total_loyers_bruts'] += loyers_bruts
             details['total_charges_deductibles'] += charges_deductibles
             details['total_charges_bailleur'] += charges_bailleur
             details['montant_net_a_payer'] += montant_net_propriete
@@ -2236,9 +2630,10 @@ class RecapitulatifMensuelBailleur(models.Model):
     def generer_pdf_recapitulatif(self):
         """Génère le PDF du récapitulatif mensuel."""
         from django.template.loader import render_to_string
-        from weasyprint import HTML
+        from xhtml2pdf import pisa
         import tempfile
         import os
+        from io import BytesIO
         
         # Récupérer les totaux globaux
         totaux = self.calculer_totaux_globaux()
@@ -2253,16 +2648,15 @@ class RecapitulatifMensuelBailleur(models.Model):
             }
         )
         
-        # Créer le PDF
-        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_file:
-            HTML(string=html_content).write_pdf(tmp_file.name)
-            
-            # Lire le contenu du PDF
-            with open(tmp_file.name, 'rb') as pdf_file:
-                pdf_content = pdf_file.read()
-            
-            # Nettoyer le fichier temporaire
-            os.unlink(tmp_file.name)
+        # Créer le PDF avec xhtml2pdf
+        pdf_buffer = BytesIO()
+        pisa_status = pisa.CreatePDF(html_content, dest=pdf_buffer)
+        
+        if pisa_status.err:
+            raise Exception(f"Erreur lors de la génération du PDF: {pisa_status.err}")
+        
+        pdf_content = pdf_buffer.getvalue()
+        pdf_buffer.close()
         
         return pdf_content
     
@@ -2356,37 +2750,158 @@ class RecapitulatifMensuelBailleur(models.Model):
         return self.statut in ['envoye', 'valide']
 
 
-class Recu(models.Model):
-    """Modèle pour les reçus de paiement générés automatiquement."""
+# Temporairement commenté pour résoudre le problème de migration
+# class Recu(models.Model):
+#     """Modèle pour les reçus de paiement générés automatiquement."""
+#     
+#     # Numéro unique du reçu
+#     numero_recu = models.CharField(
+#         max_length=50,
+#         unique=True,
+#         verbose_name=_("Numéro de reçu"),
+#         help_text=_("Numéro unique du reçu")
+#     )
+#     
+#     # Paiement associé
+#     paiement = models.OneToOneField(
+#         Paiement,
+#         on_delete=models.CASCADE,
+#         related_name='recu',
+#         verbose_name=_("Paiement")
+#     )
+#     
+#     # Template utilisé
+#     template_utilise = models.CharField(
+#         max_length=20,
+#         choices=[
+#             ('standard', 'Standard'),
+#             ('simplified', 'Simplifié'),
+#             ('detailed', 'Détaillé'),
+#             ('professionnel', 'Professionnel'),
+#             ('luxe', 'Luxe'),
+#             ('entreprise', 'Entreprise'),
+#         ],
+#         default='standard',
+#         verbose_name=_("Template utilisé")
+#     )
+#     
+#     # Format d'impression
+#     format_impression = models.CharField(
+#         max_length=20,
+#         choices=[
+#             ('A4', 'A4'),
+#             ('A5', 'A5'),
+#             ('lettre', 'Lettre'),
+#             ('personnalise', 'Personnalisé'),
+#         ],
+#         default='A4',
+#         verbose_name=_("Format d'impression")
+#     )
+#     
+#     # Statut du reçu
+#     valide = models.BooleanField(
+#         default=True,
+#         verbose_name=_("Reçu validé")
+#     )
+#     
+#     # Informations d'impression
+#     imprime = models.BooleanField(
+#         default=False,
+#         verbose_name=_("Reçu imprimé")
+#     )
+#     date_impression = models.DateTimeField(
+#         null=True,
+#         blank=True,
+#         verbose_name=_("Date d'impression")
+#     )
+#     imprime_par = models.ForeignKey(
+#         'utilisateurs.Utilisateur',
+#         on_delete=models.SET_NULL,
+#         null=True,
+#         blank=True,
+#         related_name='recus_imprimes',
+#         verbose_name=_("Imprimé par")
+#     )
+#     nombre_impressions = models.PositiveIntegerField(
+#         default=0,
+#         verbose_name=_("Nombre d'impressions")
+#     )
+#     
+#     # Métadonnées
+#     date_creation = models.DateTimeField(
+#         auto_now_add=True,
+#         verbose_name=_("Date de création")
+#     )
+#     cree_par = models.ForeignKey(
+#         'utilisateurs.Utilisateur',
+#         on_delete=models.SET_NULL,
+#         null=True,
+#         blank=True,
+#         related_name='recus_crees',
+#         verbose_name=_("Créé par")
+#     )
+#     
+#     class Meta:
+#         verbose_name = _("Reçu de paiement")
+#         verbose_name_plural = _("Reçus de paiement")
+#         ordering = ['-date_creation']
+#     
+#     def __str__(self):
+#         return f"Reçu {self.numero_recu} - {self.paiement.contrat.locataire.get_nom_complet()}"
+#     
+#     def marquer_imprime(self, utilisateur):
+#         """Marque le reçu comme imprimé."""
+#         self.imprime = True
+#         self.date_impression = timezone.now()
+#         self.imprime_par = utilisateur
+#         self.nombre_impressions += 1
+#         self.save()
+
+
+class RecuRecapitulatif(models.Model):
+    """Modèle pour les reçus de récapitulatifs mensuels - PROFESSIONNEL."""
     
     # Numéro unique du reçu
     numero_recu = models.CharField(
         max_length=50,
         unique=True,
         verbose_name=_("Numéro de reçu"),
-        help_text=_("Numéro unique du reçu")
+        help_text=_("Numéro unique du reçu de récapitulatif")
     )
     
-    # Paiement associé
-    paiement = models.OneToOneField(
-        Paiement,
+    # Récapitulatif associé
+    recapitulatif = models.OneToOneField(
+        RecapitulatifMensuelBailleur,
         on_delete=models.CASCADE,
         related_name='recu',
-        verbose_name=_("Paiement")
+        verbose_name=_("Récapitulatif")
+    )
+    
+    # Type de reçu
+    type_recu = models.CharField(
+        max_length=20,
+        choices=[
+            ('recapitulatif', 'Récapitulatif'),
+            ('quittance', 'Quittance'),
+            ('attestation', 'Attestation'),
+            ('releve', 'Relevé'),
+            ('facture', 'Facture'),
+        ],
+        default='recapitulatif',
+        verbose_name=_("Type de reçu")
     )
     
     # Template utilisé
     template_utilise = models.CharField(
         max_length=20,
         choices=[
-            ('standard', 'Standard'),
-            ('simplified', 'Simplifié'),
-            ('detailed', 'Détaillé'),
             ('professionnel', 'Professionnel'),
-            ('luxe', 'Luxe'),
             ('entreprise', 'Entreprise'),
+            ('luxe', 'Luxe'),
+            ('standard', 'Standard'),
+            ('gestimmob', 'GESTIMMOB'),
         ],
-        default='standard',
+        default='professionnel',
         verbose_name=_("Template utilisé")
     )
     
@@ -2394,19 +2909,27 @@ class Recu(models.Model):
     format_impression = models.CharField(
         max_length=20,
         choices=[
-            ('A4', 'A4'),
-            ('A5', 'A5'),
-            ('lettre', 'Lettre'),
-            ('personnalise', 'Personnalisé'),
+            ('A4_paysage', 'A4 Paysage'),
+            ('A4_portrait', 'A4 Portrait'),
+            ('A3_paysage', 'A3 Paysage'),
+            ('lettre_paysage', 'Lettre Paysage'),
         ],
-        default='A4',
+        default='A4_paysage',
         verbose_name=_("Format d'impression")
     )
     
     # Statut du reçu
-    valide = models.BooleanField(
-        default=True,
-        verbose_name=_("Reçu validé")
+    statut = models.CharField(
+        max_length=20,
+        choices=[
+            ('brouillon', 'Brouillon'),
+            ('valide', 'Validé'),
+            ('imprime', 'Imprimé'),
+            ('envoye', 'Envoyé'),
+            ('archive', 'Archivé'),
+        ],
+        default='brouillon',
+        verbose_name=_("Statut du reçu")
     )
     
     # Informations d'impression
@@ -2424,7 +2947,7 @@ class Recu(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='recus_imprimes',
+        related_name='recus_recapitulatifs_imprimes',
         verbose_name=_("Imprimé par")
     )
     nombre_impressions = models.PositiveIntegerField(
@@ -2432,73 +2955,69 @@ class Recu(models.Model):
         verbose_name=_("Nombre d'impressions")
     )
     
-    # Informations d'envoi par email
-    envoye_email = models.BooleanField(
+    # Informations d'envoi
+    envoye = models.BooleanField(
         default=False,
-        verbose_name=_("Reçu envoyé par email")
+        verbose_name=_("Reçu envoyé")
     )
-    date_envoi_email = models.DateTimeField(
+    date_envoi = models.DateTimeField(
         null=True,
         blank=True,
-        verbose_name=_("Date d'envoi par email")
+        verbose_name=_("Date d'envoi")
     )
-    email_destinataire = models.EmailField(
-        null=True,
+    mode_envoi = models.CharField(
+        max_length=20,
+        choices=[
+            ('email', 'Email'),
+            ('courrier', 'Courrier'),
+            ('remise_main', 'Remise en main propre'),
+            ('fax', 'Fax'),
+        ],
         blank=True,
-        verbose_name=_("Email du destinataire")
-    )
-    nombre_emails = models.PositiveIntegerField(
-        default=0,
-        verbose_name=_("Nombre d'emails envoyés")
+        verbose_name=_("Mode d'envoi")
     )
     
     # Métadonnées
-    date_emission = models.DateTimeField(
+    date_creation = models.DateTimeField(
         auto_now_add=True,
-        verbose_name=_("Date d'émission")
+        verbose_name=_("Date de création")
     )
-    date_validation = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name=_("Date de validation")
-    )
-    valide_par = models.ForeignKey(
+    cree_par = models.ForeignKey(
         'utilisateurs.Utilisateur',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='recus_valides',
-        verbose_name=_("Validé par")
+        related_name='recus_recapitulatifs_crees',
+        verbose_name=_("Créé par")
     )
     
-    # Génération automatique
-    genere_automatiquement = models.BooleanField(
-        default=True,
-        verbose_name=_("Généré automatiquement")
+    # Hash de sécurité
+    hash_securite = models.CharField(
+        max_length=64,
+        blank=True,
+        verbose_name=_("Hash de sécurité")
     )
     
-    # Gestion de la suppression logique
-    is_deleted = models.BooleanField(
-        default=False,
-        verbose_name=_("Supprimé")
+    # Notes
+    notes = models.TextField(
+        blank=True,
+        verbose_name=_("Notes")
     )
     
     class Meta:
-        verbose_name = _("Reçu")
-        verbose_name_plural = _("Reçus")
-        ordering = ['-date_emission']
+        verbose_name = _("Reçu de récapitulatif")
+        verbose_name_plural = _("Reçus de récapitulatifs")
+        ordering = ['-date_creation']
         indexes = [
             models.Index(fields=['numero_recu']),
-            models.Index(fields=['date_emission']),
-            models.Index(fields=['valide']),
-            models.Index(fields=['imprime']),
+            models.Index(fields=['statut', 'date_creation']),
+            models.Index(fields=['recapitulatif', 'type_recu']),
         ]
     
     def __str__(self):
-        return f"Reçu {self.numero_recu} - {self.paiement.reference_paiement}"
+        return f"Reçu {self.numero_recu} - {self.recapitulatif.bailleur.get_nom_complet()}"
     
     def save(self, *args, **kwargs):
-        # Générer automatiquement le numéro de reçu s'il n'existe pas
         if not self.numero_recu:
             self.numero_recu = self.generer_numero_recu()
         super().save(*args, **kwargs)
@@ -2508,98 +3027,42 @@ class Recu(models.Model):
         from datetime import datetime
         import random
         
-        # Format: REC-YYYYMMDD-XXXXX
+        # Format: REC-YYYYMMDD-XXXX
         date_str = datetime.now().strftime('%Y%m%d')
-        random_suffix = random.randint(10000, 99999)
-        
-        numero = f"REC-{date_str}-{random_suffix}"
+        random_num = random.randint(1000, 9999)
+        numero = f"REC-{date_str}-{random_num}"
         
         # Vérifier l'unicité
-        while Recu.objects.filter(numero_recu=numero).exists():
-            random_suffix = random.randint(10000, 99999)
-            numero = f"REC-{date_str}-{random_suffix}"
+        while RecuRecapitulatif.objects.filter(numero_recu=numero).exists():
+            random_num = random.randint(1000, 9999)
+            numero = f"REC-{date_str}-{random_num}"
         
         return numero
     
-    def marquer_comme_imprime(self, utilisateur):
+    def marquer_imprime(self, utilisateur):
         """Marque le reçu comme imprimé."""
         self.imprime = True
         self.date_impression = timezone.now()
         self.imprime_par = utilisateur
         self.nombre_impressions += 1
+        self.statut = 'imprime'
         self.save()
     
-    def marquer_comme_envoye_email(self, email_destinataire):
-        """Marque le reçu comme envoyé par email."""
-        self.envoye_email = True
-        self.date_envoi_email = timezone.now()
-        self.email_destinataire = email_destinataire
-        self.nombre_emails += 1
+    def marquer_envoye(self, mode_envoi):
+        """Marque le reçu comme envoyé."""
+        self.envoye = True
+        self.date_envoi = timezone.now()
+        self.mode_envoi = mode_envoi
+        self.statut = 'envoye'
         self.save()
     
-    def valider_recu(self, utilisateur):
-        """Valide le reçu."""
-        self.valide = True
-        self.date_validation = timezone.now()
-        self.valide_par = utilisateur
+    def generer_hash_securite(self):
+        """Génère un hash de sécurité pour le reçu."""
+        import hashlib
+        
+        data = f"{self.numero_recu}{self.recapitulatif.pk}{self.date_creation.isoformat()}"
+        self.hash_securite = hashlib.sha256(data.encode()).hexdigest()
         self.save()
     
-    def get_statut_color(self):
-        """Retourne la couleur CSS pour le statut."""
-        if self.imprime:
-            return 'success'
-        elif self.envoye_email:
-            return 'info'
-        elif self.valide:
-            return 'primary'
-        else:
-            return 'warning'
-    
-    def get_template_utilise_display(self):
-        """Retourne le nom du template utilisé."""
-        return dict(self._meta.get_field('template_utilise').choices)[self.template_utilise]
-    
-    def get_format_impression_display(self):
-        """Retourne le format d'impression."""
-        return dict(self._meta.get_field('format_impression').choices)[self.format_impression]
-
-
-# Signaux Django pour la génération automatique des reçus (TEMPORAIREMENT DÉSACTIVÉS)
-# from django.db.models.signals import post_save
-# from django.dispatch import receiver
-
-# @receiver(post_save, sender=Paiement)
-# def generer_recu_automatique(sender, instance, created, **kwargs):
-#     """Génère automatiquement un reçu lors de la création d'un paiement."""
-#     if created and instance.statut == 'valide':
-#         # Créer le reçu automatiquement
-#         Recu.objects.create(
-#             paiement=instance,
-#             genere_automatiquement=True,
-#             valide=True
-#         )
-
-# @receiver(post_save, sender=Paiement)
-# def generer_recu_apres_validation(sender, instance, created, **kwargs):
-#     """Génère automatiquement un reçu lors de la validation d'un paiement."""
-#     if not created and instance.statut == 'valide':
-#         # Vérifier si un reçu existe déjà
-#         if not hasattr(instance, 'recu'):
-#             # Créer le reçu automatiquement
-#             Recu.objects.create(
-#                 paiement=instance,
-#                 genere_automatiquement=True,
-#                 valide=True
-#             )
-
-# Méthode pour générer un reçu manuellement si nécessaire
-def generer_recu_manuel(paiement, utilisateur):
-    """Génère manuellement un reçu pour un paiement."""
-    if not hasattr(paiement, 'recu'):
-        return Recu.objects.create(
-            paiement=paiement,
-            genere_automatiquement=False,
-            valide=True,
-            valide_par=utilisateur
-        )
-    return paiement.recu
+    def get_absolute_url(self):
+        return reverse('paiements:detail_recu_recapitulatif', kwargs={'pk': self.pk})

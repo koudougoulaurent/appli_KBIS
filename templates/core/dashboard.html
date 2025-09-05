@@ -131,6 +131,97 @@
         </div>
     </div>
 
+    <!-- Section Unités Locatives -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-primary" style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-building"></i> Gestion des Unités Locatives
+                        </h5>
+                        <span class="badge bg-light text-primary">NOUVEAU</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h6 class="text-primary mb-3">Système Avancé pour Grandes Propriétés</h6>
+                            <p class="mb-3">
+                                Gérez efficacement vos immeubles avec de nombreuses unités locatives : 
+                                appartements, bureaux, chambres, locaux commerciaux, etc.
+                            </p>
+                            <div class="row mb-3">
+                                <div class="col-sm-6">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        <small>Tableaux de bord spécialisés</small>
+                                    </div>
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        <small>Système de réservation</small>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        <small>Gestion par étage</small>
+                                    </div>
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        <small>Analyses de rentabilité</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="mb-3">
+                                <i class="fas fa-building fa-4x text-primary opacity-75"></i>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'proprietes:unites_liste' %}" class="btn btn-primary">
+                                    <i class="fas fa-list"></i> Voir les Unités
+                                </a>
+                                <a href="{% url 'proprietes:unite_create' %}" class="btn btn-outline-primary">
+                                    <i class="fas fa-plus"></i> Nouvelle Unité
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Statistiques rapides des unités -->
+                    {% if unites_stats %}
+                    <hr class="my-4">
+                    <div class="row text-center">
+                        <div class="col-3">
+                            <div class="border-end">
+                                <h4 class="text-primary mb-0">{{ unites_stats.total }}</h4>
+                                <small class="text-muted">Total Unités</small>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="border-end">
+                                <h4 class="text-success mb-0">{{ unites_stats.disponibles }}</h4>
+                                <small class="text-muted">Disponibles</small>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="border-end">
+                                <h4 class="text-danger mb-0">{{ unites_stats.occupees }}</h4>
+                                <small class="text-muted">Occupées</small>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <h4 class="text-warning mb-0">{{ unites_stats.reservees }}</h4>
+                            <small class="text-muted">Réservées</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Contenu principal -->
     <div class="row">
         <!-- Top propriétés -->

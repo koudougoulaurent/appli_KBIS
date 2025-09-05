@@ -182,7 +182,7 @@ def create_bailleur_detail_template(template_path):
                                                 <td>{{ propriete.adresse }}</td>
                                                 <td>{{ propriete.type_bien.nom }}</td>
                                                 <td>{{ propriete.surface }} m²</td>
-                                                <td>{{ propriete.prix }} XOF</td>
+                                                <td>{{ propriete.prix }} F CFA</td>
                                                 <td>
                                                     <a href="{% url 'proprietes:detail' propriete.pk %}" class="btn btn-sm btn-outline-primary">
                                                         <i class="bi bi-eye"></i>

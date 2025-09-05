@@ -32,7 +32,7 @@ def test_formulaire_contrat():
             print(f"   ✅ Données des propriétés disponibles : {len(form.proprietes_data)} propriétés")
             
             for prop_id, prop_data in form.proprietes_data.items():
-                print(f"      - ID {prop_id}: {prop_data['titre']} - Loyer: {prop_data['loyer']} XOF")
+                print(f"      - ID {prop_id}: {prop_data['titre']} - Loyer: {prop_data['loyer']} F CFA")
         else:
             print("   ❌ Données des propriétés non disponibles")
         
@@ -64,7 +64,7 @@ def test_formulaire_contrat():
         
         if proprietes_disponibles.exists():
             for prop in proprietes_disponibles:
-                print(f"      - {prop.titre} (ID: {prop.id}) - Loyer: {prop.loyer_actuel} XOF")
+                print(f"      - {prop.titre} (ID: {prop.id}) - Loyer: {prop.loyer_actuel} F CFA")
         
         print("\n🎉 Test du formulaire terminé avec succès !")
         print("\n📋 Pour tester le remplissage automatique :")

@@ -41,9 +41,9 @@ def test_dashboard_caisse():
         if 'stats' in response.context:
             stats = response.context['stats']
             print(f"✅ Statistiques trouvées:")
-            print(f"   - Paiements du mois: {stats.get('paiements_mois', 0)} XOF")
-            print(f"   - Retraits du mois: {stats.get('retraits_mois', 0)} XOF")
-            print(f"   - Cautions en cours: {stats.get('cautions_cours', 0)} XOF")
+            print(f"   - Paiements du mois: {stats.get('paiements_mois', 0)} F CFA")
+            print(f"   - Retraits du mois: {stats.get('retraits_mois', 0)} F CFA")
+            print(f"   - Cautions en cours: {stats.get('cautions_cours', 0)} F CFA")
             print(f"   - Paiements en attente: {stats.get('paiements_attente', 0)}")
         else:
             print("❌ Aucune statistique trouvée dans le contexte")

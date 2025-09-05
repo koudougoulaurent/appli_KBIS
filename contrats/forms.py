@@ -2,9 +2,11 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django.db import models
 from .models import Contrat, DocumentContrat, ResiliationContrat
-from proprietes.models import Propriete, Bailleur, Locataire
+from proprietes.models import Propriete, Bailleur, Locataire, UniteLocative, Piece
 from datetime import date
+from django_select2.forms import ModelSelect2Widget
 
 class ContratForm(forms.ModelForm):
     """Formulaire pour créer/modifier un contrat de bail"""
@@ -74,33 +76,40 @@ class ContratForm(forms.ModelForm):
         })
     )
     
-    date_paiement_caution = forms.DateField(
+    # Champ pour sélectionner une unité locative spécifique
+    unite_locative = forms.ModelChoiceField(
+        queryset=UniteLocative.objects.all(),
         required=False,
-        label=_('Date de paiement de la caution'),
-        widget=forms.DateInput(attrs={
-            'class': 'form-control',
-            'type': 'date'
-        })
+        label=_("Unité locative"),
+        help_text=_("Sélectionnez une unité locative spécifique si vous louez une partie de la propriété"),
+        widget=ModelSelect2Widget(
+            model=UniteLocative,
+            search_fields=['numero__icontains', 'nom__icontains'],
+            attrs={'data-placeholder': 'Rechercher une unité locative', 'class': 'form-select'},
+            dependent_fields={}
+        )
     )
     
-    date_paiement_avance = forms.DateField(
+    # Champ pour sélectionner une pièce spécifique
+    piece = forms.ModelChoiceField(
+        queryset=Piece.objects.all(),
         required=False,
-        label=_('Date de paiement de l\'avance'),
-        widget=forms.DateInput(attrs={
-            'class': 'form-control',
-            'type': 'date'
+        label=_("Pièce"),
+        help_text=_("Sélectionnez une pièce spécifique si vous louez une pièce individuelle"),
+        widget=forms.Select(attrs={
+            'class': 'form-select'
         })
     )
     
     class Meta:
         model = Contrat
         fields = [
-            'numero_contrat', 'propriete', 'locataire',
-            'date_debut', 'date_fin', 'date_signature', 'loyer_mensuel', 
+            'numero_contrat', 'propriete', 'locataire', 'unite_locative',
+            'date_debut', 'date_fin', 'date_signature', 'loyer_mensuel',
             'charges_mensuelles', 'depot_garantie', 'avance_loyer',
-            'jour_paiement', 'mode_paiement', 'notes'
-            # Suppression des anciens champs de gestion de caution/avance
-            # 'caution_payee', 'date_paiement_caution', 'avance_loyer_payee', 'date_paiement_avance'
+            'jour_paiement', 'mode_paiement', 'notes',
+            'creer_paiement_caution', 'creer_paiement_avance',
+            'date_paiement_caution', 'date_paiement_avance'
         ]
         widgets = {
             'numero_contrat': forms.TextInput(attrs={
@@ -160,10 +169,74 @@ class ContratForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         # Filtrer les propriétés disponibles
-        self.fields['propriete'].queryset = Propriete.objects.filter(disponible=True)
+        # Une propriété est disponible si :
+        # 1. Elle-même est marquée comme disponible, OU
+        # 2. Elle a au moins une unité locative disponible
         
         # Filtrer les locataires actifs
-        self.fields['locataire'].queryset = Locataire.objects.filter(statut='actif')
+        # Afficher toutes les propriétés et tous les locataires sans filtrage
+        self.fields['propriete'].queryset = Propriete.objects.all()
+        self.fields['locataire'].queryset = Locataire.objects.all()
+        
+        # Filtrer les unités locatives disponibles ou non réservées
+        if self.instance.pk and self.instance.propriete:
+            # Pour un contrat existant, filtrer par la propriété du contrat
+            self.fields['unite_locative'].queryset = UniteLocative.objects.filter(
+                propriete=self.instance.propriete,
+                statut__in=['disponible', 'reservee']
+            )
+        elif 'propriete' in self.data:
+            # Pour un nouveau contrat, filtrer par la propriété sélectionnée dans les données POST
+            try:
+                propriete_id = int(self.data.get('propriete'))
+                self.fields['unite_locative'].queryset = UniteLocative.objects.filter(
+                    propriete_id=propriete_id,
+                    statut__in=['disponible', 'reservee']
+                )
+            except (ValueError, TypeError):
+                self.fields['unite_locative'].queryset = UniteLocative.objects.none()
+        elif self.initial.get('propriete'):
+            # Pour un nouveau contrat, filtrer par la propriété initiale si elle est définie
+            try:
+                propriete_id = self.initial['propriete'].id if hasattr(self.initial['propriete'], 'id') else int(self.initial['propriete'])
+                self.fields['unite_locative'].queryset = UniteLocative.objects.filter(
+                    propriete_id=propriete_id,
+                    statut__in=['disponible', 'reservee']
+                )
+            except (ValueError, TypeError):
+                self.fields['unite_locative'].queryset = UniteLocative.objects.none()
+        else:
+            self.fields['unite_locative'].queryset = UniteLocative.objects.none()
+            
+        # Filtrer les pièces disponibles ou non réservées
+        if self.instance.pk and self.instance.propriete:
+            # Pour un contrat existant, filtrer par la propriété du contrat
+            self.fields['piece'].queryset = Piece.objects.filter(
+                propriete=self.instance.propriete,
+                statut__in=['disponible', 'reservee']
+            )
+        elif 'propriete' in self.data:
+            # Pour un nouveau contrat, filtrer par la propriété sélectionnée dans les données POST
+            try:
+                propriete_id = int(self.data.get('propriete'))
+                self.fields['piece'].queryset = Piece.objects.filter(
+                    propriete_id=propriete_id,
+                    statut__in=['disponible', 'reservee']
+                )
+            except (ValueError, TypeError):
+                self.fields['piece'].queryset = Piece.objects.none()
+        elif self.initial.get('propriete'):
+            # Pour un nouveau contrat, filtrer par la propriété initiale si elle est définie
+            try:
+                propriete_id = self.initial['propriete'].id if hasattr(self.initial['propriete'], 'id') else int(self.initial['propriete'])
+                self.fields['piece'].queryset = Piece.objects.filter(
+                    propriete_id=propriete_id,
+                    statut__in=['disponible', 'reservee']
+                )
+            except (ValueError, TypeError):
+                self.fields['piece'].queryset = Piece.objects.none()
+        else:
+            self.fields['piece'].queryset = Piece.objects.none()
         
         # Rendre les champs optionnels
         self.fields['charges_mensuelles'].required = False
@@ -179,10 +252,43 @@ class ContratForm(forms.ModelForm):
         
         # Ajouter les données des propriétés pour le JavaScript
         self.proprietes_data = {}
-        for propriete in Propriete.objects.filter(disponible=True):
+        for propriete in Propriete.objects.filter(
+            models.Q(disponible=True) |
+            models.Q(unites_locatives__statut='disponible', unites_locatives__is_deleted=False)
+        ).distinct():
+            # Récupérer toutes les unités locatives pour cette propriété
+            unites = UniteLocative.objects.filter(
+                propriete=propriete
+            )
+            unites_data = [
+                {
+                    'id': unite.id,
+                    'nom': unite.nom,
+                    'loyer_mensuel': str(unite.loyer_mensuel) if unite.loyer_mensuel else "0.00",
+                    'statut': unite.statut
+                }
+                for unite in unites
+            ]
+            
+            # Récupérer toutes les pièces pour cette propriété
+            pieces = Piece.objects.filter(
+                propriete=propriete
+            )
+            pieces_data = [
+                {
+                    'id': piece.id,
+                    'nom': piece.nom,
+                    'loyer_mensuel': "0.00",  # Les pièces n'ont pas de loyer mensuel direct, cela dépend des contrats
+                    'statut': piece.statut
+                }
+                for piece in pieces
+            ]
+            
             self.proprietes_data[propriete.id] = {
-                'loyer': str(propriete.loyer_actuel),
-                'titre': propriete.titre
+                'loyer': str(propriete.loyer_actuel) if propriete.loyer_actuel else "0.00",
+                'titre': propriete.titre,
+                'unites': unites_data,
+                'pieces': pieces_data
             }
         
         # Suppression de la personnalisation des anciens champs de caution/avance
@@ -265,6 +371,26 @@ class ContratForm(forms.ModelForm):
                 cleaned_data['loyer_mensuel'] = str(propriete.loyer_actuel)
             except AttributeError:
                 pass
+        
+        # Validation de cohérence entre unité locative et pièces
+        unite_locative = cleaned_data.get('unite_locative')
+        if unite_locative:
+            # Si une unité locative est sélectionnée, vérifier qu'aucune pièce n'est assignée
+            if self.instance.pk:
+                pieces_assignees = self.instance.pieces_contrat.filter(actif=True).exists()
+                if pieces_assignees:
+                    raise ValidationError(
+                        "Ce contrat a déjà des pièces spécifiques assignées. "
+                        "Impossible d'assigner une unité locative complète. "
+                        "Veuillez d'abord supprimer les pièces assignées."
+                    )
+            
+            # Vérifier que l'unité locative appartient à la propriété sélectionnée
+            propriete = cleaned_data.get('propriete')
+            if propriete and unite_locative.propriete != propriete:
+                raise ValidationError(
+                    "L'unité locative sélectionnée n'appartient pas à la propriété choisie."
+                )
         
         return cleaned_data
     

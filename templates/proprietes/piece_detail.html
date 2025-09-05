@@ -82,7 +82,7 @@
                         </a>
                         
                         {% if piece.statut == 'disponible' %}
-                            <a href="{% url 'contrats:creer' %}?piece={{ piece.pk }}" class="btn btn-outline-success">
+                            <a href="{% url 'contrats:ajouter' %}?piece={{ piece.pk }}" class="btn btn-outline-success">
                                 <i class="bi bi-person-plus"></i> Louer
                             </a>
                         {% endif %}

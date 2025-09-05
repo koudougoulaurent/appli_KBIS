@@ -223,7 +223,7 @@ def test_methodes_avancees(recu):
     # Test des informations de paiement
     infos = recu.get_informations_paiement()
     print(f"✅ Informations de paiement récupérées:")
-    print(f"   - Montant: {infos['montant']} XOF")
+    print(f"   - Montant: {infos['montant']} F CFA")
     print(f"   - Montant en lettres: {infos['montant_lettres']}")
     print(f"   - Locataire: {infos['locataire_nom']} {infos['locataire_prenom']}")
     print(f"   - Propriété: {infos['propriete_adresse']}")

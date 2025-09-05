@@ -835,10 +835,10 @@ class ContexteIntelligentRetraits {
     
     // Méthodes utilitaires
     formatCurrency(amount) {
-        if (amount === null || amount === undefined) return '0 XOF';
+        if (amount === null || amount === undefined) return '0 F CFA';
         return new Intl.NumberFormat('fr-FR', {
             style: 'currency',
-            currency: 'XOF',
+            currency: 'F CFA',
             minimumFractionDigits: 0
         }).format(amount);
     }

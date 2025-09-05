@@ -70,9 +70,9 @@ def test_dashboards_complet():
     
     print(f"\n💰 FINANCES (Mois {mois_courant}/{annee_courante})")
     print("-" * 30)
-    print(f"💳 Paiements: {paiements_mois} XOF")
-    print(f"💸 Retraits: {retraits_mois} XOF")
-    print(f"🏦 Cautions: {cautions_cours} XOF")
+    print(f"💳 Paiements: {paiements_mois} F CFA")
+    print(f"💸 Retraits: {retraits_mois} F CFA")
+    print(f"🏦 Cautions: {cautions_cours} F CFA")
     print(f"⏳ En attente: {paiements_attente}")
     
     # Données immobilières

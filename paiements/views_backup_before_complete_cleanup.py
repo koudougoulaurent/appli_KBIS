@@ -148,7 +148,7 @@ def generer_pdf_reportlab(recu, config=None, template=None):
         recu_data = [
             ['Numéro de reçu:', recu.numero_recu],
             ['Date d\'émission:', recu.date_emission.strftime('%d/%m/%Y')],
-            ['Montant:', f"{recu.paiement.montant} XOF"],
+            ['Montant:', f"{recu.paiement.montant} F CFA"],
         ]
         
         recu_table = Table(recu_data, colWidths=[2*inch, 4*inch])
@@ -411,8 +411,8 @@ def ajouter_paiement(request):
                 messages.success(
                     request, 
                     f"Paiement créé avec succès ! "
-                    f"{len(charges_ajoutees)} charge(s) déduites pour un total de {total_deductions} XOF. "
-                    f"Montant net payé : {paiement.montant_net_paye or paiement.calculer_montant_net()} XOF"
+                    f"{len(charges_ajoutees)} charge(s) déduites pour un total de {total_deductions} F CFA. "
+                    f"Montant net payé : {paiement.montant_net_paye or paiement.calculer_montant_net()} F CFA"
                 )
             else:
                 messages.success(request, "Paiement créé avec succès.")
@@ -558,7 +558,7 @@ def liste_recus(request):
     # Montant total
     montant_total = recus.aggregate(total=Sum('paiement__montant'))['total'] or 0
     devise_active = getattr(request, 'devise_active', None)
-    devise_base = Devise.objects.get(code='XOF')
+    devise_base = Devise.objects.get(code='F CFA')
     montant_total = convertir_montant(montant_total, devise_base, devise_active)
     
     # Statistiques par template
@@ -688,7 +688,7 @@ def imprimer_recu(request, pk):
     """
     recu = get_object_or_404(Recu, pk=pk)
     devise_active = getattr(request, 'devise_active', None)
-    devise_base = Devise.objects.get(code='XOF')
+    devise_base = Devise.objects.get(code='F CFA')
     informations = recu.get_informations_paiement()
     informations['montant'] = convertir_montant(informations['montant'] or 0, devise_base, devise_active)
     from core.models import ConfigurationEntreprise
@@ -732,7 +732,7 @@ def telecharger_recu_pdf(request, pk):
         import os
         
         devise_active = getattr(request, 'devise_active', None)
-        devise_base = Devise.objects.get(code='XOF')
+        devise_base = Devise.objects.get(code='F CFA')
         informations = recu.get_informations_paiement()
         informations['montant'] = convertir_montant(informations['montant'] or 0, devise_base, devise_active)
         
@@ -1568,7 +1568,7 @@ def impression_directe_recu(request, pk):
         from django.conf import settings
         
         devise_active = getattr(request, 'devise_active', None)
-        devise_base = Devise.objects.get(code='XOF')
+        devise_base = Devise.objects.get(code='F CFA')
         informations = recu.get_informations_paiement()
         informations['montant'] = convertir_montant(informations['montant'] or 0, devise_base, devise_active)
         
@@ -2042,7 +2042,7 @@ def paiement_avec_charges(request, contrat_id):
                 messages.success(
                     request, 
                     f"Paiement créé avec succès. {len(charges_ajoutees)} charge(s) déduites "
-                    f"pour un total de {total_deductions} XOF."
+                    f"pour un total de {total_deductions} F CFA."
                 )
             else:
                 messages.success(request, "Paiement créé avec succès.")

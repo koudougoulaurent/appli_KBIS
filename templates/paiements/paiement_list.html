@@ -177,21 +177,36 @@
                                            title="Voir les détails">
                                             <i class="bi bi-eye"></i>
                                         </a>
-                                        <a href="{% url 'paiements:modifier_paiement' paiement.pk %}" 
-                                           class="btn btn-sm btn-outline-warning"
-                                           title="Modifier">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
+                                        
                                         {% if paiement.statut == 'en_attente' %}
-                                            <form method="post" action="{% url 'paiements:valider_paiement' paiement.pk %}" 
-                                                  style="display: inline;" class="d-inline">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-sm btn-outline-success" 
-                                                        title="Valider le paiement">
-                                                    <i class="bi bi-check-circle"></i>
-                                                </button>
-                                            </form>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-success"
+                                                    onclick="validerPaiementRapide({{ paiement.pk }}, '{{ paiement.reference_paiement|escapejs }}')"
+                                                    title="✅ VALIDER LE PAIEMENT">
+                                                <i class="bi bi-check-circle me-1"></i>VALIDER
+                                            </button>
+                                            
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-danger"
+                                                    onclick="refuserPaiementRapide({{ paiement.pk }}, '{{ paiement.reference_paiement|escapejs }}')"
+                                                    title="❌ Refuser le paiement">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+                                        {% elif paiement.statut == 'valide' %}
+                                            <span class="btn btn-sm btn-outline-success disabled">
+                                                <i class="bi bi-check-circle me-1"></i>Validé
+                                            </span>
+                                        {% elif paiement.statut == 'refuse' %}
+                                            <span class="btn btn-sm btn-outline-danger disabled">
+                                                <i class="bi bi-x-circle me-1"></i>Refusé
+                                            </span>
                                         {% endif %}
+                                        
+                                        <a href="{% url 'paiements:detail' paiement.pk %}" 
+                                           class="btn btn-sm btn-outline-info"
+                                           title="Voir détails">
+                                            <i class="bi bi-info-circle"></i>
+                                        </a>
                                     </div>
                                 </td>
                             </tr>
@@ -268,4 +283,100 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Fonction pour valider un paiement directement depuis la liste
+function validerPaiementRapide(paiementId, reference) {
+    if (confirm(`Êtes-vous sûr de vouloir VALIDER le paiement ${reference} ?\n\nCette action confirmera que le paiement a été reçu et traité.`)) {
+        
+        // Afficher un indicateur de chargement
+        const btn = event.target.closest('button');
+        const originalContent = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Validation...';
+        btn.disabled = true;
+        
+        fetch(`/paiements/paiement/${paiementId}/valider/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+        })
+        .then(response => {
+            if (response.ok) {
+                // Recharger la page pour voir les changements
+                window.location.reload();
+            } else {
+                alert('Erreur lors de la validation du paiement');
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la validation du paiement');
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+        });
+    }
+}
+
+// Fonction pour refuser un paiement directement depuis la liste
+function refuserPaiementRapide(paiementId, reference) {
+    const raison = prompt(`Refus du paiement ${reference}\n\nVeuillez indiquer la raison du refus :`);
+    
+    if (raison && raison.trim()) {
+        if (confirm(`Êtes-vous sûr de vouloir REFUSER le paiement ${reference} ?\n\nRaison : ${raison}`)) {
+            
+            // Afficher un indicateur de chargement
+            const btn = event.target.closest('button');
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Refus...';
+            btn.disabled = true;
+            
+            const formData = new FormData();
+            formData.append('raison_refus', raison);
+            
+            fetch(`/paiements/paiement/${paiementId}/refuser/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Recharger la page pour voir les changements
+                    window.location.reload();
+                } else {
+                    alert('Erreur lors du refus du paiement');
+                    btn.innerHTML = originalContent;
+                    btn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors du refus du paiement');
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            });
+        }
+    } else if (raison !== null) {
+        alert('Veuillez indiquer une raison pour le refus.');
+    }
+}
+
+// Ajouter le token CSRF si manquant
+document.addEventListener('DOMContentLoaded', function() {
+    if (!document.querySelector('[name=csrfmiddlewaretoken]')) {
+        const token = document.createElement('input');
+        token.type = 'hidden';
+        token.name = 'csrfmiddlewaretoken';
+        token.value = '{{ csrf_token }}';
+        document.body.appendChild(token);
+    }
+});
+</script>
 {% endblock %}

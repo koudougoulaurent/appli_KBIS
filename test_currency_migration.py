@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Script de test pour vérifier la migration de la devise XOF vers F CFA
+Script de test pour vérifier la migration de la devise F CFA vers F CFA
 """
 
 import os
@@ -50,17 +50,17 @@ def test_database_devises():
         except Devise.DoesNotExist:
             print("   ❌ Devise F CFA non trouvée")
         
-        # Vérifier l'ancienne devise XOF
+        # Vérifier l'ancienne devise F CFA
         try:
-            devise_xof = Devise.objects.get(code='XOF')
-            print(f"   ℹ️  Devise XOF trouvée: {devise_xof.nom} ({devise_xof.symbole})")
+            devise_xof = Devise.objects.get(code='F CFA')
+            print(f"   ℹ️  Devise F CFA trouvée: {devise_xof.nom} ({devise_xof.symbole})")
             print(f"   • Actif: {devise_xof.actif}")
             if not devise_xof.actif:
-                print("   ✅ Devise XOF correctement désactivée")
+                print("   ✅ Devise F CFA correctement désactivée")
             else:
-                print("   ❌ Devise XOF toujours active")
+                print("   ❌ Devise F CFA toujours active")
         except Devise.DoesNotExist:
-            print("   ℹ️  Devise XOF n'existe plus")
+            print("   ℹ️  Devise F CFA n'existe plus")
             
     except Exception as e:
         print(f"   ❌ Erreur lors du test de la base: {e}")
@@ -103,7 +103,7 @@ def test_currency_utils():
 
 def main():
     """Fonction principale de test"""
-    print("🧪 Test de la migration XOF → F CFA")
+    print("🧪 Test de la migration F CFA → F CFA")
     print("=" * 50)
     
     # 1. Test des settings

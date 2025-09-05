@@ -1,5 +1,6 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
+from django.db import models
 from .models import Document, Propriete, Locataire
 
 
@@ -39,7 +40,10 @@ class DiagnosticForm(forms.Form):
     
     # Champs de liaison
     propriete = forms.ModelChoiceField(
-        queryset=Propriete.objects.filter(disponible=True),
+        queryset=Propriete.objects.filter(
+            models.Q(disponible=True) |
+            models.Q(unites_locatives__statut='disponible', unites_locatives__is_deleted=False)
+        ).distinct(),
         label=_('Propriété concernée'),
         help_text=_('Sélectionnez la propriété pour laquelle ces diagnostics s\'appliquent'),
         required=True
@@ -157,7 +161,10 @@ class AssuranceForm(forms.Form):
     
     # Champs de liaison
     propriete = forms.ModelChoiceField(
-        queryset=Propriete.objects.filter(disponible=True),
+        queryset=Propriete.objects.filter(
+            models.Q(disponible=True) |
+            models.Q(unites_locatives__statut='disponible', unites_locatives__is_deleted=False)
+        ).distinct(),
         label=_('Propriété concernée'),
         help_text=_('Sélectionnez la propriété concernée par ces assurances'),
         required=True
@@ -259,7 +266,10 @@ class EtatLieuxForm(forms.Form):
     
     # Champs de liaison
     propriete = forms.ModelChoiceField(
-        queryset=Propriete.objects.filter(disponible=True),
+        queryset=Propriete.objects.filter(
+            models.Q(disponible=True) |
+            models.Q(unites_locatives__statut='disponible', unites_locatives__is_deleted=False)
+        ).distinct(),
         label=_('Propriété concernée'),
         help_text=_('Sélectionnez la propriété concernée'),
         required=True

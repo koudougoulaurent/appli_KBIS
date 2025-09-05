@@ -61,7 +61,7 @@ class QuittanceLoyerForm(forms.Form):
         max_digits=10,
         decimal_places=2,
         required=True,
-        label=_('Montant du loyer (XOF)'),
+        label=_('Montant du loyer (F CFA)'),
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
             'step': '0.01',
@@ -74,7 +74,7 @@ class QuittanceLoyerForm(forms.Form):
         decimal_places=2,
         required=False,
         initial=0,
-        label=_('Montant des charges (XOF)'),
+        label=_('Montant des charges (F CFA)'),
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
             'step': '0.01',
@@ -86,7 +86,7 @@ class QuittanceLoyerForm(forms.Form):
         max_digits=10,
         decimal_places=2,
         required=True,
-        label=_('Montant total (XOF)'),
+        label=_('Montant total (F CFA)'),
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
             'step': '0.01',
@@ -215,7 +215,7 @@ class FactureForm(forms.Form):
         max_digits=10,
         decimal_places=2,
         required=True,
-        label=_('Montant de la facture (XOF)'),
+        label=_('Montant de la facture (F CFA)'),
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
             'step': '0.01',
@@ -370,7 +370,7 @@ class RecuForm(forms.Form):
         max_digits=10,
         decimal_places=2,
         required=True,
-        label=_('Montant reçu (XOF)'),
+        label=_('Montant reçu (F CFA)'),
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
             'step': '0.01',

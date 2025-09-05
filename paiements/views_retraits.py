@@ -386,7 +386,7 @@ def gerer_charges_bailleur_retrait(request, retrait_id):
                     if retrait.ajouter_charge_bailleur(charge_bailleur, montant_deduction, notes):
                         messages.success(
                             request, 
-                            f'Charge "{charge_bailleur.titre}" ajoutée au retrait pour {montant_deduction} XOF'
+                            f'Charge "{charge_bailleur.titre}" ajoutée au retrait pour {montant_deduction} F CFA'
                         )
                     else:
                         messages.error(request, 'Erreur lors de l\'ajout de la charge')

@@ -96,7 +96,7 @@ def test_systeme_recus():
         
         # Test des méthodes
         print(f"   📄 Test reçu: {recu_test.numero_recu}")
-        print(f"   💰 Montant: {recu_test.paiement.montant} XOF")
+        print(f"   💰 Montant: {recu_test.paiement.montant} F CFA")
         print(f"   📝 Montant en lettres: {recu_test.get_montant_en_lettres()}")
         
         # Test des informations

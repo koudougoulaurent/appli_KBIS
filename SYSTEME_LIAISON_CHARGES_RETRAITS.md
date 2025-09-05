@@ -257,7 +257,7 @@ class GestionChargesBailleurForm(forms.Form):
     )
     montant_deduction = forms.DecimalField(
         min_value=0.01,
-        label='Montant à déduire (XOF)'
+        label='Montant à déduire (F CFA)'
     )
     notes = forms.CharField(
         max_length=500,
@@ -359,7 +359,7 @@ charges_liees = retrait.get_charges_bailleur_liees()
 
 for liaison in charges_liees:
     print(f"Charge: {liaison.charge_bailleur.titre}")
-    print(f"Montant déduit: {liaison.montant_deduit} XOF")
+    print(f"Montant déduit: {liaison.montant_deduit} F CFA")
     print(f"Date: {liaison.date_deduction}")
     print("---")
 ```

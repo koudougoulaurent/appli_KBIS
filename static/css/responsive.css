@@ -533,6 +533,13 @@
         border-radius: var(--border-radius-md);
         padding: 1rem;
         background: var(--white);
+        box-shadow: var(--shadow-md);
+        transition: all 0.3s ease;
+    }
+    
+    .table-responsive .table tbody tr:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
     }
     
     .table-responsive .table tbody td {
@@ -540,12 +547,18 @@
         text-align: left;
         border: none;
         padding: 0.5rem 0;
+        position: relative;
+        padding-left: 35%;
     }
     
     .table-responsive .table tbody td::before {
         content: attr(data-label) ": ";
         font-weight: bold;
         color: var(--primary-color);
+        position: absolute;
+        left: 0;
+        width: 30%;
+        text-align: left;
     }
 }
 

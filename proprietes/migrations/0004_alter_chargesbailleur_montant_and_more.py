@@ -13,11 +13,11 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='chargesbailleur',
             name='montant',
-            field=models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Montant (XOF)'),
+            field=models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Montant (F CFA)'),
         ),
         migrations.AlterField(
             model_name='chargesbailleur',
             name='montant_rembourse',
-            field=models.DecimalField(decimal_places=2, default=0, max_digits=10, verbose_name='Montant remboursé (XOF)'),
+            field=models.DecimalField(decimal_places=2, default=0, max_digits=10, verbose_name='Montant remboursé (F CFA)'),
         ),
     ]

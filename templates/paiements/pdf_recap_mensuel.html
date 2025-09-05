@@ -365,7 +365,7 @@
     <!-- Détail par propriété -->
     <div class="subtitle">DÉTAIL PAR PROPRIÉTÉ</div>
     
-    {% for propriete in recap.bailleur.propriete_set.all %}
+    {% for propriete in recap.bailleur.proprietes.all %}
         {% if propriete.contrats.all %}
             {% for contrat in propriete.contrats.all %}
                 {% if contrat.est_actif and not contrat.est_resilie %}
@@ -473,6 +473,7 @@
     </div>
 </body>
 </html>
+
 
 
 

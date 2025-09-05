@@ -413,7 +413,7 @@ class ServiceContexteIntelligentRetraits:
             alertes.append({
                 'type': 'charges_en_attente',
                 'severite': 'normale',
-                'message': f'{charges_en_attente.count()} charges en attente pour un total de {total_charges} XOF',
+                'message': f'{charges_en_attente.count()} charges en attente pour un total de {total_charges} F CFA',
                 'total_charges': total_charges
             })
         
@@ -438,7 +438,7 @@ class ServiceContexteIntelligentRetraits:
             })
         
         # Suggestion de retrait exceptionnel si montant élevé
-        if calculs['montant_net_a_payer'] > 100000:  # Plus de 100k XOF
+        if calculs['montant_net_a_payer'] > 100000:  # Plus de 100k F CFA
             suggestions.append({
                 'type': 'retrait_exceptionnel',
                 'montant': calculs['montant_net_a_payer'],

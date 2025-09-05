@@ -9,6 +9,8 @@ from django.urls import reverse_lazy
 from django.db.models import Q, Sum, Count, F, Case, When, DecimalField
 from django.db.models.functions import Coalesce
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+from django.db import transaction
 from datetime import datetime, timedelta, date
 from django.core.paginator import Paginator
 from django.contrib.contenttypes.models import ContentType
@@ -19,7 +21,7 @@ import json
 import os
 
 from .models import Paiement, ChargeDeductible, QuittancePaiement
-from .forms import PaiementForm, ChargeDeductibleForm, RetraitBailleurForm
+from .forms import PaiementForm, ChargeDeductibleForm, RetraitBailleurForm, GenererPDFLotForm
 from contrats.models import Contrat
 from proprietes.models import Propriete, Locataire, Bailleur
 from core.models import AuditLog, ConfigurationEntreprise
@@ -97,6 +99,28 @@ def paiements_dashboard(request):
     
     mois_stats.reverse()
     
+    # Données des récapitulatifs et paiements bailleurs
+    from .models import RecapMensuel, RetraitBailleur
+    from django.db import models
+    
+    # Statistiques des récapitulatifs
+    recaps_valides = RecapMensuel.objects.filter(is_deleted=False, statut='valide').count()
+    recaps_payes = RecapMensuel.objects.filter(is_deleted=False, statut='paye').count()
+    retraits_en_attente = RetraitBailleur.objects.filter(is_deleted=False, statut='en_attente').count()
+    
+    # Calcul du montant total à payer (seulement pour les récapitulatifs validés)
+    montant_total_a_payer = RecapMensuel.objects.filter(
+        is_deleted=False, 
+        statut='valide'
+    ).aggregate(
+        total=models.Sum('total_net_a_payer')
+    )['total'] or 0
+    
+    # Récapitulatifs récents (5 derniers)
+    recaps_recents = RecapMensuel.objects.filter(
+        is_deleted=False
+    ).select_related('bailleur').order_by('-date_creation')[:5]
+    
     context = {
         'total_paiements': total_paiements,
         'paiements_valides': paiements_valides,
@@ -107,6 +131,12 @@ def paiements_dashboard(request):
         'paiements_recents': paiements_recents,
         'paiements_attention': paiements_attention,
         'mois_stats': mois_stats,
+        # Nouvelles données pour les récapitulatifs
+        'recaps_valides': recaps_valides,
+        'recaps_payes': recaps_payes,
+        'retraits_en_attente': retraits_en_attente,
+        'montant_total_a_payer': montant_total_a_payer,
+        'recaps_recents': recaps_recents,
     }
     
     return render(request, 'paiements/dashboard.html', context)
@@ -769,7 +799,7 @@ def liste_recaps_mensuels(request):
     
     # Récupérer les récapitulatifs avec filtres
     recaps = RecapMensuel.objects.all().select_related(
-        'bailleur', 'cree_par', 'valide_par'
+        'bailleur', 'cree_par', 'modifie_par'
     ).prefetch_related(
         'paiements_concernes', 'charges_deductibles'
     ).order_by('-mois_recap')
@@ -844,7 +874,7 @@ def creer_recap_mensuel(request):
                 
                 if recap_existant:
                     messages.warning(request, f'Un récapitulatif existe déjà pour {bailleur.get_nom_complet()} - {mois_recap.strftime("%B %Y")}')
-                    return redirect('paiements:detail_recap_mensuel', recap_id=recap_existant.id)
+                    return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_existant.id)
                 
                 # Créer le récapitulatif
                 recap = RecapMensuel.objects.create(
@@ -857,7 +887,7 @@ def creer_recap_mensuel(request):
                 recap.calculer_totaux()
                 
                 messages.success(request, f'Récapitulatif créé avec succès pour {bailleur.get_nom_complet()} - {mois_recap.strftime("%B %Y")}')
-                return redirect('paiements:detail_recap_mensuel', recap_id=recap.id)
+                return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap.id)
                 
             except (Bailleur.DoesNotExist, ValueError) as e:
                 messages.error(request, f'Erreur lors de la création: {str(e)}')
@@ -887,7 +917,7 @@ def detail_recap_mensuel(request, recap_id):
     
     try:
         recap = RecapMensuel.objects.select_related(
-            'bailleur', 'cree_par', 'valide_par'
+            'bailleur', 'cree_par', 'modifie_par'
         ).prefetch_related(
             'paiements_concernes__contrat__propriete',
             'paiements_concernes__contrat__locataire',
@@ -913,14 +943,15 @@ def detail_recap_mensuel(request, recap_id):
     for paiement in recap.paiements_concernes.all():
         propriete = paiement.contrat.propriete
         if propriete not in paiements_par_propriete:
+            from decimal import Decimal
             paiements_par_propriete[propriete] = {
                 'contrat': paiement.contrat,
                 'locataire': paiement.contrat.locataire,
                 'paiements': [],
-                'total_loyers': 0,
+                'total_loyers': Decimal('0'),
                 'charges_deductibles': [],
-                'total_charges': 0,
-                'montant_net': 0
+                'total_charges': Decimal('0'),
+                'montant_net': Decimal('0')
             }
         
         paiements_par_propriete[propriete]['paiements'].append(paiement)
@@ -962,7 +993,7 @@ def valider_recap_mensuel(request, recap_id):
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'change')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
-        return redirect('paiements:detail_recap_mensuel', recap_id=recap_id)
+        return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
     
     try:
         recap = RecapMensuel.objects.get(id=recap_id)
@@ -972,13 +1003,13 @@ def valider_recap_mensuel(request, recap_id):
     
     if recap.statut != 'brouillon':
         messages.warning(request, 'Ce récapitulatif ne peut plus être validé.')
-        return redirect('paiements:detail_recap_mensuel', recap_id=recap_id)
+        return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
     
     # Valider le récapitulatif
     recap.valider_recap(request.user)
     messages.success(request, 'Récapitulatif validé avec succès.')
     
-    return redirect('paiements:detail_recap_mensuel', recap_id=recap_id)
+    return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
 
 
 @login_required
@@ -988,7 +1019,7 @@ def marquer_recap_envoye(request, recap_id):
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'change')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
-        return redirect('paiements:detail_recap_mensuel', recap_id=recap_id)
+        return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
     
     try:
         recap = RecapMensuel.objects.get(id=recap_id)
@@ -998,13 +1029,13 @@ def marquer_recap_envoye(request, recap_id):
     
     if recap.statut not in ['valide', 'envoye']:
         messages.warning(request, 'Ce récapitulatif doit être validé avant d\'être marqué comme envoyé.')
-        return redirect('paiements:detail_recap_mensuel', recap_id=recap_id)
+        return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
     
     # Marquer comme envoyé
     recap.marquer_envoye(request.user)
     messages.success(request, 'Récapitulatif marqué comme envoyé au bailleur.')
     
-    return redirect('paiements:detail_recap_mensuel', recap_id=recap_id)
+    return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
 
 
 @login_required
@@ -1014,7 +1045,7 @@ def marquer_recap_paye(request, recap_id):
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'change')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
-        return redirect('paiements:detail_recap_mensuel', recap_id=recap_id)
+        return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
     
     try:
         recap = RecapMensuel.objects.get(id=recap_id)
@@ -1024,13 +1055,13 @@ def marquer_recap_paye(request, recap_id):
     
     if recap.statut not in ['envoye', 'paye']:
         messages.warning(request, 'Ce récapitulatif doit être envoyé avant d\'être marqué comme payé.')
-        return redirect('paiements:detail_recap_mensuel', recap_id=recap_id)
+        return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
     
     # Marquer comme payé
     recap.marquer_paye(request.user)
     messages.success(request, 'Récapitulatif marqué comme payé au bailleur.')
     
-    return redirect('paiements:detail_recap_mensuel', recap_id=recap_id)
+    return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
 
 
 @login_required
@@ -1040,11 +1071,11 @@ def imprimer_recap_mensuel(request, recap_id):
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
-        return redirect('paiements:detail_recap_mensuel', recap_id=recap_id)
+        return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
     
     try:
         recap = RecapMensuel.objects.select_related(
-            'bailleur', 'cree_par', 'valide_par'
+            'bailleur', 'cree_par', 'modifie_par'
         ).prefetch_related(
             'paiements_concernes__contrat__locataire',
             'paiements_concernes__contrat__propriete',
@@ -1115,7 +1146,7 @@ def imprimer_recap_mensuel(request, recap_id):
         
         # Tableau des montants
         montants_data = [
-            ['Description', 'Montant (XOF)'],
+            ['Description', 'Montant (F CFA)'],
             ['Loyer brut total', f"{recap.total_loyers_bruts:,.0f}"],
             ['Charges déductibles', f"{recap.total_charges_deductibles:,.0f}"],
             ['Loyer net total', f"{recap.total_net_a_payer:,.0f}"],
@@ -1136,22 +1167,71 @@ def imprimer_recap_mensuel(request, recap_id):
         story.append(montants_table)
         story.append(Spacer(1, 20))
         
-        # Détails des propriétés
-        story.append(Paragraph("DÉTAILS DES PROPRIÉTÉS", subtitle_style))
+        # Détails des propriétés enrichis
+        story.append(Paragraph("DÉTAILS DES PROPRIÉTÉS LOUÉES", subtitle_style))
         story.append(Spacer(1, 10))
         
-        proprietes_data = [['Propriété', 'Locataire', 'Loyer (XOF)']]
-        for paiement in recap.paiements_concernes.all():
-            propriete = paiement.contrat.propriete
-            locataire = paiement.contrat.locataire
-            proprietes_data.append([
-                propriete.adresse,
-                f"{locataire.prenom} {locataire.nom}",
-                f"{paiement.montant:,.0f}"
-            ])
+        # Récupérer les propriétés actives avec plus de détails
+        proprietes_actives = recap.bailleur.proprietes.filter(
+            contrats__est_actif=True,
+            contrats__est_resilie=False
+        ).distinct()
         
-        proprietes_table = Table(proprietes_data, colWidths=[6*cm, 4*cm, 2*cm])
+        proprietes_data = [['Propriété', 'Adresse', 'Locataire', 'Contact', 'Loyer', 'Charges', 'Net']]
+        for propriete in proprietes_actives:
+            contrat_actif = propriete.contrats.filter(est_actif=True).first()
+            if contrat_actif:
+                loyer = contrat_actif.loyer_mensuel or 0
+                charges = contrat_actif.charges_mensuelles or 0
+                net = loyer - charges
+                contact = f"{contrat_actif.locataire.telephone or 'N/A'}"
+                
+                proprietes_data.append([
+                    propriete.nom or f"Prop #{propriete.id}",
+                    propriete.adresse or "N/A",
+                    f"{contrat_actif.locataire.get_nom_complet()}",
+                    contact,
+                    f"{loyer:,.0f}",
+                    f"{charges:,.0f}",
+                    f"{net:,.0f}"
+                ])
+        
+        proprietes_table = Table(proprietes_data, colWidths=[3*cm, 4*cm, 3*cm, 2*cm, 2*cm, 2*cm, 2*cm])
         proprietes_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        
+        story.append(proprietes_table)
+        story.append(Spacer(1, 20))
+        
+        # Statistiques et indicateurs
+        story.append(Paragraph("STATISTIQUES ET INDICATEURS", subtitle_style))
+        story.append(Spacer(1, 10))
+        
+        # Calculer les statistiques
+        total_proprietes = proprietes_actives.count()
+        total_contrats = proprietes_actives.filter(contrats__est_actif=True).count()
+        taux_occupation = (total_contrats / total_proprietes * 100) if total_proprietes > 0 else 0
+        
+        stats_data = [
+            ['Indicateur', 'Valeur'],
+            ['Nombre de propriétés', str(total_proprietes)],
+            ['Contrats actifs', str(total_contrats)],
+            ['Taux d\'occupation', f"{taux_occupation:.1f}%"],
+            ['Paiements reçus', str(recap.nombre_paiements_recus)],
+        ]
+        
+        stats_table = Table(stats_data, colWidths=[6*cm, 4*cm])
+        stats_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -1160,10 +1240,85 @@ def imprimer_recap_mensuel(request, recap_id):
             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
             ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
         ]))
         
-        story.append(proprietes_table)
+        story.append(stats_table)
+        story.append(Spacer(1, 20))
+        
+        # Vérification des garanties financières
+        story.append(Paragraph("VÉRIFICATION DES GARANTIES FINANCIÈRES", subtitle_style))
+        story.append(Spacer(1, 10))
+        
+        garanties_data = [['Propriété', 'Caution Requise', 'Caution Versée', 'Avance Requise', 'Avance Versée', 'Statut']]
+        total_cautions_requises = 0
+        total_cautions_versees = 0
+        total_avances_requises = 0
+        total_avances_versees = 0
+        garanties_completes = 0
+        
+        for propriete in proprietes_actives:
+            contrat_actif = propriete.contrats.filter(est_actif=True).first()
+            if contrat_actif:
+                caution_requise = contrat_actif.loyer_mensuel or 0
+                avance_requise = contrat_actif.loyer_mensuel or 0
+                
+                # Récupérer les paiements de caution et d'avance
+                paiements_caution = contrat_actif.paiements.filter(
+                    type_paiement='caution',
+                    statut='valide'
+                ).aggregate(total=Sum('montant'))['total'] or 0
+                
+                paiements_avance = contrat_actif.paiements.filter(
+                    type_paiement='avance',
+                    statut='valide'
+                ).aggregate(total=Sum('montant'))['total'] or 0
+                
+                statut = "Complètes" if (paiements_caution >= caution_requise and paiements_avance >= avance_requise) else "Incomplètes"
+                
+                garanties_data.append([
+                    propriete.nom or f"Prop #{propriete.id}",
+                    f"{caution_requise:,.0f}",
+                    f"{paiements_caution:,.0f}",
+                    f"{avance_requise:,.0f}",
+                    f"{paiements_avance:,.0f}",
+                    statut
+                ])
+                
+                total_cautions_requises += caution_requise
+                total_cautions_versees += paiements_caution
+                total_avances_requises += avance_requise
+                total_avances_versees += paiements_avance
+                
+                if paiements_caution >= caution_requise and paiements_avance >= avance_requise:
+                    garanties_completes += 1
+        
+        # Ajouter les totaux
+        garanties_data.append([
+            "TOTAL",
+            f"{total_cautions_requises:,.0f}",
+            f"{total_cautions_versees:,.0f}",
+            f"{total_avances_requises:,.0f}",
+            f"{total_avances_versees:,.0f}",
+            f"{garanties_completes}/{total_proprietes}"
+        ])
+        
+        garanties_table = Table(garanties_data, colWidths=[2.5*cm, 2*cm, 2*cm, 2*cm, 2*cm, 2.5*cm])
+        garanties_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.darkgreen),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -2), colors.lightgrey),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.yellow),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTSIZE', (0, 1), (-1, -1), 7),
+        ]))
+        
+        story.append(garanties_table)
         story.append(Spacer(1, 20))
         
         # Charges déductibles
@@ -1171,7 +1326,7 @@ def imprimer_recap_mensuel(request, recap_id):
             story.append(Paragraph("CHARGES DÉDUCTIBLES", subtitle_style))
             story.append(Spacer(1, 10))
             
-            charges_data = [['Description', 'Montant (XOF)']]
+            charges_data = [['Description', 'Montant (F CFA)']]
             for charge in recap.charges_deductibles.all():
                 charges_data.append([charge.description, f"{charge.montant:,.0f}"])
             
@@ -1224,10 +1379,10 @@ def imprimer_recap_mensuel(request, recap_id):
         
     except ImportError:
         messages.error(request, 'La génération PDF nécessite ReportLab. Veuillez l\'installer.')
-        return redirect('paiements:detail_recap_mensuel', recap_id=recap_id)
+        return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
     except Exception as e:
         messages.error(request, f'Erreur lors de la génération du PDF: {str(e)}')
-        return redirect('paiements:detail_recap_mensuel', recap_id=recap_id)
+        return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
 
 @login_required
 def liste_retraits_bailleur(request):
@@ -1749,6 +1904,7 @@ def generer_recap_mensuel_automatique(request):
     if request.method == 'POST':
         mois_recap = request.POST.get('mois_recap')
         forcer_regeneration = request.POST.get('forcer_regeneration') == 'on'
+        bailleur_id = request.POST.get('bailleur_id')  # Nouveau : sélection de bailleur
         
         if not mois_recap:
             messages.error(request, _("Veuillez sélectionner un mois."))
@@ -1758,10 +1914,22 @@ def generer_recap_mensuel_automatique(request):
             # Convertir la date
             mois_date = datetime.strptime(mois_recap, '%Y-%m-%d').date()
             
-            # Vérifier s'il existe déjà des récapitulatifs pour ce mois
+            # Récupérer les bailleurs selon la sélection
+            if bailleur_id and bailleur_id != 'tous':
+                # Génération pour un bailleur spécifique
+                bailleurs = Bailleur.objects.filter(id=bailleur_id, is_deleted=False)
+                if not bailleurs.exists():
+                    messages.error(request, _("Bailleur sélectionné introuvable."))
+                    return redirect('paiements:generer_recap_mensuel_automatique')
+            else:
+                # Génération pour tous les bailleurs
+                bailleurs = Bailleur.objects.filter(is_deleted=False)
+            
+            # Vérifier s'il existe déjà des récapitulatifs pour ce mois et ces bailleurs
             recaps_existants = RecapMensuel.objects.filter(
                 mois_recap__year=mois_date.year,
-                mois_recap__month=mois_date.month
+                mois_recap__month=mois_date.month,
+                bailleur__in=bailleurs
             )
             
             if recaps_existants.exists() and not forcer_regeneration:
@@ -1772,9 +1940,6 @@ def generer_recap_mensuel_automatique(request):
             if forcer_regeneration and recaps_existants.exists():
                 recaps_existants.delete()
                 messages.info(request, _("Anciens récapitulatifs supprimés. Génération en cours..."))
-            
-            # Récupérer tous les bailleurs actifs
-            bailleurs = Bailleur.objects.filter(is_deleted=False)
             
             if not bailleurs.exists():
                 messages.warning(request, _("Aucun bailleur actif trouvé."))
@@ -1788,7 +1953,7 @@ def generer_recap_mensuel_automatique(request):
                 for bailleur in bailleurs:
                     try:
                         # Vérifier si le bailleur a des propriétés louées
-                        proprietes_louees = bailleur.propriete_set.filter(
+                        proprietes_louees = bailleur.proprietes.filter(
                             contrats__est_actif=True,
                             contrats__est_resilie=False
                         ).distinct()
@@ -1853,9 +2018,27 @@ def generer_recap_mensuel_automatique(request):
             'label': date_mois.strftime('%B %Y')
         })
     
+    # Récupérer les informations de détection automatique pour chaque bailleur
+    bailleurs_actifs = Bailleur.objects.filter(is_deleted=False)
+    suggestions_mois = {}
+    
+    for bailleur in bailleurs_actifs:
+        mois_info = RecapMensuel.get_mois_recap_suggere_pour_bailleur(bailleur)
+        suggestions_mois[bailleur.id] = {
+            'bailleur_nom': bailleur.get_nom_complet(),
+            'mois_suggere': mois_info['mois_suggere'].strftime('%Y-%m-%d'),
+            'mois_suggere_formate': mois_info['mois_suggere_formate'],
+            'raison': mois_info['raison'],
+            'dernier_mois': mois_info['dernier_mois'].strftime('%B %Y') if mois_info['dernier_mois'] else 'Aucun',
+            'recap_existant': mois_info['recap_existant']
+        }
+    
     context = get_context_with_entreprise_config({
         'mois_disponibles': mois_disponibles,
+        'suggestions_mois': suggestions_mois,
+        'bailleurs_actifs': bailleurs_actifs,  # Nouveau : liste des bailleurs pour la sélection
         'title': 'Génération Automatique des Récapitulatifs Mensuels',
+        'description': 'Génération automatique avec détection intelligente du mois basée sur le dernier récapitulatif par bailleur'
     })
     
     return render(request, 'paiements/generer_recap_automatique.html', context)
@@ -1963,7 +2146,7 @@ def generer_pdf_recap_mensuel(request, recap_id):
         
     except Exception as e:
         messages.error(request, f"Erreur lors de la génération du PDF: {str(e)}")
-        return redirect('paiements:detail_recap_mensuel', recap_id=recap_id)
+        return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
 
 @login_required
 def generer_pdf_recaps_lot(request):
@@ -2012,26 +2195,25 @@ def apercu_pdf_recap_mensuel(request, recap_id):
 
 @login_required
 def creer_recap_mensuel_bailleur(request, bailleur_id):
-    """Crée un récapitulatif mensuel pour un bailleur spécifique."""
+    """Crée un récapitulatif mensuel pour un bailleur spécifique avec détection automatique du mois."""
     try:
         from proprietes.models import Bailleur
-        from datetime import date
         
         bailleur = get_object_or_404(Bailleur, id=bailleur_id)
         
-        # Créer un récapitulatif pour le mois actuel
-        mois_recap = date.today().replace(day=1)
+        # Détection automatique du mois de récapitulatif
+        mois_info = RecapMensuel.get_mois_recap_suggere_pour_bailleur(bailleur)
+        mois_recap = mois_info['mois_suggere']
         
         # Vérifier si un récapitulatif existe déjà pour ce mois et ce bailleur
-        recap_existant = RecapMensuel.objects.filter(
-            bailleur=bailleur,
-            mois_recap=mois_recap,
-            is_deleted=False
-        ).first()
-        
-        if recap_existant:
-            messages.info(request, f"Un récapitulatif existe déjà pour {bailleur.get_nom_complet()} - {mois_recap.strftime('%B %Y')}")
-            return redirect('paiements:detail_recap_mensuel', recap_id=recap_existant.id)
+        if mois_info['recap_existant']:
+            recap_existant = RecapMensuel.objects.filter(
+                bailleur=bailleur,
+                mois_recap=mois_recap,
+                is_deleted=False
+            ).first()
+            messages.info(request, f"Un récapitulatif existe déjà pour {bailleur.get_nom_complet()} - {mois_info['mois_suggere_formate']}")
+            return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_existant.id)
         
         # Créer le nouveau récapitulatif
         recap = RecapMensuel.objects.create(
@@ -2044,8 +2226,13 @@ def creer_recap_mensuel_bailleur(request, bailleur_id):
         recap.calculer_totaux()
         recap.save()
         
-        messages.success(request, f"Récapitulatif créé avec succès pour {bailleur.get_nom_complet()} - {mois_recap.strftime('%B %Y')}")
-        return redirect('paiements:detail_recap_mensuel', recap_id=recap.id)
+        # Message de succès avec information sur la détection automatique
+        message_succes = (
+            f"Récapitulatif créé avec succès pour {bailleur.get_nom_complet()} - {mois_info['mois_suggere_formate']}. "
+            f"({mois_info['raison']})"
+        )
+        messages.success(request, message_succes)
+        return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap.id)
         
     except Exception as e:
         messages.error(request, f"Erreur lors de la création du récapitulatif: {str(e)}")
@@ -2053,9 +2240,10 @@ def creer_recap_mensuel_bailleur(request, bailleur_id):
 
 @login_required
 def liste_bailleurs_recaps(request):
-    """Liste des bailleurs pour créer des récapitulatifs mensuels."""
+    """Liste des bailleurs pour créer des récapitulatifs mensuels avec détection automatique du mois."""
     try:
         from proprietes.models import Bailleur
+        from datetime import date
         
         # Récupérer tous les bailleurs avec des propriétés actives
         bailleurs = Bailleur.objects.filter(
@@ -2063,19 +2251,33 @@ def liste_bailleurs_recaps(request):
             propriete__contrats__est_resilie=False
         ).distinct().order_by('nom')
         
-        # Pour chaque bailleur, vérifier s'il a un récapitulatif pour le mois actuel
+        # Pour chaque bailleur, déterminer le mois suggéré et les informations contextuelles
         mois_actuel = date.today().replace(day=1)
         for bailleur in bailleurs:
-            bailleur.recap_existant = RecapMensuel.objects.filter(
-                bailleur=bailleur,
-                mois_recap=mois_actuel,
-                is_deleted=False
-            ).first()
+            # Obtenir les informations de détection automatique du mois
+            mois_info = RecapMensuel.get_mois_recap_suggere_pour_bailleur(bailleur)
+            bailleur.mois_suggere = mois_info['mois_suggere']
+            bailleur.mois_suggere_formate = mois_info['mois_suggere_formate']
+            bailleur.raison_suggestion = mois_info['raison']
+            bailleur.dernier_mois = mois_info['dernier_mois']
+            bailleur.recap_existant = mois_info['recap_existant']
+            
+            # Récupérer le récapitulatif existant pour le mois suggéré
+            if mois_info['recap_existant']:
+                bailleur.recap_existant_obj = RecapMensuel.objects.filter(
+                    bailleur=bailleur,
+                    mois_recap=mois_info['mois_suggere'],
+                    is_deleted=False
+                ).first()
+            else:
+                bailleur.recap_existant_obj = None
         
         context = {
             'bailleurs': bailleurs,
             'mois_actuel': mois_actuel,
-            'page_title': 'Créer des Récapitulatifs Mensuels'
+            'page_title': 'Créer des Récapitulatifs Mensuels',
+            'page_icon': 'calendar-plus',
+            'description': 'Création de récapitulatifs mensuels avec détection automatique du mois basée sur le dernier récapitulatif par bailleur'
         }
         
         return render(request, 'paiements/liste_bailleurs_recaps.html', context)
@@ -2083,3 +2285,356 @@ def liste_bailleurs_recaps(request):
     except Exception as e:
         messages.error(request, f"Erreur lors du chargement des bailleurs: {str(e)}")
         return redirect('paiements:tableau_bord_recaps_mensuels')
+
+@login_required
+def creer_recap_avec_detection_auto(request, bailleur_id):
+    """Crée un récapitulatif avec détection automatique du mois et possibilité de modification."""
+    try:
+        from proprietes.models import Bailleur
+        from datetime import date
+        
+        bailleur = get_object_or_404(Bailleur, id=bailleur_id)
+        
+        if request.method == 'POST':
+            # Récupérer le mois sélectionné par l'utilisateur
+            mois_recap_str = request.POST.get('mois_recap')
+            if not mois_recap_str:
+                messages.error(request, "Veuillez sélectionner un mois.")
+                return redirect('paiements:creer_recap_avec_detection_auto', bailleur_id=bailleur_id)
+            
+            mois_recap = datetime.strptime(mois_recap_str, '%Y-%m-%d').date()
+            
+            # Obtenir les informations de détection automatique pour validation
+            mois_info = RecapMensuel.get_mois_recap_suggere_pour_bailleur(bailleur)
+            
+            # Validation stricte : vérifier que le mois sélectionné est bien le mois suggéré
+            if mois_recap != mois_info['mois_suggere']:
+                messages.error(request, 
+                    f"Erreur de validation : Vous devez sélectionner le mois suggéré automatiquement "
+                    f"({mois_info['mois_suggere_formate']}) pour maintenir la continuité des récapitulatifs. "
+                    f"Raison : {mois_info['raison']}"
+                )
+                return redirect('paiements:creer_recap_avec_detection_auto', bailleur_id=bailleur_id)
+            
+            # Vérifier si un récapitulatif existe déjà pour ce mois et ce bailleur
+            recap_existant = RecapMensuel.objects.filter(
+                bailleur=bailleur,
+                mois_recap=mois_recap,
+                is_deleted=False
+            ).first()
+            
+            if recap_existant:
+                messages.info(request, f"Un récapitulatif existe déjà pour {bailleur.get_nom_complet()} - {mois_recap.strftime('%B %Y')}")
+                return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_existant.id)
+            
+            # Créer le nouveau récapitulatif
+            recap = RecapMensuel.objects.create(
+                bailleur=bailleur,
+                mois_recap=mois_recap,
+                cree_par=request.user
+            )
+            
+            # Calculer les totaux automatiquement
+            recap.calculer_totaux()
+            recap.save()
+            
+            messages.success(request, 
+                f"Récapitulatif créé avec succès pour {bailleur.get_nom_complet()} - {mois_recap.strftime('%B %Y')}. "
+                f"({mois_info['raison']})"
+            )
+            return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap.id)
+        
+        # Obtenir les informations de détection automatique du mois
+        mois_info = RecapMensuel.get_mois_recap_suggere_pour_bailleur(bailleur)
+        
+        # Préparer les mois disponibles (12 derniers mois + mois suggéré)
+        mois_disponibles = []
+        date_courante = datetime.now()
+        
+        # Ajouter le mois suggéré en premier
+        mois_suggere = mois_info['mois_suggere']
+        mois_disponibles.append({
+            'value': mois_suggere.strftime('%Y-%m-%d'),
+            'label': f"{mois_info['mois_suggere_formate']} (Suggéré - {mois_info['raison']})",
+            'is_suggested': True
+        })
+        
+        # Ajouter les 12 derniers mois
+        for i in range(12):
+            date_mois = date_courante - timedelta(days=30*i)
+            if date_mois != mois_suggere:  # Éviter les doublons
+                mois_disponibles.append({
+                    'value': date_mois.strftime('%Y-%m-%d'),
+                    'label': date_mois.strftime('%B %Y'),
+                    'is_suggested': False
+                })
+        
+        context = {
+            'bailleur': bailleur,
+            'mois_info': mois_info,
+            'mois_disponibles': mois_disponibles,
+            'page_title': f'Créer un Récapitulatif - {bailleur.get_nom_complet()}',
+            'page_icon': 'calendar-plus',
+            'description': 'Création de récapitulatif avec détection automatique du mois'
+        }
+        
+        return render(request, 'paiements/creer_recap_avec_detection.html', context)
+        
+    except Exception as e:
+        messages.error(request, f"Erreur lors de la création du récapitulatif: {str(e)}")
+        return redirect('paiements:liste_bailleurs_recaps')
+
+@login_required
+def generer_pdf_recap_detaille_paysage(request, recap_id):
+    """Génère un PDF détaillé en format A4 paysage avec toutes les informations enrichies."""
+    try:
+        recap = get_object_or_404(RecapMensuel, id=recap_id, is_deleted=False)
+        
+        # Vérification des permissions
+        permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+        if not permissions['allowed']:
+            messages.error(request, permissions['message'])
+            return redirect('paiements:tableau_bord_recaps_mensuels')
+        
+        # Récupérer les détails des propriétés avec informations enrichies
+        proprietes_details = []
+        proprietes_actives = recap.bailleur.proprietes.filter(
+            contrats__est_actif=True,
+            contrats__est_resilie=False
+        ).distinct()
+        
+        # Statistiques globales
+        stats_globales = {
+            'total_proprietes': 0,
+            'total_contrats_actifs': 0,
+            'total_loyers_bruts': Decimal('0'),
+            'total_charges_deductibles': Decimal('0'),
+            'total_charges_bailleur': Decimal('0'),
+            'total_net_a_payer': Decimal('0'),
+            'total_cautions_requises': Decimal('0'),
+            'total_avances_requises': Decimal('0'),
+            'total_cautions_versees': Decimal('0'),
+            'total_avances_versees': Decimal('0'),
+            'proprietes_avec_garanties_completes': 0,
+            'proprietes_avec_retards': 0,
+            'taux_occupation': 0,
+        }
+        
+        for propriete in proprietes_actives:
+            contrat_actif = propriete.contrats.filter(est_actif=True).first()
+            if contrat_actif:
+                # Calculer les garanties financières
+                caution_requise = contrat_actif.loyer_mensuel or Decimal('0')
+                avance_requise = contrat_actif.loyer_mensuel or Decimal('0')
+                
+                # Récupérer les paiements de caution et d'avance
+                paiements_caution = contrat_actif.paiements.filter(
+                    type_paiement='caution',
+                    statut='valide'
+                ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
+                
+                paiements_avance = contrat_actif.paiements.filter(
+                    type_paiement='avance',
+                    statut='valide'
+                ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
+                
+                # Vérifier les retards de paiement
+                paiements_en_retard = contrat_actif.paiements.filter(
+                    type_paiement='loyer',
+                    statut='en_retard'
+                ).count()
+                
+                # Calculer les charges du mois
+                charges_mensuelles = contrat_actif.charges_mensuelles or Decimal('0')
+                charges_bailleur = Decimal('0')  # À calculer selon la logique métier
+                
+                # Montant net pour cette propriété
+                montant_net = (contrat_actif.loyer_mensuel or Decimal('0')) - charges_mensuelles - charges_bailleur
+                
+                garanties_suffisantes = (
+                    paiements_caution >= caution_requise and
+                    paiements_avance >= avance_requise
+                )
+                
+                propriete_detail = {
+                    'id': propriete.id,
+                    'nom': propriete.nom or f"Propriété #{propriete.id}",
+                    'adresse': propriete.adresse or "Adresse non renseignée",
+                    'ville': propriete.ville or "Ville non renseignée",
+                    'locataire': contrat_actif.locataire,
+                    'loyer_mensuel': contrat_actif.loyer_mensuel or Decimal('0'),
+                    'charges_mensuelles': charges_mensuelles,
+                    'charges_bailleur': charges_bailleur,
+                    'montant_net': montant_net,
+                    'contrat_actif': True,
+                    'date_debut': contrat_actif.date_debut,
+                    'date_fin': contrat_actif.date_fin,
+                    'caution_requise': caution_requise,
+                    'avance_requise': avance_requise,
+                    'caution_versee': paiements_caution,
+                    'avance_versee': paiements_avance,
+                    'garanties_suffisantes': garanties_suffisantes,
+                    'retards_paiement': paiements_en_retard,
+                    'statut_garanties': 'Complètes' if garanties_suffisantes else 'Incomplètes',
+                    'contact_locataire': f"{contrat_actif.locataire.telephone or 'N/A'} / {contrat_actif.locataire.email or 'N/A'}",
+                }
+                proprietes_details.append(propriete_detail)
+                
+                # Mettre à jour les statistiques globales
+                stats_globales['total_proprietes'] += 1
+                stats_globales['total_contrats_actifs'] += 1
+                stats_globales['total_loyers_bruts'] += contrat_actif.loyer_mensuel or Decimal('0')
+                stats_globales['total_charges_deductibles'] += charges_mensuelles
+                stats_globales['total_charges_bailleur'] += charges_bailleur
+                stats_globales['total_net_a_payer'] += montant_net
+                stats_globales['total_cautions_requises'] += caution_requise
+                stats_globales['total_avances_requises'] += avance_requise
+                stats_globales['total_cautions_versees'] += paiements_caution
+                stats_globales['total_avances_versees'] += paiements_avance
+                
+                if garanties_suffisantes:
+                    stats_globales['proprietes_avec_garanties_completes'] += 1
+                
+                if paiements_en_retard > 0:
+                    stats_globales['proprietes_avec_retards'] += 1
+        
+        # Calculer le taux d'occupation
+        if stats_globales['total_proprietes'] > 0:
+            stats_globales['taux_occupation'] = (stats_globales['total_contrats_actifs'] / stats_globales['total_proprietes']) * 100
+        
+        # Récupérer l'historique des paiements du mois
+        historique_paiements = []
+        for propriete in proprietes_actives:
+            contrat_actif = propriete.contrats.filter(est_actif=True).first()
+            if contrat_actif:
+                paiements_mois = contrat_actif.paiements.filter(
+                    date_paiement__year=recap.mois_recap.year,
+                    date_paiement__month=recap.mois_recap.month,
+                    type_paiement='loyer'
+                ).order_by('-date_paiement')
+                
+                for paiement in paiements_mois:
+                    historique_paiements.append({
+                        'propriete': propriete.nom or f"Propriété #{propriete.id}",
+                        'locataire': contrat_actif.locataire.get_nom_complet(),
+                        'montant': paiement.montant,
+                        'date_paiement': paiement.date_paiement,
+                        'statut': paiement.get_statut_display(),
+                        'methode_paiement': paiement.get_methode_paiement_display(),
+                    })
+        
+        # Récupérer la configuration de l'entreprise
+        from core.models import ConfigurationEntreprise
+        entreprise_config = ConfigurationEntreprise.get_configuration_active()
+        
+        # Générer le PDF avec xhtml2pdf
+        from django.template.loader import render_to_string
+        from xhtml2pdf import pisa
+        from io import BytesIO
+        from django.http import HttpResponse
+        
+        html_content = render_to_string(
+            'paiements/recapitulatif_mensuel_detaille_paysage.html',
+            {
+                'recap': recap,
+                'proprietes_details': proprietes_details,
+                'stats_globales': stats_globales,
+                'historique_paiements': historique_paiements,
+                'entreprise_config': entreprise_config,
+                'date_generation': timezone.now(),
+            }
+        )
+        
+        # Créer le PDF
+        pdf_buffer = BytesIO()
+        pisa_status = pisa.CreatePDF(html_content, dest=pdf_buffer)
+        
+        if pisa_status.err:
+            messages.error(request, f"Erreur lors de la génération du PDF: {pisa_status.err}")
+            return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap.id)
+        
+        # Préparer la réponse
+        pdf_content = pdf_buffer.getvalue()
+        pdf_buffer.close()
+        
+        response = HttpResponse(pdf_content, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="recapitulatif_detaille_{recap.bailleur.get_nom_complet().replace(" ", "_")}_{recap.mois_recap.strftime("%Y_%m")}.pdf"'
+        
+        return response
+        
+    except Exception as e:
+        messages.error(request, f"Erreur lors de la génération du PDF détaillé: {str(e)}")
+        return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
+
+@login_required
+def creer_retrait_depuis_recap(request, recap_id):
+    """Crée un retrait bailleur depuis un récapitulatif mensuel."""
+    try:
+        recap = get_object_or_404(RecapMensuel, id=recap_id, is_deleted=False)
+        
+        # Vérification des permissions
+        permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'add')
+        if not permissions['allowed']:
+            messages.error(request, permissions['message'])
+            return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
+        
+        # Vérifier que le récapitulatif est validé
+        if recap.statut != 'valide':
+            messages.error(request, "Le récapitulatif doit être validé avant de pouvoir créer un retrait.")
+            return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
+        
+        # Vérifier qu'il n'y a pas déjà un retrait pour ce mois et ce bailleur
+        retrait_existant = RetraitBailleur.objects.filter(
+            bailleur=recap.bailleur,
+            mois_retrait=recap.mois_recap,
+            statut__in=['en_attente', 'valide', 'paye']
+        ).first()
+        
+        if retrait_existant:
+            messages.info(request, f"Un retrait existe déjà pour {recap.bailleur.get_nom_complet()} - {recap.mois_recap.strftime('%B %Y')}")
+            return redirect('paiements:detail_retrait_bailleur', retrait_id=retrait_existant.id)
+        
+        if request.method == 'POST':
+            # Créer le retrait avec les données du récapitulatif
+            retrait = RetraitBailleur.objects.create(
+                bailleur=recap.bailleur,
+                mois_retrait=recap.mois_recap,
+                montant_loyers_bruts=recap.total_loyers_bruts,
+                montant_charges_deductibles=recap.total_charges_deductibles,
+                montant_net_a_payer=recap.total_net_a_payer,
+                type_retrait='mensuel',
+                statut='en_attente',
+                mode_retrait=request.POST.get('mode_retrait', 'virement'),
+                date_demande=timezone.now().date(),
+                reference_virement=request.POST.get('reference_retrait', ''),
+                notes=request.POST.get('observations', f'Retrait basé sur le récapitulatif mensuel {recap.mois_recap.strftime("%B %Y")}'),
+                cree_par=request.user,
+                recap_lie=recap  # Lier le retrait au récapitulatif
+            )
+            
+            # Mettre à jour le statut du récapitulatif
+            recap.statut = 'paye'
+            recap.date_paiement = timezone.now()
+            recap.save()
+            
+            messages.success(request, 
+                f"Retrait créé avec succès pour {recap.bailleur.get_nom_complet()} - "
+                f"Montant: {recap.total_net_a_payer:.0f} F CFA"
+            )
+            return redirect('paiements:detail_retrait_bailleur', retrait_id=retrait.id)
+        
+        # Préparer le contexte pour le formulaire
+        context = {
+            'recap': recap,
+            'bailleur': recap.bailleur,
+            'montant_net': recap.total_net_a_payer,
+            'page_title': f'Créer un Retrait - {recap.bailleur.get_nom_complet()}',
+            'page_icon': 'cash-coin',
+            'description': f'Retrait basé sur le récapitulatif de {recap.mois_recap.strftime("%B %Y")}'
+        }
+        
+        return render(request, 'paiements/creer_retrait_depuis_recap.html', context)
+        
+    except Exception as e:
+        messages.error(request, f"Erreur lors de la création du retrait: {str(e)}")
+        return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)

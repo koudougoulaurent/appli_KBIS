@@ -2,8 +2,10 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Count, Q, Sum, ProtectedError
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse
 from django.utils import timezone
+from datetime import timedelta
+import os
 from .models import Propriete, Bailleur, Locataire, TypeBien, ChargesBailleur
 from .forms import ProprieteForm, BailleurForm, LocataireForm, TypeBienForm, ChargesBailleurForm, ChargesBailleurDeductionForm
 from core.utils import convertir_montant
@@ -23,6 +25,14 @@ from proprietes.models import Document
 from proprietes.forms import DocumentSearchForm, DocumentForm
 from proprietes.specialized_forms import DiagnosticForm, AssuranceForm, EtatLieuxForm
 from django.http import HttpResponse
+from .document_viewer import DocumentViewerView, document_content_view, document_pdf_viewer, document_secure_proxy
+from .document_debug import document_debug_info, document_test_download
+from .simple_download import simple_document_download, simple_document_view
+
+@login_required
+def document_test_page(request):
+    """Page de test pour les documents"""
+    return render(request, 'proprietes/documents/document_test.html')
 
 
 from core.intelligent_views import IntelligentListView
@@ -79,7 +89,10 @@ class ProprieteListView(PrivilegeButtonsMixin, IntelligentListView):
         # Statistiques
         context['total_proprietes'] = Propriete.objects.count()
         context['proprietes_louees'] = Propriete.objects.filter(disponible=False).count()
-        context['proprietes_disponibles'] = Propriete.objects.filter(disponible=True).count()
+        context['proprietes_disponibles'] = Propriete.objects.filter(
+            models.Q(disponible=True) |
+            models.Q(unites_locatives__statut='disponible', unites_locatives__is_deleted=False)
+        ).distinct().count()
         context['proprietes_en_travaux'] = Propriete.objects.filter(etat='mauvais').count()
         
         # SUPPRIMER: Calculs financiers pour la confidentialité
@@ -172,6 +185,22 @@ def ajouter_propriete(request):
                 f'Numéro: {propriete.numero_propriete}. '
                 f'Documents associés créés automatiquement.'
             )
+            
+            # Vérifier si cette propriété nécessite des unités locatives
+            if propriete.necessite_unites_locatives():
+                # Créer automatiquement les pièces
+                from .services import GestionPiecesService
+                try:
+                    pieces_crees = GestionPiecesService.creer_pieces_automatiques(propriete)
+                    messages.success(
+                        request,
+                        f'{len(pieces_crees)} pièces créées automatiquement pour la propriété "{propriete.titre}".'
+                    )
+                except Exception as e:
+                    messages.error(
+                        request,
+                        f'Erreur lors de la création automatique des pièces : {str(e)}'
+                    )
             
             return redirect('proprietes:detail', pk=propriete.pk)
         else:
@@ -410,7 +439,7 @@ def deduction_charge_bailleur(request, pk):
             
             messages.success(
                 request, 
-                f'Déduction de {montant_effectivement_deduit} XOF appliquée avec succès!'
+                f'Déduction de {montant_effectivement_deduit} F CFA appliquée avec succès!'
             )
             return redirect('proprietes:detail_charge_bailleur', pk=pk)
         else:
@@ -1773,10 +1802,18 @@ class PhotoDeleteAjaxView(LoginRequiredMixin, View):
 # Vues pour la gestion des documents
 @login_required
 def document_list(request):
-    """Vue pour lister tous les documents."""
+    """Vue pour lister tous les documents avec fonctionnalités avancées pour les utilisateurs privilégiés."""
+    # Vérifier les permissions utilisateur
+    is_privilege_user = hasattr(request.user, 'groupe_travail') and request.user.groupe_travail and request.user.groupe_travail.nom == 'PRIVILEGE'
+    
+    # Base queryset avec optimisations
     documents = Document.objects.select_related(
         'propriete', 'bailleur', 'locataire', 'cree_par'
-    ).all()
+    ).prefetch_related('propriete__type_bien')
+    
+    # Filtrer les documents confidentiels pour les utilisateurs non privilégiés
+    if not is_privilege_user:
+        documents = documents.filter(confidentiel=False)
     
     # Filtres de recherche
     form = DocumentSearchForm(request.GET)
@@ -1810,33 +1847,95 @@ def document_list(request):
         if date_fin:
             documents = documents.filter(date_creation__date__lte=date_fin)
     
-    # Pagination
-    paginator = Paginator(documents.order_by('-date_creation'), 20)
+    # Statistiques avancées pour les utilisateurs privilégiés
+    stats = {}
+    if is_privilege_user:
+        stats = {
+            'total_documents': documents.count(),
+            'documents_expires': documents.filter(
+                date_expiration__lt=timezone.now().date()
+            ).count(),
+            'documents_confidentiels': documents.filter(confidentiel=True).count(),
+            'documents_par_type': documents.values('type_document').annotate(
+                count=Count('id')
+            ).order_by('-count'),
+            'documents_par_statut': documents.values('statut').annotate(
+                count=Count('id')
+            ).order_by('-count'),
+            'documents_recents': documents.filter(
+                date_creation__gte=timezone.now() - timedelta(days=30)
+            ).count(),
+        }
+    
+    # Pagination avec plus d'éléments pour les utilisateurs privilégiés
+    items_per_page = 50 if is_privilege_user else 20
+    paginator = Paginator(documents.order_by('-date_creation'), items_per_page)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
     context = {
         'page_obj': page_obj,
         'search_form': form,
+        'is_privilege_user': is_privilege_user,
+        'stats': stats,
         'total_documents': documents.count(),
         'documents_expires': documents.filter(
             date_expiration__lt=timezone.now().date()
         ).count(),
     }
     
-    return render(request, 'proprietes/documents/document_list.html', context)
+    # Template différent pour les utilisateurs privilégiés
+    template_name = 'proprietes/documents/document_list_privilege.html' if is_privilege_user else 'proprietes/documents/document_list.html'
+    
+    return render(request, template_name, context)
 
 
 @login_required
 def document_detail(request, pk):
-    """Vue pour afficher le détail d'un document."""
+    """Vue pour afficher le détail d'un document avec fonctionnalités avancées."""
     document = get_object_or_404(Document, pk=pk)
+    
+    # Vérifier les permissions utilisateur
+    is_privilege_user = hasattr(request.user, 'groupe_travail') and request.user.groupe_travail and request.user.groupe_travail.nom == 'PRIVILEGE'
+    
+    # Vérifier l'accès aux documents confidentiels
+    if document.confidentiel and not is_privilege_user:
+        messages.error(request, "Vous n'avez pas les permissions pour consulter ce document confidentiel.")
+        return redirect('proprietes:document_list')
+    
+    # Informations supplémentaires pour les utilisateurs privilégiés
+    extra_info = {}
+    if is_privilege_user:
+        # Historique des modifications (si implémenté)
+        extra_info['can_edit'] = True
+        extra_info['can_delete'] = True
+        extra_info['file_size'] = document.taille_fichier if hasattr(document, 'taille_fichier') else None
+        
+        # Documents liés de la même propriété
+        if document.propriete:
+            extra_info['related_documents'] = Document.objects.filter(
+                propriete=document.propriete
+            ).exclude(pk=document.pk).select_related('cree_par')[:5]
+        
+        # Métadonnées du fichier
+        if document.fichier:
+            import os
+            extra_info['file_info'] = {
+                'name': os.path.basename(document.fichier.name),
+                'extension': os.path.splitext(document.fichier.name)[1],
+                'url': document.fichier.url,
+            }
     
     context = {
         'document': document,
+        'is_privilege_user': is_privilege_user,
+        'extra_info': extra_info,
     }
     
-    return render(request, 'proprietes/documents/document_detail.html', context)
+    # Template différent pour les utilisateurs privilégiés
+    template_name = 'proprietes/documents/document_detail_privilege.html' if is_privilege_user else 'proprietes/documents/document_detail.html'
+    
+    return render(request, template_name, context)
 
 
 @login_required
@@ -1924,14 +2023,46 @@ def document_download(request, pk):
     """Vue pour télécharger un document."""
     document = get_object_or_404(Document, pk=pk)
     
+    # Vérifier que le fichier existe
+    if not document.fichier:
+        messages.error(request, "Ce document n'a pas de fichier associé.")
+        return redirect('proprietes:document_list')
+    
     # Vérifier les permissions si le document est confidentiel
     if document.confidentiel:
-        # Ici vous pouvez ajouter une logique de vérification des permissions
-        pass
+        # Vérifier si l'utilisateur est privilégié
+        is_privilege_user = (hasattr(request.user, 'groupe_travail') and 
+                           request.user.groupe_travail and 
+                           request.user.groupe_travail.nom == 'PRIVILEGE')
+        
+        if not is_privilege_user:
+            messages.error(request, "Vous n'avez pas l'autorisation de télécharger ce document confidentiel.")
+            return redirect('proprietes:document_list')
     
-    response = HttpResponse(document.fichier, content_type='application/octet-stream')
-    response['Content-Disposition'] = f'attachment; filename="{document.fichier.name}"'
-    return response
+    try:
+        # Utiliser FileResponse pour un téléchargement correct
+        response = FileResponse(
+            open(document.fichier.path, 'rb'),
+            as_attachment=True,
+            filename=os.path.basename(document.fichier.name)
+        )
+        
+        # Headers de sécurité
+        response['X-Content-Type-Options'] = 'nosniff'
+        
+        # Log du téléchargement
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Document {document.pk} ({document.nom}) téléchargé par {request.user.username}")
+        
+        return response
+        
+    except FileNotFoundError:
+        messages.error(request, f"Le fichier '{document.fichier.name}' est introuvable sur le serveur.")
+        return redirect('proprietes:document_list')
+    except Exception as e:
+        messages.error(request, f"Erreur lors du téléchargement : {str(e)}")
+        return redirect('proprietes:document_list')
 
 
 # ========================================
@@ -2131,7 +2262,7 @@ def gestion_pieces(request, propriete_id):
     
     if recherche:
         pieces = pieces.filter(
-            Q(nom__icontains=recherche) | 
+            Q(nom__icontains=recherche) |
             Q(description__icontains=recherche) |
             Q(numero_piece__icontains=recherche)
         )
@@ -2139,6 +2270,7 @@ def gestion_pieces(request, propriete_id):
     # Statistiques des pièces
     from .services import GestionPiecesService
     stats = GestionPiecesService.get_statistiques_pieces(propriete_id)
+    
     
     context = {
         'propriete': propriete,

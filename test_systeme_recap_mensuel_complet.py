@@ -215,7 +215,7 @@ def test_generation_recap_automatique():
         for bailleur in bailleurs:
             try:
                 # Vérifier si le bailleur a des propriétés louées
-                proprietes_louees = bailleur.propriete_set.filter(
+                proprietes_louees = bailleur.proprietes.filter(
                     contrats__est_actif=True,
                     contrats__est_resilie=False
                 ).distinct()

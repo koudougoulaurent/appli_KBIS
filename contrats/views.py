@@ -4,6 +4,7 @@ from django.contrib import messages
 from .models import Contrat, Quittance, EtatLieux
 from proprietes.models import Propriete, Locataire
 from django.utils import timezone
+from django.db import models
 from django.db.models import ProtectedError
 from core.models import AuditLog, ConfigurationEntreprise
 from django.contrib.contenttypes.models import ContentType
@@ -140,7 +141,9 @@ def ajouter_contrat(request):
         return redirect('contrats:liste')
     
     if request.method == 'POST':
-        form = ContratForm(request.POST, request.FILES)
+        # Récupérer l'ID de la propriété sélectionnée
+        propriete_id = request.POST.get('propriete')
+        form = ContratForm(request.POST, request.FILES, propriete_id=propriete_id)
         if form.is_valid():
             contrat = form.save(commit=False)
             contrat.cree_par = request.user
@@ -174,14 +177,14 @@ def ajouter_contrat(request):
                     )
                     
                     messages.success(
-                        request, 
+                        request,
                         f'Contrat "{contrat.numero_contrat}" ajouté avec succès! '
                         f'Le paiement de caution de {contrat.depot_garantie} F CFA a été créé automatiquement.'
                     )
                     
                 except Exception as e:
                     messages.warning(
-                        request, 
+                        request,
                         f'Contrat "{contrat.numero_contrat}" ajouté avec succès, '
                         f'mais la création du paiement de caution a échoué: {str(e)}'
                     )
@@ -201,14 +204,14 @@ def ajouter_contrat(request):
                     )
                     
                     messages.success(
-                        request, 
+                        request,
                         f'Contrat "{contrat.numero_contrat}" ajouté avec succès! '
                         f'Le paiement d\'avance de loyer de {contrat.avance_loyer} F CFA a été créé automatiquement.'
                     )
                     
                 except Exception as e:
                     messages.warning(
-                        request, 
+                        request,
                         f'Contrat "{contrat.numero_contrat}" ajouté avec succès, '
                         f'mais la création du paiement d\'avance de loyer a échoué: {str(e)}'
                     )
@@ -230,13 +233,13 @@ def ajouter_contrat(request):
                     
                     if creer_paiement_caution or creer_paiement_avance:
                         messages.success(
-                            request, 
+                            request,
                             f'Contrat "{contrat.numero_contrat}" ajouté avec succès! '
                             f'Le PDF du contrat a été généré et les paiements ont été créés.'
                         )
                     else:
                         messages.success(
-                            request, 
+                            request,
                             f'Contrat "{contrat.numero_contrat}" ajouté avec succès! '
                             f'Le PDF du contrat a été généré et téléchargé.'
                         )
@@ -245,7 +248,7 @@ def ajouter_contrat(request):
                     
                 except Exception as e:
                     messages.warning(
-                        request, 
+                        request,
                         f'Contrat "{contrat.numero_contrat}" ajouté avec succès, '
                         f'mais la génération du PDF a échoué: {str(e)}'
                     )
@@ -253,13 +256,13 @@ def ajouter_contrat(request):
             else:
                 if creer_paiement_caution or creer_paiement_avance:
                     messages.success(
-                        request, 
+                        request,
                         f'Contrat "{contrat.numero_contrat}" ajouté avec succès! '
                         f'Les paiements ont été créés. Vous pouvez générer le PDF depuis la page de détail.'
                     )
                 else:
                     messages.success(
-                        request, 
+                        request,
                         f'Contrat "{contrat.numero_contrat}" ajouté avec succès! '
                         f'Vous pouvez générer le PDF et créer les paiements depuis la page de détail.'
                     )
@@ -277,9 +280,12 @@ def ajouter_contrat(request):
     context = {
         'form': form,
         'title': 'Ajouter un contrat',
-        'proprietes': Propriete.objects.filter(disponible=True),
+        'proprietes': Propriete.objects.filter(
+            models.Q(disponible=True) |
+            models.Q(unites_locatives__statut='disponible', unites_locatives__is_deleted=False)
+        ).distinct(),
         'locataires': Locataire.objects.all(),
-        'proprietes_data': form.proprietes_data
+        'proprietes_data': form.proprietes_data,
     }
     return render(request, 'contrats/contrat_form.html', context)
 
@@ -299,7 +305,9 @@ def modifier_contrat(request, pk):
     contrat = get_object_or_404(Contrat, pk=pk)
     
     if request.method == 'POST':
-        form = ContratForm(request.POST, request.FILES, instance=contrat)
+        # Récupérer l'ID de la propriété sélectionnée
+        propriete_id = request.POST.get('propriete')
+        form = ContratForm(request.POST, request.FILES, instance=contrat, propriete_id=propriete_id)
         if form.is_valid():
             contrat = form.save(commit=False)
             contrat.save()
@@ -397,9 +405,12 @@ def modifier_contrat(request, pk):
         'form': form,
         'title': f'Modifier le contrat {contrat.numero_contrat}',
         'contrat': contrat,
-        'proprietes': Propriete.objects.filter(disponible=True),
+        'proprietes': Propriete.objects.filter(
+            models.Q(disponible=True) |
+            models.Q(unites_locatives__statut='disponible', unites_locatives__is_deleted=False)
+        ).distinct(),
         'locataires': Locataire.objects.all(),
-        'proprietes_data': form.proprietes_data
+        'proprietes_data': form.proprietes_data,
     }
     return render(request, 'contrats/contrat_form.html', context)
 
@@ -2127,6 +2138,124 @@ def contrats_dashboard(request):
     }
     
     return render(request, 'contrats/dashboard.html', context)
+
+
+@login_required
+def occupation_propriete(request, propriete_id):
+    """
+    Vue unifiée pour visualiser l'occupation des unités et pièces d'une grande propriété.
+    """
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:liste')
+    
+    propriete = get_object_or_404(Propriete, pk=propriete_id)
+    
+    # Récupérer toutes les unités locatives de cette propriété
+    from proprietes.models import UniteLocative, Piece, PieceContrat
+    unites_locatives = UniteLocative.objects.filter(propriete=propriete)
+    
+    # Récupérer toutes les pièces de cette propriété
+    pieces = Piece.objects.filter(propriete=propriete)
+    
+    # Contrats actifs pour cette propriété
+    contrats_actifs = Contrat.objects.filter(
+        propriete=propriete,
+        est_actif=True,
+        est_resilie=False
+    ).select_related('locataire', 'unite_locative')
+    
+    # Statistiques d'occupation
+    occupation_data = {
+        'unites_locatives': [],
+        'pieces_individuelles': [],
+        'statistiques': {
+            'total_unites': unites_locatives.count(),
+            'unites_occupees': 0,
+            'total_pieces': pieces.count(),
+            'pieces_occupees': 0,
+            'revenus_mensuels_total': 0,
+            'taux_occupation_unites': 0,
+            'taux_occupation_pieces': 0,
+        }
+    }
+    
+    # Traitement des unités locatives
+    for unite in unites_locatives:
+        contrat_unite = contrats_actifs.filter(unite_locative=unite).first()
+        unite_data = {
+            'unite': unite,
+            'contrat': contrat_unite,
+            'statut': 'occupee' if contrat_unite else 'libre',
+            'locataire': contrat_unite.locataire if contrat_unite else None,
+            'loyer_mensuel': float(contrat_unite.loyer_mensuel) if contrat_unite and contrat_unite.loyer_mensuel else 0,
+            'charges_mensuelles': float(contrat_unite.charges_mensuelles) if contrat_unite and contrat_unite.charges_mensuelles else 0,
+            'date_debut': contrat_unite.date_debut if contrat_unite else None,
+            'date_fin': contrat_unite.date_fin if contrat_unite else None,
+        }
+        occupation_data['unites_locatives'].append(unite_data)
+        
+        if contrat_unite:
+            occupation_data['statistiques']['unites_occupees'] += 1
+            occupation_data['statistiques']['revenus_mensuels_total'] += unite_data['loyer_mensuel'] + unite_data['charges_mensuelles']
+    
+    # Traitement des pièces individuelles
+    for piece in pieces:
+        # Récupérer les contrats actifs pour cette pièce
+        pieces_contrats = PieceContrat.objects.filter(
+            piece=piece,
+            actif=True,
+            contrat__est_actif=True,
+            contrat__est_resilie=False
+        ).select_related('contrat', 'contrat__locataire')
+        
+        piece_data = {
+            'piece': piece,
+            'contrats': [],
+            'statut': 'occupee' if pieces_contrats.exists() else 'libre',
+            'revenus_mensuels': 0,
+        }
+        
+        for piece_contrat in pieces_contrats:
+            contrat_data = {
+                'contrat': piece_contrat.contrat,
+                'locataire': piece_contrat.contrat.locataire,
+                'loyer_piece': float(piece_contrat.loyer_piece) if piece_contrat.loyer_piece else 0,
+                'charges_piece': float(piece_contrat.charges_piece) if piece_contrat.charges_piece else 0,
+                'date_debut': piece_contrat.date_debut_occupation,
+                'date_fin': piece_contrat.date_fin_occupation,
+            }
+            piece_data['contrats'].append(contrat_data)
+            piece_data['revenus_mensuels'] += contrat_data['loyer_piece'] + contrat_data['charges_piece']
+        
+        occupation_data['pieces_individuelles'].append(piece_data)
+        
+        if pieces_contrats.exists():
+            occupation_data['statistiques']['pieces_occupees'] += 1
+            occupation_data['statistiques']['revenus_mensuels_total'] += piece_data['revenus_mensuels']
+    
+    # Calcul des taux d'occupation
+    if occupation_data['statistiques']['total_unites'] > 0:
+        occupation_data['statistiques']['taux_occupation_unites'] = round(
+            (occupation_data['statistiques']['unites_occupees'] / occupation_data['statistiques']['total_unites']) * 100, 1
+        )
+    
+    if occupation_data['statistiques']['total_pieces'] > 0:
+        occupation_data['statistiques']['taux_occupation_pieces'] = round(
+            (occupation_data['statistiques']['pieces_occupees'] / occupation_data['statistiques']['total_pieces']) * 100, 1
+        )
+    
+    # Informations générales sur la propriété
+    context = {
+        'propriete': propriete,
+        'occupation_data': occupation_data,
+        'contrats_actifs': contrats_actifs,
+        'date_actuelle': timezone.now().date(),
+    }
+    
+    return render(request, 'contrats/occupation_propriete.html', context)
 
 
 @login_required

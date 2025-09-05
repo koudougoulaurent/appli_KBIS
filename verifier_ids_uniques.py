@@ -66,7 +66,7 @@ def verifier_ids_uniques():
     if paiements.exists():
         for paiement in paiements[:5]:  # Afficher les 5 premiers
             print(f"   - Paiement ID: {paiement.id}")
-            print(f"     Montant: {paiement.montant} XOF")
+            print(f"     Montant: {paiement.montant} F CFA")
             print(f"     Contrat: {paiement.contrat.numero_contrat if paiement.contrat else 'Aucun'}")
             print(f"     Date: {paiement.date_paiement}")
             print()

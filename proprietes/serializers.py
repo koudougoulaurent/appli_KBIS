@@ -29,7 +29,7 @@ class BailleurSerializer(serializers.ModelSerializer):
     
     def get_proprietes_count(self, obj):
         """Retourne le nombre de propriétés du bailleur"""
-        return obj.propriete_set.count()
+        return obj.proprietes.count()
 
 
 class BailleurListSerializer(serializers.ModelSerializer):
@@ -52,7 +52,7 @@ class BailleurListSerializer(serializers.ModelSerializer):
     
     def get_proprietes_count(self, obj):
         """Retourne le nombre de propriétés du bailleur"""
-        return obj.propriete_set.count()
+        return obj.proprietes.count()
 
 
 class LocataireSerializer(serializers.ModelSerializer):
@@ -74,7 +74,7 @@ class LocataireSerializer(serializers.ModelSerializer):
     
     def get_proprietes_count(self, obj):
         """Retourne le nombre de propriétés louées par le locataire"""
-        return obj.propriete_set.count()
+        return obj.proprietes.count()
 
 
 class LocataireListSerializer(serializers.ModelSerializer):
@@ -97,7 +97,7 @@ class LocataireListSerializer(serializers.ModelSerializer):
     
     def get_proprietes_count(self, obj):
         """Retourne le nombre de propriétés louées par le locataire"""
-        return obj.propriete_set.count()
+        return obj.proprietes.count()
 
 
 class ProprieteSerializer(serializers.ModelSerializer):

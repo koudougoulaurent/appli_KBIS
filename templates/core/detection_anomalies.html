@@ -1,5 +1,6 @@
 {% extends 'base_dashboard.html' %}
 {% load static %}
+{% load humanize %}
 
 {% block title %}Détection d'anomalies - Gestion Immobilière{% endblock %}
 
@@ -229,7 +230,7 @@
                                 {% for paiement in paiements_retard %}
                                 <tr>
                                     <td>{{ paiement.contrat.locataire.nom }}</td>
-                                    <td>{{ paiement.montant }}€</td>
+                                    <td>{{ paiement.montant|floatformat:0|intcomma }} F CFA</td>
                                     <td>
                                         {% with jours_retard=paiement.date_echeance|timesince %}
                                             <span class="badge badge-danger">{{ jours_retard }}</span>

@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
                 ('date_debut_personnalisee', models.DateField(blank=True, null=True, verbose_name='Date de début (période personnalisée)')),
                 ('date_fin_personnalisee', models.DateField(blank=True, null=True, verbose_name='Date de fin (période personnalisée)')),
                 ('seuil_alerte', models.DecimalField(blank=True, decimal_places=2, help_text='Montant seuil pour déclencher des alertes', max_digits=10, null=True, verbose_name="Seuil d'alerte")),
-                ('devise', models.CharField(default='XOF', help_text='Devise utilisée pour les montants', max_length=10, verbose_name='Devise')),
+                ('devise', models.CharField(default='F CFA', help_text='Devise utilisée pour les montants', max_length=10, verbose_name='Devise')),
                 ('couleur_theme', models.CharField(default='#007bff', help_text='Couleur principale du tableau de bord (format hexadécimal)', max_length=7, verbose_name='Couleur du thème')),
                 ('date_creation', models.DateTimeField(auto_now_add=True, verbose_name='Date de création')),
                 ('date_modification', models.DateTimeField(auto_now=True, verbose_name='Date de modification')),

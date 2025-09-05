@@ -545,19 +545,48 @@
         </a>
         
         {% if paiement.statut == 'en_attente' %}
-        <a href="#" onclick="validerPaiement({{ paiement.pk }})" class="btn-action btn-success">
-            <i class="bi bi-check-circle me-2"></i>✅ Valider le Paiement
-        </a>
+        <button type="button" 
+                onclick="validerPaiement({{ paiement.pk }})" 
+                class="btn btn-success btn-lg me-2"
+                style="font-weight: bold; padding: 15px 30px; font-size: 1.1rem;">
+            <i class="bi bi-check-circle-fill me-2"></i>✅ VALIDER LE PAIEMENT
+        </button>
         
-        <a href="#" onclick="refuserPaiement({{ paiement.pk }})" class="btn-action btn-danger">
-            <i class="bi bi-x-circle me-2"></i>❌ Refuser le Paiement
-        </a>
-        {% endif %}
-        
-        {% if paiement.statut == 'valide' %}
-        <span class="badge bg-success fs-6">
-            <i class="bi bi-check-circle me-2"></i>Paiement Validé
-        </span>
+        <button type="button" 
+                onclick="refuserPaiement({{ paiement.pk }})" 
+                class="btn btn-danger btn-lg me-2"
+                style="font-weight: bold; padding: 15px 30px; font-size: 1.1rem;">
+            <i class="bi bi-x-circle-fill me-2"></i>❌ REFUSER LE PAIEMENT
+        </button>
+        {% elif paiement.statut == 'valide' %}
+        <div class="alert alert-success d-flex align-items-center" role="alert">
+            <i class="bi bi-check-circle-fill me-2 fs-4"></i>
+            <div>
+                <strong>Paiement Validé</strong>
+                {% if paiement.date_validation %}
+                <br><small>Validé le {{ paiement.date_validation|date:"d/m/Y à H:i" }}</small>
+                {% endif %}
+                {% if paiement.valide_par %}
+                <br><small>par {{ paiement.valide_par.get_full_name|default:paiement.valide_par.username }}</small>
+                {% endif %}
+            </div>
+        </div>
+        {% elif paiement.statut == 'refuse' %}
+        <div class="alert alert-danger d-flex align-items-center" role="alert">
+            <i class="bi bi-x-circle-fill me-2 fs-4"></i>
+            <div>
+                <strong>Paiement Refusé</strong>
+                {% if paiement.date_refus %}
+                <br><small>Refusé le {{ paiement.date_refus|date:"d/m/Y à H:i" }}</small>
+                {% endif %}
+                {% if paiement.refuse_par %}
+                <br><small>par {{ paiement.refuse_par.get_full_name|default:paiement.refuse_par.username }}</small>
+                {% endif %}
+                {% if paiement.raison_refus %}
+                <br><small><strong>Raison :</strong> {{ paiement.raison_refus }}</small>
+                {% endif %}
+            </div>
+        </div>
         {% endif %}
         {% endif %}
         
@@ -593,26 +622,57 @@
 <script>
     // Fonction pour valider un paiement
     function validerPaiement(paiementId) {
-        if (confirm('Êtes-vous sûr de vouloir valider ce paiement ?')) {
-            fetch(`/paiements/${paiementId}/valider/`, {
+        if (confirm('Êtes-vous sûr de vouloir valider ce paiement ?\n\nCette action confirmera que le paiement a été reçu et traité.')) {
+            fetch(`/paiements/paiement/${paiementId}/valider/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded',
                 },
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
+            .then(response => {
+                if (response.ok) {
                     location.reload();
                 } else {
-                    alert('Erreur lors de la validation : ' + data.message);
+                    alert('Erreur lors de la validation du paiement');
                 }
             })
             .catch(error => {
                 console.error('Erreur:', error);
                 alert('Erreur lors de la validation du paiement');
             });
+        }
+    }
+
+    // Fonction pour refuser un paiement
+    function refuserPaiement(paiementId) {
+        const raison = prompt('Veuillez indiquer la raison du refus :');
+        if (raison && raison.trim()) {
+            if (confirm(`Êtes-vous sûr de vouloir refuser ce paiement ?\n\nRaison : ${raison}`)) {
+                const formData = new FormData();
+                formData.append('raison_refus', raison);
+                
+                fetch(`/paiements/paiement/${paiementId}/refuser/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    },
+                    body: formData
+                })
+                .then(response => {
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        alert('Erreur lors du refus du paiement');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    alert('Erreur lors du refus du paiement');
+                });
+            }
+        } else if (raison !== null) {
+            alert('Veuillez indiquer une raison pour le refus.');
         }
     }
 
