@@ -629,43 +629,32 @@ def check_group_permissions(user, allowed_groups, operation_type='modify'):
     if groupe_nom == 'PRIVILEGE':
         return {'allowed': True, 'message': 'Accès autorisé (groupe PRIVILEGE).'}
     
-    # SÉCURITÉ STRICTE : Seul PRIVILEGE a accès aux fonctionnalités sensibles
-    operations_sensibles = ['modify', 'delete', 'validate', 'resilier']
-    if operation_type in operations_sensibles:
-        return {'allowed': False, 'message': f'Accès refusé. Seul le groupe PRIVILEGE peut effectuer des {operation_type}.'}
+    # Vérification alternative avec la méthode is_privilege_user pour plus de robustesse
+    if hasattr(user, 'is_privilege_user') and user.is_privilege_user():
+        return {'allowed': True, 'message': 'Accès autorisé (groupe PRIVILEGE via is_privilege_user).'}
+
+
+def check_group_permissions_with_fallback(user, allowed_groups, operation_type='modify'):
+    """
+    Vérifie les permissions d'un utilisateur avec fallback pour les utilisateurs PRIVILEGE.
+    Cette fonction est spécialement conçue pour éviter les redirections incorrectes.
     
-    # CAISSE : Lecture uniquement, pas de modification/suppression
-    if groupe_nom == 'CAISSE':
-        if operation_type == 'view':
-            return {'allowed': True, 'message': 'Accès autorisé (groupe CAISSE - consultation uniquement).'}
-        elif operation_type == 'add':
-            # CAISSE peut ajouter des paiements mais pas d'autres éléments sensibles
-            return {'allowed': True, 'message': 'Accès autorisé (groupe CAISSE - ajout de paiements).'}
-        else:
-            return {'allowed': False, 'message': 'Le groupe CAISSE ne peut que consulter et ajouter des paiements.'}
+    Args:
+        user: L'utilisateur connecté
+        allowed_groups: Liste des groupes autorisés (ex: ['PRIVILEGE', 'ADMINISTRATION'])
+        operation_type: Type d'opération ('add', 'modify', 'delete', 'view', 'validate', 'resilier')
     
-    # CONTROLES : Lecture et audit uniquement
-    if groupe_nom == 'CONTROLES':
-        if operation_type == 'view':
-            return {'allowed': True, 'message': 'Accès autorisé (groupe CONTROLES - audit et vérification).'}
-        else:
-            return {'allowed': False, 'message': 'Le groupe CONTROLES peut consulter et vérifier mais pas modifier, supprimer ou valider.'}
+    Returns:
+        dict: Dictionnaire avec 'allowed' (bool) et 'message' (str)
+    """
+    # Vérification standard
+    permissions = check_group_permissions(user, allowed_groups, operation_type)
     
-    # ADMINISTRATION : Lecture et ajout limité uniquement
-    if groupe_nom == 'ADMINISTRATION':
-        if operation_type == 'view':
-            return {'allowed': True, 'message': 'Accès autorisé (groupe ADMINISTRATION - consultation).'}
-        elif operation_type == 'add':
-            # ADMINISTRATION peut ajouter des éléments de base mais pas de fonctionnalités sensibles
-            return {'allowed': True, 'message': 'Accès autorisé (groupe ADMINISTRATION - ajout d\'éléments de base).'}
-        else:
-            return {'allowed': False, 'message': 'Le groupe ADMINISTRATION peut consulter et ajouter des éléments de base mais pas modifier, supprimer ou valider.'}
+    # Si l'accès est refusé mais que l'utilisateur est PRIVILEGE, forcer l'autorisation
+    if not permissions['allowed'] and hasattr(user, 'is_privilege_user') and user.is_privilege_user():
+        return {'allowed': True, 'message': 'Accès autorisé (groupe PRIVILEGE - fallback).'}
     
-    # Autres groupes : Vérifier la liste allowed_groups pour les opérations non sensibles
-    if groupe_nom in allowed_groups and operation_type not in operations_sensibles:
-        return {'allowed': True, 'message': f'Accès autorisé (groupe {groupe_nom}).'}
-    
-    return {'allowed': False, 'message': f'Accès refusé. Groupe requis: {", ".join(allowed_groups)}.'} 
+    return permissions 
 
 def log_audit_action(request, action, content_type=None, object_id=None, object_repr=None, details=None):
     """

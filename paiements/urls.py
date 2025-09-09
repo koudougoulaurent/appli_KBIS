@@ -57,6 +57,7 @@ urlpatterns = [
     path('recaps-mensuels-automatiques/', views.liste_recaps_mensuels, name='liste_recaps_mensuels_auto'),
     path('recaps-mensuels-automatiques/creer/', views.creer_recap_mensuel, name='creer_recap_mensuel_auto'),
     path('recaps-mensuels-automatiques/creer/<int:bailleur_id>/', views.creer_recap_mensuel_bailleur, name='creer_recap_mensuel_bailleur'),
+    path('recaps-mensuels-automatiques/api/calcul-preview/', views.get_calculation_preview, name='api_calculation_preview'),
     path('recaps-mensuels-automatiques/creer-avec-detection/<int:bailleur_id>/', views.creer_recap_avec_detection_auto, name='creer_recap_avec_detection_auto'),
     path('recaps-mensuels-automatiques/<int:recap_id>/', views.detail_recap_mensuel, name='detail_recap_mensuel_auto'),
     path('recaps-mensuels-automatiques/<int:recap_id>/pdf-detaille/', views.generer_pdf_recap_detaille_paysage, name='generer_pdf_recap_detaille_paysage'),

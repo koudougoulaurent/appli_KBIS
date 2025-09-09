@@ -37,10 +37,12 @@ logger = logging.getLogger(__name__)
 def liste_charges_avancees(request):
     """Liste avancée des charges déductibles avec filtres."""
     
-    # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
-    if not request.user.groups.filter(name='PRIVILEGE').exists():
-        messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('utilisateurs:connexion_groupes')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    from core.utils import check_group_permissions_with_fallback
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:dashboard')
     
     # Formulaire de recherche
     form_recherche = RechercheChargesForm(request.GET)
@@ -118,10 +120,12 @@ def liste_charges_avancees(request):
 def creer_charge_avancee(request, bailleur_id=None):
     """Créer une nouvelle charge déductible."""
     
-    # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
-    if not request.user.groups.filter(name='PRIVILEGE').exists():
-        messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('utilisateurs:connexion_groupes')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    from core.utils import check_group_permissions_with_fallback
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:dashboard')
     
     bailleur = None
     if bailleur_id:
@@ -157,10 +161,12 @@ def creer_charge_avancee(request, bailleur_id=None):
 def modifier_charge_avancee(request, charge_id):
     """Modifier une charge déductible existante."""
     
-    # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
-    if not request.user.groups.filter(name='PRIVILEGE').exists():
-        messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('utilisateurs:connexion_groupes')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    from core.utils import check_group_permissions_with_fallback
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:dashboard')
     
     charge = get_object_or_404(ChargeDeductible, id=charge_id)
     
@@ -187,10 +193,12 @@ def modifier_charge_avancee(request, charge_id):
 def detail_charge_avancee(request, charge_id):
     """Détail d'une charge déductible."""
     
-    # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
-    if not request.user.groups.filter(name='PRIVILEGE').exists():
-        messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('utilisateurs:connexion_groupes')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    from core.utils import check_group_permissions_with_fallback
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:dashboard')
     
     charge = get_object_or_404(
         ChargeDeductible.objects.select_related(
@@ -250,10 +258,12 @@ def valider_charges(request):
 def dashboard_charges_bailleur(request, bailleur_id):
     """Dashboard des charges pour un bailleur spécifique."""
     
-    # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
-    if not request.user.groups.filter(name='PRIVILEGE').exists():
-        messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('utilisateurs:connexion_groupes')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    from core.utils import check_group_permissions_with_fallback
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:dashboard')
     
     bailleur = get_object_or_404(Bailleur, id=bailleur_id, actif=True)
     
@@ -306,10 +316,12 @@ def dashboard_charges_bailleur(request, bailleur_id):
 def rapport_charges(request):
     """Générer des rapports sur les charges déductibles."""
     
-    # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
-    if not request.user.groups.filter(name='PRIVILEGE').exists():
-        messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('utilisateurs:connexion_groupes')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    from core.utils import check_group_permissions_with_fallback
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:dashboard')
     
     if request.method == 'POST':
         form = RapportChargesForm(request.POST)

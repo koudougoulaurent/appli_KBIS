@@ -25,7 +25,7 @@ from .forms import PaiementForm, ChargeDeductibleForm, RetraitBailleurForm, Gene
 from contrats.models import Contrat
 from proprietes.models import Propriete, Locataire, Bailleur
 from core.models import AuditLog, ConfigurationEntreprise
-from core.utils import check_group_permissions, get_context_with_entreprise_config
+from core.utils import check_group_permissions, check_group_permissions_with_fallback, get_context_with_entreprise_config
 from django.views.generic import ListView
 from .models import TableauBordFinancier
 from .forms import TableauBordFinancierForm
@@ -685,8 +685,8 @@ def ajouter_retrait(request):
 @login_required
 def detail_retrait(request, pk):
     """Afficher le détail d'un retrait bailleur SÉCURISÉ."""
-    # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -791,8 +791,8 @@ def liste_recus(request):
 @login_required
 def liste_recaps_mensuels(request):
     """Liste des récapitulatifs mensuels."""
-    # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -846,11 +846,11 @@ def liste_recaps_mensuels(request):
 @login_required
 def creer_recap_mensuel(request):
     """Créer un nouveau récapitulatif mensuel."""
-    # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'add')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'add')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
-        return redirect('paiements:liste_recaps_mensuels')
+        return redirect('paiements:liste_recaps_mensuels_auto')
     
     if request.method == 'POST':
         # Logique de création du récapitulatif
@@ -969,9 +969,10 @@ def detail_recap_mensuel(request, recap_id):
             )
     
     # Calculer les totaux globaux
-    total_global_loyers = sum(prop['total_loyers'] for prop in paiements_par_propriete.values())
-    total_global_charges = sum(prop['total_charges'] for prop in paiements_par_propriete.values())
-    total_global_net = sum(prop['montant_net'] for prop in paiements_par_propriete.values())
+    from decimal import Decimal
+    total_global_loyers = sum(prop['total_loyers'] for prop in paiements_par_propriete.values()) or Decimal('0')
+    total_global_charges = sum(prop['total_charges'] for prop in paiements_par_propriete.values()) or Decimal('0')
+    total_global_net = sum(prop['montant_net'] for prop in paiements_par_propriete.values()) or Decimal('0')
     
     context = get_context_with_entreprise_config({
         'recap': recap,
@@ -1387,8 +1388,8 @@ def imprimer_recap_mensuel(request, recap_id):
 @login_required
 def liste_retraits_bailleur(request):
     """Liste des retraits bailleur SÉCURISÉE."""
-    # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -1431,8 +1432,8 @@ def paiement_caution_avance_list(request):
 @login_required
 def tableau_bord_list(request):
     """Liste des tableaux de bord financiers."""
-    # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -1861,8 +1862,8 @@ def tableau_bord_export_pdf(request, pk):
 @login_required
 def tableau_bord_dashboard(request):
     """Dashboard principal des tableaux de bord financiers."""
-    # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -1895,8 +1896,9 @@ def tableau_bord_dashboard(request):
 @login_required
 def generer_recap_mensuel_automatique(request):
     """Génère automatiquement les récapitulatifs mensuels pour tous les bailleurs actifs."""
-    # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -2044,10 +2046,118 @@ def generer_recap_mensuel_automatique(request):
     return render(request, 'paiements/generer_recap_automatique.html', context)
 
 @login_required
+def get_calculation_preview(request):
+    """API AJAX pour obtenir l'aperçu des calculs en temps réel."""
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+    
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    
+    if not permissions['allowed']:
+        return JsonResponse({'error': permissions['message']}, status=403)
+    
+    try:
+        mois_str = request.GET.get('mois')
+        bailleur_id = request.GET.get('bailleur_id')
+        
+        if not mois_str:
+            return JsonResponse({'error': 'Mois requis'}, status=400)
+        
+        # Convertir la date
+        mois_date = datetime.strptime(mois_str, '%Y-%m-%d').date()
+        
+        # Récupérer les bailleurs selon la sélection
+        if bailleur_id and bailleur_id != 'tous':
+            bailleurs = Bailleur.objects.filter(id=bailleur_id, is_deleted=False)
+        else:
+            bailleurs = Bailleur.objects.filter(is_deleted=False)
+        
+        if not bailleurs.exists():
+            return JsonResponse({'error': 'Aucun bailleur trouvé'}, status=404)
+        
+        # Calculer les totaux pour l'aperçu
+        total_loyers = Decimal('0')
+        total_charges = Decimal('0')
+        nombre_proprietes = 0
+        nombre_contrats = 0
+        nombre_paiements = 0
+        
+        for bailleur in bailleurs:
+            # Récupérer les propriétés actives du bailleur
+            proprietes_actives = bailleur.proprietes.filter(
+                contrats__est_actif=True,
+                contrats__est_resilie=False
+            ).distinct()
+            
+            nombre_proprietes += proprietes_actives.count()
+            
+            for propriete in proprietes_actives:
+                # Contrats actifs de cette propriété
+                contrats_actifs = propriete.contrats.filter(
+                    est_actif=True,
+                    est_resilie=False
+                )
+                nombre_contrats += contrats_actifs.count()
+                
+                for contrat in contrats_actifs:
+                    # Loyers du mois (basés sur le montant du contrat, pas les paiements reçus)
+                    loyer_mensuel = contrat.montant_loyer or Decimal('0')
+                    total_loyers += loyer_mensuel
+                    
+                    # Paiements reçus du mois (pour information)
+                    paiements_mois = contrat.paiements.filter(
+                        date_paiement__year=mois_date.year,
+                        date_paiement__month=mois_date.month,
+                        statut='valide',
+                        type_paiement='loyer'
+                    )
+                    nombre_paiements += paiements_mois.count()
+                    
+                    # Charges déductibles du mois
+                    charges_mois = contrat.charges_deductibles.filter(
+                        date_charge__year=mois_date.year,
+                        date_charge__month=mois_date.month,
+                        statut='validee'
+                    )
+                    total_charges += sum(charge.montant for charge in charges_mois)
+        
+        # Calculer le montant net
+        total_net = total_loyers - total_charges
+        
+        # Vérifier s'il existe déjà des récapitulatifs pour ce mois
+        recaps_existants = RecapMensuel.objects.filter(
+            mois_recap__year=mois_date.year,
+            mois_recap__month=mois_date.month,
+            bailleur__in=bailleurs
+        ).count()
+        
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'total_loyers': float(total_loyers),
+                'total_charges': float(total_charges),
+                'total_net': float(total_net),
+                'nombre_proprietes': nombre_proprietes,
+                'nombre_contrats': nombre_contrats,
+                'nombre_paiements': nombre_paiements,
+                'recaps_existants': recaps_existants,
+                'mois_formate': mois_date.strftime('%B %Y'),
+                'bailleurs_count': bailleurs.count()
+            }
+        })
+        
+    except ValueError as e:
+        return JsonResponse({'error': f'Format de date invalide: {str(e)}'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': f'Erreur lors du calcul: {str(e)}'}, status=500)
+
+@login_required
 def tableau_bord_recaps_mensuels(request):
     """Tableau de bord spécialisé pour les récapitulatifs mensuels."""
-    # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')

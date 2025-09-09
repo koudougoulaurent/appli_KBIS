@@ -34,10 +34,12 @@ logger = logging.getLogger(__name__)
 def liste_recapitulatifs(request):
     """Liste de tous les récapitulatifs mensuels."""
     
-    # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
-    if not request.user.groups.filter(name='PRIVILEGE').exists():
-        messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('utilisateurs:connexion_groupes')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    from core.utils import check_group_permissions_with_fallback
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:dashboard')
     
     # Filtres
     mois = request.GET.get('mois')
@@ -87,10 +89,12 @@ def liste_recapitulatifs(request):
 def creer_recapitulatif(request):
     """Créer un nouveau récapitulatif mensuel."""
     
-    # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
-    if not request.user.groups.filter(name='PRIVILEGE').exists():
-        messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('utilisateurs:connexion_groupes')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    from core.utils import check_group_permissions_with_fallback
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'add')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:liste_recapitulatifs')
     
     if request.method == 'POST':
         form = RecapitulatifMensuelBailleurForm(request.POST)
@@ -123,10 +127,12 @@ def creer_recapitulatif(request):
 def detail_recapitulatif(request, recapitulatif_id):
     """Détail d'un récapitulatif mensuel."""
     
-    # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
-    if not request.user.groups.filter(name='PRIVILEGE').exists():
-        messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('utilisateurs:connexion_groupes')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    from core.utils import check_group_permissions_with_fallback
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:dashboard')
     
     recapitulatif = get_object_or_404(RecapitulatifMensuelBailleur, pk=recapitulatif_id)
     
@@ -153,10 +159,12 @@ def detail_recapitulatif(request, recapitulatif_id):
 def valider_recapitulatif(request, recapitulatif_id):
     """Valider un récapitulatif mensuel."""
     
-    # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
-    if not request.user.groups.filter(name='PRIVILEGE').exists():
-        messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('utilisateurs:connexion_groupes')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    from core.utils import check_group_permissions_with_fallback
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:dashboard')
     
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
@@ -196,10 +204,12 @@ def valider_recapitulatif(request, recapitulatif_id):
 def envoyer_recapitulatif(request, recapitulatif_id):
     """Envoyer un récapitulatif mensuel au bailleur."""
     
-    # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
-    if not request.user.groups.filter(name='PRIVILEGE').exists():
-        messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('utilisateurs:connexion_groupes')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    from core.utils import check_group_permissions_with_fallback
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:dashboard')
     
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
@@ -239,10 +249,12 @@ def envoyer_recapitulatif(request, recapitulatif_id):
 def marquer_paye_recapitulatif(request, recapitulatif_id):
     """Marquer un récapitulatif mensuel comme payé."""
     
-    # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
-    if not request.user.groups.filter(name='PRIVILEGE').exists():
-        messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('utilisateurs:connexion_groupes')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    from core.utils import check_group_permissions_with_fallback
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:dashboard')
     
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
@@ -282,10 +294,12 @@ def marquer_paye_recapitulatif(request, recapitulatif_id):
 def telecharger_pdf_recapitulatif(request, recapitulatif_id):
     """Télécharger le PDF du récapitulatif mensuel."""
     
-    # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
-    if not request.user.groups.filter(name='PRIVILEGE').exists():
-        messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('utilisateurs:connexion_groupes')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    from core.utils import check_group_permissions_with_fallback
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:dashboard')
     
     recapitulatif = get_object_or_404(RecapitulatifMensuelBailleur, pk=recapitulatif_id)
     
@@ -314,10 +328,12 @@ def telecharger_pdf_recapitulatif(request, recapitulatif_id):
 def apercu_recapitulatif(request, recapitulatif_id):
     """Aperçu HTML du récapitulatif mensuel."""
     
-    # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
-    if not request.user.groups.filter(name='PRIVILEGE').exists():
-        messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('utilisateurs:connexion_groupes')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    from core.utils import check_group_permissions_with_fallback
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:dashboard')
     
     recapitulatif = get_object_or_404(RecapitulatifMensuelBailleur, pk=recapitulatif_id)
     totaux = recapitulatif.calculer_totaux_bailleur()
@@ -336,10 +352,12 @@ def apercu_recapitulatif(request, recapitulatif_id):
 def statistiques_recapitulatifs(request):
     """Statistiques des récapitulatifs mensuels."""
     
-    # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
-    if not request.user.groups.filter(name='PRIVILEGE').exists():
-        messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('utilisateurs:connexion_groupes')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    from core.utils import check_group_permissions_with_fallback
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:dashboard')
     
     # Statistiques par mois
     stats_mensuelles = RecapitulatifMensuelBailleur.objects.values('mois_recapitulatif').annotate(
@@ -391,10 +409,12 @@ def statistiques_recapitulatifs(request):
 def generer_recapitulatif_automatique(request):
     """Générer automatiquement le récapitulatif du mois en cours."""
     
-    # Vérifier si l'utilisateur est dans le groupe PRIVILEGE
-    if not request.user.groups.filter(name='PRIVILEGE').exists():
-        messages.error(request, "Vous devez être dans le groupe PRIVILEGE pour accéder à cette page.")
-        return redirect('utilisateurs:connexion_groupes')
+    # Vérification des permissions avec fallback pour PRIVILEGE
+    from core.utils import check_group_permissions_with_fallback
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:dashboard')
     
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})

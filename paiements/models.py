@@ -1818,6 +1818,7 @@ class TableauBordFinancier(models.Model):
     def _calculer_revenus(self, periode):
         """Calcule les revenus pour la période donnée."""
         from .models import Paiement
+        from decimal import Decimal
         
         paiements = Paiement.objects.filter(
             contrat__propriete__in=self.proprietes.all(),
@@ -1826,13 +1827,19 @@ class TableauBordFinancier(models.Model):
             statut='valide'
         )
         
-        return paiements.aggregate(
+        total = paiements.aggregate(
             total=models.Sum('montant')
-        )['total'] or 0
+        )['total'] or Decimal('0')
+        
+        if not isinstance(total, Decimal):
+            total = Decimal(str(total))
+        
+        return total
     
     def _calculer_charges(self, periode):
         """Calcule les charges pour la période donnée."""
         from proprietes.models import ChargeBailleur
+        from decimal import Decimal
         
         charges = ChargeBailleur.objects.filter(
             propriete__in=self.proprietes.all(),
@@ -1840,9 +1847,14 @@ class TableauBordFinancier(models.Model):
             date_charge__lte=periode['fin']
         )
         
-        return charges.aggregate(
+        total = charges.aggregate(
             total=models.Sum('montant')
-        )['total'] or 0
+        )['total'] or Decimal('0')
+        
+        if not isinstance(total, Decimal):
+            total = Decimal(str(total))
+        
+        return total
     
     def _calculer_taux_occupation(self, periode):
         """Calcule le taux d'occupation pour la période donnée."""
@@ -2543,7 +2555,7 @@ class RecapitulatifMensuelBailleur(models.Model):
         
         # Obtenir les dates de la période
         date_debut, date_fin = self.get_periode_calcul()
-        multiplicateur = self.get_multiplicateur_periode()
+        multiplicateur = Decimal(str(self.get_multiplicateur_periode()))
         
         for propriete in proprietes_louees:
             # Contrat actif de la propriété
@@ -2559,6 +2571,8 @@ class RecapitulatifMensuelBailleur(models.Model):
                     loyer_mensuel_contrat = Decimal(loyer_mensuel_contrat)
                 except (ValueError, TypeError):
                     loyer_mensuel_contrat = Decimal('0')
+            elif isinstance(loyer_mensuel_contrat, (int, float)):
+                loyer_mensuel_contrat = Decimal(str(loyer_mensuel_contrat))
             elif loyer_mensuel_contrat is None:
                 loyer_mensuel_contrat = Decimal('0')
             
@@ -2570,7 +2584,9 @@ class RecapitulatifMensuelBailleur(models.Model):
                 contrat=contrat_actif,
                 date_paiement__range=[date_debut, date_fin],
                 statut='valide'
-            ).aggregate(total=Sum('montant'))['total'] or 0
+            ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
+            if not isinstance(loyers_percus_periode, Decimal):
+                loyers_percus_periode = Decimal(str(loyers_percus_periode))
             
             # Charges déductibles (locataire) - basées sur le contrat
             charges_mensuelles_contrat = contrat_actif.charges_mensuelles
@@ -2579,6 +2595,8 @@ class RecapitulatifMensuelBailleur(models.Model):
                     charges_mensuelles_contrat = Decimal(charges_mensuelles_contrat)
                 except (ValueError, TypeError):
                     charges_mensuelles_contrat = Decimal('0')
+            elif isinstance(charges_mensuelles_contrat, (int, float)):
+                charges_mensuelles_contrat = Decimal(str(charges_mensuelles_contrat))
             elif charges_mensuelles_contrat is None:
                 charges_mensuelles_contrat = Decimal('0')
             
@@ -2590,7 +2608,9 @@ class RecapitulatifMensuelBailleur(models.Model):
                 contrat__propriete=propriete,
                 date_charge__range=[date_debut, date_fin],
                 statut='validee'
-            ).aggregate(total=Sum('montant'))['total'] or 0
+            ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
+            if not isinstance(charges_deductibles_supplementaires, Decimal):
+                charges_deductibles_supplementaires = Decimal(str(charges_deductibles_supplementaires))
             
             # Total des charges déductibles
             charges_deductibles = charges_contrat_periode + charges_deductibles_supplementaires
@@ -2600,7 +2620,9 @@ class RecapitulatifMensuelBailleur(models.Model):
                 propriete=propriete,
                 date_charge__range=[date_debut, date_fin],
                 statut__in=['en_attente', 'deduite_retrait']
-            ).aggregate(total=Sum('montant_restant'))['total'] or 0
+            ).aggregate(total=Sum('montant_restant'))['total'] or Decimal('0')
+            if not isinstance(charges_bailleur, Decimal):
+                charges_bailleur = Decimal(str(charges_bailleur))
             
             # Calcul du montant net pour cette propriété
             montant_net_propriete = loyers_bruts - charges_deductibles - charges_bailleur

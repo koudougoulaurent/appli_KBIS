@@ -162,7 +162,7 @@ class Utilisateur(AbstractUser):
     
     def is_privilege_user(self):
         """Vérifie si l'utilisateur appartient au groupe PRIVILEGE"""
-        return self.groupe_travail and self.groupe_travail.nom == 'PRIVILEGE'
+        return self.groupe_travail and self.groupe_travail.nom.upper() == 'PRIVILEGE'
     
     def can_delete_any_element(self, model_instance):
         """
