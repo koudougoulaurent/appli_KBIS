@@ -784,6 +784,103 @@ def privilege_delete_element(request, model_name, element_id):
     })
 
 
+@login_required
+@require_POST
+def privilege_force_delete_element(request, model_name, element_id):
+    """Suppression forcée/urgente d'un élément - uniquement pour PRIVILEGE"""
+    
+    # Vérifier les permissions PRIVILEGE
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'delete')
+    if not permissions['allowed']:
+        return JsonResponse({
+            'success': False, 
+            'message': permissions['message']
+        })
+    
+    # Mapper les noms de modèles
+    model_map = {
+        'bailleur': Bailleur,
+        'locataire': Locataire,
+        'propriete': Propriete,
+        'typebien': TypeBien,
+        'templaterecu': TemplateRecu,
+        'devise': Devise,
+        'chargesbailleur': ChargesBailleur,
+        'utilisateur': Utilisateur,
+        'contrat': 'contrats.models.Contrat',
+    }
+    
+    model_class = model_map.get(model_name.lower())
+    if not model_class:
+        return JsonResponse({'success': False, 'message': "Type d'élément non reconnu."})
+    
+    # Importer le modèle si c'est une chaîne
+    if isinstance(model_class, str):
+        from django.apps import apps
+        app_name, model_name_import = model_class.split('.')
+        model_class = apps.get_model(app_name, model_name_import)
+    
+    try:
+        element = model_class.objects.get(id=element_id)
+    except model_class.DoesNotExist:
+        return JsonResponse({'success': False, 'message': "Élément non trouvé."})
+    
+    # Vérifier les contrats actifs avant suppression forcée
+    from core.utils import check_active_contracts_before_force_delete
+    contract_check = check_active_contracts_before_force_delete(element)
+    
+    if not contract_check['can_force_delete']:
+        return JsonResponse({
+            'success': False,
+            'message': contract_check['message'],
+            'contracts_count': contract_check['contracts_count']
+        })
+    
+    try:
+        # Suppression forcée - suppression PHYSIQUE de la base de données
+        old_data = {f.name: getattr(element, f.name) for f in element._meta.fields}
+        object_repr = str(element)
+        model_name = element._meta.model_name
+        
+        # SUPPRESSION PHYSIQUE RÉELLE de la base de données
+        element.delete()
+        
+        # Log d'audit spécial pour suppression forcée
+        AuditLog.objects.create(
+            content_type=ContentType.objects.get_for_model(element.__class__),
+            object_id=element_id,
+            action='force_delete',
+            details={
+                'old_data': old_data,
+                'force_delete': True,
+                'contracts_checked': True,
+                'contracts_count': 0,
+                'deleted_at': str(timezone.now()),
+                'deletion_type': 'PHYSICAL_DELETE',
+                'model_name': model_name
+            },
+            object_repr=object_repr,
+            user=request.user,
+            ip_address=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f"✅ SUPPRESSION FORCÉE RÉUSSIE ✅\n\nL'élément '{object_repr}' a été supprimé DÉFINITIVEMENT de la base de données.\n\n📋 Détails :\n• Type : Suppression physique\n• Modèle : {model_name}\n• Utilisateur : {request.user.username}\n• Heure : {timezone.now().strftime('%d/%m/%Y à %H:%M:%S')}\n• Audit : Action tracée dans les logs",
+            'action': 'force_delete',
+            'deletion_type': 'PHYSICAL',
+            'user': request.user.username
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f"❌ ERREUR LORS DE LA SUPPRESSION FORCÉE ❌\n\nImpossible de supprimer l'élément de la base de données.\n\n📋 Détails de l'erreur :\n{str(e)}\n\n💡 Solutions possibles :\n• Vérifiez les permissions\n• Contactez l'administrateur système"
+        })
+
+
 @privilege_required
 def privilege_profile_management(request):
     """Gestion des profils utilisateurs pour le groupe PRIVILEGE"""

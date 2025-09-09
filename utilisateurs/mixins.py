@@ -41,6 +41,10 @@ class PrivilegeButtonsMixin:
             # Vérifier si l'élément peut être supprimé ou désactivé
             peut_supprimer, peut_désactiver, raison, détails_références = self.request.user.can_delete_any_element(obj)
             
+            # Vérifier les contrats actifs pour la suppression forcée
+            from core.utils import check_active_contracts_before_force_delete
+            contract_check = check_active_contracts_before_force_delete(obj)
+            
             if peut_supprimer:
                 # Bouton Supprimer - disponible si pas de références
                 actions.append({
@@ -92,6 +96,24 @@ class PrivilegeButtonsMixin:
                         'details-references': détails_références if détails_références else ''
                     }
                 })
+            
+            # Bouton Suppression Forcée/Urgente - TOUJOURS visible pour PRIVILEGE
+            actions.append({
+                'type': 'force_delete',
+                'url': self.get_force_delete_url(obj),
+                'icon': 'exclamation-triangle-fill',
+                'style': 'danger',
+                'title': 'Suppression Forcée/Urgente - Vérification des contrats actifs',
+                'class': 'btn-force-delete-privilege',
+                'data': {
+                    'object-id': obj.id,
+                    'object-name': str(obj),
+                    'model-name': obj._meta.model_name,
+                    'can-force-delete': str(contract_check['can_force_delete']).lower(),
+                    'contracts-count': contract_check['contracts_count'],
+                    'force-delete-message': contract_check['message']
+                }
+            })
             
             privilege_actions[obj.id] = actions
         
@@ -169,6 +191,16 @@ class PrivilegeButtonsMixin:
         try:
             from django.urls import reverse
             return reverse(url_name, args=[obj.id])
+        except:
+            return '#'
+    
+    def get_force_delete_url(self, obj):
+        """Génère l'URL de suppression forcée pour un objet."""
+        model_name = obj._meta.model_name
+        
+        try:
+            from django.urls import reverse
+            return reverse('utilisateurs:privilege_force_delete_element', args=[model_name, obj.id])
         except:
             return '#'
     

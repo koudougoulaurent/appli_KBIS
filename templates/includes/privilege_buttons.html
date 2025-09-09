@@ -51,6 +51,24 @@ pour les utilisateurs du groupe PRIVILEGE dans les listes d'éléments.
                         <i class="bi bi-{{ action.icon }}"></i>
                         <span class="d-none d-sm-inline">Désactiver</span>
                     </button>
+                
+                {% elif action.type == 'force_delete' %}
+                    <!-- Bouton Suppression Forcée/Urgente -->
+                    <button type="button"
+                            class="btn btn-sm btn-{{ action.style }} {{ action.class }}"
+                            title="{{ action.title }}"
+                            data-bs-toggle="tooltip"
+                            data-bs-placement="top"
+                            data-object-id="{{ action.data.object_id }}"
+                            data-object-name="{{ action.data.object_name }}"
+                            data-model-name="{{ action.data.model_name }}"
+                            data-can-force-delete="{{ action.data.can_force_delete }}"
+                            data-contracts-count="{{ action.data.contracts_count }}"
+                            data-force-delete-message="{{ action.data.force_delete_message }}"
+                            onclick="confirmForceDelete(this)">
+                        <i class="bi bi-{{ action.icon }}"></i>
+                        <span class="d-none d-sm-inline">Suppression Forcée</span>
+                    </button>
                 {% endif %}
             {% endfor %}
         </div>
@@ -108,6 +126,28 @@ pour les utilisateurs du groupe PRIVILEGE dans les listes d'éléments.
     background-color: #6c757d !important;
     border-color: #6c757d !important;
     color: #fff !important;
+}
+
+.btn-force-delete-privilege {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: #fff !important;
+    font-weight: bold;
+    animation: pulse-danger 2s infinite;
+}
+
+.btn-force-delete-privilege:hover {
+    background-color: #c82333 !important;
+    border-color: #bd2130 !important;
+    color: #fff !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(220, 53, 69, 0.4);
+}
+
+@keyframes pulse-danger {
+    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
 }
 
 .privilege-status-indicator {
@@ -174,6 +214,39 @@ function confirmPrivilegeDisable(button) {
     
     if (confirm(confirmMessage)) {
         performPrivilegeAction('disable', objectId, modelName, objectName);
+    }
+}
+
+// Fonction pour confirmer la suppression forcée d'un élément
+function confirmForceDelete(button) {
+    const objectId = button.dataset.objectId;
+    const objectName = button.dataset.objectName;
+    const modelName = button.dataset.modelName;
+    const canForceDelete = button.dataset.canForceDelete === 'true';
+    const contractsCount = parseInt(button.dataset.contractsCount) || 0;
+    const forceDeleteMessage = button.dataset.forceDeleteMessage || '';
+    
+    if (!canForceDelete) {
+        // Afficher un message d'erreur détaillé avec actions concrètes
+        showForceDeleteErrorWithActions(forceDeleteMessage, objectId, modelName, objectName);
+        return;
+    }
+    
+    // Confirmation avec avertissement spécial pour la suppression forcée
+    const confirmMessage = `🚨 SUPPRESSION FORCÉE/URGENTE 🚨\n\n` +
+        `📋 ÉLÉMENT À SUPPRIMER :\n"${objectName}"\n\n` +
+        `✅ VÉRIFICATION :\nAucun contrat actif détecté - Suppression autorisée\n\n` +
+        `⚠️ ATTENTION - SUPPRESSION PHYSIQUE :\nCette action supprimera DÉFINITIVEMENT l'élément de la base de données.\n` +
+        `L'élément sera PERDU à JAMAIS et ne pourra pas être récupéré.\n` +
+        `Cette action est IRRÉVERSIBLE et sera tracée dans l'audit.\n\n` +
+        `🔐 CONFIRMATION REQUISE :\nTapez exactement "SUPPRIMER" pour confirmer la suppression physique :`;
+    
+    const userInput = prompt(confirmMessage);
+    
+    if (userInput === "SUPPRIMER") {
+        performForceDeleteAction('force_delete', objectId, modelName, objectName);
+    } else if (userInput !== null) {
+        showPrivilegeAlert('info', '❌ Suppression annulée', 'Vous devez taper exactement "SUPPRIMER" pour confirmer la suppression forcée.');
     }
 }
 
@@ -251,6 +324,200 @@ function performPrivilegeAction(actionType, objectId, modelName, objectName) {
         button.innerHTML = originalContent;
         button.disabled = false;
     });
+}
+
+// Fonction pour effectuer la suppression forcée
+function performForceDeleteAction(actionType, objectId, modelName, objectName) {
+    const button = document.querySelector(`[data-object-id="${objectId}"][data-model-name="${modelName}"]`);
+    const originalContent = button.innerHTML;
+    
+    // Afficher un indicateur de chargement spécial pour la suppression forcée
+    button.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> <span class="d-none d-sm-inline">Suppression...</span>';
+    button.disabled = true;
+    button.classList.add('btn-warning');
+    
+    // Construire l'URL de l'action de suppression forcée
+    const actionUrl = `/utilisateurs/privilege/force_delete/${modelName}/${objectId}/`;
+    
+    // Effectuer la requête AJAX
+    fetch(actionUrl, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            action: actionType,
+            object_id: objectId,
+            model_name: modelName,
+            force_delete: true
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showPrivilegeAlert('success', '✅ SUPPRESSION FORCÉE RÉUSSIE', 
+                `L'élément "${objectName}" a été supprimé définitivement de la base de données.\n\n` +
+                `📋 Détails :\n• Action : Suppression forcée/urgente\n• Utilisateur : ${data.user || 'N/A'}\n• Heure : ${new Date().toLocaleString()}\n• Audit : Action tracée dans les logs`);
+            
+            // Masquer la ligne avec animation spéciale
+            const row = button.closest('tr');
+            row.style.transition = 'all 0.5s ease';
+            row.style.opacity = '0.3';
+            row.style.backgroundColor = '#ffebee';
+            row.style.borderLeft = '4px solid #dc3545';
+            
+            setTimeout(() => {
+                row.remove();
+            }, 1500);
+            
+        } else {
+            showPrivilegeAlert('error', '❌ ERREUR DE SUPPRESSION FORCÉE', 
+                `Impossible de supprimer l'élément "${objectName}".\n\n` +
+                `📋 Détails de l'erreur :\n${data.message}\n\n` +
+                `💡 Solutions possibles :\n• Vérifiez les permissions\n• Résiliez les contrats actifs\n• Contactez l'administrateur`);
+            // Restaurer le bouton
+            button.innerHTML = originalContent;
+            button.disabled = false;
+            button.classList.remove('btn-warning');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur lors de la suppression forcée:', error);
+        showPrivilegeAlert('error', '❌ ERREUR SYSTÈME', 
+            `Une erreur technique est survenue lors de la suppression forcée.\n\n` +
+            `📋 Détails :\n• Élément : "${objectName}"\n• Erreur : ${error.message}\n• Heure : ${new Date().toLocaleString()}\n\n` +
+            `💡 Solution :\nContactez l'administrateur système.`);
+        // Restaurer le bouton
+        button.innerHTML = originalContent;
+        button.disabled = false;
+        button.classList.remove('btn-warning');
+    });
+}
+
+// Fonction pour afficher l'erreur de suppression forcée avec actions concrètes
+function showForceDeleteErrorWithActions(message, objectId, modelName, objectName) {
+    // Créer une modal Bootstrap pour afficher l'erreur avec actions
+    const modalHtml = `
+        <div class="modal fade" id="forceDeleteErrorModal" tabindex="-1" aria-labelledby="forceDeleteErrorModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning text-dark">
+                        <h5 class="modal-title" id="forceDeleteErrorModalLabel">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            🚫 SUPPRESSION FORCÉE IMPOSSIBLE
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-warning" role="alert">
+                            <h6 class="alert-heading">⚠️ Action requise avant suppression</h6>
+                            <p class="mb-0">L'élément <strong>"${objectName}"</strong> ne peut pas être supprimé car il est lié à des contrats actifs.</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h6>📋 Détails de l'erreur :</h6>
+                            <pre class="bg-light p-3 rounded" style="white-space: pre-wrap; font-size: 0.9em;">${message}</pre>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card border-primary">
+                                    <div class="card-header bg-primary text-white">
+                                        <h6 class="mb-0"><i class="bi bi-list-check"></i> Actions disponibles</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="d-grid gap-2">
+                                            <button class="btn btn-outline-primary" onclick="openContratsList()">
+                                                <i class="bi bi-list-ul"></i> Voir tous les contrats
+                                            </button>
+                                            <button class="btn btn-outline-warning" onclick="openContratsActifs()">
+                                                <i class="bi bi-exclamation-circle"></i> Voir les contrats actifs
+                                            </button>
+                                            <button class="btn btn-outline-info" onclick="openContratsByElement('${modelName}', ${objectId})">
+                                                <i class="bi bi-search"></i> Contrats de cet élément
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-success">
+                                    <div class="card-header bg-success text-white">
+                                        <h6 class="mb-0"><i class="bi bi-lightbulb"></i> Solutions</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <ol class="mb-0 small">
+                                            <li>Cliquez sur "Voir les contrats actifs"</li>
+                                            <li>Identifiez les contrats liés à cet élément</li>
+                                            <li>Résiliez chaque contrat un par un</li>
+                                            <li>Revenez ici pour la suppression</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle"></i> Fermer
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="retryForceDelete('${objectId}', '${modelName}', '${objectName}')">
+                            <i class="bi bi-arrow-clockwise"></i> Vérifier à nouveau
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Supprimer l'ancienne modal si elle existe
+    const existingModal = document.getElementById('forceDeleteErrorModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Ajouter la nouvelle modal au DOM
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Afficher la modal
+    const modal = new bootstrap.Modal(document.getElementById('forceDeleteErrorModal'));
+    modal.show();
+}
+
+// Fonctions d'action pour la modal d'erreur
+function openContratsList() {
+    window.open('/contrats/liste/', '_blank');
+}
+
+function openContratsActifs() {
+    window.open('/contrats/liste/?filter=actifs', '_blank');
+}
+
+function openContratsByElement(modelName, objectId) {
+    let url = '/contrats/liste/';
+    if (modelName === 'propriete') {
+        url += `?propriete=${objectId}`;
+    } else if (modelName === 'locataire') {
+        url += `?locataire=${objectId}`;
+    } else if (modelName === 'bailleur') {
+        url += `?bailleur=${objectId}`;
+    }
+    window.open(url, '_blank');
+}
+
+function retryForceDelete(objectId, modelName, objectName) {
+    // Fermer la modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('forceDeleteErrorModal'));
+    modal.hide();
+    
+    // Relancer la vérification
+    setTimeout(() => {
+        const button = document.querySelector(`[data-object-id="${objectId}"][data-model-name="${modelName}"]`);
+        if (button) {
+            confirmForceDelete(button);
+        }
+    }, 500);
 }
 
 // Fonction pour afficher les alertes de privilège

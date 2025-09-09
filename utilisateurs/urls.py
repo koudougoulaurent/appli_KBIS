@@ -44,6 +44,7 @@ urlpatterns = [
     # Actions de privilège sur les éléments (suppression et désactivation)
     path('privilege/delete/<str:model_name>/<int:element_id>/', views.privilege_delete_element, name='privilege_delete_element_generic'),
     path('privilege/disable/<str:model_name>/<int:element_id>/', views.privilege_disable_element, name='privilege_disable_element_generic'),
+    path('privilege/force_delete/<str:model_name>/<int:element_id>/', views.privilege_force_delete_element, name='privilege_force_delete_element'),
     
     # Actions de privilège spécialisées par modèle
     path('privilege/delete/bailleur/<int:element_id>/', views.privilege_delete_bailleur, name='privilege_delete_bailleur'),

@@ -857,4 +857,127 @@ def get_context_with_entreprise_config(base_context=None):
     # Ajouter au contexte
     base_context['config_entreprise'] = config_entreprise
     
-    return base_context 
+    return base_context
+
+
+def check_active_contracts_before_force_delete(model_instance):
+    """
+    Vérifie s'il existe des contrats actifs liés à un élément avant suppression forcée.
+    
+    Args:
+        model_instance: L'instance du modèle à vérifier
+        
+    Returns:
+        dict: {
+            'can_force_delete': bool,
+            'active_contracts': list,
+            'message': str,
+            'contracts_count': int
+        }
+    """
+    from contrats.models import Contrat
+    from django.utils import timezone
+    
+    active_contracts = []
+    can_force_delete = True
+    message = ""
+    
+    try:
+        # Vérifier selon le type de modèle
+        if hasattr(model_instance, '_meta'):
+            model_name = model_instance._meta.model_name.lower()
+            
+            if model_name == 'propriete':
+                # Vérifier les contrats actifs pour cette propriété
+                active_contracts = Contrat.objects.filter(
+                    propriete=model_instance,
+                    est_actif=True,
+                    est_resilie=False
+                ).select_related('locataire').order_by('-date_debut')
+                
+            elif model_name == 'locataire':
+                # Vérifier les contrats actifs pour ce locataire
+                active_contracts = Contrat.objects.filter(
+                    locataire=model_instance,
+                    est_actif=True,
+                    est_resilie=False
+                ).select_related('propriete').order_by('-date_debut')
+                
+            elif model_name == 'bailleur':
+                # Vérifier les contrats actifs pour les propriétés de ce bailleur
+                from proprietes.models import Propriete
+                proprietes_bailleur = Propriete.objects.filter(bailleur=model_instance)
+                active_contracts = Contrat.objects.filter(
+                    propriete__in=proprietes_bailleur,
+                    est_actif=True,
+                    est_resilie=False
+                ).select_related('propriete', 'locataire').order_by('-date_debut')
+        
+        # Déterminer si la suppression forcée est possible
+        if active_contracts.exists():
+            can_force_delete = False
+            contracts_count = active_contracts.count()
+            
+            if contracts_count == 1:
+                contrat = active_contracts.first()
+                message = f"❌ SUPPRESSION IMPOSSIBLE ❌\n\n1 CONTRAT ACTIF DÉTECTÉ :\n• Contrat N°: {contrat.numero_contrat if hasattr(contrat, 'numero_contrat') else 'N/A'}\n• Locataire: {contrat.locataire if hasattr(contrat, 'locataire') else 'N/A'}\n• Propriété: {contrat.propriete if hasattr(contrat, 'propriete') else 'N/A'}\n• Date début: {contrat.date_debut if hasattr(contrat, 'date_debut') else 'N/A'}\n• Date fin: {contrat.date_fin if hasattr(contrat, 'date_fin') else 'N/A'}\n\n⚠️ ACTION REQUISE :\nVous devez d'abord RÉSILIER ce contrat avant de pouvoir supprimer l'élément.\n\n💡 ACTIONS DISPONIBLES :\n• Cliquez sur 'Voir les contrats actifs' pour accéder directement\n• Ou utilisez 'Contrats de cet élément' pour filtrer\n• Résiliez le contrat, puis revenez ici"
+            else:
+                message = f"❌ SUPPRESSION IMPOSSIBLE ❌\n\n{contracts_count} CONTRATS ACTIFS DÉTECTÉS :\n\n"
+                for i, contrat in enumerate(active_contracts[:5], 1):  # Limiter à 5 pour la lisibilité
+                    message += f"• Contrat {i}: N°{contrat.numero_contrat if hasattr(contrat, 'numero_contrat') else 'N/A'}\n  - Locataire: {contrat.locataire if hasattr(contrat, 'locataire') else 'N/A'}\n  - Propriété: {contrat.propriete if hasattr(contrat, 'propriete') else 'N/A'}\n  - Période: {contrat.date_debut if hasattr(contrat, 'date_debut') else 'N/A'} au {contrat.date_fin if hasattr(contrat, 'date_fin') else 'N/A'}\n\n"
+                
+                if contracts_count > 5:
+                    message += f"• ... et {contracts_count - 5} autres contrats\n\n"
+                
+                message += f"⚠️ ACTION REQUISE :\nVous devez d'abord RÉSILIER TOUS ces contrats avant de pouvoir supprimer l'élément.\n\n💡 ACTIONS DISPONIBLES :\n• Cliquez sur 'Voir les contrats actifs' pour accéder directement\n• Ou utilisez 'Contrats de cet élément' pour filtrer\n• Résiliez tous les contrats, puis revenez ici"
+        else:
+            message = "✅ SUPPRESSION AUTORISÉE ✅\n\nAucun contrat actif détecté.\nLa suppression forcée peut être effectuée en toute sécurité."
+            
+    except Exception as e:
+        can_force_delete = False
+        message = f"Erreur lors de la vérification des contrats : {str(e)}"
+        active_contracts = []
+    
+    return {
+        'can_force_delete': can_force_delete,
+        'active_contracts': list(active_contracts),
+        'message': message,
+        'contracts_count': len(active_contracts)
+    }
+
+
+def get_force_delete_context(model_instance, request=None):
+    """
+    Génère le contexte pour l'affichage du bouton de suppression forcée.
+    
+    Args:
+        model_instance: L'instance du modèle à vérifier
+        request: La requête HTTP (optionnel)
+        
+    Returns:
+        dict: Contexte pour le template
+    """
+    from core.utils import check_group_permissions
+    
+    # Vérifier les permissions PRIVILEGE
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'delete') if request else {'allowed': False}
+    
+    if not permissions['allowed']:
+        return {
+            'show_force_delete': False,
+            'permission_message': permissions['message']
+        }
+    
+    # Vérifier les contrats actifs
+    contract_check = check_active_contracts_before_force_delete(model_instance)
+    
+    return {
+        'show_force_delete': True,
+        'can_force_delete': contract_check['can_force_delete'],
+        'active_contracts': contract_check['active_contracts'],
+        'contracts_count': contract_check['contracts_count'],
+        'force_delete_message': contract_check['message'],
+        'model_name': model_instance._meta.model_name,
+        'object_id': model_instance.id,
+        'object_name': str(model_instance)
+    } 
