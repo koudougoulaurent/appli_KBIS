@@ -1,0 +1,392 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Archivage des Documents - Gestion Immobilière{% endblock %}
+
+{% block extra_css %}
+<style>
+    .entity-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid #007bff;
+    }
+    .entity-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .entity-card.propriete {
+        border-left-color: #28a745;
+    }
+    .entity-card.bailleur {
+        border-left-color: #17a2b8;
+    }
+    .entity-card.locataire {
+        border-left-color: #ffc107;
+    }
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .stats-card.warning {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    .stats-card.success {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    .stats-card.info {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    }
+    .document-type-badge {
+        font-size: 0.75em;
+        padding: 0.25em 0.5em;
+    }
+    .search-section {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+    .entity-section {
+        margin-bottom: 30px;
+    }
+    .recent-documents {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .document-item {
+        border-bottom: 1px solid #eee;
+        padding: 10px 0;
+    }
+    .document-item:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="fas fa-archive text-primary me-2"></i>
+                Archivage des Documents
+            </h1>
+            <p class="text-muted">Gérez et organisez vos documents par entité</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'proprietes:document_quick_upload' %}" class="btn btn-primary">
+                <i class="fas fa-upload me-2"></i>Upload Rapide
+            </a>
+            <a href="{% url 'proprietes:document_search_advanced' %}" class="btn btn-outline-primary">
+                <i class="fas fa-search me-2"></i>Recherche Avancée
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistiques globales -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ total_documents }}</h4>
+                            <small>Total Documents</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-file-alt fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ documents_expires }}</h4>
+                            <small>Documents Expirés</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% if is_privilege_user %}
+        <div class="col-md-3">
+            <div class="card stats-card success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ documents_confidentiels }}</h4>
+                            <small>Documents Confidentiels</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-lock fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        <div class="col-md-3">
+            <div class="card stats-card info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ documents_par_propriete|length }}</h4>
+                            <small>Propriétés avec Documents</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-home fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recherche rapide -->
+    <div class="search-section">
+        <h5 class="mb-3">
+            <i class="fas fa-search me-2"></i>Recherche Rapide
+        </h5>
+        <form method="get" action="{% url 'proprietes:document_search_advanced' %}" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="search" class="form-control" placeholder="Rechercher par nom, description, entité...">
+            </div>
+            <div class="col-md-2">
+                <select name="type_document" class="form-select">
+                    <option value="">Tous les types</option>
+                    <option value="contrat">Contrat de bail</option>
+                    <option value="etat_lieux">État des lieux</option>
+                    <option value="quittance">Quittance de loyer</option>
+                    <option value="facture">Facture</option>
+                    <option value="devis">Devis</option>
+                    <option value="assurance">Assurance</option>
+                    <option value="diagnostic">Diagnostic</option>
+                    <option value="justificatif">Justificatif</option>
+                    <option value="courrier">Courrier</option>
+                    <option value="autre">Autre</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="statut" class="form-select">
+                    <option value="">Tous les statuts</option>
+                    <option value="brouillon">Brouillon</option>
+                    <option value="en_attente">En attente</option>
+                    <option value="valide">Validé</option>
+                    <option value="archive">Archivé</option>
+                    <option value="expire">Expiré</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fas fa-search me-2"></i>Rechercher
+                </button>
+                <a href="{% url 'proprietes:document_archive' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-2"></i>Réinitialiser
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div class="row">
+        <!-- Documents par Propriété -->
+        <div class="col-md-4">
+            <div class="card entity-card propriete">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-home me-2"></i>Documents par Propriété
+                        <span class="badge bg-success ms-2">{{ documents_par_propriete|length }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if documents_par_propriete %}
+                        {% for item in documents_par_propriete %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <h6 class="mb-0">{{ item.propriete__titre|truncatechars:25 }}</h6>
+                                <small class="text-muted">{{ item.propriete__numero_propriete }}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-primary">{{ item.count }} docs</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        <div class="text-center mt-3">
+                            <a href="{% url 'proprietes:document_search_advanced' %}?entite=propriete" class="btn btn-sm btn-outline-success">
+                                Voir tous les documents
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">Aucun document de propriété</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Documents par Bailleur -->
+        <div class="col-md-4">
+            <div class="card entity-card bailleur">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-tie me-2"></i>Documents par Bailleur
+                        <span class="badge bg-info ms-2">{{ documents_par_bailleur|length }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if documents_par_bailleur %}
+                        {% for item in documents_par_bailleur %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <h6 class="mb-0">{{ item.bailleur__prenom }} {{ item.bailleur__nom|truncatechars:15 }}</h6>
+                                <small class="text-muted">{{ item.bailleur__numero_bailleur }}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-primary">{{ item.count }} docs</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        <div class="text-center mt-3">
+                            <a href="{% url 'proprietes:document_search_advanced' %}?entite=bailleur" class="btn btn-sm btn-outline-info">
+                                Voir tous les documents
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">Aucun document de bailleur</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Documents par Locataire -->
+        <div class="col-md-4">
+            <div class="card entity-card locataire">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user me-2"></i>Documents par Locataire
+                        <span class="badge bg-warning ms-2">{{ documents_par_locataire|length }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if documents_par_locataire %}
+                        {% for item in documents_par_locataire %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <h6 class="mb-0">{{ item.locataire__prenom }} {{ item.locataire__nom|truncatechars:15 }}</h6>
+                                <small class="text-muted">{{ item.locataire__numero_locataire }}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-primary">{{ item.count }} docs</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        <div class="text-center mt-3">
+                            <a href="{% url 'proprietes:document_search_advanced' %}?entite=locataire" class="btn btn-sm btn-outline-warning">
+                                Voir tous les documents
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">Aucun document de locataire</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Documents récents -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>Documents Récents
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="recent-documents">
+                        {% if documents_recents %}
+                            {% for document in documents_recents %}
+                            <div class="document-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3">
+                                            {% if document.type_document == 'contrat' %}
+                                                <i class="fas fa-file-contract text-primary fa-lg"></i>
+                                            {% elif document.type_document == 'quittance' %}
+                                                <i class="fas fa-receipt text-success fa-lg"></i>
+                                            {% elif document.type_document == 'facture' %}
+                                                <i class="fas fa-file-invoice text-warning fa-lg"></i>
+                                            {% elif document.type_document == 'assurance' %}
+                                                <i class="fas fa-shield-alt text-info fa-lg"></i>
+                                            {% elif document.type_document == 'diagnostic' %}
+                                                <i class="fas fa-clipboard-check text-danger fa-lg"></i>
+                                            {% else %}
+                                                <i class="fas fa-file-alt text-secondary fa-lg"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0">{{ document.nom }}</h6>
+                                            <small class="text-muted">
+                                                <span class="badge document-type-badge bg-secondary">{{ document.get_type_document_display }}</span>
+                                                {% if document.propriete %}
+                                                    <i class="fas fa-home me-1"></i>{{ document.propriete.titre }}
+                                                {% elif document.bailleur %}
+                                                    <i class="fas fa-user-tie me-1"></i>{{ document.bailleur.get_nom_complet }}
+                                                {% elif document.locataire %}
+                                                    <i class="fas fa-user me-1"></i>{{ document.locataire.get_nom_complet }}
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <small class="text-muted">{{ document.date_creation|date:"d/m/Y H:i" }}</small>
+                                        <div class="mt-1">
+                                            <a href="{% url 'proprietes:document_detail' document.pk %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted text-center">Aucun document récent</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh des statistiques toutes les 5 minutes
+    setInterval(function() {
+        fetch('{% url "proprietes:document_stats_api" %}')
+            .then(response => response.json())
+            .then(data => {
+                // Mettre à jour les statistiques si nécessaire
+                console.log('Statistiques mises à jour:', data);
+            })
+            .catch(error => console.error('Erreur lors de la mise à jour des statistiques:', error));
+    }, 300000); // 5 minutes
+
+    // Animation des cartes au survol
+    document.querySelectorAll('.entity-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+</script>
+{% endblock %}

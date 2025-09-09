@@ -298,10 +298,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const chargesDeduites = 0; // À calculer selon les charges sélectionnées
         const montantNet = montant - chargesDeduites;
         
+        // Fonction utilitaire pour formater les montants sans décimales
+        function formatMontant(montant) {
+            return Math.round(montant).toLocaleString('fr-FR', {maximumFractionDigits: 0}) + ' F CFA';
+        }
+        
         // Mise à jour de l'affichage
-        document.getElementById('montant-brut').textContent = montant.toLocaleString() + ' F CFA';
-        document.getElementById('charges-deduites').textContent = chargesDeduites.toLocaleString() + ' F CFA';
-        document.getElementById('montant-net').textContent = montantNet.toLocaleString() + ' F CFA';
+        document.getElementById('montant-brut').textContent = formatMontant(montant);
+        document.getElementById('charges-deduites').textContent = formatMontant(chargesDeduites);
+        document.getElementById('montant-net').textContent = formatMontant(montantNet);
         document.getElementById('statut-paiement').textContent = montant > 0 ? 'Validé' : 'En attente';
     }
 

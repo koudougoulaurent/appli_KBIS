@@ -1,246 +1,202 @@
 {% load static %}
 
-<!-- Bouton Flottant d'Actions Rapides -->
-<div class="floating-quick-actions" id="floatingQuickActions">
-    <!-- Bouton Principal -->
-    <button class="fab-main" onclick="toggleFloatingActions()" id="fabMain">
-        <i class="bi bi-lightning-fill" id="fabIcon"></i>
-    </button>
-    
-    <!-- Menu des Actions -->
-    <div class="fab-menu" id="fabMenu">
-        <!-- Actions selon la page actuelle -->
-        {% if 'proprietes' in request.resolver_match.namespace %}
-        <a href="{% url 'proprietes:ajouter' %}" class="fab-action" title="Nouvelle Propriété">
-            <i class="bi bi-plus-circle"></i>
-        </a>
-        <a href="{% url 'proprietes:bailleurs_liste' %}" class="fab-action" title="Bailleurs">
-            <i class="bi bi-person-badge"></i>
-        </a>
-        <a href="{% url 'proprietes:locataires_liste' %}" class="fab-action" title="Locataires">
-            <i class="bi bi-people"></i>
-        </a>
-        {% elif 'paiements' in request.resolver_match.namespace %}
-        <a href="{% url 'paiements:ajouter' %}" class="fab-action" title="Nouveau Paiement">
-            <i class="bi bi-plus-circle"></i>
-        </a>
-        <a href="{% url 'paiements:liste' %}?statut=en_attente" class="fab-action" title="Paiements en Attente">
-            <i class="bi bi-clock"></i>
-        </a>
-        <a href="{% url 'paiements:liste_recaps_mensuels' %}" class="fab-action" title="Récapitulatifs">
-            <i class="bi bi-calendar-month"></i>
-        </a>
-        {% elif 'contrats' in request.resolver_match.namespace %}
-        <a href="{% url 'contrats:ajouter' %}" class="fab-action" title="Nouveau Contrat">
-            <i class="bi bi-plus-circle"></i>
-        </a>
-        <a href="{% url 'contrats:quittances_liste' %}" class="fab-action" title="Quittances">
-            <i class="bi bi-receipt"></i>
-        </a>
-        {% else %}
-        <!-- Actions générales pour toutes les autres pages -->
-        <a href="{% url 'core:intelligent_search' %}" class="fab-action" title="Recherche">
-            <i class="bi bi-search"></i>
-        </a>
-        <a href="{% url 'notifications:notification_list' %}" class="fab-action" title="Notifications">
-            <i class="bi bi-bell"></i>
-        </a>
-        {% endif %}
-        
-        <!-- Actions communes -->
-        <a href="{% url 'core:dashboard' %}" class="fab-action" title="Dashboard">
-            <i class="bi bi-speedometer2"></i>
-        </a>
-        
-        {% if user.groupe_travail.nom == 'PRIVILEGE' %}
-        <a href="{% url 'utilisateurs:privilege_dashboard_advanced' %}" class="fab-action privilege" title="Admin Avancé">
-            <i class="bi bi-shield-check"></i>
-        </a>
-        {% endif %}
+<!-- Actions rapides flottantes pour les pages de détail -->
+{% if quick_actions and request.resolver_match.url_name == 'detail_bailleur' %}
+<div class="floating-quick-actions">
+    <div class="floating-actions-container">
+        <div class="floating-actions-toggle" id="floatingActionsToggle">
+            <i class="bi bi-lightning-charge"></i>
+        </div>
+        <div class="floating-actions-menu" id="floatingActionsMenu">
+            {% for action in quick_actions %}
+            <a href="{{ action.url }}" 
+               class="floating-action-btn {{ action.style|default:'btn-outline-primary' }}"
+               title="{{ action.tooltip|default:action.label }}"
+               {% if action.confirm %}
+                   onclick="return confirm('{{ action.confirm }}')"
+               {% endif %}>
+                <i class="bi bi-{{ action.icon|default:'arrow-right' }}"></i>
+                <span class="floating-action-label">{{ action.label }}</span>
+            </a>
+            {% endfor %}
+        </div>
     </div>
 </div>
 
 <style>
 .floating-quick-actions {
     position: fixed;
-    bottom: 30px;
-    right: 30px;
+    bottom: 20px;
+    right: 20px;
     z-index: 1000;
-    display: flex;
-    flex-direction: column-reverse;
-    align-items: center;
 }
 
-.fab-main {
+.floating-actions-container {
+    position: relative;
+}
+
+.floating-actions-toggle {
     width: 60px;
     height: 60px;
-    border-radius: 50%;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
-    color: white;
-    font-size: 24px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    cursor: pointer;
-    transition: all 0.3s ease;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    transition: all 0.3s ease;
+    animation: pulse 2s infinite;
 }
 
-.fab-main:hover {
+.floating-actions-toggle:hover {
     transform: scale(1.1);
-    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 6px 25px rgba(102, 126, 234, 0.4);
 }
 
-.fab-main.active {
-    transform: rotate(45deg);
-}
-
-.fab-menu {
-    display: flex;
-    flex-direction: column-reverse;
-    align-items: center;
-    margin-bottom: 15px;
+.floating-actions-menu {
+    position: absolute;
+    bottom: 70px;
+    right: 0;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    padding: 10px;
+    min-width: 200px;
     opacity: 0;
     visibility: hidden;
     transform: translateY(20px);
     transition: all 0.3s ease;
 }
 
-.fab-menu.show {
+.floating-actions-menu.show {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
 }
 
-.fab-action {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    background: #007bff;
-    color: white;
-    text-decoration: none;
+.floating-action-btn {
     display: flex;
     align-items: center;
-    justify-content: center;
-    margin-bottom: 10px;
-    box-shadow: 0 2px 10px rgba(0, 123, 255, 0.3);
+    padding: 12px 16px;
+    margin: 5px 0;
+    border-radius: 10px;
+    text-decoration: none;
     transition: all 0.3s ease;
-    font-size: 18px;
-    position: relative;
+    border: 2px solid transparent;
+    font-size: 0.9rem;
+    font-weight: 500;
 }
 
-.fab-action:hover {
-    background: #0056b3;
-    color: white;
-    transform: scale(1.1);
+.floating-action-btn:hover {
+    transform: translateX(-5px);
     text-decoration: none;
 }
 
-.fab-action.privilege {
-    background: #ffc107;
-    color: #212529;
+.floating-action-btn i {
+    margin-right: 10px;
+    font-size: 1.1rem;
 }
 
-.fab-action.privilege:hover {
-    background: #e0a800;
-    color: #212529;
+.floating-action-label {
+    white-space: nowrap;
 }
 
-/* Animation d'apparition */
-.fab-action {
-    animation: fabSlideIn 0.3s ease forwards;
+.floating-action-btn.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
 }
 
-@keyframes fabSlideIn {
-    0% {
-        opacity: 0;
-        transform: translateY(20px) scale(0.8);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
+.floating-action-btn.btn-success {
+    background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+    color: white;
 }
 
-/* Responsive */
+.floating-action-btn.btn-info {
+    background: linear-gradient(135deg, #3498db 0%, #85c1e9 100%);
+    color: white;
+}
+
+.floating-action-btn.btn-outline-primary {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.floating-action-btn.btn-outline-primary:hover {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.floating-action-btn.btn-outline-success {
+    border-color: #56ab2f;
+    color: #56ab2f;
+}
+
+.floating-action-btn.btn-outline-success:hover {
+    background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+    color: white;
+}
+
+.floating-action-btn.btn-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #adb5bd 100%);
+    color: white;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
 @media (max-width: 768px) {
     .floating-quick-actions {
-        bottom: 20px;
-        right: 20px;
+        bottom: 15px;
+        right: 15px;
     }
     
-    .fab-main {
+    .floating-actions-toggle {
         width: 50px;
         height: 50px;
-        font-size: 20px;
+        font-size: 1.2rem;
     }
     
-    .fab-action {
-        width: 40px;
-        height: 40px;
-        font-size: 16px;
+    .floating-actions-menu {
+        min-width: 180px;
+        bottom: 60px;
     }
-}
-
-/* Masquer sur très petits écrans si nécessaire */
-@media (max-width: 480px) {
-    .floating-quick-actions {
-        display: none;
+    
+    .floating-action-btn {
+        padding: 10px 14px;
+        font-size: 0.85rem;
     }
 }
 </style>
 
 <script>
-let fabMenuOpen = false;
-
-function toggleFloatingActions() {
-    const menu = document.getElementById('fabMenu');
-    const icon = document.getElementById('fabIcon');
-    const mainBtn = document.getElementById('fabMain');
-    
-    if (fabMenuOpen) {
-        // Fermer le menu
-        menu.classList.remove('show');
-        mainBtn.classList.remove('active');
-        icon.className = 'bi bi-lightning-fill';
-        fabMenuOpen = false;
-    } else {
-        // Ouvrir le menu
-        menu.classList.add('show');
-        mainBtn.classList.add('active');
-        icon.className = 'bi bi-x';
-        fabMenuOpen = true;
-        
-        // Log de l'ouverture
-        console.log('🚀 Menu d\'actions rapides ouvert');
-    }
-}
-
-// Fermer le menu si on clique ailleurs
-document.addEventListener('click', function(e) {
-    if (fabMenuOpen && !e.target.closest('.floating-quick-actions')) {
-        toggleFloatingActions();
-    }
-});
-
-// Fermer le menu avec Escape
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && fabMenuOpen) {
-        toggleFloatingActions();
-    }
-});
-
-// Animation d'entrée
 document.addEventListener('DOMContentLoaded', function() {
-    const fab = document.getElementById('floatingQuickActions');
-    fab.style.opacity = '0';
-    fab.style.transform = 'scale(0.8)';
+    const toggle = document.getElementById('floatingActionsToggle');
+    const menu = document.getElementById('floatingActionsMenu');
     
-    setTimeout(() => {
-        fab.style.transition = 'all 0.5s ease';
-        fab.style.opacity = '1';
-        fab.style.transform = 'scale(1)';
-    }, 500);
+    if (toggle && menu) {
+        toggle.addEventListener('click', function() {
+            menu.classList.toggle('show');
+        });
+        
+        // Fermer le menu en cliquant à l'extérieur
+        document.addEventListener('click', function(e) {
+            if (!toggle.contains(e.target) && !menu.contains(e.target)) {
+                menu.classList.remove('show');
+            }
+        });
+        
+        // Fermer le menu en appuyant sur Échap
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                menu.classList.remove('show');
+            }
+        });
+    }
 });
 </script>
+{% endif %}

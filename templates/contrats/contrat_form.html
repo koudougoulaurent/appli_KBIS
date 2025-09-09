@@ -109,7 +109,376 @@
 {% block extra_js %}
 <script>
     // Données des propriétés pour le JavaScript
-    const proprietesData = JSON.parse('{{ proprietes_data|escapejs }}');
+    if (typeof window.contratProprietesData === 'undefined') {
+        window.contratProprietesData = {};
+    }
+    let proprietesData = window.contratProprietesData;
+    try {
+        const proprietesDataRaw = '{{ proprietes_data|escapejs }}';
+        console.log('=== DEBUG: Données des propriétés chargées ===');
+        console.log('proprietes_data brut:', proprietesDataRaw);
+        
+        if (proprietesDataRaw && proprietesDataRaw !== 'None' && proprietesDataRaw.trim() !== '') {
+            // Remplacer les guillemets simples par des guillemets doubles et ajouter des guillemets aux clés
+            let jsonString = proprietesDataRaw.replace(/'/g, '"');
+            // Ajouter des guillemets aux clés qui n'en ont pas (mais pas aux valeurs numériques)
+            jsonString = jsonString.replace(/(\d+):/g, '"$1":');
+            console.log('JSON après correction des clés numériques:', jsonString);
+            console.log('JSON corrigé:', jsonString);
+            proprietesData = JSON.parse(jsonString);
+            window.contratProprietesData = proprietesData;
+        } else {
+            console.log('Aucune donnée de propriété disponible');
+        }
+        
+        console.log('proprietes_data parsé:', proprietesData);
+        console.log('=== FIN DEBUG ===');
+    } catch (error) {
+        console.error('Erreur lors du parsing des données des propriétés:', error);
+        console.log('Tentative de parsing avec eval...');
+        try {
+            // Fallback avec eval si JSON.parse échoue
+            const proprietesDataRaw = '{{ proprietes_data|escapejs }}';
+            proprietesData = eval('(' + proprietesDataRaw + ')');
+            window.contratProprietesData = proprietesData;
+            console.log('Parsing avec eval réussi:', proprietesData);
+        } catch (evalError) {
+            console.error('Erreur avec eval aussi:', evalError);
+            proprietesData = {};
+            window.contratProprietesData = proprietesData;
+        }
+    }
+    
+    // Fonction pour remplir automatiquement le loyer à partir de la propriété sélectionnée
+    function updateLoyerFromPropriete() {
+        console.log('=== DEBUG: updateLoyerFromPropriete appelée ===');
+        
+        const proprieteSelectElement = document.getElementById('id_propriete');
+        const loyerInput = document.getElementById('id_loyer_mensuel');
+        const uniteLocativeSelect = document.getElementById('id_unite_locative');
+        
+        console.log('Éléments trouvés:', {
+            proprieteSelect: !!proprieteSelectElement,
+            loyerInput: !!loyerInput,
+            uniteLocativeSelect: !!uniteLocativeSelect
+        });
+        
+        if (proprieteSelectElement && loyerInput) {
+            const selectedOption = proprieteSelectElement.options[proprieteSelectElement.selectedIndex];
+            console.log('Option sélectionnée:', selectedOption ? selectedOption.value : 'Aucune');
+            
+            if (selectedOption && selectedOption.value) {
+                // Récupérer le loyer directement depuis les données du template
+                const proprieteId = selectedOption.value;
+                console.log('ID de propriété sélectionnée:', proprieteId);
+                
+                console.log('Données des propriétés chargées:', proprietesData);
+                
+                if (proprietesData && proprietesData[proprieteId]) {
+                    console.log('Données trouvées pour la propriété:', proprietesData[proprieteId]);
+                    
+                    // Si une unité locative est sélectionnée, utiliser son loyer
+                    if (uniteLocativeSelect && uniteLocativeSelect.value) {
+                        const uniteId = uniteLocativeSelect.value;
+                        console.log('ID d\'unité locative sélectionnée:', uniteId);
+                        
+                        const unites = proprietesData[proprieteId].unites;
+                        const unite = unites.find(u => u.id == uniteId);
+                        
+                        if (unite) {
+                            loyerInput.value = unite.loyer_mensuel;
+                            console.log(`✅ Loyer automatiquement rempli depuis l'unité : ${unite.loyer_mensuel} F CFA`);
+                        } else {
+                            loyerInput.value = proprietesData[proprieteId].loyer;
+                            console.log(`✅ Loyer automatiquement rempli depuis la propriété (unité non trouvée) : ${proprietesData[proprieteId].loyer} F CFA`);
+                        }
+                    } else {
+                        // Sinon, utiliser le loyer de la propriété
+                        const loyer = proprietesData[proprieteId].loyer;
+                        loyerInput.value = loyer;
+                        console.log(`✅ Loyer automatiquement rempli depuis la propriété : ${loyer} F CFA`);
+                    }
+                    // Déclencher l'événement change pour mettre à jour les calculs
+                    loyerInput.dispatchEvent(new Event('change'));
+                } else {
+                    console.log('❌ Données de propriété non trouvées pour l\'ID:', proprieteId);
+                    console.log('Propriétés disponibles:', Object.keys(proprietesData || {}));
+                }
+            } else {
+                loyerInput.value = '';
+                console.log('Aucune propriété sélectionnée, loyer vidé');
+            }
+        } else {
+            console.log('❌ Éléments requis non trouvés');
+        }
+        
+        console.log('=== FIN DEBUG ===');
+    }
+
+    // Fonction utilitaire pour formater les montants sans décimales
+    function formatMontant(montant) {
+        return Math.round(montant).toLocaleString('fr-FR', {maximumFractionDigits: 0}) + ' F CFA';
+    }
+
+    // Calculs automatiques
+    function updateContractSummary() {
+        const loyer = parseFloat(document.getElementById('id_loyer_mensuel')?.value) || 0;
+        const charges = parseFloat(document.getElementById('id_charges_mensuelles')?.value) || 0;
+        const depot = parseFloat(document.getElementById('id_depot_garantie')?.value) || 0;
+        const avance = parseFloat(document.getElementById('id_avance_loyer')?.value) || 0;
+        
+        const dateDebut = document.getElementById('id_date_debut')?.value;
+        const dateFin = document.getElementById('id_date_fin')?.value;
+        
+        // Calculs
+        const totalMensuel = loyer + charges;
+        const totalEntree = depot + avance; // Seulement caution + avance, pas plus le loyer mensuel
+        
+        // Durée du contrat
+        let dureeMois = 0;
+        if (dateDebut && dateFin) {
+            const debut = new Date(dateDebut);
+            const fin = new Date(dateFin);
+            dureeMois = Math.round((fin - debut) / (1000 * 60 * 60 * 24 * 30.44));
+        }
+        
+        const totalContrat = totalMensuel * dureeMois;
+        
+        // Mise à jour de l'affichage
+        const totalMensuelEl = document.getElementById('total-mensuel');
+        const totalEntreeEl = document.getElementById('total-entree');
+        const dureeContratEl = document.getElementById('duree-contrat');
+        const totalContratEl = document.getElementById('total-contrat');
+        
+        if (totalMensuelEl) totalMensuelEl.textContent = formatMontant(totalMensuel);
+        if (totalEntreeEl) totalEntreeEl.textContent = formatMontant(totalEntree);
+        if (dureeContratEl) dureeContratEl.textContent = dureeMois + ' mois';
+        if (totalContratEl) totalContratEl.textContent = formatMontant(totalContrat);
+    }
+
+    // Mise à jour des montants affichés
+    function updateMontantsAffichés() {
+        const depotGarantie = parseFloat(document.getElementById('id_depot_garantie')?.value) || 0;
+        const avanceLoyer = parseFloat(document.getElementById('id_avance_loyer')?.value) || 0;
+        
+        const montantCautionEl = document.getElementById('montant-caution-requis');
+        const montantAvanceEl = document.getElementById('montant-avance-requis');
+        
+        if (montantCautionEl) montantCautionEl.textContent = formatMontant(depotGarantie);
+        if (montantAvanceEl) montantAvanceEl.textContent = formatMontant(avanceLoyer);
+    }
+
+    // Gestion de l'affichage conditionnel des champs de paiement
+    function toggleChampsPaiement() {
+        const cautionChecked = document.getElementById('id_creer_paiement_caution')?.checked;
+        const avanceChecked = document.getElementById('id_creer_paiement_avance')?.checked;
+        
+        const champsCaution = document.getElementById('champs-caution');
+        const champsAvance = document.getElementById('champs-avance');
+        
+        if (champsCaution) {
+            champsCaution.style.display = cautionChecked ? 'block' : 'none';
+        }
+        
+        if (champsAvance) {
+            champsAvance.style.display = avanceChecked ? 'block' : 'none';
+        }
+    }
+
+    // Gestion de la sélection dynamique d'unités locatives
+    function updateUnitesLocatives() {
+        const proprieteSelect = document.getElementById('id_propriete');
+        const uniteLocativeSelect = document.getElementById('id_unite_locative');
+        const uniteLocativeContainer = uniteLocativeSelect?.closest('.col-md-6'); // Conteneur du champ
+        
+        if (proprieteSelect && uniteLocativeSelect) {
+            const selectedProprieteId = proprieteSelect.value;
+            
+            // Vider la liste des unités locatives
+            uniteLocativeSelect.innerHTML = '<option value="">---------</option>';
+            
+            // Si une propriété est sélectionnée, charger les unités locatives
+            if (selectedProprieteId) {
+                // Récupérer les unités locatives depuis les données du template
+                
+                if (proprietesData && proprietesData[selectedProprieteId] && proprietesData[selectedProprieteId].unites) {
+                    const unites = proprietesData[selectedProprieteId].unites;
+                    let hasAvailableUnites = false;
+                    
+                    unites.forEach(function(unite) {
+                        // Ne charger que les unités disponibles ou réservées
+                        if (unite.statut === 'disponible' || unite.statut === 'reservee') {
+                            hasAvailableUnites = true;
+                            const option = document.createElement('option');
+                            option.value = unite.id;
+                            option.textContent = unite.nom;
+                            uniteLocativeSelect.appendChild(option);
+                        }
+                    });
+                    
+                    // Masquer le champ si aucune unité n'est disponible
+                    if (uniteLocativeContainer) {
+                        if (hasAvailableUnites) {
+                            uniteLocativeContainer.style.display = '';
+                        } else {
+                            uniteLocativeContainer.style.display = 'none';
+                        }
+                    }
+                } else {
+                    // Masquer le champ si aucune unité n'existe pour cette propriété
+                    if (uniteLocativeContainer) {
+                        uniteLocativeContainer.style.display = 'none';
+                    }
+                }
+            } else {
+                // Masquer le champ si aucune propriété n'est sélectionnée
+                if (uniteLocativeContainer) {
+                    uniteLocativeContainer.style.display = 'none';
+                }
+            }
+        }
+    }
+
+    // Gestion de la sélection dynamique de pièces
+    function updatePieces() {
+        const proprieteSelect = document.getElementById('id_propriete');
+        const pieceSelect = document.getElementById('id_piece');
+        const pieceContainer = pieceSelect?.closest('.col-md-6'); // Conteneur du champ
+        
+        if (proprieteSelect && pieceSelect) {
+            const selectedProprieteId = proprieteSelect.value;
+            
+            // Vider la liste des pièces
+            pieceSelect.innerHTML = '<option value="">---------</option>';
+            
+            // Si une propriété est sélectionnée, charger les pièces
+            if (selectedProprieteId) {
+                // Récupérer les pièces depuis les données du template
+                
+                if (proprietesData && proprietesData[selectedProprieteId] && proprietesData[selectedProprieteId].pieces) {
+                    const pieces = proprietesData[selectedProprieteId].pieces;
+                    let hasAvailablePieces = false;
+                    
+                    pieces.forEach(function(piece) {
+                        // Ne charger que les pièces disponibles ou réservées
+                        if (piece.statut === 'disponible' || piece.statut === 'reservee') {
+                            hasAvailablePieces = true;
+                            const option = document.createElement('option');
+                            option.value = piece.id;
+                            option.textContent = piece.nom;
+                            pieceSelect.appendChild(option);
+                        }
+                    });
+                    
+                    // Masquer le champ si aucune pièce n'est disponible
+                    if (pieceContainer) {
+                        if (hasAvailablePieces) {
+                            pieceContainer.style.display = '';
+                        } else {
+                            pieceContainer.style.display = 'none';
+                        }
+                    }
+                } else {
+                    // Masquer le champ si aucune pièce n'existe pour cette propriété
+                    if (pieceContainer) {
+                        pieceContainer.style.display = 'none';
+                    }
+                }
+            } else {
+                // Masquer le champ si aucune propriété n'est sélectionnée
+                if (pieceContainer) {
+                    pieceContainer.style.display = 'none';
+                }
+            }
+        }
+    }
+
+    // Initialisation quand le DOM est chargé
+    document.addEventListener('DOMContentLoaded', function() {
+        // Validation des formulaires Bootstrap
+        const forms = document.querySelectorAll('.needs-validation');
+        Array.from(forms).forEach(form => {
+            form.addEventListener('submit', event => {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            });
+        });
+
+        // Écouter le changement de propriété
+        const proprieteSelect = document.getElementById('id_propriete');
+        if (proprieteSelect) {
+            proprieteSelect.addEventListener('change', function() {
+                updateUnitesLocatives();
+                updateLoyerFromPropriete();
+                updatePieces();
+            });
+            
+            // Remplir automatiquement le loyer si une propriété est déjà sélectionnée
+            if (proprieteSelect.value) {
+                updateLoyerFromPropriete();
+            }
+        }
+
+        // Écouter le changement d'unité locative
+        const uniteLocativeSelect = document.getElementById('id_unite_locative');
+        if (uniteLocativeSelect) {
+            uniteLocativeSelect.addEventListener('change', updateLoyerFromPropriete);
+            
+            // Remplir automatiquement le loyer si une unité est déjà sélectionnée
+            if (uniteLocativeSelect.value) {
+                updateLoyerFromPropriete();
+            }
+        }
+
+        // Écouter le changement de pièce
+        const pieceSelect = document.getElementById('id_piece');
+        if (pieceSelect) {
+            pieceSelect.addEventListener('change', function() {
+                // Logique pour les pièces si nécessaire
+            });
+        }
+
+        // Écouter les changements sur les champs financiers
+        const financialInputs = ['id_loyer_mensuel', 'id_charges_mensuelles', 'id_depot_garantie', 'id_avance_loyer', 'id_date_debut', 'id_date_fin'];
+        financialInputs.forEach(inputId => {
+            const input = document.getElementById(inputId);
+            if (input) {
+                input.addEventListener('input', updateContractSummary);
+                input.addEventListener('change', updateContractSummary);
+            }
+        });
+
+        // Calcul initial
+        updateContractSummary();
+
+        // Écouter les changements sur les montants
+        const montantInputs = ['id_depot_garantie', 'id_avance_loyer'];
+        montantInputs.forEach(inputId => {
+            const input = document.getElementById(inputId);
+            if (input) {
+                input.addEventListener('input', updateMontantsAffichés);
+                input.addEventListener('change', updateMontantsAffichés);
+            }
+        });
+
+        // Mise à jour initiale des montants
+        updateMontantsAffichés();
+
+        // Écouter les changements sur les checkboxes de paiement
+        const paiementCheckboxes = ['id_creer_paiement_caution', 'id_creer_paiement_avance'];
+        paiementCheckboxes.forEach(checkboxId => {
+            const checkbox = document.getElementById(checkboxId);
+            if (checkbox) {
+                checkbox.addEventListener('change', toggleChampsPaiement);
+            }
+        });
+        
+        // Initialisation de l'affichage des champs
+        toggleChampsPaiement();
+    });
 </script>
 {% endblock %}
 {% endblock %}
@@ -543,296 +912,5 @@
 </div>
 
 <!-- JavaScript pour la gestion conditionnelle des champs de date -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Validation des formulaires Bootstrap
-    const forms = document.querySelectorAll('.needs-validation');
-    Array.from(forms).forEach(form => {
-        form.addEventListener('submit', event => {
-            if (!form.checkValidity()) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-            form.classList.add('was-validated');
-        });
-    });
-
-    // Fonction pour remplir automatiquement le loyer à partir de la propriété sélectionnée
-    function updateLoyerFromPropriete() {
-        const proprieteSelectElement = document.getElementById('id_propriete');
-        const loyerInput = document.getElementById('id_loyer_mensuel');
-        const uniteLocativeSelect = document.getElementById('id_unite_locative');
-        
-        if (proprieteSelectElement && loyerInput) {
-            const selectedOption = proprieteSelectElement.options[proprieteSelectElement.selectedIndex];
-            if (selectedOption && selectedOption.value) {
-                // Récupérer le loyer directement depuis les données du template
-                const proprieteId = selectedOption.value;
-                const proprietesData = JSON.parse('{{ proprietes_data|escapejs }}');
-                
-                if (proprietesData && proprietesData[proprieteId]) {
-                    // Si une unité locative est sélectionnée, utiliser son loyer
-                    if (uniteLocativeSelect && uniteLocativeSelect.value) {
-                        const uniteId = uniteLocativeSelect.value;
-                        const unites = proprietesData[proprieteId].unites;
-                        const unite = unites.find(u => u.id == uniteId);
-                        if (unite) {
-                            loyerInput.value = unite.loyer_mensuel;
-                            console.log(`Loyer automatiquement rempli depuis l'unité : ${unite.loyer_mensuel} F CFA`);
-                        } else {
-                            loyerInput.value = proprietesData[proprieteId].loyer;
-                            console.log(`Loyer automatiquement rempli depuis la propriété : ${proprietesData[proprieteId].loyer} F CFA`);
-                        }
-                    } else {
-                        // Sinon, utiliser le loyer de la propriété
-                        const loyer = proprietesData[proprieteId].loyer;
-                        loyerInput.value = loyer;
-                        console.log(`Loyer automatiquement rempli depuis la propriété : ${loyer} F CFA`);
-                    }
-                    // Déclencher l'événement change pour mettre à jour les calculs
-                    loyerInput.dispatchEvent(new Event('change'));
-                } else {
-                    console.log('Données de propriété non trouvées pour l\'ID:', proprieteId);
-                }
-            } else {
-                loyerInput.value = '';
-            }
-        }
-    }
-
-    // Écouter le changement de propriété
-    if (proprieteSelectElement) {
-        proprieteSelectElement.addEventListener('change', updateLoyerFromPropriete);
-    }
-
-    // Calculs automatiques
-    function updateContractSummary() {
-        const loyer = parseFloat(document.getElementById('id_loyer_mensuel')?.value) || 0;
-        const charges = parseFloat(document.getElementById('id_charges_mensuelles')?.value) || 0;
-        const depot = parseFloat(document.getElementById('id_depot_garantie')?.value) || 0;
-        const avance = parseFloat(document.getElementById('id_avance_loyer')?.value) || 0;
-        
-        const dateDebut = document.getElementById('id_date_debut')?.value;
-        const dateFin = document.getElementById('id_date_fin')?.value;
-        
-        // Calculs
-        const totalMensuel = loyer + charges;
-        const totalEntree = depot + avance; // Seulement caution + avance, pas plus le loyer mensuel
-        
-        // Durée du contrat
-        let dureeMois = 0;
-        if (dateDebut && dateFin) {
-            const debut = new Date(dateDebut);
-            const fin = new Date(dateFin);
-            dureeMois = Math.round((fin - debut) / (1000 * 60 * 60 * 24 * 30.44));
-        }
-        
-        const totalContrat = totalMensuel * dureeMois;
-        
-        // Mise à jour de l'affichage
-                    document.getElementById('total-mensuel').textContent = totalMensuel.toLocaleString() + ' F CFA';
-            document.getElementById('total-entree').textContent = totalEntree.toLocaleString() + ' F CFA';
-        document.getElementById('duree-contrat').textContent = dureeMois + ' mois';
-        document.getElementById('total-contrat').textContent = totalContrat.toLocaleString() + ' F CFA';
-    }
-
-    // Écouter les changements sur les champs financiers
-    const financialInputs = ['id_loyer_mensuel', 'id_charges_mensuelles', 'id_depot_garantie', 'id_avance_loyer', 'id_date_debut', 'id_date_fin'];
-    financialInputs.forEach(inputId => {
-        const input = document.getElementById(inputId);
-        if (input) {
-            input.addEventListener('input', updateContractSummary);
-            input.addEventListener('change', updateContractSummary);
-        }
-    });
-
-    // Calcul initial
-    updateContractSummary();
-
-    // Mise à jour des montants affichés
-    function updateMontantsAffichés() {
-        const depotGarantie = parseFloat(document.getElementById('id_depot_garantie')?.value) || 0;
-        const avanceLoyer = parseFloat(document.getElementById('id_avance_loyer')?.value) || 0;
-        
-        document.getElementById('montant-caution-requis').textContent = depotGarantie.toLocaleString() + ' F CFA';
-        document.getElementById('montant-avance-requis').textContent = avanceLoyer.toLocaleString() + ' F CFA';
-    }
-
-    // Écouter les changements sur les montants
-    const montantInputs = ['id_depot_garantie', 'id_avance_loyer'];
-    montantInputs.forEach(inputId => {
-        const input = document.getElementById(inputId);
-        if (input) {
-            input.addEventListener('input', updateMontantsAffichés);
-            input.addEventListener('change', updateMontantsAffichés);
-        }
-    });
-
-    // Mise à jour initiale des montants
-    updateMontantsAffichés();
-
-    // Gestion de l'affichage conditionnel des champs de paiement
-    function toggleChampsPaiement() {
-        const cautionChecked = document.getElementById('id_creer_paiement_caution')?.checked;
-        const avanceChecked = document.getElementById('id_creer_paiement_avance')?.checked;
-        
-        const champsCaution = document.getElementById('champs-caution');
-        const champsAvance = document.getElementById('champs-avance');
-        
-        if (champsCaution) {
-            champsCaution.style.display = cautionChecked ? 'block' : 'none';
-        }
-        
-        if (champsAvance) {
-            champsAvance.style.display = avanceChecked ? 'block' : 'none';
-        }
-    }
-    
-    // Écouter les changements sur les checkboxes de paiement
-    const paiementCheckboxes = ['id_creer_paiement_caution', 'id_creer_paiement_avance'];
-    paiementCheckboxes.forEach(checkboxId => {
-        const checkbox = document.getElementById(checkboxId);
-        if (checkbox) {
-            checkbox.addEventListener('change', toggleChampsPaiement);
-        }
-    });
-    
-    // Initialisation de l'affichage des champs
-    toggleChampsPaiement();
-    
-    // Gestion de la sélection dynamique d'unités locatives
-    function updateUnitesLocatives() {
-        const proprieteSelect = document.getElementById('id_propriete');
-        const uniteLocativeSelect = document.getElementById('id_unite_locative');
-        const uniteLocativeContainer = uniteLocativeSelect.closest('.col-md-6'); // Conteneur du champ
-        
-        if (proprieteSelect && uniteLocativeSelect) {
-            const selectedProprieteId = proprieteSelect.value;
-            
-            // Vider la liste des unités locatives
-            uniteLocativeSelect.innerHTML = '<option value="">---------</option>';
-            
-            // Si une propriété est sélectionnée, charger les unités locatives
-            if (selectedProprieteId) {
-                // Récupérer les unités locatives depuis les données du template
-                
-                if (proprietesData && proprietesData[selectedProprieteId] && proprietesData[selectedProprieteId].unites) {
-                    const unites = proprietesData[selectedProprieteId].unites;
-                    let hasAvailableUnites = false;
-                    
-                    unites.forEach(function(unite) {
-                        // Ne charger que les unités disponibles ou réservées
-                        if (unite.statut === 'disponible' || unite.statut === 'reservee') {
-                            hasAvailableUnites = true;
-                            const option = document.createElement('option');
-                            option.value = unite.id;
-                            option.textContent = unite.nom;
-                            uniteLocativeSelect.appendChild(option);
-                        }
-                    });
-                    
-                    // Masquer le champ si aucune unité n'est disponible
-                    if (uniteLocativeContainer) {
-                        if (hasAvailableUnites) {
-                            uniteLocativeContainer.style.display = '';
-                        } else {
-                            uniteLocativeContainer.style.display = 'none';
-                        }
-                    }
-                } else {
-                    // Masquer le champ si aucune unité n'existe pour cette propriété
-                    if (uniteLocativeContainer) {
-                        uniteLocativeContainer.style.display = 'none';
-                    }
-                }
-            } else {
-                // Masquer le champ si aucune propriété n'est sélectionnée
-                if (uniteLocativeContainer) {
-                    uniteLocativeContainer.style.display = 'none';
-                }
-            }
-        }
-    }
-    
-    // Écouter le changement de propriété
-    const proprieteSelect = document.getElementById('id_propriete');
-    if (proprieteSelect) {
-        proprieteSelect.addEventListener('change', updateUnitesLocatives);
-        // Mettre également à jour le loyer quand la propriété change
-        proprieteSelect.addEventListener('change', updateLoyerFromPropriete);
-    }
-    
-    // Écouter le changement d'unité locative
-   const uniteLocativeSelect = document.getElementById('id_unite_locative');
-   if (uniteLocativeSelect) {
-       uniteLocativeSelect.addEventListener('change', updateLoyerFromPropriete);
-   }
-   
-   // Gestion de la sélection dynamique de pièces
-   function updatePieces() {
-       const proprieteSelect = document.getElementById('id_propriete');
-       const pieceSelect = document.getElementById('id_piece');
-       const pieceContainer = pieceSelect.closest('.col-md-6'); // Conteneur du champ
-       
-       if (proprieteSelect && pieceSelect) {
-           const selectedProprieteId = proprieteSelect.value;
-           
-           // Vider la liste des pièces
-           pieceSelect.innerHTML = '<option value="">---------</option>';
-           
-           // Si une propriété est sélectionnée, charger les pièces
-           if (selectedProprieteId) {
-               // Récupérer les pièces depuis les données du template
-               
-               if (proprietesData && proprietesData[selectedProprieteId] && proprietesData[selectedProprieteId].pieces) {
-                   const pieces = proprietesData[selectedProprieteId].pieces;
-                   let hasAvailablePieces = false;
-                   
-                   pieces.forEach(function(piece) {
-                       // Ne charger que les pièces disponibles
-                       if (piece.statut === 'disponible') {
-                           hasAvailablePieces = true;
-                           const option = document.createElement('option');
-                           option.value = piece.id;
-                           option.textContent = piece.nom;
-                           pieceSelect.appendChild(option);
-                       }
-                   });
-                   
-                   // Masquer le champ si aucune pièce n'est disponible
-                   if (pieceContainer) {
-                       if (hasAvailablePieces) {
-                           pieceContainer.style.display = '';
-                       } else {
-                           pieceContainer.style.display = 'none';
-                       }
-                   }
-               } else {
-                   // Masquer le champ si aucune pièce n'existe pour cette propriété
-                   if (pieceContainer) {
-                       pieceContainer.style.display = 'none';
-                   }
-               }
-           } else {
-               // Masquer le champ si aucune propriété n'est sélectionnée
-               if (pieceContainer) {
-                   pieceContainer.style.display = 'none';
-               }
-           }
-       }
-   }
-   
-   // Écouter le changement de propriété pour les pièces
-   if (proprieteSelect) {
-       proprieteSelect.addEventListener('change', updatePieces);
-   }
-   
-   // Initialisation des unités locatives
-   updateUnitesLocatives();
-   
-   // Initialisation des pièces
-   updatePieces();
-});
-</script>
 
 {% endblock %}

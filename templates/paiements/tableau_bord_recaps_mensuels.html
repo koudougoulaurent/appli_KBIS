@@ -390,7 +390,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             maxTicksLimit: 5,
                             padding: 10,
                             callback: function(value, index, values) {
-                                return value.toLocaleString('fr-FR') + ' F CFA';
+                                return Math.round(value).toLocaleString('fr-FR', {maximumFractionDigits: 0}) + ' F CFA';
                             }
                         },
                         gridLines: {
@@ -422,7 +422,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     callbacks: {
                         label: function(tooltipItem, chart) {
                             var datasetLabel = chart.datasets[tooltipItem.datasetIndex].label || '';
-                            return datasetLabel + ': ' + tooltipItem.yLabel.toLocaleString('fr-FR') + ' F CFA';
+                            return datasetLabel + ': ' + Math.round(tooltipItem.yLabel).toLocaleString('fr-FR', {maximumFractionDigits: 0}) + ' F CFA';
                         }
                     }
                 }

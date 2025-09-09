@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'contrats',
     'paiements',
     'notifications',
+    'bailleurs',
 ]
 
 MIDDLEWARE = [
@@ -62,10 +63,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'utilisateurs.middleware.PerformanceMiddleware',
-    'utilisateurs.middleware.DatabaseOptimizationMiddleware',
-    'utilisateurs.middleware.CacheOptimizationMiddleware',
-    'core.middleware.DeviseMiddleware',
 ]
 
 ROOT_URLCONF = 'gestion_immobiliere.urls'

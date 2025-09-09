@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views, views_unites
+from . import views, api_views, views_unites, document_views
 from .views import ajouter_charge_bailleur_rapide
 
 # Router pour l'API
@@ -38,8 +38,10 @@ urlpatterns = [
     path('bailleurs/<int:pk>/', views.detail_bailleur, name='detail_bailleur'),
     path('bailleurs/<int:pk>/', views.detail_bailleur, name='bailleur_detail'),  # Alias pour compatibilité
     path('bailleurs/<int:pk>/modifier/', views.modifier_bailleur, name='modifier_bailleur'),
+    path('bailleurs/<int:pk>/proprietes/', views.proprietes_bailleur, name='proprietes_bailleur'),
     path('bailleurs/<int:pk>/supprimer/', views.supprimer_bailleur, name='supprimer_bailleur'),
     path('bailleurs/recherche-avancee/', views.recherche_avancee_bailleurs, name='recherche_avancee_bailleurs'),
+    path('test-actions-rapides/', views.test_quick_actions, name='test_quick_actions'),
 
     # URLs pour les locataires
     path('locataires/', views.liste_locataires, name='locataires_liste'),
@@ -75,6 +77,15 @@ urlpatterns = [
     path('documents/<int:pk>/modifier/', views.document_update, name='document_update'),
     path('documents/<int:pk>/supprimer/', views.document_delete, name='document_delete'),
     path('documents/<int:pk>/telecharger/', views.document_download, name='document_download'),
+    
+    # URLs pour l'archivage des documents par entité
+    path('documents/archivage/', document_views.document_archive_by_entity, name='document_archive'),
+    path('documents/recherche-avancee/', document_views.document_search_advanced, name='document_search_advanced'),
+    path('documents/upload-rapide/', document_views.document_quick_upload, name='document_quick_upload'),
+    path('documents/propriete/<int:propriete_id>/', document_views.document_list_by_propriete, name='document_list_by_propriete'),
+    path('documents/bailleur/<int:bailleur_id>/', document_views.document_list_by_bailleur, name='document_list_by_bailleur'),
+    path('documents/locataire/<int:locataire_id>/', document_views.document_list_by_locataire, name='document_list_by_locataire'),
+    path('documents/api/stats/', document_views.document_stats_api, name='document_stats_api'),
     
     # URLs pour le visualiseur universel
     path('documents/<int:pk>/viewer/', views.DocumentViewerView.as_view(), name='document_viewer'),

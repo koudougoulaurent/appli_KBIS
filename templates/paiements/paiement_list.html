@@ -6,7 +6,12 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">
-            <i class="bi bi-cash-coin"></i> Liste des Paiements
+            <i class="bi bi-cash-coin"></i> 
+            {% if locataire %}
+                Historique des Paiements - {{ locataire.get_nom_complet }}
+            {% else %}
+                Liste des Paiements
+            {% endif %}
         </h1>
         <div>
             <a href="{% url 'paiements:ajouter' %}" class="btn btn-primary">
@@ -14,6 +19,36 @@
             </a>
         </div>
     </div>
+
+    <!-- Informations du locataire si filtré -->
+    {% if locataire %}
+    <div class="alert alert-info mb-4">
+        <div class="row">
+            <div class="col-md-8">
+                <h5 class="alert-heading">
+                    <i class="bi bi-person-circle"></i> {{ locataire.get_nom_complet }}
+                </h5>
+                <p class="mb-1">
+                    <strong>Email:</strong> {{ locataire.email|default:"Non renseigné" }} | 
+                    <strong>Téléphone:</strong> {{ locataire.telephone|default:"Non renseigné" }}
+                </p>
+                {% if locataire.contrats.exists %}
+                    <p class="mb-0">
+                        <strong>Contrats actifs:</strong> {{ locataire.contrats.count }}
+                    </p>
+                {% endif %}
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'proprietes:detail_locataire' locataire.pk %}" class="btn btn-outline-primary">
+                    <i class="bi bi-eye"></i> Voir le profil
+                </a>
+                <a href="{% url 'paiements:ajouter' %}?locataire={{ locataire.pk }}" class="btn btn-success">
+                    <i class="bi bi-plus-circle"></i> Nouveau paiement
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Statistiques -->
     <div class="row mb-4">

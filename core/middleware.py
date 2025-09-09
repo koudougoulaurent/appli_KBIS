@@ -1,71 +1,106 @@
-from core.models import Devise
+"""
+Middleware pour optimiser les performances
+"""
+
+from django.db import connection
 from django.core.cache import cache
+from django.utils.deprecation import MiddlewareMixin
+import time
 
-class DeviseMiddleware:
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    def __call__(self, request):
-        devise_code = request.session.get('devise_active', 'F CFA')
-        
-        # Utiliser le cache pour éviter les requêtes répétées
-        cache_key = f"devise_{devise_code}"
-        devise = cache.get(cache_key)
-        
-        if devise is None:
-            try:
-                devise = Devise.objects.get(code=devise_code, actif=True)
-                # Mettre en cache pour 1 heure
-                cache.set(cache_key, devise, 3600)
-            except Devise.DoesNotExist:
-                # Essayer de récupérer la devise par défaut
-                try:
-                    devise = Devise.objects.filter(par_defaut=True, actif=True).first()
-                    if devise:
-                        cache.set(cache_key, devise, 3600)
-                    else:
-                        # Essayer de récupérer n'importe quelle devise active
-                        devise = Devise.objects.filter(actif=True).first()
-                        if devise:
-                            cache.set(cache_key, devise, 3600)
-                        else:
-                            # Créer une devise par défaut si aucune n'existe
-                            devise = self._create_default_devise()
-                            cache.set(cache_key, devise, 3600)
-                except Exception:
-                    # En dernier recours, créer une devise par défaut
-                    devise = self._create_default_devise()
-                    cache.set(cache_key, devise, 3600)
-        
-        request.devise_active = devise
-        response = self.get_response(request)
-        return response
+class PerformanceMiddleware(MiddlewareMixin):
+    """
+    Middleware pour optimiser les performances
+    """
     
-    def _create_default_devise(self):
-        """Crée une devise par défaut si aucune n'existe."""
-        try:
-            devise = Devise.objects.create(
-                code='F CFA',
-                nom='Franc CFA',
-                symbole='F CFA',
-                taux_change=1.0,
-                actif=True,
-                par_defaut=True
-            )
-            return devise
-        except Exception:
-            # Si la création échoue, retourner un objet Devise minimal
-            # pour éviter les erreurs dans les templates
-            class MockDevise:
-                def __init__(self):
-                    self.code = 'F CFA'
-                    self.nom = 'Franc CFA'
-                    self.symbole = 'F CFA'
-                    self.taux_change = 1.0
-                    self.actif = True
-                    self.par_defaut = True
-                
-                def __str__(self):
-                    return f"{self.nom} ({self.code})"
+    def process_request(self, request):
+        """Début de la requête"""
+        request.start_time = time.time()
+        request.query_count_start = len(connection.queries)
+        return None
+    
+    def process_response(self, request, response):
+        """Fin de la requête"""
+        if hasattr(request, 'start_time'):
+            # Calculer le temps de traitement
+            process_time = time.time() - request.start_time
             
-            return MockDevise() 
+            # Ajouter des headers de performance
+            response['X-Process-Time'] = f"{process_time:.3f}s"
+            
+            # Compter les requêtes
+            if hasattr(request, 'query_count_start'):
+                query_count = len(connection.queries) - request.query_count_start
+                response['X-Query-Count'] = str(query_count)
+                
+                # Avertir si trop de requêtes
+                if query_count > 50:
+                    response['X-Performance-Warning'] = 'High query count detected'
+            
+            # Mettre en cache les statistiques
+            cache_key = f"perf_stats_{request.path}"
+            cache.set(cache_key, {
+                'process_time': process_time,
+                'query_count': query_count if hasattr(request, 'query_count_start') else 0,
+                'timestamp': time.time()
+            }, 300)  # 5 minutes
+        
+        return response
+
+class DatabaseOptimizationMiddleware(MiddlewareMixin):
+    """
+    Middleware pour optimiser les requêtes de base de données
+    """
+    
+    def process_request(self, request):
+        """Optimiser les requêtes"""
+        # Activer les logs de requêtes en mode debug
+        if hasattr(connection, 'queries'):
+            connection.queries_log.clear()
+        
+        return None
+    
+    def process_response(self, request, response):
+        """Analyser les requêtes après traitement"""
+        if hasattr(connection, 'queries') and len(connection.queries) > 0:
+            # Analyser les requêtes lentes
+            slow_queries = [
+                q for q in connection.queries 
+                if float(q['time']) > 0.1  # Plus de 100ms
+            ]
+            
+            if slow_queries:
+                # Log des requêtes lentes
+                print(f"SLOW QUERIES detected on {request.path}:")
+                for query in slow_queries:
+                    print(f"  - {query['time']}s: {query['sql'][:100]}...")
+        
+        return response
+
+class CacheMiddleware(MiddlewareMixin):
+    """
+    Middleware pour la gestion du cache
+    """
+    
+    def process_request(self, request):
+        """Gérer le cache des requêtes"""
+        # Vérifier si la page est en cache
+        if request.method == 'GET' and not request.user.is_authenticated:
+            cache_key = f"page_cache_{request.path}_{request.GET.urlencode()}"
+            cached_response = cache.get(cache_key)
+            
+            if cached_response:
+                return cached_response
+        
+        return None
+    
+    def process_response(self, request, response):
+        """Mettre en cache les réponses"""
+        if (request.method == 'GET' and 
+            response.status_code == 200 and 
+            not request.user.is_authenticated and
+            'text/html' in response.get('Content-Type', '')):
+            
+            cache_key = f"page_cache_{request.path}_{request.GET.urlencode()}"
+            cache.set(cache_key, response, 300)  # 5 minutes
+        
+        return response

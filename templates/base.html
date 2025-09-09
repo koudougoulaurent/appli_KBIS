@@ -22,6 +22,7 @@
     <link href="{% static 'css/montant-fix.css' %}" rel="stylesheet">
     <link href="{% static 'css/proprietes.css' %}" rel="stylesheet">
     <link href="{% static 'css/performance-optimizations.css' %}" rel="stylesheet">
+    <link href="{% static 'css/quick-actions-enhanced.css' %}" rel="stylesheet">
     
     <style>
         /* Indicateur de chargement global */
@@ -504,6 +505,13 @@
                                 <span class="d-inline d-lg-none">Résiliations</span>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'proprietes:document_archive' %}">
+                                <i class="bi bi-archive"></i> 
+                                <span class="d-none d-lg-inline">Archivage Documents</span>
+                                <span class="d-inline d-lg-none">Documents</span>
+                            </a>
+                        </li>
 
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -595,6 +603,7 @@
     <script src="{% static 'js/enhanced-navigation.js' %}"></script>
     <script src="{% static 'js/debug-buttons.js' %}"></script>
     <script src="{% static 'js/quick-actions-activator.js' %}"></script>
+    <script src="{% static 'js/quick-actions-enhanced.js' %}"></script>
     <script src="{% static 'js/keyboard-shortcuts.js' %}"></script>
     
     <script>

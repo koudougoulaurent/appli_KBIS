@@ -14,10 +14,13 @@
             <p class="text-muted mb-0">Code: <strong>{{ bailleur.code_bailleur }}</strong></p>
             {% include 'includes/breadcrumbs.html' %}
         </div>
-        <div class="d-flex gap-2">
-            {% include 'includes/quick_actions.html' %}
-        </div>
     </div>
+
+    <!-- Actions rapides universelles -->
+    {% include 'includes/universal_quick_actions.html' %}
+    
+    <!-- Aide pour les actions rapides -->
+    {% include 'includes/quick_actions_help.html' %}
 
     <!-- Informations principales -->
     <div class="row mb-4">

@@ -1,164 +1,153 @@
-{% extends 'base.html' %}
+{% extends 'base_with_quick_actions.html' %}
 {% load static %}
+{% load humanize %}
 
-{% block title %}Détail Retrait Bailleur - Gestion Immobilière{% endblock %}
+{% block page_icon %}<i class="bi bi-receipt text-success"></i>{% endblock %}
+{% block page_title %}Retrait {{ retrait.mois_retrait|date:"F Y" }}{% endblock %}
+{% block page_subtitle %}
+    <p class="text-muted mb-0">
+        <i class="bi bi-person"></i> {{ bailleur.get_nom_complet }} | 
+        <i class="bi bi-calendar"></i> {{ retrait.date_demande|date:"d/m/Y" }} |
+        <span class="badge bg-{% if retrait.statut == 'paye' %}success{% elif retrait.statut == 'valide' %}primary{% elif retrait.statut == 'en_attente' %}warning{% else %}danger{% endif %}">
+            {{ retrait.get_statut_display }}
+        </span>
+    </p>
+{% endblock %}
 
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">
-        <i class="bi bi-cash-stack text-primary"></i>
-        Détail du Retrait Bailleur
-    </h1>
-    <div class="d-flex gap-2">
-        <a href="{% url 'paiements:imprimer_recu_retrait' retrait.id %}" 
-           class="btn btn-outline-secondary" target="_blank">
-            <i class="bi bi-printer"></i> Imprimer Reçu
-        </a>
-        <a href="{% url 'paiements:liste_retraits_bailleur' %}" class="btn btn-outline-primary">
-            <i class="bi bi-arrow-left"></i> Retour à la liste
-        </a>
-    </div>
-</div>
+{% block main_content %}
+<!-- Actions rapides universelles -->
+{% include 'includes/universal_quick_actions.html' %}
 
-<div class="row">
-    <div class="col-lg-8">
-        <!-- Informations principales -->
-        <div class="card mb-4">
+<!-- Informations du retrait -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-info-circle"></i> Informations du Retrait
-                </h5>
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle"></i> Informations Générales
+                </h6>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <table class="table table-borderless">
-                            <tr>
-                                <td><strong>Bailleur :</strong></td>
-                                <td>{{ retrait.bailleur.get_nom_complet }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Mois :</strong></td>
-                                <td>{{ retrait.mois_retrait|date:"F Y" }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Type :</strong></td>
-                                <td>
-                                    <span class="badge bg-info">{{ retrait.get_type_retrait_display }}</span>
-                                </td>
-                            </tr>
-                            {% if retrait.recap_lie %}
-                            <tr>
-                                <td><strong>Récapitulatif lié :</strong></td>
-                                <td>
-                                    <a href="{% url 'paiements:detail_recap_mensuel_auto' recap_id=retrait.recap_lie.id %}" 
-                                       class="btn btn-outline-primary btn-sm">
-                                        <i class="bi bi-file-earmark-text me-1"></i>
-                                        Voir le Récapitulatif
-                                    </a>
-                                </td>
-                            </tr>
-                            {% endif %}
-                            <tr>
-                                <td><strong>Mode :</strong></td>
-                                <td>
-                                    <span class="badge bg-secondary">{{ retrait.get_mode_retrait_display }}</span>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                    <div class="col-md-6">
-                        <table class="table table-borderless">
-                            <tr>
-                                <td><strong>Statut :</strong></td>
-                                <td>
-                                    {% if retrait.statut == 'en_cours' %}
-                                        <span class="badge bg-warning">En cours</span>
-                                    {% elif retrait.statut == 'valide' %}
-                                        <span class="badge bg-info">Validé</span>
-                                    {% elif retrait.statut == 'paye' %}
-                                        <span class="badge bg-success">Payé</span>
-                                    {% elif retrait.statut == 'annule' %}
-                                        <span class="badge bg-danger">Annulé</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><strong>Date de demande :</strong></td>
-                                <td>{{ retrait.date_demande|date:"d/m/Y" }}</td>
-                            </tr>
-                            {% if retrait.date_versement %}
-                            <tr>
-                                <td><strong>Date de versement :</strong></td>
-                                <td>{{ retrait.date_versement|date:"d/m/Y" }}</td>
-                            </tr>
-                            {% endif %}
-                            <tr>
-                                <td><strong>Créé par :</strong></td>
-                                <td>{{ retrait.cree_par.get_full_name|default:retrait.cree_par.username }}</td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Informations de paiement -->
-                {% if retrait.numero_cheque or retrait.reference_virement %}
-                <hr>
-                <h6>Informations de Paiement</h6>
-                <div class="row">
-                    {% if retrait.numero_cheque %}
-                    <div class="col-md-6">
-                        <strong>Numéro de chèque :</strong> {{ retrait.numero_cheque }}
-                    </div>
+                <table class="table table-borderless">
+                    <tr>
+                        <td><strong>Bailleur :</strong></td>
+                        <td>{{ bailleur.get_nom_complet }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Mois :</strong></td>
+                        <td>{{ retrait.mois_retrait|date:"F Y" }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Type :</strong></td>
+                        <td><span class="badge bg-info">{{ retrait.get_type_retrait_display }}</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Mode :</strong></td>
+                        <td>
+                            <i class="bi bi-{% if retrait.mode_retrait == 'virement' %}credit-card{% elif retrait.mode_retrait == 'cheque' %}receipt{% else %}cash{% endif %}"></i>
+                            {{ retrait.get_mode_retrait_display }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Date Demande :</strong></td>
+                        <td>{{ retrait.date_demande|date:"d/m/Y" }}</td>
+                    </tr>
+                    {% if retrait.date_versement %}
+                    <tr>
+                        <td><strong>Date Versement :</strong></td>
+                        <td class="text-success">{{ retrait.date_versement|date:"d/m/Y" }}</td>
+                    </tr>
                     {% endif %}
-                    {% if retrait.reference_virement %}
-                    <div class="col-md-6">
-                        <strong>Référence de virement :</strong> {{ retrait.reference_virement }}
-                    </div>
-                    {% endif %}
-                </div>
-                {% endif %}
+                </table>
             </div>
         </div>
-
-        <!-- Montants -->
-        <div class="card mb-4">
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-calculator"></i> Calcul des Montants
-                </h5>
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-cash-coin"></i> Montants
+                </h6>
             </div>
             <div class="card-body">
                 <div class="row text-center">
-                    <div class="col-md-4">
-                        <div class="stat-card success">
-                            <div class="stat-number">{{ retrait.get_montant_loyers_bruts_formatted }}</div>
-                            <div class="stat-label">Loyers Bruts</div>
-                        </div>
+                    <div class="col-12 mb-3">
+                        <h4 class="text-primary">{{ retrait.montant_loyers_bruts|floatformat:0|intcomma }} F CFA</h4>
+                        <p class="text-muted mb-0">Loyers Bruts</p>
                     </div>
-                    <div class="col-md-4">
-                        <div class="stat-card warning">
-                            <div class="stat-number">{{ retrait.get_montant_charges_deductibles_formatted }}</div>
-                            <div class="stat-label">Charges Déductibles</div>
-                        </div>
+                    <div class="col-12 mb-3">
+                        <h4 class="text-warning">{{ retrait.montant_charges_deductibles|floatformat:0|intcomma }} F CFA</h4>
+                        <p class="text-muted mb-0">Charges Déduites</p>
                     </div>
-                    <div class="col-md-4">
-                        <div class="stat-card info">
-                            <div class="stat-number">{{ retrait.get_montant_net_formatted }}</div>
-                            <div class="stat-label">Montant Net à Payer</div>
-                        </div>
+                    <div class="col-12">
+                        <h4 class="text-success">{{ retrait.montant_net_a_payer|floatformat:0|intcomma }} F CFA</h4>
+                        <p class="text-muted mb-0">Montant Net</p>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
+</div>
 
-        <!-- Charges déductibles -->
-        {% if charges_deductibles %}
-        <div class="card mb-4">
+<!-- Paiements concernés -->
+{% if paiements_concernes %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-list-check"></i> Charges Déductibles
-                </h5>
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-list-ul"></i> Paiements Concernés
+                    <span class="badge bg-primary ms-2">{{ paiements_concernes.count }}</span>
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Référence</th>
+                                <th>Locataire</th>
+                                <th>Propriété</th>
+                                <th>Montant</th>
+                                <th>Date Paiement</th>
+                                <th>Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for paiement in paiements_concernes %}
+                            <tr>
+                                <td>{{ paiement.reference_paiement }}</td>
+                                <td>{{ paiement.contrat.locataire.get_nom_complet }}</td>
+                                <td>{{ paiement.contrat.propriete.titre }}</td>
+                                <td>{{ paiement.montant|floatformat:0|intcomma }} F CFA</td>
+                                <td>{{ paiement.date_paiement|date:"d/m/Y" }}</td>
+                                <td>
+                                    <span class="badge bg-{% if paiement.statut == 'valide' %}success{% elif paiement.statut == 'en_attente' %}warning{% else %}danger{% endif %}">
+                                        {{ paiement.get_statut_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Charges déductibles -->
+{% if charges_deductibles %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-receipt"></i> Charges Déductibles
+                    <span class="badge bg-warning ms-2">{{ charges_deductibles.count }}</span>
+                </h6>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -174,8 +163,8 @@
                             {% for charge in charges_deductibles %}
                             <tr>
                                 <td>{{ charge.description }}</td>
-                                <td class="text-end">{{ charge.montant_formatted }}</td>
-                                <td>{{ charge.date_charge|date:"d/m/Y" }}</td>
+                                <td>{{ charge.montant|floatformat:0|intcomma }} F CFA</td>
+                                <td>{{ charge.date_creation|date:"d/m/Y" }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -183,34 +172,52 @@
                 </div>
             </div>
         </div>
-        {% endif %}
+    </div>
+</div>
+{% endif %}
 
-        <!-- Paiements concernés -->
-        {% if paiements_concernes %}
+<!-- Reçus -->
+{% if reçus %}
+<div class="row mb-4">
+    <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-cash"></i> Paiements Concernés
-                </h5>
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-file-earmark-text"></i> Reçus Générés
+                    <span class="badge bg-info ms-2">{{ reçus.count }}</span>
+                </h6>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>Contrat</th>
-                                <th>Locataire</th>
-                                <th>Montant</th>
-                                <th>Date</th>
+                                <th>Numéro</th>
+                                <th>Date Émission</th>
+                                <th>Imprimé</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for paiement in paiements_concernes %}
+                            {% for recu in reçus %}
                             <tr>
-                                <td>{{ paiement.contrat.numero_contrat }}</td>
-                                <td>{{ paiement.contrat.locataire.get_nom_complet }}</td>
-                                <td class="text-end">{{ paiement.montant_formatted }}</td>
-                                <td>{{ paiement.date_paiement|date:"d/m/Y" }}</td>
+                                <td>{{ recu.numero_recu }}</td>
+                                <td>{{ recu.date_emission|date:"d/m/Y" }}</td>
+                                <td>
+                                    {% if recu.imprime %}
+                                        <span class="badge bg-success">Oui</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Non</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="#" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> Voir
+                                    </a>
+                                    <a href="#" class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-printer"></i> Imprimer
+                                    </a>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -218,144 +225,25 @@
                 </div>
             </div>
         </div>
-        {% endif %}
-    </div>
-
-    <div class="col-lg-4">
-        <!-- Actions -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-gear"></i> Actions
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="d-grid gap-2">
-                    {% if retrait.statut == 'en_cours' %}
-                        <a href="{% url 'paiements:valider_retrait_bailleur' retrait.id %}" 
-                           class="btn btn-success">
-                            <i class="bi bi-check-circle"></i> Valider le Retrait
-                        </a>
-                    {% endif %}
-                    
-                    {% if retrait.statut == 'valide' %}
-                        <a href="{% url 'paiements:marquer_retrait_paye' retrait.id %}" 
-                           class="btn btn-info">
-                            <i class="bi bi-cash"></i> Marquer comme Payé
-                        </a>
-                    {% endif %}
-                    
-                    <a href="{% url 'paiements:imprimer_recu_retrait' retrait.id %}" 
-                       class="btn btn-outline-secondary" target="_blank">
-                        <i class="bi bi-printer"></i> Imprimer Reçu A5
-                    </a>
-                    
-                    {% if retrait.statut == 'en_cours' %}
-                        <button type="button" class="btn btn-outline-danger" 
-                                data-bs-toggle="modal" data-bs-target="#annulerModal">
-                            <i class="bi bi-x-circle"></i> Annuler le Retrait
-                        </button>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Historique -->
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-clock-history"></i> Historique
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="timeline">
-                    <div class="timeline-item">
-                        <div class="timeline-marker bg-primary"></div>
-                        <div class="timeline-content">
-                            <h6>Retrait créé</h6>
-                            <small class="text-muted">{{ retrait.date_demande|date:"d/m/Y H:i" }}</small>
-                            <p class="mb-0">Par {{ retrait.cree_par.get_full_name|default:retrait.cree_par.username }}</p>
-                        </div>
-                    </div>
-                    
-                    {% if retrait.valide_par %}
-                    <div class="timeline-item">
-                        <div class="timeline-marker bg-success"></div>
-                        <div class="timeline-content">
-                            <h6>Retrait validé</h6>
-                            <small class="text-muted">{{ retrait.date_validation|date:"d/m/Y H:i" }}</small>
-                            <p class="mb-0">Par {{ retrait.valide_par.get_full_name|default:retrait.valide_par.username }}</p>
-                        </div>
-                    </div>
-                    {% endif %}
-                    
-                    {% if retrait.date_versement %}
-                    <div class="timeline-item">
-                        <div class="timeline-marker bg-info"></div>
-                        <div class="timeline-content">
-                            <h6>Retrait payé</h6>
-                            <small class="text-muted">{{ retrait.date_versement|date:"d/m/Y H:i" }}</small>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
     </div>
 </div>
+{% endif %}
 
-<!-- Modal d'annulation -->
-{% if retrait.statut == 'en_cours' %}
-<div class="modal fade" id="annulerModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Annuler le Retrait</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- Notes -->
+{% if retrait.notes %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-sticky"></i> Notes
+                </h6>
             </div>
-            <div class="modal-body">
-                <p>Êtes-vous sûr de vouloir annuler ce retrait ?</p>
-                <p class="text-muted">Cette action est irréversible.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Non, garder</button>
-                <a href="#" class="btn btn-danger">Oui, annuler</a>
+            <div class="card-body">
+                <p class="mb-0">{{ retrait.notes }}</p>
             </div>
         </div>
     </div>
 </div>
 {% endif %}
-{% endblock %}
-
-{% block extra_css %}
-<style>
-.timeline {
-    position: relative;
-    padding-left: 30px;
-}
-
-.timeline-item {
-    position: relative;
-    margin-bottom: 20px;
-}
-
-.timeline-marker {
-    position: absolute;
-    left: -35px;
-    top: 5px;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-}
-
-.timeline-item:not(:last-child)::before {
-    content: '';
-    position: absolute;
-    left: -29px;
-    top: 17px;
-    height: calc(100% + 3px);
-    width: 1px;
-    background-color: #dee2e6;
-}
-</style>
 {% endblock %}

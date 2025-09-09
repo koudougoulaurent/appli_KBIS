@@ -226,6 +226,9 @@ class ProprieteForm(forms.ModelForm):
         # Rendre le champ charges_locataire optionnel
         self.fields['charges_locataire'].required = False
         
+        # Rendre le champ numero_propriete optionnel (généré automatiquement)
+        self.fields['numero_propriete'].required = False
+        
         # Ajout de classes CSS pour les champs requis
         for field_name, field in self.fields.items():
             if field.required:
@@ -870,35 +873,32 @@ class LocataireForm(forms.ModelForm):
     )
     
     justificatif_domicile = forms.FileField(
-        required=True,
+        required=False,
         label=_('Justificatif de domicile'),
-        help_text=_('Facture EDF, téléphone, quittance de loyer (PDF, JPG, PNG)'),
+        help_text=_('Facture EDF, téléphone, quittance de loyer (PDF, JPG, PNG) - Optionnel'),
         widget=forms.FileInput(attrs={
             'class': 'form-control',
-            'accept': '.pdf,.jpg,.jpeg,.png',
-            'required': 'required'
+            'accept': '.pdf,.jpg,.jpeg,.png'
         })
     )
     
     justificatifs_revenus = forms.FileField(
-        required=True,
+        required=False,
         label=_('Justificatifs de revenus'),
-        help_text=_('3 derniers bulletins de salaire (PDF, JPG, PNG)'),
+        help_text=_('3 derniers bulletins de salaire (PDF, JPG, PNG) - Optionnel'),
         widget=forms.FileInput(attrs={
             'class': 'form-control',
-            'accept': '.pdf,.jpg,.jpeg,.png',
-            'required': 'required'
+            'accept': '.pdf,.jpg,.jpeg,.png'
         })
     )
     
     avis_imposition = forms.FileField(
-        required=True,
+        required=False,
         label=_('Avis d\'imposition'),
-        help_text=_('Dernier avis d\'imposition (PDF, JPG, PNG)'),
+        help_text=_('Dernier avis d\'imposition (PDF, JPG, PNG) - Optionnel'),
         widget=forms.FileInput(attrs={
             'class': 'form-control',
-            'accept': '.pdf,.jpg,.jpeg,.png',
-            'required': 'required'
+            'accept': '.pdf,.jpg,.jpeg,.png'
         })
     )
     
@@ -1015,13 +1015,12 @@ class LocataireForm(forms.ModelForm):
     )
     
     garant_code_postal = forms.CharField(
-        required=True,
+        required=False,
         max_length=10,
         label=_('Code postal du garant'),
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Code postal du garant',
-            'required': 'required'
+            'placeholder': 'Code postal du garant (optionnel)'
         })
     )
     

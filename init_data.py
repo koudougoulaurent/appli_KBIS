@@ -1,115 +1,228 @@
 #!/usr/bin/env python
 """
-Script d'initialisation des données de base
+Script d'initialisation des données de base pour GESTIMMOB
 """
 import os
+import sys
 import django
 
 # Configuration Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'test_settings')
 django.setup()
 
-from contrats.models import TypeContrat
-from paiements.models import TypePaiement
+from django.contrib.auth import get_user_model
+from utilisateurs.models import GroupeTravail
+from core.models import ConfigurationEntreprise, Devise
 
-def init_types_contrats():
-    """Initialise les types de contrats de base"""
-    types = [
+User = get_user_model()
+
+def create_work_groups():
+    """Créer les groupes de travail"""
+    print("🔧 Création des groupes de travail...")
+    
+    groups_data = [
         {
-            'nom': 'Bail résidentiel',
-            'description': 'Contrat de location pour résidence principale',
-            'duree_min_mois': 12,
-            'duree_max_mois': 36,
-            'caution_requise': True,
-            'charges_comprises': False,
+            'nom': 'ADMINISTRATION',
+            'description': 'Gestion administrative complète',
+            'permissions': {
+                'modules': ['proprietes', 'contrats', 'paiements', 'utilisateurs', 'notifications']
+            }
         },
         {
-            'nom': 'Bail meublé',
-            'description': 'Contrat de location avec meubles',
-            'duree_min_mois': 12,
-            'duree_max_mois': 36,
-            'caution_requise': True,
-            'charges_comprises': True,
+            'nom': 'CAISSE',
+            'description': 'Gestion des paiements et retraits',
+            'permissions': {
+                'modules': ['paiements', 'proprietes']
+            }
         },
         {
-            'nom': 'Location saisonnière',
-            'description': 'Location courte durée (vacances)',
-            'duree_min_mois': 1,
-            'duree_max_mois': 6,
-            'caution_requise': True,
-            'charges_comprises': True,
+            'nom': 'CONTROLES',
+            'description': 'Contrôles et vérifications',
+            'permissions': {
+                'modules': ['proprietes', 'contrats', 'paiements']
+            }
         },
         {
-            'nom': 'Bail commercial',
-            'description': 'Contrat de location pour activité commerciale',
-            'duree_min_mois': 24,
-            'duree_max_mois': 60,
-            'caution_requise': True,
-            'charges_comprises': False,
-        },
+            'nom': 'PRIVILEGE',
+            'description': 'Accès complet au système',
+            'permissions': {
+                'modules': ['proprietes', 'contrats', 'paiements', 'utilisateurs', 'notifications', 'admin']
+            }
+        }
     ]
     
-    for type_data in types:
-        TypeContrat.objects.get_or_create(
-            nom=type_data['nom'],
-            defaults=type_data
+    for group_data in groups_data:
+        group, created = GroupeTravail.objects.get_or_create(
+            nom=group_data['nom'],
+            defaults={
+                'description': group_data['description'],
+                'permissions': group_data['permissions'],
+                'actif': True
+            }
         )
-        print(f"Type de contrat créé : {type_data['nom']}")
+        if created:
+            print(f"✅ Groupe créé: {group.nom}")
+        else:
+            print(f"ℹ️  Groupe existant: {group.nom}")
 
-def init_types_paiements():
-    """Initialise les types de paiements de base"""
-    types = [
+def create_test_users():
+    """Créer des utilisateurs de test"""
+    print("\n👥 Création des utilisateurs de test...")
+    
+    # Récupérer les groupes
+    admin_group = GroupeTravail.objects.get(nom='ADMINISTRATION')
+    caisse_group = GroupeTravail.objects.get(nom='CAISSE')
+    controles_group = GroupeTravail.objects.get(nom='CONTROLES')
+    privilege_group = GroupeTravail.objects.get(nom='PRIVILEGE')
+    
+    users_data = [
         {
-            'nom': 'Loyer',
-            'description': 'Paiement du loyer mensuel',
-            'est_recurrent': True,
-            'est_remboursable': False,
-            'couleur': '#007bff',
+            'username': 'admin',
+            'email': 'admin@gestimmob.fr',
+            'first_name': 'Admin',
+            'last_name': 'Système',
+            'groupe_travail': admin_group,
+            'is_staff': True,
+            'is_superuser': True
         },
         {
-            'nom': 'Charges',
-            'description': 'Paiement des charges locatives',
-            'est_recurrent': True,
-            'est_remboursable': False,
-            'couleur': '#28a745',
+            'username': 'caisse',
+            'email': 'caisse@gestimmob.fr',
+            'first_name': 'Caissier',
+            'last_name': 'Principal',
+            'groupe_travail': caisse_group,
+            'is_staff': False,
+            'is_superuser': False
         },
         {
-            'nom': 'Caution',
-            'description': 'Dépôt de garantie',
-            'est_recurrent': False,
-            'est_remboursable': True,
-            'couleur': '#ffc107',
+            'username': 'controle',
+            'email': 'controle@gestimmob.fr',
+            'first_name': 'Contrôleur',
+            'last_name': 'Principal',
+            'groupe_travail': controles_group,
+            'is_staff': False,
+            'is_superuser': False
         },
         {
-            'nom': 'Frais d\'agence',
-            'description': 'Frais de gestion et d\'agence',
-            'est_recurrent': False,
-            'est_remboursable': False,
-            'couleur': '#dc3545',
-        },
-        {
-            'nom': 'Régularisation',
-            'description': 'Régularisation de charges',
-            'est_recurrent': False,
-            'est_remboursable': True,
-            'couleur': '#6c757d',
-        },
+            'username': 'privilege',
+            'email': 'privilege@gestimmob.fr',
+            'first_name': 'Privilégié',
+            'last_name': 'Principal',
+            'groupe_travail': privilege_group,
+            'is_staff': True,
+            'is_superuser': False
+        }
     ]
     
-    for type_data in types:
-        TypePaiement.objects.get_or_create(
-            nom=type_data['nom'],
-            defaults=type_data
+    for user_data in users_data:
+        user, created = User.objects.get_or_create(
+            username=user_data['username'],
+            defaults={
+                'email': user_data['email'],
+                'first_name': user_data['first_name'],
+                'last_name': user_data['last_name'],
+                'groupe_travail': user_data['groupe_travail'],
+                'is_staff': user_data['is_staff'],
+                'is_superuser': user_data['is_superuser'],
+                'actif': True
+            }
         )
-        print(f"Type de paiement créé : {type_data['nom']}")
+        
+        if created:
+            user.set_password('password123')  # Mot de passe par défaut
+            user.save()
+            print(f"✅ Utilisateur créé: {user.username} (mot de passe: password123)")
+        else:
+            print(f"ℹ️  Utilisateur existant: {user.username}")
+
+def create_company_config():
+    """Créer la configuration de l'entreprise"""
+    print("\n🏢 Création de la configuration entreprise...")
+    
+    config, created = ConfigurationEntreprise.objects.get_or_create(
+        nom_entreprise='GESTIMMOB',
+        defaults={
+            'slogan': 'Système de Gestion Immobilière',
+            'adresse': '123 Rue de la Paix',
+            'code_postal': '75001',
+            'ville': 'Paris',
+            'pays': 'France',
+            'telephone': '01 23 45 67 89',
+            'email': 'contact@gestimmob.fr',
+            'siret': '123 456 789 00012',
+            'numero_licence': '123456789',
+            'forme_juridique': 'SARL',
+            'actif': True
+        }
+    )
+    
+    if created:
+        print("✅ Configuration entreprise créée")
+    else:
+        print("ℹ️  Configuration entreprise existante")
+
+def create_currencies():
+    """Créer les devises"""
+    print("\n💰 Création des devises...")
+    
+    currencies_data = [
+        {
+            'code': 'F CFA',
+            'nom': 'Franc CFA',
+            'symbole': 'F CFA',
+            'taux_change': 1.0,
+            'par_defaut': True
+        },
+        {
+            'code': 'EUR',
+            'nom': 'Euro',
+            'symbole': '€',
+            'taux_change': 0.15,
+            'par_defaut': False
+        },
+        {
+            'code': 'USD',
+            'nom': 'Dollar US',
+            'symbole': '$',
+            'taux_change': 0.16,
+            'par_defaut': False
+        }
+    ]
+    
+    for currency_data in currencies_data:
+        currency, created = Devise.objects.get_or_create(
+            code=currency_data['code'],
+            defaults=currency_data
+        )
+        
+        if created:
+            print(f"✅ Devise créée: {currency.nom}")
+        else:
+            print(f"ℹ️  Devise existante: {currency.nom}")
+
+def main():
+    """Fonction principale"""
+    print("🚀 Initialisation des données de base pour GESTIMMOB...")
+    print("=" * 60)
+    
+    try:
+        create_work_groups()
+        create_test_users()
+        create_company_config()
+        create_currencies()
+        
+        print("\n" + "=" * 60)
+        print("✅ Initialisation terminée avec succès!")
+        print("\n📋 Informations de connexion:")
+        print("   - Admin: admin / password123")
+        print("   - Caisse: caisse / password123")
+        print("   - Contrôle: controle / password123")
+        print("   - Privilège: privilege / password123")
+        print("\n🌐 Accédez à l'application: http://127.0.0.1:8000")
+        
+    except Exception as e:
+        print(f"\n❌ Erreur lors de l'initialisation: {e}")
+        sys.exit(1)
 
 if __name__ == '__main__':
-    print("Initialisation des données de base...")
-    
-    print("\n1. Création des types de contrats...")
-    init_types_contrats()
-    
-    print("\n2. Création des types de paiements...")
-    init_types_paiements()
-    
-    print("\nInitialisation terminée avec succès !") 
+    main()

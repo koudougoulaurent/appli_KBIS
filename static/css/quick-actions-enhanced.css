@@ -1,0 +1,297 @@
+/**
+ * Enhanced Quick Actions - Styles améliorés pour les actions rapides
+ * Design moderne et responsive pour les boutons d'action rapide
+ */
+
+.quick-actions-container {
+    margin-bottom: 2rem;
+}
+
+.quick-actions-container .card {
+    border: none;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.quick-actions-container .card:hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+.quick-actions-container .card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    padding: 1rem 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.quick-actions-container .card-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+    pointer-events: none;
+}
+
+.quick-actions-container .card-header h6 {
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.quick-actions-container .card-header i {
+    font-size: 1.2rem;
+    margin-right: 0.5rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.quick-actions-container .card-body {
+    padding: 1.5rem;
+    background: #f8f9fa;
+}
+
+.quick-action-btn {
+    border-radius: 25px;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 140px;
+    margin: 0.25rem;
+}
+
+.quick-action-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.quick-action-btn:hover::before {
+    left: 100%;
+}
+
+.quick-action-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    text-decoration: none;
+}
+
+.quick-action-btn:active {
+    transform: translateY(-1px);
+}
+
+/* Styles spécifiques pour chaque type de bouton */
+.quick-action-btn.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #667eea;
+    color: white;
+}
+
+.quick-action-btn.btn-primary:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    border-color: #5a6fd8;
+    color: white;
+}
+
+.quick-action-btn.btn-success {
+    background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+    border-color: #56ab2f;
+    color: white;
+}
+
+.quick-action-btn.btn-success:hover {
+    background: linear-gradient(135deg, #4a9a1f 0%, #98d6bf 100%);
+    border-color: #4a9a1f;
+    color: white;
+}
+
+.quick-action-btn.btn-info {
+    background: linear-gradient(135deg, #3498db 0%, #85c1e9 100%);
+    border-color: #3498db;
+    color: white;
+}
+
+.quick-action-btn.btn-info:hover {
+    background: linear-gradient(135deg, #2980b9 0%, #75b1d9 100%);
+    border-color: #2980b9;
+    color: white;
+}
+
+.quick-action-btn.btn-outline-primary {
+    background: transparent;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.quick-action-btn.btn-outline-primary:hover {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #667eea;
+    color: white;
+}
+
+.quick-action-btn.btn-outline-success {
+    background: transparent;
+    border-color: #56ab2f;
+    color: #56ab2f;
+}
+
+.quick-action-btn.btn-outline-success:hover {
+    background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+    border-color: #56ab2f;
+    color: white;
+}
+
+.quick-action-btn.btn-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #adb5bd 100%);
+    border-color: #6c757d;
+    color: white;
+}
+
+.quick-action-btn.btn-secondary:hover {
+    background: linear-gradient(135deg, #5a6268 0%, #9da5ad 100%);
+    border-color: #5a6268;
+    color: white;
+}
+
+/* Animation de chargement */
+.quick-action-btn.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.quick-action-btn.loading i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .quick-actions-container .card-body {
+        padding: 1rem;
+    }
+    
+    .quick-action-btn {
+        min-width: 120px;
+        padding: 0.6rem 1.2rem;
+        font-size: 0.85rem;
+        margin: 0.2rem;
+    }
+    
+    .quick-actions-container .d-flex {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 576px) {
+    .quick-action-btn {
+        min-width: 100px;
+        padding: 0.5rem 1rem;
+        font-size: 0.8rem;
+        margin: 0.1rem;
+    }
+    
+    .quick-action-btn span {
+        display: none;
+    }
+    
+    .quick-action-btn i {
+        margin-right: 0;
+    }
+}
+
+/* Animation d'apparition */
+.quick-actions-container {
+    animation: slideInDown 0.6s ease-out;
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Effet de focus pour l'accessibilité */
+.quick-action-btn:focus {
+    outline: 3px solid rgba(102, 126, 234, 0.3);
+    outline-offset: 2px;
+}
+
+/* Indicateur de statut */
+.quick-action-btn.status-active {
+    position: relative;
+}
+
+.quick-action-btn.status-active::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 12px;
+    height: 12px;
+    background: #28a745;
+    border-radius: 50%;
+    border: 2px solid white;
+    animation: pulse 2s infinite;
+}
+
+/* Tooltip personnalisé */
+.quick-action-btn[data-bs-toggle="tooltip"] {
+    position: relative;
+}
+
+/* Animation de hover pour les icônes */
+.quick-action-btn i {
+    transition: transform 0.3s ease;
+}
+
+.quick-action-btn:hover i {
+    transform: scale(1.1);
+}
+
+/* Effet de vague sur le clic */
+.quick-action-btn:active {
+    animation: ripple 0.6s linear;
+}
+
+@keyframes ripple {
+    0% {
+        box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4);
+    }
+    100% {
+        box-shadow: 0 0 0 20px rgba(102, 126, 234, 0);
+    }
+}

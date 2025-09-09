@@ -10,6 +10,8 @@ from .models import Propriete, Bailleur, Locataire, TypeBien, ChargesBailleur
 from .forms import ProprieteForm, BailleurForm, LocataireForm, TypeBienForm, ChargesBailleurForm, ChargesBailleurDeductionForm
 from core.utils import convertir_montant
 from core.models import Devise
+from core.mixins import DetailViewQuickActionsMixin, ListViewQuickActionsMixin
+from core.quick_actions_generator import QuickActionsGenerator
 from contrats.models import Contrat
 from core.models import AuditLog
 from django.contrib.contenttypes.models import ContentType
@@ -534,27 +536,28 @@ def detail_bailleur(request, pk):
     
     bailleur = get_object_or_404(Bailleur, pk=pk)
     
-    # Récupérer les statistiques
+    # Récupérer les statistiques (optimisé)
     stats = bailleur.get_statistiques_paiements()
     
-    # Récupérer les propriétés
-    proprietes = bailleur.proprietes.all().order_by('-date_creation')
+    # Récupérer les propriétés (optimisé)
+    proprietes = bailleur.proprietes.select_related('type_bien').prefetch_related('contrats').order_by('-date_creation')[:10]
     
-    # Récupérer les derniers paiements
+    # Récupérer les derniers paiements (optimisé)
     from paiements.models import Paiement
     derniers_paiements = Paiement.objects.filter(
         contrat__propriete__bailleur=bailleur,
         statut='valide'
-    ).select_related('contrat__propriete', 'contrat__locataire').order_by('-date_paiement')[:10]
+    ).select_related('contrat__propriete', 'contrat__locataire').order_by('-date_paiement')[:5]
     
-    # Récupérer les contrats actifs
+    # Récupérer les contrats actifs (optimisé)
     from contrats.models import Contrat
     contrats_actifs = Contrat.objects.filter(
         propriete__bailleur=bailleur,
         est_actif=True,
         est_resilie=False
-    ).select_related('propriete', 'locataire')
+    ).select_related('propriete', 'locataire')[:5]
     
+    # Générer les actions rapides automatiquement
     context = {
         'bailleur': bailleur,
         'stats': stats,
@@ -565,13 +568,11 @@ def detail_bailleur(request, pk):
             {'url': 'core:dashboard', 'label': 'Tableau de bord'},
             {'url': 'proprietes:liste_bailleurs', 'label': 'Bailleurs'},
             {'label': bailleur.get_nom_complet()}
-        ],
-        'quick_actions': [
-            {'url': 'proprietes:modifier_bailleur', 'pk': bailleur.pk, 'label': 'Modifier', 'icon': 'bi-pencil'},
-            {'url': 'proprietes:ajouter_propriete', 'label': 'Ajouter Propriété', 'icon': 'bi-plus-circle'},
-            {'url': 'paiements:liste', 'label': 'Voir Paiements', 'icon': 'bi-cash-coin'},
         ]
     }
+    
+    # Ajouter les actions rapides automatiquement
+    context['quick_actions'] = QuickActionsGenerator.get_actions_for_bailleur(bailleur, request)
     
     return render(request, 'proprietes/detail_bailleur.html', context)
 
@@ -686,6 +687,61 @@ def modifier_bailleur(request, pk):
         'title': f'Modifier le bailleur "{bailleur.get_nom_complet()}"'
     }
     return render(request, 'proprietes/bailleurs/bailleur_form.html', context)
+
+
+@login_required
+def proprietes_bailleur(request, pk):
+    """Vue pour afficher les propriétés d'un bailleur spécifique."""
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('proprietes:liste_bailleurs')
+    
+    bailleur = get_object_or_404(Bailleur, pk=pk)
+    proprietes = bailleur.proprietes.select_related('type_bien', 'bailleur').prefetch_related('contrats').order_by('-date_creation')
+    
+    # Statistiques des propriétés (optimisées)
+    stats = {
+        'total': proprietes.count(),
+        'disponibles': proprietes.filter(disponible=True).count(),
+        'occupees': proprietes.filter(disponible=False).count(),
+        'avec_contrats': proprietes.filter(contrats__isnull=False).distinct().count(),
+    }
+    
+    context = {
+        'bailleur': bailleur,
+        'proprietes': proprietes,
+        'stats': stats,
+        'breadcrumbs': [
+            {'url': 'core:dashboard', 'label': 'Tableau de bord'},
+            {'url': 'proprietes:liste_bailleurs', 'label': 'Bailleurs'},
+            {'url': f'/proprietes/bailleurs/{bailleur.pk}/', 'label': bailleur.get_nom_complet()},
+            {'label': 'Ses Propriétés'}
+        ],
+        'quick_actions': [
+            {'url': f'/proprietes/bailleurs/{bailleur.pk}/', 'label': 'Retour au Bailleur', 'icon': 'arrow-left', 'style': 'btn-secondary'},
+            {'url': '/proprietes/ajouter/', 'label': 'Ajouter Propriété', 'icon': 'plus-circle', 'style': 'btn-success'},
+            {'url': f'/proprietes/bailleurs/{bailleur.pk}/modifier/', 'label': 'Modifier Bailleur', 'icon': 'pencil', 'style': 'btn-primary'},
+        ]
+    }
+    
+    return render(request, 'proprietes/proprietes_bailleur.html', context)
+
+
+@login_required
+def test_quick_actions(request):
+    """Vue de test pour les actions rapides."""
+    context = {
+        'quick_actions': [
+            {'url': '/proprietes/bailleurs/1/modifier/', 'label': 'Modifier', 'icon': 'pencil', 'style': 'btn-primary'},
+            {'url': '/proprietes/ajouter/', 'label': 'Ajouter Propriété', 'icon': 'plus-circle', 'style': 'btn-success'},
+            {'url': '/paiements/liste/', 'label': 'Voir Paiements', 'icon': 'cash-coin', 'style': 'btn-info'},
+            {'url': '/proprietes/bailleurs/1/proprietes/', 'label': 'Ses Propriétés', 'icon': 'house', 'style': 'btn-outline-primary'},
+            {'url': '/contrats/ajouter/?bailleur=1', 'label': 'Nouveau Contrat', 'icon': 'file-contract', 'style': 'btn-outline-success'},
+        ]
+    }
+    return render(request, 'test_quick_actions.html', context)
 
 
 @login_required
@@ -930,11 +986,7 @@ def detail_locataire(request, pk):
             {'url': 'proprietes:liste_locataires', 'label': 'Locataires'},
             {'label': locataire.get_nom_complet()}
         ],
-        'quick_actions': [
-            {'url': f'/proprietes/locataires/{locataire.pk}/modifier/', 'label': 'Modifier', 'icon': 'pencil', 'style': 'btn-outline-primary'},
-            {'url': '/contrats/ajouter/', 'label': 'Nouveau Contrat', 'icon': 'plus-circle', 'style': 'btn-outline-success'},
-            {'url': '/paiements/', 'label': 'Voir Paiements', 'icon': 'cash-coin', 'style': 'btn-outline-info'},
-        ]
+        'quick_actions': QuickActionsGenerator.get_actions_for_locataire(locataire, request)
     }
     
     return render(request, 'proprietes/detail_locataire.html', context)

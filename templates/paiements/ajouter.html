@@ -465,7 +465,7 @@ function afficherResultatsRecherche(resultats, query) {
                     <div class="resultat-details">
                         <strong>Contrat:</strong> ${resultat.numero_contrat} | 
                         <strong>Propriété:</strong> ${resultat.propriete.adresse} | 
-                        <strong>Loyer:</strong> ${resultat.loyer.toLocaleString()} F CFA
+                        <strong>Loyer:</strong> ${Math.round(resultat.loyer).toLocaleString('fr-FR', {maximumFractionDigits: 0})} F CFA
                     </div>
                 </div>
             `;
@@ -559,8 +559,8 @@ function afficherContexteComplet(data) {
         <p><strong>Numéro:</strong> ${data.contrat.numero}</p>
         <p><strong>Date début:</strong> ${data.contrat.date_debut || 'Non renseigné'}</p>
         <p><strong>Date fin:</strong> ${data.contrat.date_fin || 'Non renseigné'}</p>
-        <p><strong>Loyer mensuel:</strong> ${data.contrat.montant_loyer.toLocaleString()} F CFA</p>
-        <p><strong>Charges mensuelles:</strong> ${data.contrat.charges.toLocaleString()} F CFA</p>
+        <p><strong>Loyer mensuel:</strong> ${Math.round(data.contrat.montant_loyer).toLocaleString('fr-FR', {maximumFractionDigits: 0})} F CFA</p>
+        <p><strong>Charges mensuelles:</strong> ${Math.round(data.contrat.charges).toLocaleString('fr-FR', {maximumFractionDigits: 0})} F CFA</p>
     `);
     
     // Informations du locataire
@@ -580,8 +580,8 @@ function afficherContexteComplet(data) {
     
     // Calculs automatiques
     let calculsHtml = `
-        <p><strong>Loyer net:</strong> ${data.net_a_payer.toLocaleString()} F CFA</p>
-        <p><strong>Charges déductibles:</strong> ${data.total_charges.toLocaleString()} F CFA</p>
+        <p><strong>Loyer net:</strong> ${Math.round(data.net_a_payer).toLocaleString('fr-FR', {maximumFractionDigits: 0})} F CFA</p>
+        <p><strong>Charges déductibles:</strong> ${Math.round(data.total_charges).toLocaleString('fr-FR', {maximumFractionDigits: 0})} F CFA</p>
         <p><strong>Prochain mois:</strong> ${data.prochain_mois_paiement || 'Non déterminé'}</p>
     `;
     
@@ -617,7 +617,7 @@ function afficherContexteComplet(data) {
                         <span><strong>${paiement.date}</strong></span>
                         <span class="badge bg-${statutClass}">${paiement.statut}</span>
                     </div>
-                    <div>${paiement.montant.toLocaleString()} F CFA - ${paiement.type}</div>
+                    <div>${Math.round(paiement.montant).toLocaleString('fr-FR', {maximumFractionDigits: 0})} F CFA - ${paiement.type}</div>
                 </div>
             `;
         });

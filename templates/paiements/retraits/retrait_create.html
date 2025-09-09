@@ -239,9 +239,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const charges = parseFloat(chargesInput.value) || 0;
         const net = loyers - charges;
         
-        document.getElementById('loyers_bruts_display').textContent = loyers.toLocaleString() + ' F CFA';
-        document.getElementById('charges_deductibles_display').textContent = charges.toLocaleString() + ' F CFA';
-        document.getElementById('net_a_payer_display').textContent = net.toLocaleString() + ' F CFA';
+        // Fonction utilitaire pour formater les montants sans décimales
+        function formatMontant(montant) {
+            return Math.round(montant).toLocaleString('fr-FR', {maximumFractionDigits: 0}) + ' F CFA';
+        }
+        
+        document.getElementById('loyers_bruts_display').textContent = formatMontant(loyers);
+        document.getElementById('charges_deductibles_display').textContent = formatMontant(charges);
+        document.getElementById('net_a_payer_display').textContent = formatMontant(net);
     }
     
     loyersInput.addEventListener('input', updateCalcul);

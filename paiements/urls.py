@@ -1,6 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives
+from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_retraits_bailleur, views_quick_actions
+# from . import views_locataire_paiements
 
 app_name = 'paiements'
 
@@ -18,6 +19,10 @@ urlpatterns = [
     path('liste/', views.paiement_list, name='liste'),  # Alias principal pour compatibilité
     path('detail/<int:pk>/', views.paiement_detail, name='detail'),  # Alias principal pour compatibilité
     path('ajouter/', views.ajouter_paiement, name='ajouter'),  # Alias principal pour compatibilité
+    
+    # URLs pour les paiements des locataires
+    path('locataire/<int:locataire_id>/', views_quick_actions.liste_paiements, name='paiements_locataire'),
+    # path('locataire/<int:locataire_id>/api/', views_locataire_paiements.paiements_locataire_json, name='paiements_locataire_json'),
     
     # Aliases pour compatibilité avec les templates existants
     path('paiement_list/', views.paiement_list, name='paiement_list'),
@@ -133,6 +138,17 @@ urlpatterns = [
     
     # URLs pour les retraits aux bailleurs (nouveau système)
     path('retraits-bailleurs/', include('paiements.urls_retraits')),
+    
+    # URLs spécifiques pour les retraits des bailleurs
+    path('retraits-bailleur/<int:pk>/', views_retraits_bailleur.retraits_bailleur, name='retraits_bailleur'),
+    path('retrait-bailleur/<int:pk>/', views_retraits_bailleur.detail_retrait_bailleur, name='detail_retrait_bailleur'),
+    path('retrait-bailleur/ajouter/<int:bailleur_id>/', views_retraits_bailleur.ajouter_retrait_bailleur, name='ajouter_retrait_bailleur'),
+    path('retrait-bailleur/modifier/<int:pk>/', views_retraits_bailleur.modifier_retrait_bailleur, name='modifier_retrait_bailleur'),
+    path('retrait-bailleur/valider/<int:pk>/', views_retraits_bailleur.valider_retrait, name='valider_retrait'),
+    path('retrait-bailleur/marquer-paye/<int:pk>/', views_retraits_bailleur.marquer_paye_retrait, name='marquer_paye_retrait'),
+    path('retrait-bailleur/generer-recu/<int:pk>/', views_retraits_bailleur.generer_recu_retrait, name='generer_recu_retrait'),
+    path('retrait-bailleur/export/<int:bailleur_id>/', views_retraits_bailleur.export_retraits_bailleur, name='export_retraits_bailleur'),
+    path('retrait-bailleur/rapport/<int:bailleur_id>/', views_retraits_bailleur.generer_rapport_retraits, name='generer_rapport_retraits'),
 
     # URLs pour les récapitulatifs mensuels
     path('recapitulatifs/', views_recapitulatifs.liste_recapitulatifs, name='liste_recapitulatifs'),

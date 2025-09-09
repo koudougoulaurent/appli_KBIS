@@ -260,32 +260,37 @@ class Utilisateur(AbstractUser):
         """
         Retourne la liste des relations à vérifier selon le type de modèle.
         """
-        from proprietes.models import Bailleur, Locataire, Propriete, TypeBien, ChargesBailleur
-        from core.models import TemplateRecu, Devise
-        
-        relations_map = {
-            'Bailleur': [
-                {'model': Propriete, 'field': 'bailleur'},
-            ],
-            'Locataire': [
-                # Ajouter les relations quand les modèles de contrats seront créés
-            ],
-            'Propriete': [
-                # Ajouter les relations quand les modèles de contrats seront créés
-                {'model': ChargesBailleur, 'field': 'propriete'},
-            ],
-            'TypeBien': [
-                {'model': Propriete, 'field': 'type_bien'},
-            ],
-            'TemplateRecu': [
-                # Ajouter les relations si nécessaire
-            ],
-            'Devise': [
-                # Ajouter les relations si nécessaire
-            ],
-        }
-        
-        return relations_map.get(model_name, [])
+        # Utiliser des imports dynamiques pour éviter les imports circulaires
+        try:
+            from proprietes.models import Bailleur, Locataire, Propriete, TypeBien, ChargesBailleur
+            from core.models import TemplateRecu, Devise
+            
+            relations_map = {
+                'Bailleur': [
+                    {'model': Propriete, 'field': 'bailleur'},
+                ],
+                'Locataire': [
+                    # Ajouter les relations quand les modèles de contrats seront créés
+                ],
+                'Propriete': [
+                    # Ajouter les relations quand les modèles de contrats seront créés
+                    {'model': ChargesBailleur, 'field': 'propriete'},
+                ],
+                'TypeBien': [
+                    {'model': Propriete, 'field': 'type_bien'},
+                ],
+                'TemplateRecu': [
+                    # Ajouter les relations si nécessaire
+                ],
+                'Devise': [
+                    # Ajouter les relations si nécessaire
+                ],
+            }
+            
+            return relations_map.get(model_name, [])
+        except ImportError:
+            # Si les modèles ne sont pas encore disponibles, retourner une liste vide
+            return []
     
     def safe_delete_element(self, model_instance, request=None):
         """

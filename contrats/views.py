@@ -141,9 +141,7 @@ def ajouter_contrat(request):
         return redirect('contrats:liste')
     
     if request.method == 'POST':
-        # Récupérer l'ID de la propriété sélectionnée
-        propriete_id = request.POST.get('propriete')
-        form = ContratForm(request.POST, request.FILES, propriete_id=propriete_id)
+        form = ContratForm(request.POST, request.FILES)
         if form.is_valid():
             contrat = form.save(commit=False)
             contrat.cree_par = request.user
@@ -305,9 +303,7 @@ def modifier_contrat(request, pk):
     contrat = get_object_or_404(Contrat, pk=pk)
     
     if request.method == 'POST':
-        # Récupérer l'ID de la propriété sélectionnée
-        propriete_id = request.POST.get('propriete')
-        form = ContratForm(request.POST, request.FILES, instance=contrat, propriete_id=propriete_id)
+        form = ContratForm(request.POST, request.FILES, instance=contrat)
         if form.is_valid():
             contrat = form.save(commit=False)
             contrat.save()

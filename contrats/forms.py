@@ -245,17 +245,23 @@ class ContratForm(forms.ModelForm):
         
         # Ajouter des classes CSS pour le style
         self.fields['loyer_mensuel'].widget.attrs.update({
-            'readonly': 'readonly',
             'class': 'form-control bg-light',
-            'title': 'Ce champ sera automatiquement rempli à partir de la propriété sélectionnée'
+            'title': 'Ce champ sera automatiquement rempli à partir de la propriété sélectionnée',
+            'placeholder': 'Sélectionnez une propriété pour remplir automatiquement'
         })
         
         # Ajouter les données des propriétés pour le JavaScript
         self.proprietes_data = {}
-        for propriete in Propriete.objects.filter(
+        proprietes_queryset = Propriete.objects.filter(
             models.Q(disponible=True) |
             models.Q(unites_locatives__statut='disponible', unites_locatives__is_deleted=False)
-        ).distinct():
+        ).distinct()
+        
+        print(f"DEBUG: {proprietes_queryset.count()} propriétés trouvées pour le formulaire")
+        
+        for propriete in proprietes_queryset:
+            print(f"DEBUG: Traitement de la propriété {propriete.id} - {propriete.titre} (loyer: {propriete.loyer_actuel})")
+            
             # Récupérer toutes les unités locatives pour cette propriété
             unites = UniteLocative.objects.filter(
                 propriete=propriete
@@ -290,6 +296,10 @@ class ContratForm(forms.ModelForm):
                 'unites': unites_data,
                 'pieces': pieces_data
             }
+            
+            print(f"DEBUG: Données ajoutées pour propriété {propriete.id}: loyer={self.proprietes_data[propriete.id]['loyer']}, unites={len(unites_data)}")
+        
+        print(f"DEBUG: Données finales des propriétés: {self.proprietes_data}")
         
         # Suppression de la personnalisation des anciens champs de caution/avance
     

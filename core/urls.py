@@ -24,6 +24,12 @@ from .views.tableaux_bord_securises import (
     export_donnees_securise,
     intelligent_search
 )
+from .api_views import (
+    quick_actions_api,
+    performance_stats,
+    clear_cache,
+    health_check
+)
 
 app_name = 'core'
 
@@ -66,4 +72,10 @@ urlpatterns = [
     path('detection-anomalies/', detection_anomalies, name='detection_anomalies'),
     path('audit/log/<int:log_id>/', detail_audit_log, name='detail_audit_log'),
     path('audit/statistiques/', audit_statistiques, name='audit_statistiques'),
+    
+    # API pour les actions rapides et performance
+    path('api/quick-actions/', quick_actions_api, name='quick_actions_api'),
+    path('api/performance-stats/', performance_stats, name='performance_stats'),
+    path('api/clear-cache/', clear_cache, name='clear_cache'),
+    path('api/health-check/', health_check, name='health_check'),
 ]
