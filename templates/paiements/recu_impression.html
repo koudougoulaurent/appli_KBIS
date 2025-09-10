@@ -7,89 +7,89 @@
     <title>Reçu {{ recu.numero_recu }} - GESTIMMOB</title>
     <style>
         @page {
-            size: A4;
-            margin: 1cm;
+            size: A5;
+            margin: 8mm;
         }
         
         body {
             font-family: 'Arial', sans-serif;
-            font-size: 12px;
-            line-height: 1.4;
+            font-size: 9px;
+            line-height: 1.2;
             color: #333;
             margin: 0;
-            padding: 20px;
+            padding: 8mm;
         }
         
         .receipt-container {
-            max-width: 800px;
+            max-width: 100%;
             margin: 0 auto;
-            border: 2px solid #333;
-            padding: 30px;
+            border: 1px solid #333;
+            padding: 6mm;
             position: relative;
         }
         
         .header {
             text-align: center;
-            border-bottom: 2px solid #333;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 4mm;
+            margin-bottom: 6mm;
         }
         
         .company-name {
-            font-size: 24px;
+            font-size: 14px;
             font-weight: bold;
             color: #2c3e50;
-            margin-bottom: 5px;
+            margin-bottom: 2mm;
         }
         
         .company-slogan {
-            font-size: 16px;
+            font-size: 9px;
             color: #666;
-            margin-bottom: 10px;
+            margin-bottom: 2mm;
         }
         
         .company-info {
-            font-size: 14px;
+            font-size: 7px;
             color: #666;
-            margin-bottom: 10px;
+            margin-bottom: 2mm;
         }
         
         .receipt-title {
-            font-size: 20px;
+            font-size: 12px;
             font-weight: bold;
             text-transform: uppercase;
-            margin: 20px 0;
+            margin: 4mm 0;
             text-align: center;
-            border: 2px solid #333;
-            padding: 10px;
+            border: 1px solid #333;
+            padding: 3mm;
             background-color: #f8f9fa;
         }
         
         .receipt-number {
             font-family: 'Courier New', monospace;
-            font-size: 16px;
+            font-size: 10px;
             font-weight: bold;
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 6mm;
         }
         
         .amount-section {
             text-align: center;
-            margin: 30px 0;
-            padding: 20px;
-            border: 3px solid #28a745;
+            margin: 6mm 0;
+            padding: 4mm;
+            border: 2px solid #28a745;
             background-color: #f8fff9;
         }
         
         .amount {
-            font-size: 32px;
+            font-size: 18px;
             font-weight: bold;
             color: #28a745;
-            margin-bottom: 10px;
+            margin-bottom: 2mm;
         }
         
         .amount-words {
-            font-size: 14px;
+            font-size: 8px;
             color: #666;
             font-style: italic;
         }
@@ -97,21 +97,21 @@
         .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin: 30px 0;
+            gap: 4mm;
+            margin: 6mm 0;
         }
         
         .info-section {
             border: 1px solid #ddd;
-            padding: 15px;
-            border-radius: 5px;
+            padding: 3mm;
+            border-radius: 3px;
         }
         
         .info-section h3 {
-            font-size: 14px;
+            font-size: 8px;
             font-weight: bold;
-            margin: 0 0 15px 0;
-            padding-bottom: 5px;
+            margin: 0 0 3mm 0;
+            padding-bottom: 1mm;
             border-bottom: 1px solid #ddd;
             color: #2c3e50;
         }
@@ -119,16 +119,18 @@
         .info-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
+            margin-bottom: 2mm;
         }
         
         .info-label {
             font-weight: bold;
             color: #555;
+            font-size: 7px;
         }
         
         .info-value {
             text-align: right;
+            font-size: 7px;
         }
         
         .payment-details {
@@ -138,32 +140,32 @@
         }
         
         .signature-section {
-            margin-top: 50px;
+            margin-top: 6mm;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 50px;
+            gap: 8mm;
         }
         
         .signature-box {
             border-top: 1px solid #333;
-            padding-top: 10px;
+            padding-top: 2mm;
             text-align: center;
         }
         
         .signature-line {
             border-top: 1px solid #333;
-            margin-top: 40px;
-            width: 200px;
+            margin-top: 8mm;
+            width: 3cm;
             display: inline-block;
         }
         
         .footer {
-            margin-top: 40px;
+            margin-top: 6mm;
             text-align: center;
-            font-size: 10px;
+            font-size: 6px;
             color: #666;
             border-top: 1px solid #ddd;
-            padding-top: 20px;
+            padding-top: 3mm;
         }
         
         .watermark {
@@ -171,7 +173,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 60px;
+            font-size: 30px;
             color: rgba(0,0,0,0.1);
             z-index: -1;
             pointer-events: none;
@@ -179,9 +181,9 @@
         
         .print-info {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 10px;
+            top: 2mm;
+            right: 2mm;
+            font-size: 6px;
             color: #999;
         }
         

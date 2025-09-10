@@ -91,10 +91,12 @@ class ProprieteListView(PrivilegeButtonsMixin, IntelligentListView):
         # Statistiques
         context['total_proprietes'] = Propriete.objects.count()
         context['proprietes_louees'] = Propriete.objects.filter(disponible=False).count()
-        context['proprietes_disponibles'] = Propriete.objects.filter(
-            models.Q(disponible=True) |
-            models.Q(unites_locatives__statut='disponible', unites_locatives__is_deleted=False)
-        ).distinct().count()
+        
+        # Utiliser la nouvelle logique de disponibilité
+        from core.property_utils import get_proprietes_disponibles_global
+        proprietes_disponibles_pour_location = get_proprietes_disponibles_global()
+        context['proprietes_disponibles'] = proprietes_disponibles_pour_location.count()
+        
         context['proprietes_en_travaux'] = Propriete.objects.filter(etat='mauvais').count()
         
         # SUPPRIMER: Calculs financiers pour la confidentialité

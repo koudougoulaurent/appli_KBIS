@@ -6,132 +6,279 @@
 
 {% block extra_css %}
 <style>
-    /* Styles pour l'impression A5 */
+    /* Styles pour l'impression A4 - Format optimisé */
     @media print {
+        @page {
+            size: A4;
+            margin: 15mm;
+        }
+        
         .no-print {
             display: none !important;
         }
-        .quittance-page {
-            page-break-after: always;
-            margin: 0;
-            padding: 10px;
-            width: 148mm;
-            height: 210mm;
+        
+        /* Supprimer l'URL et les éléments de navigation du navigateur */
+        @page {
+            @bottom-right {
+                content: none;
+            }
         }
+        
         body {
-            font-size: 8px;
+            font-size: 12px;
+            line-height: 1.4;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .quittance-page {
+            width: 100%;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .quittance-container {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            box-shadow: none;
+            border: none;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* En-tête entreprise - optimisé A4 */
+        .entreprise-header {
+            padding: 8mm;
+            margin-bottom: 4mm;
+        }
+        
+        .entreprise-nom {
+            font-size: 18px;
+            margin-bottom: 2mm;
+        }
+        
+        .entreprise-details {
+            font-size: 11px;
             line-height: 1.2;
         }
-        .quittance-container {
-            box-shadow: none;
-            border: 1px solid #ddd;
-            max-width: none;
-            margin: 0;
-        }
+        
+        /* En-tête quittance - optimisé A4 */
         .quittance-header {
-            padding: 0.5rem;
+            padding: 6mm;
+            margin-bottom: 4mm;
         }
+        
         .quittance-title {
-            font-size: 1.4rem;
+            font-size: 20px;
+            margin-bottom: 2mm;
         }
+        
+        .quittance-number {
+            font-size: 14px;
+        }
+        
+        .quittance-date {
+            font-size: 11px;
+        }
+        
+        /* Sections - optimisées A4 */
         .quittance-section {
-            padding: 0.4rem 0.5rem;
+            padding: 4mm 6mm;
+            margin-bottom: 3mm;
         }
-        .amount-section {
-            margin: 0.3rem 0.5rem;
-            padding: 0.5rem;
+        
+        .section-header h5 {
+            font-size: 12px;
+            margin-bottom: 2mm;
         }
-        .amount-value {
-            font-size: 1.4rem;
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3mm;
         }
-        .quittance-footer {
-            padding: 0.5rem;
+        
+        .info-label {
+            font-size: 9px;
         }
+        
+        .info-value {
+            font-size: 11px;
+            padding: 2mm;
+        }
+        
+        /* Détails paiement - optimisés A4 */
         .payment-details {
-            padding: 0.3rem 0.5rem;
+            padding: 4mm 6mm;
+            margin-bottom: 3mm;
+        }
+        
+        .payment-details h5 {
+            font-size: 12px;
+            margin-bottom: 2mm;
+        }
+        
+        .payment-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 3mm;
+        }
+        
+        .payment-info-item {
+            font-size: 10px;
+            padding: 1mm 0;
+        }
+        
+        /* Montant - mis en évidence */
+        .amount-section {
+            margin: 4mm 6mm;
+            padding: 6mm;
+        }
+        
+        .amount-value {
+            font-size: 24px;
+        }
+        
+        .amount-label {
+            font-size: 12px;
+        }
+        
+        /* Pied de page - compact */
+        .quittance-footer {
+            padding: 2mm 3mm;
+            margin-top: auto;
+        }
+        
+        .signature-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3mm;
+            margin-bottom: 2mm;
+        }
+        
+        .signature-box {
+            padding: 2mm;
+        }
+        
+        .signature-line {
+            height: 15px;
+            margin: 2mm 0;
+        }
+        
+        .signature-label {
+            font-size: 6px;
+        }
+        
+        .entreprise-footer {
+            padding: 2mm;
+        }
+        
+        .entreprise-footer-info {
+            font-size: 6px;
+            line-height: 1.0;
         }
     }
 
-    /* Styles pour l'écran */
+    /* Styles pour l'écran - Format A4 optimisé */
     .quittance-page {
         background: #f8f9fa;
         min-height: 100vh;
-        padding: 1rem 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
 
     .quittance-container {
-        max-width: 148mm;
-        margin: 0 auto;
+        width: 210mm;
+        height: 297mm;
+        margin: 0;
         background: white;
         border: 1px solid #ddd;
         overflow: hidden;
-        min-height: 210mm;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
     }
 
-    /* En-tête de l'entreprise */
+    /* En-tête de l'entreprise - Style humain */
     .entreprise-header {
-        background: #2c3e50;
-        color: white;
-        padding: 0.8rem;
-        text-align: center;
-        border-bottom: 2px solid #3498db;
+        background: white;
+        color: #2c3e50;
+        padding: 15mm 20mm 10mm 20mm;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+        flex-shrink: 0;
     }
 
     .entreprise-logo {
-        margin-bottom: 0.4rem;
+        margin-bottom: 8mm;
+        text-align: left;
     }
 
     .entreprise-logo img {
-        max-height: 35px;
-        max-width: 100px;
+        max-height: 50px;
+        max-width: 150px;
         object-fit: contain;
     }
 
     .entreprise-nom {
-        font-size: 1rem;
-        font-weight: 700;
-        margin-bottom: 0.2rem;
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 4mm;
+        color: #2c3e50;
+        font-family: 'Times New Roman', serif;
     }
 
     .entreprise-details {
-        font-size: 0.7rem;
-        opacity: 0.9;
-        line-height: 1.2;
+        font-size: 11px;
+        color: #666;
+        line-height: 1.4;
+        font-family: Arial, sans-serif;
     }
 
-    /* En-tête de la quittance */
+    /* En-tête de la quittance - Style humain */
     .quittance-header {
         background: white;
-        padding: 0.8rem;
+        padding: 15mm 20mm 10mm 20mm;
         text-align: center;
-        border-bottom: 1px solid #ecf0f1;
+        border-bottom: 1px solid #ddd;
+        flex-shrink: 0;
     }
 
     .quittance-title {
-        font-size: 1.3rem;
-        font-weight: 700;
-        margin: 0 0 0.4rem 0;
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0 0 8mm 0;
         color: #2c3e50;
         text-transform: uppercase;
+        letter-spacing: 1px;
+        font-family: 'Times New Roman', serif;
     }
 
     .quittance-number {
-        font-size: 0.9rem;
-        font-weight: 600;
-        margin-bottom: 0.2rem;
-        color: #3498db;
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 4mm;
+        color: #333;
+        font-family: Arial, sans-serif;
     }
 
     .quittance-date {
-        color: #7f8c8d;
-        font-size: 0.8rem;
+        color: #666;
+        font-size: 11px;
         margin: 0;
+        font-family: Arial, sans-serif;
     }
 
-    /* Sections de la quittance */
+    /* Sections de la quittance - Style humain */
     .quittance-section {
-        padding: 0.5rem 0.8rem;
-        border-bottom: 1px solid #ecf0f1;
+        padding: 10mm 20mm;
+        border-bottom: 1px solid #ddd;
+        flex-shrink: 0;
     }
 
     .quittance-section:last-child {
@@ -139,29 +286,30 @@
     }
 
     .section-header {
-        display: flex;
-        align-items: center;
-        margin-bottom: 0.4rem;
+        margin-bottom: 6mm;
         color: #2c3e50;
     }
 
     .section-header i {
-        font-size: 0.9rem;
-        margin-right: 0.4rem;
-        color: #3498db;
+        display: none;
     }
 
     .section-header h5 {
         margin: 0;
         font-weight: 600;
-        font-size: 0.8rem;
+        font-size: 12px;
         text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #333;
+        font-family: Arial, sans-serif;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 2mm;
     }
 
     .info-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-        gap: 0.4rem;
+        grid-template-columns: 1fr 1fr;
+        gap: 8mm;
     }
 
     .info-item {
@@ -170,179 +318,162 @@
     }
 
     .info-label {
-        font-size: 0.6rem;
-        color: #7f8c8d;
+        font-size: 10px;
+        color: #666;
         font-weight: 500;
-        margin-bottom: 0.1rem;
+        margin-bottom: 3mm;
         text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-family: Arial, sans-serif;
     }
 
     .info-value {
-        font-size: 0.7rem;
-        color: #2c3e50;
-        font-weight: 600;
-        padding: 0.2rem;
-        background: #f8f9fa;
-        border-radius: 2px;
-        border-left: 2px solid #3498db;
+        font-size: 12px;
+        color: #333;
+        font-weight: 500;
+        padding: 0;
+        background: none;
+        border: none;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 2mm;
+        font-family: Arial, sans-serif;
     }
 
-    /* Section des montants */
+    /* Section des montants - Style humain */
     .amount-section {
-        background: #27ae60;
-        color: white;
-        padding: 0.8rem;
+        background: white;
+        color: #333;
+        padding: 15mm 20mm;
         text-align: center;
-        margin: 0.4rem 0.8rem;
-        border-radius: 4px;
+        margin: 0;
+        border: 2px solid #333;
+        flex-shrink: 0;
     }
 
     .amount-value {
-        font-size: 1.4rem;
+        font-size: 28px;
         font-weight: 700;
-        margin-bottom: 0.2rem;
+        margin-bottom: 4mm;
+        font-family: 'Times New Roman', serif;
     }
 
     .amount-label {
-        font-size: 0.7rem;
-        opacity: 0.9;
+        font-size: 12px;
+        color: #666;
         text-transform: uppercase;
+        letter-spacing: 1px;
+        font-family: Arial, sans-serif;
     }
 
-    /* Détails du paiement */
+    /* Détails du paiement - Style humain */
     .payment-details {
-        background: #f8f9fa;
-        padding: 0.5rem 0.8rem;
-        border-bottom: 1px solid #ecf0f1;
+        background: white;
+        padding: 10mm 20mm;
+        border-bottom: 1px solid #ddd;
+        flex-shrink: 0;
     }
 
     .payment-details h5 {
-        font-size: 0.8rem;
-        margin: 0 0 0.3rem 0;
-        color: #2c3e50;
+        font-size: 12px;
+        margin: 0 0 6mm 0;
+        color: #333;
         text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-family: Arial, sans-serif;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 2mm;
     }
 
     .payment-info {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 0.3rem;
-        font-size: 0.7rem;
+        gap: 8mm;
+        font-size: 11px;
     }
 
     .payment-info-item {
         display: flex;
         justify-content: space-between;
-        padding: 0.2rem 0;
+        padding: 3mm 0;
+        border-bottom: 1px solid #eee;
     }
 
     .payment-info-label {
-        color: #7f8c8d;
+        color: #666;
         font-weight: 500;
+        font-family: Arial, sans-serif;
     }
 
     .payment-info-value {
-        color: #2c3e50;
-        font-weight: 600;
+        color: #333;
+        font-weight: 500;
+        font-family: Arial, sans-serif;
     }
 
-    /* Pied de page avec signatures et entreprise */
+    /* Pied de page avec signatures et entreprise - Style humain */
     .quittance-footer {
-        background: #f8f9fa;
-        padding: 0.8rem;
-        border-top: 1px solid #ecf0f1;
+        background: white;
+        padding: 15mm 20mm;
+        border-top: 1px solid #ddd;
         margin-top: auto;
+        flex-shrink: 0;
     }
 
     .signature-section {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 0.8rem;
-        margin-bottom: 0.8rem;
+        gap: 20mm;
+        margin-bottom: 15mm;
     }
 
     .signature-box {
         text-align: center;
-        padding: 0.4rem;
-        background: white;
-        border-radius: 4px;
-        border: 1px solid #e9ecef;
+        padding: 0;
+        background: none;
+        border: none;
     }
 
     .signature-line {
         width: 100%;
         height: 1px;
-        background: #bdc3c7;
-        margin: 0.4rem 0;
-        border-radius: 1px;
+        background: #333;
+        margin: 8mm 0 4mm 0;
     }
 
     .signature-label {
         margin: 0;
-        color: #7f8c8d;
-        font-size: 0.6rem;
+        color: #666;
+        font-size: 10px;
         font-weight: 500;
+        font-family: Arial, sans-serif;
     }
 
     .entreprise-footer {
-        background: #2c3e50;
-        color: white;
-        padding: 0.6rem;
+        background: white;
+        color: #666;
+        padding: 0;
         text-align: center;
-        border-radius: 4px;
+        border-top: 1px solid #ddd;
+        padding-top: 8mm;
     }
 
     .entreprise-footer-info {
-        font-size: 0.6rem;
-        line-height: 1.2;
+        font-size: 10px;
+        line-height: 1.4;
+        font-family: Arial, sans-serif;
     }
 
-    /* Boutons d'action */
-    .action-buttons {
-        display: flex;
-        gap: 0.8rem;
-        justify-content: center;
-        padding: 0.8rem;
-        background: #f8f9fa;
-        border-top: 1px solid #ecf0f1;
-    }
 
-    .btn-action {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        padding: 0.4rem 0.8rem;
-        border: none;
-        border-radius: 4px;
-        font-weight: 600;
-        text-decoration: none;
-        transition: all 0.3s ease;
-        cursor: pointer;
-        font-size: 0.8rem;
-    }
-
-    .btn-print {
-        background: #3498db;
-        color: white;
-    }
-
-    .btn-print:hover {
-        background: #2980b9;
-    }
-
-    .btn-download {
-        background: #27ae60;
-        color: white;
-    }
-
-    .btn-download:hover {
-        background: #229954;
-    }
-
-    /* Responsive */
+    /* Responsive pour format A4 */
     @media (max-width: 768px) {
+        .quittance-page {
+            padding: 0.5rem 0;
+        }
+        
         .quittance-container {
-            margin: 1rem;
+            width: 100%;
+            height: auto;
+            margin: 0.5rem;
             border-radius: 0;
         }
         
@@ -350,14 +481,40 @@
             grid-template-columns: 1fr;
         }
         
-        .signature-section {
-            grid-template-columns: 1fr;
-            gap: 0.4rem;
+        .payment-info {
+            grid-template-columns: 1fr 1fr;
         }
         
-        .action-buttons {
-            flex-direction: column;
-            align-items: center;
+        .signature-section {
+            grid-template-columns: 1fr;
+            gap: 4mm;
+        }
+    }
+    
+    /* Ajustements pour très petits écrans */
+    @media (max-width: 480px) {
+        .quittance-container {
+            margin: 0.25rem;
+        }
+        
+        .entreprise-header {
+            padding: 6mm;
+        }
+        
+        .quittance-header {
+            padding: 4mm;
+        }
+        
+        .quittance-section {
+            padding: 4mm 6mm;
+        }
+        
+        .payment-details {
+            padding: 4mm 6mm;
+        }
+        
+        .quittance-footer {
+            padding: 4mm 6mm;
         }
     }
 </style>
@@ -365,40 +522,8 @@
 
 {% block content %}
 <div class="quittance-page">
-    <div class="container-fluid">
-        <!-- En-tête avec navigation -->
-        <div class="row mb-4 no-print">
-            <div class="col-12">
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb">
-                        <li class="breadcrumb-item">
-                            <a href="{% url 'paiements:liste' %}">
-                                <i class="bi bi-credit-card me-2"></i>Paiements
-                            </a>
-                        </li>
-                        <li class="breadcrumb-item">
-                            <a href="{% url 'paiements:detail' quittance.paiement.pk %}">
-                                {{ quittance.paiement.reference_paiement }}
-                            </a>
-                        </li>
-                        <li class="breadcrumb-item active" aria-current="page">Quittance</li>
-                    </ol>
-                </nav>
-
-                <!-- Statut de la quittance -->
-                <div class="d-flex align-items-center mb-3">
-                    <span class="status-badge status-{{ quittance.statut }} me-3">
-                        {{ quittance.get_statut_display }}
-                    </span>
-                    <small class="text-muted">
-                        Émise le {{ quittance.date_emission|date:"d/m/Y à H:i" }}
-                    </small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Contenu de la quittance -->
-        <div class="quittance-container">
+    <!-- Contenu de la quittance -->
+    <div class="quittance-container">
             <!-- En-tête de l'entreprise -->
             <div class="entreprise-header">
                 {% if config_entreprise.logo_url %}
@@ -406,10 +531,10 @@
                     <img src="{{ config_entreprise.logo_url }}" alt="Logo" onerror="this.style.display='none'">
                 </div>
                 {% endif %}
-                <div class="entreprise-nom">{{ config_entreprise.nom_entreprise }}</div>
+                <div class="entreprise-nom">{{ config_entreprise.nom_entreprise|default:"Configuration non trouvée" }}</div>
                 <div class="entreprise-details">
-                    {{ config_entreprise.get_adresse_complete }}<br>
-                    {{ config_entreprise.get_contact_complet }}
+                    {{ config_entreprise.get_adresse_complete|default:"Adresse non configurée" }}<br>
+                    {{ config_entreprise.get_contact_complet|default:"Contact non configuré" }}
                 </div>
             </div>
 
@@ -420,53 +545,34 @@
                 <p class="quittance-date">Émise le {{ quittance.date_emission|date:"d/m/Y à H:i" }}</p>
             </div>
 
-            <!-- Informations du locataire -->
+            <!-- Informations du locataire et propriété -->
             <div class="quittance-section">
                 <div class="section-header">
-                    <i class="bi bi-person"></i>
-                    <h5>Locataire</h5>
+                    <h5>Locataire & Propriété</h5>
                 </div>
                 <div class="info-grid">
                     <div class="info-item">
-                        <span class="info-label">Nom</span>
-                        <span class="info-value">{{ quittance.get_locataire.get_nom_complet }}</span>
+                        <span class="info-label">Locataire</span>
+                        <span class="info-value">{{ quittance.get_locataire.get_nom_complet }} ({{ quittance.get_locataire.code_locataire }})</span>
                     </div>
-                    <div class="info-item">
-                        <span class="info-label">Code</span>
-                        <span class="info-value">{{ quittance.get_locataire.code_locataire }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Informations de la propriété -->
-            <div class="quittance-section">
-                <div class="section-header">
-                    <i class="bi bi-house"></i>
-                    <h5>Propriété & Unité locative</h5>
-                </div>
-                <div class="info-grid">
                     {% with prop=quittance.get_propriete %}
-                        <div class="info-item">
-                            <span class="info-label">Numéro propriété</span>
-                            <span class="info-value">{{ prop.numero_propriete|default:"-" }}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Titre</span>
-                            <span class="info-value">{{ prop.titre|default:"-" }}</span>
-                        </div>
+                    <div class="info-item">
+                        <span class="info-label">Propriété</span>
+                        <span class="info-value">{{ prop.numero_propriete|default:"-" }} - {{ prop.titre|default:"-" }}</span>
+                    </div>
                     {% endwith %}
                     {% if quittance.get_unite_locative %}
                         {% with unite=quittance.get_unite_locative %}
                         <div class="info-item">
-                            <span class="info-label">Unité locative</span>
-                            <span class="info-value">{{ unite.nom|default:"-" }}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Type</span>
-                            <span class="info-value">{{ unite.type_unite|default:"-" }}</span>
+                            <span class="info-label">Unité</span>
+                            <span class="info-value">{{ unite.nom|default:"-" }} ({{ unite.type_unite|default:"-" }})</span>
                         </div>
                         {% endwith %}
                     {% endif %}
+                    <div class="info-item">
+                        <span class="info-label">Contrat</span>
+                        <span class="info-value">N° {{ quittance.paiement.contrat.numero_contrat }}</span>
+                    </div>
                 </div>
             </div>
 
@@ -474,10 +580,6 @@
             <div class="payment-details">
                 <h5>Détails du paiement</h5>
                 <div class="payment-info">
-                    <div class="payment-info-item">
-                        <span class="payment-info-label">Référence:</span>
-                        <span class="payment-info-value">{{ quittance.paiement.reference_paiement }}</span>
-                    </div>
                     <div class="payment-info-item">
                         <span class="payment-info-label">Type:</span>
                         <span class="payment-info-value">{{ quittance.paiement.get_type_paiement_display }}</span>
@@ -491,23 +593,8 @@
                         <span class="payment-info-value">{{ quittance.paiement.date_paiement|date:"d/m/Y" }}</span>
                     </div>
                     <div class="payment-info-item">
-                        <span class="payment-info-label">Montant payé:</span>
-                        <span class="payment-info-value">{{ quittance.paiement.get_montant_formatted }}</span>
-                    </div>
-                    <div class="payment-info-item">
-                        <span class="payment-info-label">Contrat:</span>
-                        <span class="payment-info-value">N° {{ quittance.paiement.contrat.numero_contrat }}</span>
-                    </div>
-                    <div class="payment-info-item">
-                        <!-- Bailleur supprimé, non affiché sur la quittance -->
-                    </div>
-                    <div class="payment-info-item">
                         <span class="payment-info-label">Période:</span>
                         <span class="payment-info-value">{{ quittance.paiement.periode|default:quittance.paiement.date_paiement|date:"F Y" }}</span>
-                    </div>
-                    <div class="payment-info-item">
-                        <span class="payment-info-label">Statut:</span>
-                        <span class="payment-info-value">{{ quittance.get_statut_display }}</span>
                     </div>
                 </div>
             </div>
@@ -533,27 +620,16 @@
 
                 <div class="entreprise-footer">
                     <div class="entreprise-footer-info">
-                        <strong>{{ config_entreprise.nom_entreprise }}</strong><br>
-                        {{ config_entreprise.get_adresse_complete }}<br>
-                        {{ config_entreprise.get_contact_complet }}<br>
-                        {{ config_entreprise.get_informations_legales }}
+                        <strong>{{ config_entreprise.nom_entreprise|default:"Configuration non trouvée" }}</strong><br>
+                        {{ config_entreprise.get_adresse_complete|default:"Adresse non configurée" }}<br>
+                        {{ config_entreprise.get_contact_complet|default:"Contact non configuré" }}
+                        {% if config_entreprise.get_informations_legales %}
+                        <br>{{ config_entreprise.get_informations_legales }}
+                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Boutons d'action -->
-        <div class="action-buttons no-print">
-            <button type="button" class="btn-action btn-print" onclick="window.print()">
-                <i class="bi bi-printer"></i>
-                Imprimer la quittance
-            </button>
-            <a href="#" class="btn-action btn-download">
-                <i class="bi bi-download"></i>
-                Télécharger en PDF
-            </a>
-        </div>
-    </div>
 </div>
 {% endblock %}
 

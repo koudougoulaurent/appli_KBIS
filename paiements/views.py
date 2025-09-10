@@ -1484,7 +1484,7 @@ def quittance_detail(request, pk):
     
     context = get_context_with_entreprise_config({
         'quittance': quittance,
-        'title': f'Quittance {quittance.numero_quittance}'
+        'title': f'Quittance {quittance.numero_quittance}',
     })
     
     return render(request, 'paiements/quittance_detail.html', context)

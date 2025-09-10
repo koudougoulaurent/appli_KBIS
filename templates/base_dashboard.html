@@ -50,14 +50,14 @@
         
         .navbar {
             background: var(--gradient-primary);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            padding: 15px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 8px 0;
         }
         
         .navbar-brand {
             color: white !important;
             font-weight: 700;
-            font-size: 1.5rem;
+            font-size: 1.2rem;
         }
         
         .navbar-nav .nav-link {
@@ -93,14 +93,14 @@
         }
         
         .main-content {
-            padding: 30px;
-            min-height: calc(100vh - 80px);
+            padding: 15px;
+            min-height: calc(100vh - 60px);
         }
         
         .card {
-            border-radius: 15px;
+            border-radius: 10px;
             border: none;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             overflow: hidden;
             transition: all 0.3s ease;
         }
@@ -114,12 +114,12 @@
             background: var(--gradient-primary);
             color: white;
             border: none;
-            padding: 20px;
+            padding: 15px;
             font-weight: 600;
         }
         
         .card-body {
-            padding: 30px;
+            padding: 20px;
         }
         
         .btn {
@@ -444,85 +444,31 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg">
+    <!-- Navigation compacte -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light py-2">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{% if user.groupe_travail and user.groupe_travail.nom %}{% url 'utilisateurs:dashboard_groupe' groupe_nom=user.groupe_travail.nom %}{% else %}#{% endif %}">
-                <i class="bi bi-building"></i> GESTIMMOB - {% if user.groupe_travail and user.groupe_travail.nom %}{{ user.groupe_travail.nom }}{% else %}Dashboard{% endif %}
+            <a class="navbar-brand fw-bold" href="{% if user.groupe_travail and user.groupe_travail.nom %}{% url 'utilisateurs:dashboard_groupe' groupe_nom=user.groupe_travail.nom %}{% else %}#{% endif %}">
+                <i class="bi bi-building text-primary"></i> GESTIMMOB
             </a>
             
             <div class="navbar-nav me-auto">
-                <!-- Menu Paiements -->
-                <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        <i class="bi bi-cash-stack"></i> Paiements
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{% url 'paiements:liste' %}">
-                            <i class="bi bi-list"></i> Liste des paiements
-                        </a></li>
-                        <li><a class="dropdown-item" href="{% url 'paiements:ajouter' %}">
-                            <i class="bi bi-plus-circle"></i> Ajouter un paiement
-                        </a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="{% url 'paiements:retraits_liste' %}">
-                            <i class="bi bi-list"></i> Liste des retraits
-                        </a></li>
-                        <li><a class="dropdown-item" href="{% url 'paiements:retrait_intelligent_create' %}">
-                            <i class="bi bi-plus-circle"></i> Créer retrait intelligent
-                        </a></li>
-                        <li><a class="dropdown-item" href="{% url 'paiements:recherche_bailleurs_intelligente' %}">
-                            <i class="bi bi-search"></i> Rechercher bailleur
-                        </a></li>
-                        <li><a class="dropdown-item" href="{% url 'paiements:dashboard' %}">
-                            <i class="bi bi-speedometer2"></i> Dashboard paiements
-                        </a></li>
-                    </ul>
-                </div>
-                
-                <!-- Menu Récapitulatifs -->
-                <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        <i class="bi bi-file-earmark-text"></i> Récapitulatifs
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{% url 'paiements:liste_recapitulatifs' %}">
-                            <i class="bi bi-list"></i> Liste des récapitulatifs
-                        </a></li>
-                        <li><a class="dropdown-item" href="{% url 'paiements:creer_recapitulatif' %}">
-                            <i class="bi bi-plus-circle"></i> Créer un récapitulatif
-                        </a></li>
-                        <li><a class="dropdown-item" href="{% url 'paiements:statistiques_recapitulatifs' %}">
-                            <i class="bi bi-bar-chart"></i> Statistiques
-                        </a></li>
-                    </ul>
-                </div>
-                
-                <!-- Menu Charges -->
-                <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        <i class="bi bi-receipt"></i> Charges
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{% url 'paiements:liste_charges_avancees' %}">
-                            <i class="bi bi-list"></i> Liste des charges
-                        </a></li>
-                        <li><a class="dropdown-item" href="{% url 'paiements:creer_charge_avancee' %}">
-                            <i class="bi bi-plus-circle"></i> Créer une charge
-                        </a></li>
-                        <li><a class="dropdown-item" href="{% url 'paiements:rapport_charges' %}">
-                            <i class="bi bi-file-earmark-bar-graph"></i> Rapports
-                        </a></li>
-                    </ul>
-                </div>
+                <a class="nav-link" href="{% url 'paiements:liste' %}">
+                    <i class="bi bi-cash-stack"></i> Paiements
+                </a>
+                <a class="nav-link" href="{% url 'paiements:liste_recapitulatifs' %}">
+                    <i class="bi bi-file-earmark-text"></i> Récapitulatifs
+                </a>
+                <a class="nav-link" href="{% url 'paiements:liste_charges_avancees' %}">
+                    <i class="bi bi-receipt"></i> Charges
+                </a>
             </div>
             
-            <div class="navbar-nav ms-auto">
+            <div class="navbar-nav">
                 <div class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                         <i class="bi bi-person-circle"></i> {{ user.get_full_name|default:user.username }}
                     </a>
-                    <ul class="dropdown-menu">
+                    <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="{% if user.groupe_travail and user.groupe_travail.nom %}{% url 'utilisateurs:dashboard_groupe' groupe_nom=user.groupe_travail.nom %}{% else %}#{% endif %}">
                             <i class="bi bi-speedometer2"></i> Dashboard
                         </a></li>

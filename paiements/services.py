@@ -75,7 +75,7 @@ class PDFGeneratorService:
         """Récupère la configuration de l'entreprise."""
         try:
             from core.models import ConfigurationEntreprise
-            return ConfigurationEntreprise.objects.first()
+            return ConfigurationEntreprise.get_configuration_active()
         except:
             return None
     
@@ -127,18 +127,21 @@ class PDFGeneratorService:
         """Crée l'en-tête du document."""
         story = []
         
-        # Logo et nom de l'entreprise
+        # Utiliser la fonction centralisée pour l'en-tête d'entreprise
         entreprise_config = self._get_entreprise_config()
         if entreprise_config:
+            from core.utils import ajouter_en_tete_entreprise_reportlab
+            ajouter_en_tete_entreprise_reportlab(story, entreprise_config)
+        else:
+            # Fallback si pas de configuration
             story.append(Paragraph(
-                entreprise_config.nom_entreprise or "GESTION IMMOBILIÈRE",
+                "GESTION IMMOBILIÈRE",
                 self.styles['CustomSubtitle']
             ))
-            if entreprise_config.adresse:
-                story.append(Paragraph(
-                    entreprise_config.adresse,
-                    self.styles['CustomNormal']
-                ))
+            story.append(Paragraph(
+                "123 Rue de la Paix, 75001 Paris, France",
+                self.styles['CustomNormal']
+            ))
         
         story.append(Spacer(1, 20))
         

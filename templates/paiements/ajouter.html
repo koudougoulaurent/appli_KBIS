@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load crispy_forms_tags %}
+{# {% load crispy_forms_tags %} #}
 
 {% block title %}Ajouter un Paiement - Contexte Intelligent{% endblock %}
 
@@ -222,40 +222,119 @@
                                     </div>
                                 </div>
                                 
-                                {{ form.contrat|as_crispy_field }}
+                                <div class="mb-3">
+                                    <label for="{{ form.contrat.id_for_label }}" class="form-label">{{ form.contrat.label }}</label>
+                                    <select name="{{ form.contrat.name }}" id="{{ form.contrat.id_for_label }}" class="form-control">
+                                        <option value="">Sélectionnez un contrat...</option>
+                                        {% for choice in form.contrat.field.queryset %}
+                                            <option value="{{ choice.pk }}" {% if form.contrat.value == choice.pk %}selected{% endif %}>
+                                                {{ choice.numero_contrat }} - {{ choice.locataire.nom }} {{ choice.locataire.prenom }} ({{ choice.propriete.adresse }})
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    {% if form.contrat.help_text %}
+                                        <div class="form-text">{{ form.contrat.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.contrat.errors %}
+                                        <div class="text-danger">{{ form.contrat.errors }}</div>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                         
                         <div class="row">
                             <div class="col-md-6">
-                                {{ form.date_paiement|as_crispy_field }}
+                                <div class="mb-3">
+                                    <label for="{{ form.date_paiement.id_for_label }}" class="form-label">{{ form.date_paiement.label }}</label>
+                                    {{ form.date_paiement }}
+                                    {% if form.date_paiement.help_text %}
+                                        <div class="form-text">{{ form.date_paiement.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.date_paiement.errors %}
+                                        <div class="text-danger">{{ form.date_paiement.errors }}</div>
+                                    {% endif %}
+                                </div>
                             </div>
                             <div class="col-md-6">
-                                {{ form.type_paiement|as_crispy_field }}
+                                <div class="mb-3">
+                                    <label for="{{ form.mois_paye.id_for_label }}" class="form-label">{{ form.mois_paye.label }}</label>
+                                    {{ form.mois_paye }}
+                                    {% if form.mois_paye.help_text %}
+                                        <div class="form-text">{{ form.mois_paye.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.mois_paye.errors %}
+                                        <div class="text-danger">{{ form.mois_paye.errors }}</div>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                         
                         <div class="row">
                             <div class="col-md-6">
-                                {{ form.mode_paiement|as_crispy_field }}
+                                <div class="mb-3">
+                                    <label for="{{ form.type_paiement.id_for_label }}" class="form-label">{{ form.type_paiement.label }}</label>
+                                    {{ form.type_paiement }}
+                                    {% if form.type_paiement.help_text %}
+                                        <div class="form-text">{{ form.type_paiement.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.type_paiement.errors %}
+                                        <div class="text-danger">{{ form.type_paiement.errors }}</div>
+                                    {% endif %}
+                                </div>
                             </div>
                             <div class="col-md-6">
-                                {{ form.reference_paiement|as_crispy_field }}
+                                <div class="mb-3">
+                                    <label for="{{ form.mode_paiement.id_for_label }}" class="form-label">{{ form.mode_paiement.label }}</label>
+                                    {{ form.mode_paiement }}
+                                    {% if form.mode_paiement.help_text %}
+                                        <div class="form-text">{{ form.mode_paiement.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.mode_paiement.errors %}
+                                        <div class="text-danger">{{ form.mode_paiement.errors }}</div>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                         
                         <div class="row">
                             <div class="col-md-6">
-                                {{ form.montant|as_crispy_field }}
+                                <div class="mb-3">
+                                    <label for="{{ form.montant.id_for_label }}" class="form-label">{{ form.montant.label }}</label>
+                                    {{ form.montant }}
+                                    {% if form.montant.help_text %}
+                                        <div class="form-text">{{ form.montant.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.montant.errors %}
+                                        <div class="text-danger">{{ form.montant.errors }}</div>
+                                    {% endif %}
+                                </div>
                             </div>
                             <div class="col-md-6">
-                                {{ form.numero_cheque|as_crispy_field }}
+                                <div class="mb-3">
+                                    <label for="{{ form.numero_cheque.id_for_label }}" class="form-label">{{ form.numero_cheque.label }}</label>
+                                    {{ form.numero_cheque }}
+                                    {% if form.numero_cheque.help_text %}
+                                        <div class="form-text">{{ form.numero_cheque.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.numero_cheque.errors %}
+                                        <div class="text-danger">{{ form.numero_cheque.errors }}</div>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                         
                         <div class="row">
                             <div class="col-12">
-                                {{ form.notes|as_crispy_field }}
+                                <div class="mb-3">
+                                    <label for="{{ form.notes.id_for_label }}" class="form-label">{{ form.notes.label }}</label>
+                                    {{ form.notes }}
+                                    {% if form.notes.help_text %}
+                                        <div class="form-text">{{ form.notes.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.notes.errors %}
+                                        <div class="text-danger">{{ form.notes.errors }}</div>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                         
@@ -352,12 +431,42 @@
 $(document).ready(function() {
     console.log('🚀 Système intelligent activé !');
     
-    // Initialiser Select2
+    // Initialiser Select2 avec recherche AJAX
     $('#id_contrat').select2({
         theme: 'bootstrap-5',
         language: 'fr',
-        placeholder: 'Sélectionnez un contrat...',
-        allowClear: true
+        placeholder: 'Recherchez un contrat...',
+        allowClear: true,
+        minimumInputLength: 2,
+        ajax: {
+            url: '/paiements/api/recherche-rapide/',
+            dataType: 'json',
+            delay: 300,
+            data: function (params) {
+                return {
+                    q: params.term
+                };
+            },
+            processResults: function (data) {
+                if (data.success && data.data.length > 0) {
+                    return {
+                        results: data.data.map(function(item) {
+                            return {
+                                id: item.id,
+                                text: `${item.numero_contrat} - ${item.locataire_nom} (${item.propriete_adresse})`
+                            };
+                        })
+                    };
+                }
+                return { 
+                    results: [{
+                        id: null,
+                        text: 'Aucun contrat trouvé'
+                    }]
+                };
+            },
+            cache: true
+        }
     });
     
     // Activer le système de temps réel
@@ -460,11 +569,11 @@ function afficherResultatsRecherche(resultats, query) {
                 <div class="resultat-item" onclick="selectionnerContratRecherche(${resultat.id})">
                     <span class="resultat-score">Score: ${resultat.score}</span>
                     <div class="resultat-locataire">
-                        ${resultat.locataire.nom} ${resultat.locataire.prenom}
+                        ${resultat.locataire_nom}
                     </div>
                     <div class="resultat-details">
                         <strong>Contrat:</strong> ${resultat.numero_contrat} | 
-                        <strong>Propriété:</strong> ${resultat.propriete.adresse} | 
+                        <strong>Propriété:</strong> ${resultat.propriete_adresse} | 
                         <strong>Loyer:</strong> ${Math.round(resultat.loyer).toLocaleString('fr-FR', {maximumFractionDigits: 0})} F CFA
                     </div>
                 </div>
@@ -717,6 +826,67 @@ function reinitialiserContexte() {
     $('#contexte-vide').show();
     $('#contexte-contenu').hide();
 }
+
+// Validation des doublons de paiement
+function verifierDoublonsPaiement() {
+    const contratId = $('#id_contrat').val();
+    const moisPaye = $('#id_mois_paye').val();
+    
+    if (contratId && moisPaye) {
+        // Convertir le mois en format pour l'API
+        const moisDate = new Date(moisPaye + '-01');
+        const moisAnnee = moisDate.getFullYear();
+        const moisMois = moisDate.getMonth() + 1;
+        
+        $.ajax({
+            url: '/paiements/api/verifier-doublon/',
+            method: 'GET',
+            data: {
+                contrat_id: contratId,
+                mois: moisMois,
+                annee: moisAnnee
+            },
+            success: function(response) {
+                if (response.doublon_existe) {
+                    // Afficher un message d'erreur
+                    const messageErreur = `
+                        <div class="alert alert-danger mt-2" id="erreur-doublon">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Paiement en doublon détecté !</strong><br>
+                            Un paiement existe déjà pour ce contrat au mois de ${response.mois_nom}.<br>
+                            <small>Paiement existant: ${response.paiement_existant.reference} du ${response.paiement_existant.date} pour ${response.paiement_existant.montant} F CFA.</small>
+                        </div>
+                    `;
+                    $('#id_mois_paye').closest('.mb-3').find('#erreur-doublon').remove();
+                    $('#id_mois_paye').closest('.mb-3').append(messageErreur);
+                    
+                    // Désactiver le bouton de soumission
+                    $('button[type="submit"]').prop('disabled', true).addClass('btn-secondary').removeClass('btn-primary');
+                } else {
+                    // Supprimer le message d'erreur s'il existe
+                    $('#erreur-doublon').remove();
+                    
+                    // Réactiver le bouton de soumission
+                    $('button[type="submit"]').prop('disabled', false).addClass('btn-primary').removeClass('btn-secondary');
+                }
+            },
+            error: function() {
+                console.log('Erreur lors de la vérification des doublons');
+            }
+        });
+    } else {
+        // Supprimer le message d'erreur s'il existe
+        $('#erreur-doublon').remove();
+        
+        // Réactiver le bouton de soumission
+        $('button[type="submit"]').prop('disabled', false).addClass('btn-primary').removeClass('btn-secondary');
+    }
+}
+
+// Écouter les changements sur les champs contrat et mois_paye
+$('#id_contrat, #id_mois_paye').on('change', function() {
+    verifierDoublonsPaiement();
+});
 
 console.log('🚀 Système intelligent chargé avec succès !');
 </script>

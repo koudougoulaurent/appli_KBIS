@@ -259,25 +259,10 @@ class ContratPDFService:
             self.styles['CustomTitle']
         ))
         
-        # Informations de l'entreprise
+        # Utiliser la fonction centralisée pour l'en-tête d'entreprise
         if self.config_entreprise:
-            elements.append(Paragraph(
-                f"<b>{self.config_entreprise.nom_entreprise}</b>",
-                self.styles['CustomHeading']
-            ))
-            elements.append(Paragraph(
-                self.config_entreprise.get_adresse_complete(),
-                self.styles['CustomBody']
-            ))
-            elements.append(Paragraph(
-                self.config_entreprise.get_contact_complet(),
-                self.styles['CustomBody']
-            ))
-            if self.config_entreprise.siret:
-                elements.append(Paragraph(
-                    f"SIRET: {self.config_entreprise.siret}",
-                    self.styles['CustomBody']
-                ))
+            from core.utils import ajouter_en_tete_entreprise_reportlab
+            ajouter_en_tete_entreprise_reportlab(elements, self.config_entreprise)
         else:
             # Fallback si pas de configuration
             elements.append(Paragraph(
@@ -436,16 +421,6 @@ class ContratPDFService:
         elements = []
         
         elements.append(Paragraph("SIGNATURES", self.styles['CustomHeading']))
-        
-        # Signature du bailleur
-        elements.append(Paragraph(
-            f"<b>Signature du bailleur :</b><br/>"
-            f"{self.contrat.propriete.bailleur.nom} {self.contrat.propriete.bailleur.prenom}<br/>"
-            f"Date : _________________",
-            self.styles['CustomSignature']
-        ))
-        
-        elements.append(Spacer(1, 20))
         
         # Signature du locataire
         elements.append(Paragraph(

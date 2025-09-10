@@ -64,7 +64,11 @@ def api_recherche_contrats_rapide(request):
         # Trier par score décroissant
         resultats.sort(key=lambda x: x['score'], reverse=True)
         
-        return JsonResponse({'resultats': resultats})
+        return JsonResponse({
+            'success': True,
+            'data': resultats,
+            'count': len(resultats)
+        })
     
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
 
@@ -811,3 +815,62 @@ class PaiementCautionAvanceViewSet(viewsets.ModelViewSet):
                 'avance_payee': contrat.avance_payee,
             }
         })
+
+
+# 🔍 API DE VÉRIFICATION DES DOUBLONS DE PAIEMENT
+@csrf_exempt
+def api_verifier_doublon_paiement(request):
+    """API pour vérifier s'il existe déjà un paiement pour un contrat dans un mois donné."""
+    if request.method == 'GET':
+        contrat_id = request.GET.get('contrat_id')
+        mois = request.GET.get('mois')
+        annee = request.GET.get('annee')
+        
+        if not all([contrat_id, mois, annee]):
+            return JsonResponse({
+                'doublon_existe': False,
+                'erreur': 'Paramètres manquants'
+            })
+        
+        try:
+            # Vérifier s'il existe un paiement pour ce contrat dans ce mois
+            existing_payment = Paiement.objects.filter(
+                contrat_id=contrat_id,
+                mois_paye__year=int(annee),
+                mois_paye__month=int(mois),
+                is_deleted=False
+            ).first()
+            
+            if existing_payment:
+                # Formater le nom du mois
+                mois_noms = [
+                    'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+                ]
+                mois_nom = mois_noms[int(mois) - 1]
+                
+                return JsonResponse({
+                    'doublon_existe': True,
+                    'mois_nom': f"{mois_nom} {annee}",
+                    'paiement_existant': {
+                        'reference': existing_payment.reference_paiement,
+                        'date': existing_payment.date_paiement.strftime('%d/%m/%Y'),
+                        'montant': f"{existing_payment.montant:,.0f}",
+                        'type': existing_payment.get_type_paiement_display()
+                    }
+                })
+            else:
+                return JsonResponse({
+                    'doublon_existe': False
+                })
+                
+        except (ValueError, Contrat.DoesNotExist):
+            return JsonResponse({
+                'doublon_existe': False,
+                'erreur': 'Contrat introuvable'
+            })
+    
+    return JsonResponse({
+        'doublon_existe': False,
+        'erreur': 'Méthode non autorisée'
+    })

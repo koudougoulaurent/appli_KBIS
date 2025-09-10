@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reçu de Récapitulatif - {{ recu.numero_recu }}</title>
     <style>
-        /* Styles pour impression A4 Paysage */
+        /* Styles pour impression A5 - Format optimisé */
         @page {
-            size: A4 landscape;
-            margin: 1.5cm;
+            size: A5;
+            margin: 8mm;
         }
         
         * {
@@ -19,20 +19,20 @@
         
         body {
             font-family: 'Arial', sans-serif;
-            font-size: 11pt;
-            line-height: 1.4;
+            font-size: 8pt;
+            line-height: 1.2;
             color: #333;
             background: white;
         }
         
-        /* En-tête principal */
+        /* En-tête principal - Format A5 */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 2cm;
-            border-bottom: 3px solid #2c3e50;
-            padding-bottom: 1cm;
+            margin-bottom: 8mm;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 4mm;
         }
         
         .logo-section {
@@ -40,16 +40,16 @@
         }
         
         .logo {
-            font-size: 24pt;
+            font-size: 14pt;
             font-weight: bold;
             color: #2c3e50;
-            margin-bottom: 0.5cm;
+            margin-bottom: 2mm;
         }
         
         .entreprise-info {
-            font-size: 10pt;
+            font-size: 7pt;
             color: #666;
-            line-height: 1.3;
+            line-height: 1.1;
         }
         
         .document-info {
@@ -58,92 +58,92 @@
         }
         
         .document-title {
-            font-size: 20pt;
+            font-size: 12pt;
             font-weight: bold;
             color: #2c3e50;
-            margin-bottom: 0.5cm;
+            margin-bottom: 2mm;
             text-transform: uppercase;
         }
         
         .document-subtitle {
-            font-size: 12pt;
+            font-size: 8pt;
             color: #666;
-            margin-bottom: 0.3cm;
+            margin-bottom: 1mm;
         }
         
         .document-number {
-            font-size: 11pt;
+            font-size: 7pt;
             color: #333;
             font-weight: bold;
         }
         
-        /* Section bailleur */
+        /* Section bailleur - Format A5 */
         .bailleur-section {
-            margin-bottom: 1.5cm;
-            padding: 1cm;
+            margin-bottom: 6mm;
+            padding: 4mm;
             background: #f8f9fa;
-            border-left: 4px solid #3498db;
+            border-left: 3px solid #3498db;
         }
         
         .section-title {
-            font-size: 14pt;
+            font-size: 9pt;
             font-weight: bold;
             color: #2c3e50;
-            margin-bottom: 0.5cm;
+            margin-bottom: 3mm;
             text-transform: uppercase;
         }
         
         .bailleur-info {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1cm;
+            gap: 4mm;
         }
         
         .info-group {
-            margin-bottom: 0.5cm;
+            margin-bottom: 2mm;
         }
         
         .info-label {
             font-weight: bold;
             color: #555;
-            font-size: 10pt;
+            font-size: 7pt;
         }
         
         .info-value {
             color: #333;
-            font-size: 11pt;
-            margin-top: 0.2cm;
+            font-size: 8pt;
+            margin-top: 1mm;
         }
         
-        /* Section récapitulatif */
+        /* Section récapitulatif - Format A5 */
         .recapitulatif-section {
-            margin-bottom: 1.5cm;
+            margin-bottom: 6mm;
         }
         
         .recap-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr;
-            gap: 1cm;
-            margin-top: 0.5cm;
+            grid-template-columns: 1fr 1fr;
+            gap: 3mm;
+            margin-top: 3mm;
         }
         
         .recap-item {
             text-align: center;
-            padding: 0.8cm;
+            padding: 3mm;
             background: #fff;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
         }
         
         .recap-value {
-            font-size: 16pt;
+            font-size: 10pt;
             font-weight: bold;
             color: #2c3e50;
-            margin-bottom: 0.3cm;
+            margin-bottom: 1mm;
         }
         
         .recap-label {
-            font-size: 10pt;
+            font-size: 6pt;
             color: #666;
             text-transform: uppercase;
         }
@@ -153,29 +153,29 @@
         .recap-item.warning { border-color: #f39c12; }
         .recap-item.danger { border-color: #e74c3c; }
         
-        /* Tableau des propriétés */
+        /* Tableau des propriétés - Format A5 */
         .proprietes-section {
-            margin-bottom: 1.5cm;
+            margin-bottom: 6mm;
         }
         
         .proprietes-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 0.5cm;
-            font-size: 10pt;
+            margin-top: 3mm;
+            font-size: 6pt;
         }
         
         .proprietes-table th {
             background: #2c3e50;
             color: white;
-            padding: 0.5cm;
+            padding: 2mm;
             text-align: left;
             font-weight: bold;
             text-transform: uppercase;
         }
         
         .proprietes-table td {
-            padding: 0.4cm;
+            padding: 1.5mm;
             border-bottom: 1px solid #ddd;
             vertical-align: top;
         }
@@ -188,37 +188,37 @@
             background: #e3f2fd;
         }
         
-        /* Section totaux */
+        /* Section totaux - Format A5 */
         .totaux-section {
-            margin-bottom: 1.5cm;
-            padding: 1cm;
+            margin-bottom: 6mm;
+            padding: 4mm;
             background: #f8f9fa;
-            border-radius: 8px;
+            border-radius: 4px;
         }
         
         .totaux-grid {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 1cm;
-            margin-top: 0.5cm;
+            gap: 3mm;
+            margin-top: 3mm;
         }
         
         .total-item {
             text-align: center;
-            padding: 0.8cm;
+            padding: 3mm;
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
         
         .total-value {
-            font-size: 18pt;
+            font-size: 10pt;
             font-weight: bold;
-            margin-bottom: 0.3cm;
+            margin-bottom: 1mm;
         }
         
         .total-label {
-            font-size: 11pt;
+            font-size: 6pt;
             color: #666;
             text-transform: uppercase;
         }
@@ -227,11 +227,11 @@
         .total-item.charges .total-value { color: #f39c12; }
         .total-item.net .total-value { color: #27ae60; }
         
-        /* Pied de page */
+        /* Pied de page - Format A5 */
         .footer {
-            margin-top: 2cm;
-            padding-top: 1cm;
-            border-top: 2px solid #e9ecef;
+            margin-top: 6mm;
+            padding-top: 4mm;
+            border-top: 1px solid #e9ecef;
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
@@ -244,26 +244,26 @@
         
         .signature-line {
             border-bottom: 1px solid #333;
-            width: 6cm;
-            margin: 0 auto 0.3cm;
-            height: 1cm;
+            width: 3cm;
+            margin: 0 auto 1mm;
+            height: 5mm;
         }
         
         .signature-label {
-            font-size: 10pt;
+            font-size: 6pt;
             color: #666;
         }
         
         .document-info-footer {
             text-align: right;
             flex: 1;
-            font-size: 9pt;
+            font-size: 6pt;
             color: #666;
         }
         
         .hash-info {
-            margin-top: 0.5cm;
-            font-size: 8pt;
+            margin-top: 2mm;
+            font-size: 5pt;
             color: #999;
             font-family: monospace;
         }

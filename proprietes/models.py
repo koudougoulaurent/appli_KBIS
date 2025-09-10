@@ -449,6 +449,147 @@ class Propriete(models.Model):
     def get_absolute_url(self):
         return reverse('proprietes:detail', kwargs={'pk': self.pk})
     
+    def est_disponible_pour_location(self):
+        """
+        Vérifie si la propriété est disponible pour une nouvelle location.
+        Une propriété est disponible si :
+        1. Elle n'a pas de contrat actif qui couvre la propriété entière, ET
+        2. Elle a au moins une unité locative disponible OU elle est marquée comme disponible, ET
+        3. Toutes ses unités/pièces ne sont pas déjà louées individuellement
+        """
+        from django.utils import timezone
+        from contrats.models import Contrat
+        
+        # Vérifier s'il y a des contrats actifs qui couvrent la propriété entière
+        contrats_actifs_propriete_complete = Contrat.objects.filter(
+            propriete=self,
+            est_actif=True,
+            est_resilie=False,
+            date_debut__lte=timezone.now().date(),
+            date_fin__gte=timezone.now().date(),
+            is_deleted=False,
+            unite_locative__isnull=True  # Pas d'unité locative = propriété complète
+        ).exists()
+        
+        # Si la propriété a un contrat actif qui la couvre entièrement, elle n'est pas disponible
+        if contrats_actifs_propriete_complete:
+            return False
+        
+        # Vérifier s'il y a des unités locatives disponibles (non louées individuellement)
+        unites_disponibles = self.unites_locatives.filter(
+            statut='disponible',
+            is_deleted=False
+        ).exclude(
+            contrats__est_actif=True,
+            contrats__est_resilie=False,
+            contrats__date_debut__lte=timezone.now().date(),
+            contrats__date_fin__gte=timezone.now().date(),
+            contrats__is_deleted=False
+        ).exists()
+        
+        # Vérifier s'il y a des pièces disponibles (non louées individuellement)
+        pieces_disponibles = self.pieces.filter(
+            statut='disponible',
+            is_deleted=False
+        ).exclude(
+            contrats__est_actif=True,
+            contrats__est_resilie=False,
+            contrats__date_debut__lte=timezone.now().date(),
+            contrats__date_fin__gte=timezone.now().date(),
+            contrats__is_deleted=False
+        ).exists()
+        
+        # La propriété est disponible si :
+        # 1. Elle est marquée comme disponible ET n'a pas de contrat actif complet, OU
+        # 2. Elle a des unités locatives disponibles (non louées), OU
+        # 3. Elle a des pièces disponibles (non louées)
+        return (self.disponible and not contrats_actifs_propriete_complete) or unites_disponibles or pieces_disponibles
+    
+    def get_unites_locatives_disponibles(self):
+        """
+        Retourne les unités locatives vraiment disponibles pour cette propriété.
+        Exclut celles qui sont déjà louées par des contrats actifs.
+        """
+        from django.utils import timezone
+        from contrats.models import Contrat
+        
+        return self.unites_locatives.filter(
+            statut='disponible',
+            is_deleted=False
+        ).exclude(
+            contrats__est_actif=True,
+            contrats__est_resilie=False,
+            contrats__date_debut__lte=timezone.now().date(),
+            contrats__date_fin__gte=timezone.now().date(),
+            contrats__is_deleted=False
+        )
+    
+    def get_pieces_disponibles(self):
+        """
+        Retourne les pièces vraiment disponibles pour cette propriété.
+        Exclut celles qui sont déjà louées par des contrats actifs.
+        """
+        from django.utils import timezone
+        from contrats.models import Contrat
+        
+        return self.pieces.filter(
+            statut='disponible',
+            is_deleted=False
+        ).exclude(
+            contrats__est_actif=True,
+            contrats__est_resilie=False,
+            contrats__date_debut__lte=timezone.now().date(),
+            contrats__date_fin__gte=timezone.now().date(),
+            contrats__is_deleted=False
+        )
+    
+    def get_contrats_actifs(self):
+        """
+        Retourne les contrats actifs pour cette propriété.
+        """
+        from django.utils import timezone
+        from contrats.models import Contrat
+        
+        return Contrat.objects.filter(
+            propriete=self,
+            est_actif=True,
+            est_resilie=False,
+            date_debut__lte=timezone.now().date(),
+            date_fin__gte=timezone.now().date(),
+            is_deleted=False
+        )
+    
+    def get_contrats_propriete_complete(self):
+        """
+        Retourne les contrats actifs qui couvrent la propriété entière.
+        """
+        return self.get_contrats_actifs().filter(unite_locative__isnull=True)
+    
+    def get_contrats_unites_locatives(self):
+        """
+        Retourne les contrats actifs sur les unités locatives de cette propriété.
+        """
+        return self.get_contrats_actifs().filter(unite_locative__isnull=False)
+    
+    def get_statut_disponibilite(self):
+        """
+        Retourne le statut de disponibilité de la propriété.
+        """
+        if not self.est_disponible_pour_location():
+            contrats_propriete_complete = self.get_contrats_propriete_complete()
+            if contrats_propriete_complete.exists():
+                return "Entièrement occupée"
+            
+            # Vérifier si toutes les unités sont louées individuellement
+            unites_disponibles = self.get_unites_locatives_disponibles()
+            pieces_disponibles = self.get_pieces_disponibles()
+            
+            if not unites_disponibles.exists() and not pieces_disponibles.exists():
+                return "Toutes les unités/pièces sont louées"
+            else:
+                return "Partiellement disponible"
+        return "Disponible"
+    
     def necessite_unites_locatives(self):
         """
         Détermine si cette propriété nécessite des unités locatives.

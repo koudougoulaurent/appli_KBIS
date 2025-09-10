@@ -301,11 +301,17 @@ class FiltreUniteForm(forms.Form):
     """Formulaire de filtrage pour la liste des unités."""
     
     propriete = forms.ModelChoiceField(
-        queryset=Propriete.objects.filter(is_deleted=False),
+        queryset=Propriete.objects.none(),  # Sera rempli dans __init__
         required=False,
         empty_label="Toutes les propriétés",
         widget=forms.Select(attrs={'class': 'form-select'})
     )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Utiliser la logique de filtrage des propriétés disponibles
+        from core.property_utils import get_proprietes_disponibles_global
+        self.fields['propriete'].queryset = get_proprietes_disponibles_global()
     
     statut = forms.ChoiceField(
         choices=[('', 'Tous les statuts')] + list(UniteLocative.STATUT_CHOICES),

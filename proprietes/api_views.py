@@ -212,6 +212,7 @@ class ProprieteViewSet(viewsets.ModelViewSet):
         prix_max = self.request.query_params.get('prix_max', None)
         surface_min = self.request.query_params.get('surface_min', None)
         surface_max = self.request.query_params.get('surface_max', None)
+        disponible_seulement = self.request.query_params.get('disponible_seulement', None)
         
         if prix_min:
             queryset = queryset.filter(loyer_actuel__gte=prix_min)
@@ -222,7 +223,37 @@ class ProprieteViewSet(viewsets.ModelViewSet):
         if surface_max:
             queryset = queryset.filter(surface__lte=surface_max)
         
+        # Filtrer les propriétés disponibles si demandé
+        if disponible_seulement == 'true':
+            from core.property_utils import get_proprietes_disponibles_global
+            proprietes_disponibles = get_proprietes_disponibles_global()
+            queryset = queryset.filter(id__in=proprietes_disponibles.values_list('id', flat=True))
+        
         return queryset
+    
+    @action(detail=False, methods=['get'])
+    def disponibles(self, request):
+        """Récupère uniquement les propriétés disponibles pour la location"""
+        from core.property_utils import get_proprietes_disponibles_global
+        proprietes_disponibles = get_proprietes_disponibles_global()
+        
+        # Appliquer les filtres supplémentaires
+        prix_min = request.query_params.get('prix_min', None)
+        prix_max = request.query_params.get('prix_max', None)
+        surface_min = request.query_params.get('surface_min', None)
+        surface_max = request.query_params.get('surface_max', None)
+        
+        if prix_min:
+            proprietes_disponibles = proprietes_disponibles.filter(loyer_actuel__gte=prix_min)
+        if prix_max:
+            proprietes_disponibles = proprietes_disponibles.filter(loyer_actuel__lte=prix_max)
+        if surface_min:
+            proprietes_disponibles = proprietes_disponibles.filter(surface__gte=surface_min)
+        if surface_max:
+            proprietes_disponibles = proprietes_disponibles.filter(surface__lte=surface_max)
+        
+        serializer = self.get_serializer(proprietes_disponibles, many=True)
+        return Response(serializer.data)
     
     @action(detail=False, methods=['get'])
     def stats(self, request):

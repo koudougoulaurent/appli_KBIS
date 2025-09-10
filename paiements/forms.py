@@ -36,10 +36,11 @@ class PaiementForm(forms.ModelForm):
         model = Paiement
         fields = [
             'contrat', 'montant', 'type_paiement', 'mode_paiement',
-            'date_paiement', 'reference_paiement', 'numero_cheque', 'reference_virement', 'notes'
+            'date_paiement', 'mois_paye', 'reference_paiement', 'numero_cheque', 'reference_virement', 'notes'
         ]
         widgets = {
             'date_paiement': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'mois_paye': forms.DateInput(attrs={'type': 'month', 'class': 'form-control'}),
             'montant': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'type_paiement': forms.Select(attrs={'class': 'form-control'}),
             'mode_paiement': forms.Select(attrs={'class': 'form-control'}),
@@ -76,7 +77,8 @@ class PaiementForm(forms.ModelForm):
         # Filtrer les contrats actifs seulement
         self.fields['contrat'].queryset = Contrat.objects.filter(
             est_actif=True,
-            est_resilie=False
+            est_resilie=False,
+            is_deleted=False
         ).select_related('locataire', 'propriete')
         
         # Personnaliser l'affichage des contrats
@@ -84,6 +86,14 @@ class PaiementForm(forms.ModelForm):
             f"{obj.numero_contrat} - {obj.locataire.nom} {obj.locataire.prenom} "
             f"({obj.propriete.titre})"
         )
+        
+        # Améliorer le widget de sélection de contrat
+        self.fields['contrat'].widget.attrs.update({
+            'class': 'form-select form-select-lg',
+            'data-toggle': 'select2',
+            'data-placeholder': 'Recherchez un contrat...',
+            'id': 'id_contrat'
+        })
         
         # Valeur par défaut pour la date
         if not self.instance.pk:
@@ -129,6 +139,21 @@ class PaiementForm(forms.ModelForm):
             raise ValidationError(_('La date de paiement ne peut pas être dans le futur.'))
         return date_paiement
     
+    def clean_mois_paye(self):
+        """Nettoyer et valider le champ mois_paye."""
+        mois_paye = self.cleaned_data.get('mois_paye')
+        
+        if mois_paye:
+            # Si c'est une chaîne au format "YYYY-MM", la convertir en date
+            if isinstance(mois_paye, str) and len(mois_paye) == 7 and mois_paye[4] == '-':
+                try:
+                    year, month = mois_paye.split('-')
+                    mois_paye = date(int(year), int(month), 1)
+                except (ValueError, TypeError):
+                    raise ValidationError(_('Format de mois invalide. Utilisez YYYY-MM.'))
+        
+        return mois_paye
+    
     def clean(self):
         cleaned_data = super().clean()
         contrat = cleaned_data.get('contrat')
@@ -137,6 +162,7 @@ class PaiementForm(forms.ModelForm):
         mode_paiement = cleaned_data.get('mode_paiement')
         numero_cheque = cleaned_data.get('numero_cheque')
         reference_virement = cleaned_data.get('reference_virement')
+        mois_paye = cleaned_data.get('mois_paye')
         
         # Validation spécifique selon le type de paiement
         if contrat and type_paiement and montant:
@@ -145,7 +171,7 @@ class PaiementForm(forms.ModelForm):
             elif type_paiement == 'caution' and montant != contrat.caution:
                 self.add_error('montant', _('Le montant doit être égal à la caution du contrat sélectionné.'))
             elif type_paiement == 'avance_loyer' and hasattr(contrat, 'avance_loyer') and montant != contrat.avance_loyer:
-                self.add_error('montant', _('Le montant doit être égal à l’avance de loyer du contrat sélectionné.'))
+                self.add_error('montant', _('Le montant doit être égal à l\'avance de loyer du contrat sélectionné.'))
         
         # Validation des informations de paiement selon le mode
         if mode_paiement == 'cheque' and not numero_cheque:
@@ -153,6 +179,24 @@ class PaiementForm(forms.ModelForm):
         
         if mode_paiement == 'virement' and not reference_virement:
             raise ValidationError(_('La référence virement est requise pour un paiement par virement.'))
+        
+        # Validation des doublons de paiement pour le même contrat dans le même mois
+        if contrat and mois_paye:
+            # Utiliser contrat.id au lieu de contrat pour éviter les problèmes de relation
+            existing_payment = Paiement.objects.filter(
+                contrat_id=contrat.id,
+                mois_paye__year=mois_paye.year,
+                mois_paye__month=mois_paye.month,
+                is_deleted=False
+            ).exclude(pk=self.instance.pk if self.instance.pk else None)
+            
+            if existing_payment.exists():
+                existing = existing_payment.first()
+                self.add_error('mois_paye', 
+                    f"Un paiement existe déjà pour ce contrat au mois de {mois_paye.strftime('%B %Y')}. "
+                    f"Paiement existant: {existing.reference_paiement} du {existing.date_paiement.strftime('%d/%m/%Y')} "
+                    f"pour un montant de {existing.montant} F CFA."
+                )
         
         return cleaned_data
 

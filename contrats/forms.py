@@ -170,12 +170,12 @@ class ContratForm(forms.ModelForm):
         
         # Filtrer les propriétés disponibles
         # Une propriété est disponible si :
-        # 1. Elle-même est marquée comme disponible, OU
-        # 2. Elle a au moins une unité locative disponible
+        # 1. Elle n'a pas de contrat actif qui couvre la propriété entière, ET
+        # 2. Elle a au moins une unité locative disponible OU elle est marquée comme disponible
         
-        # Filtrer les locataires actifs
-        # Afficher toutes les propriétés et tous les locataires sans filtrage
-        self.fields['propriete'].queryset = Propriete.objects.all()
+        # Utiliser la fonction de filtrage des propriétés disponibles
+        from .utils import get_proprietes_disponibles
+        self.fields['propriete'].queryset = get_proprietes_disponibles()
         self.fields['locataire'].queryset = Locataire.objects.all()
         
         # Filtrer les unités locatives disponibles ou non réservées
@@ -252,12 +252,11 @@ class ContratForm(forms.ModelForm):
         
         # Ajouter les données des propriétés pour le JavaScript
         self.proprietes_data = {}
-        proprietes_queryset = Propriete.objects.filter(
-            models.Q(disponible=True) |
-            models.Q(unites_locatives__statut='disponible', unites_locatives__is_deleted=False)
-        ).distinct()
+        # Utiliser la logique simplifiée pour éviter les erreurs
+        from .utils import get_proprietes_disponibles
+        proprietes_queryset = get_proprietes_disponibles()
         
-        print(f"DEBUG: {proprietes_queryset.count()} propriétés trouvées pour le formulaire")
+        print(f"DEBUG: {len(proprietes_queryset)} propriétés trouvées pour le formulaire")
         
         for propriete in proprietes_queryset:
             print(f"DEBUG: Traitement de la propriété {propriete.id} - {propriete.titre} (loyer: {propriete.loyer_actuel})")
@@ -335,24 +334,14 @@ class ContratForm(forms.ModelForm):
         
         # Vérifier que la propriété est disponible (pour les nouveaux contrats)
         if propriete and not self.instance.pk:
-            if not propriete.disponible:
+            # Utiliser la nouvelle logique de disponibilité
+            if not propriete.est_disponible_pour_location():
+                statut = propriete.get_statut_disponibilite()
                 raise ValidationError(
                     f"La propriété {propriete.titre} n'est pas disponible pour la location. "
-                    f"Elle a déjà un contrat actif."
+                    f"Statut: {statut}"
                 )
             
-            # Vérification supplémentaire : s'assurer qu'il n'y a pas de contrats actifs
-            contrats_actifs_propriete = Contrat.objects.filter(
-                propriete=propriete,
-                est_actif=True,
-                est_resilie=False
-            )
-            
-            if contrats_actifs_propriete.exists():
-                raise ValidationError(
-                    f"La propriété {propriete.titre} a déjà un contrat actif. "
-                    f"Impossible de créer un nouveau contrat."
-                )
         
         # Vérifier les chevauchements de dates pour la même propriété
         if propriete and date_debut and date_fin:

@@ -233,17 +233,22 @@ def imprimer_recu_recapitulatif_gestimmob(request, pk):
         # Calculer les totaux et détails
         totaux = recu.recapitulatif.calculer_totaux_bailleur()
         
-        # Configuration de l'entreprise (peut être récupérée depuis les paramètres)
+        # Récupérer la configuration de l'entreprise depuis la base de données
+        from core.models import ConfigurationEntreprise
+        config_entreprise = ConfigurationEntreprise.get_configuration_active()
+        
+        # Créer un objet config compatible avec le template
         config = {
-            'nom_entreprise': 'GESTIMMOB',
-            'slogan': 'Gestion Immobilière Professionnelle',
-            'couleur_principale': '#2c3e50',
-            'couleur_secondaire': '#3498db',
-            'get_adresse_complete': '123 Rue de la Paix, 75001 Paris, France',
-            'telephone': '01 23 45 67 89',
-            'email': 'contact@gestimmob.fr',
-            'site_web': 'www.gestimmob.fr',
-            'get_informations_legales': 'SIRET: 123 456 789 00012 | N° Licence: 123456789 | SARL'
+            'nom_entreprise': config_entreprise.nom_entreprise,
+            'slogan': config_entreprise.slogan or 'Gestion Immobilière Professionnelle',
+            'couleur_principale': config_entreprise.couleur_principale,
+            'couleur_secondaire': config_entreprise.couleur_secondaire,
+            'logo_url': config_entreprise.logo_url,
+            'get_adresse_complete': config_entreprise.get_adresse_complete(),
+            'telephone': config_entreprise.telephone,
+            'email': config_entreprise.email,
+            'site_web': config_entreprise.site_web,
+            'get_informations_legales': config_entreprise.get_informations_legales(),
         }
         
         # Rendre le template HTML GESTIMMOB
@@ -302,17 +307,22 @@ def apercu_recu_recapitulatif_gestimmob(request, pk):
         # Calculer les totaux et détails
         totaux = recu.recapitulatif.calculer_totaux_bailleur()
         
-        # Configuration de l'entreprise
+        # Récupérer la configuration de l'entreprise depuis la base de données
+        from core.models import ConfigurationEntreprise
+        config_entreprise = ConfigurationEntreprise.get_configuration_active()
+        
+        # Créer un objet config compatible avec le template
         config = {
-            'nom_entreprise': 'GESTIMMOB',
-            'slogan': 'Gestion Immobilière Professionnelle',
-            'couleur_principale': '#2c3e50',
-            'couleur_secondaire': '#3498db',
-            'get_adresse_complete': '123 Rue de la Paix, 75001 Paris, France',
-            'telephone': '01 23 45 67 89',
-            'email': 'contact@gestimmob.fr',
-            'site_web': 'www.gestimmob.fr',
-            'get_informations_legales': 'SIRET: 123 456 789 00012 | N° Licence: 123456789 | SARL'
+            'nom_entreprise': config_entreprise.nom_entreprise,
+            'slogan': config_entreprise.slogan or 'Gestion Immobilière Professionnelle',
+            'couleur_principale': config_entreprise.couleur_principale,
+            'couleur_secondaire': config_entreprise.couleur_secondaire,
+            'logo_url': config_entreprise.logo_url,
+            'get_adresse_complete': config_entreprise.get_adresse_complete(),
+            'telephone': config_entreprise.telephone,
+            'email': config_entreprise.email,
+            'site_web': config_entreprise.site_web,
+            'get_informations_legales': config_entreprise.get_informations_legales(),
         }
         
         context = {

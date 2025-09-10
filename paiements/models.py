@@ -155,7 +155,11 @@ class ChargeDeductible(models.Model):
         ordering = ['-date_charge']
     
     def __str__(self):
-        return f"{self.libelle} - {self.contrat.numero_contrat} - {self.montant} F CFA"
+        try:
+            contrat_num = self.contrat.numero_contrat if self.contrat else f"Contrat ID {self.contrat_id}"
+        except:
+            contrat_num = f"Contrat ID {self.contrat_id}"
+        return f"{self.libelle} - {contrat_num} - {self.montant} F CFA"
     
     def get_montant_formatted(self):
         """Retourne le montant formaté avec la devise."""
@@ -427,7 +431,11 @@ class Paiement(models.Model):
         ordering = ['-date_paiement', '-date_creation']
     
     def __str__(self):
-        return f"Paiement {self.reference_paiement} - {self.contrat.numero_contrat} - {self.montant} F CFA"
+        try:
+            contrat_num = self.contrat.numero_contrat if self.contrat else f"Contrat ID {self.contrat_id}"
+        except:
+            contrat_num = f"Contrat ID {self.contrat_id}"
+        return f"Paiement {self.reference_paiement} - {contrat_num} - {self.montant} F CFA"
     
     def save(self, *args, **kwargs):
         if not self.reference_paiement:
@@ -450,15 +458,24 @@ class Paiement(models.Model):
     
     def get_locataire(self):
         """Retourne le locataire associé à ce paiement."""
-        return self.contrat.locataire
+        try:
+            return self.contrat.locataire
+        except:
+            return None
     
     def get_bailleur(self):
         """Retourne le bailleur associé à ce paiement."""
-        return self.contrat.propriete.bailleur
+        try:
+            return self.contrat.propriete.bailleur
+        except:
+            return None
     
     def get_propriete(self):
         """Retourne la propriété associée à ce paiement."""
-        return self.contrat.propriete
+        try:
+            return self.contrat.propriete
+        except:
+            return None
     
     def get_code_locataire(self):
         """Retourne le code unique du locataire."""
@@ -617,6 +634,49 @@ class Paiement(models.Model):
                 'autres': 'Autres',
             }
             return type_names.get(self.type_paiement, self.type_paiement)
+    
+    def clean(self):
+        """Validation personnalisée pour empêcher les doublons de paiement."""
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone
+        
+        super().clean()
+        
+        # Vérifier les doublons seulement si c'est un nouveau paiement ou si le contrat/mois a changé
+        if self.pk is None or hasattr(self, '_original_contrat') or hasattr(self, '_original_mois_paye'):
+            # Utiliser contrat_id au lieu de self.contrat pour éviter l'erreur RelatedObjectDoesNotExist
+            contrat_id = getattr(self, 'contrat_id', None)
+            if contrat_id and self.mois_paye:
+                # Vérifier s'il existe déjà un paiement pour ce contrat dans le même mois
+                existing_payment = Paiement.objects.filter(
+                    contrat_id=contrat_id,
+                    mois_paye__year=self.mois_paye.year,
+                    mois_paye__month=self.mois_paye.month,
+                    is_deleted=False
+                ).exclude(pk=self.pk)
+                
+                if existing_payment.exists():
+                    existing = existing_payment.first()
+                    raise ValidationError({
+                        'mois_paye': f"Un paiement existe déjà pour ce contrat au mois de {self.mois_paye.strftime('%B %Y')}. "
+                                    f"Paiement existant: {existing.reference_paiement} du {existing.date_paiement.strftime('%d/%m/%Y')} "
+                                    f"pour un montant de {existing.montant} F CFA."
+                    })
+    
+    def save(self, *args, **kwargs):
+        """Override save pour stocker les valeurs originales et valider."""
+        # Stocker les valeurs originales pour la validation
+        if self.pk:
+            try:
+                original = Paiement.objects.get(pk=self.pk)
+                self._original_contrat = original.contrat
+                self._original_mois_paye = original.mois_paye
+            except Paiement.DoesNotExist:
+                pass
+        
+        # Valider avant de sauvegarder
+        self.clean()
+        super().save(*args, **kwargs)
 
 
 class QuittancePaiement(models.Model):

@@ -206,7 +206,9 @@ def configuration_entreprise(request):
     # Vérification des permissions : Tous les utilisateurs connectés peuvent accéder
     # mais seuls PRIVILEGE peuvent modifier
     from core.utils import check_group_permissions
-    can_modify = check_group_permissions(request.user, ['PRIVILEGE'], 'modify')['allowed']
+    permissions_result = check_group_permissions(request.user, ['PRIVILEGE'], 'modify')
+    can_modify = permissions_result['allowed']
+    
     
     # Récupérer ou créer la configuration active
     config = ConfigurationEntreprise.get_configuration_active()
@@ -224,13 +226,36 @@ def configuration_entreprise(request):
         )
     
     if request.method == 'POST' and can_modify:
-        form = ConfigurationEntrepriseForm(request.POST, instance=config)
+        form = ConfigurationEntrepriseForm(request.POST, request.FILES, instance=config)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Configuration de l\'entreprise mise à jour avec succès.')
-            return redirect('core:configuration_entreprise')
+            try:
+                # Désactiver toutes les autres configurations
+                ConfigurationEntreprise.objects.filter(actif=True).exclude(id=config.id).update(actif=False)
+                
+                # Sauvegarder la nouvelle configuration
+                config = form.save()
+                config.actif = True
+                config.save()
+                
+                # Vérifier que la configuration est bien active
+                config_verif = ConfigurationEntreprise.get_configuration_active()
+                
+                messages.success(request, 'Configuration de l\'entreprise mise à jour avec succès.')
+                return redirect('core:configuration_entreprise')
+            except Exception as e:
+                messages.error(request, f'Erreur lors de la sauvegarde: {str(e)}')
         else:
-            messages.error(request, 'Erreur dans le formulaire. Veuillez vérifier les informations.')
+            # Afficher les erreurs spécifiques du formulaire
+            error_messages = []
+            for field, errors in form.errors.items():
+                field_name = form.fields[field].label or field
+                for error in errors:
+                    error_messages.append(f"{field_name}: {error}")
+            
+            if error_messages:
+                messages.error(request, 'Erreurs dans le formulaire: ' + '; '.join(error_messages))
+            else:
+                messages.error(request, 'Erreur dans le formulaire. Veuillez vérifier les informations.')
     elif request.method == 'POST' and not can_modify:
         messages.warning(request, 'Vous n\'avez pas les permissions pour modifier la configuration. Contactez un administrateur.')
         return redirect('core:configuration_entreprise')
@@ -436,6 +461,7 @@ def api_configuration(request):
     }
     
     return JsonResponse(data)
+
 
 @login_required
 @require_http_methods(["POST"])

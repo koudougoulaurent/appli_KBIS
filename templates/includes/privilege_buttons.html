@@ -68,6 +68,10 @@ pour les utilisateurs du groupe PRIVILEGE dans les listes d'éléments.
                             onclick="confirmForceDelete(this)">
                         <i class="bi bi-{{ action.icon }}"></i>
                         <span class="d-none d-sm-inline">Suppression Forcée</span>
+                        <!-- Debug temporaire -->
+                        <small class="d-block text-muted" style="font-size: 0.7em;">
+                            Debug: can={{ action.data.can_force_delete }}, count={{ action.data.contracts_count }}
+                        </small>
                     </button>
                 {% endif %}
             {% endfor %}
@@ -226,28 +230,137 @@ function confirmForceDelete(button) {
     const contractsCount = parseInt(button.dataset.contractsCount) || 0;
     const forceDeleteMessage = button.dataset.forceDeleteMessage || '';
     
+    // Debug temporaire
+    console.log('🔍 Debug suppression forcée:', {
+        objectId,
+        objectName,
+        modelName,
+        canForceDelete,
+        contractsCount,
+        forceDeleteMessage: forceDeleteMessage.substring(0, 100) + '...'
+    });
+    
+    // Debug des attributs du bouton
+    console.log('🔍 Attributs du bouton:', {
+        'data-can-force-delete': button.dataset.canForceDelete,
+        'data-contracts-count': button.dataset.contractsCount,
+        'data-force-delete-message': button.dataset.forceDeleteMessage
+    });
+    
     if (!canForceDelete) {
+        console.log('❌ Suppression impossible - contrats actifs détectés');
         // Afficher un message d'erreur détaillé avec actions concrètes
         showForceDeleteErrorWithActions(forceDeleteMessage, objectId, modelName, objectName);
         return;
     }
     
-    // Confirmation avec avertissement spécial pour la suppression forcée
-    const confirmMessage = `🚨 SUPPRESSION FORCÉE/URGENTE 🚨\n\n` +
-        `📋 ÉLÉMENT À SUPPRIMER :\n"${objectName}"\n\n` +
-        `✅ VÉRIFICATION :\nAucun contrat actif détecté - Suppression autorisée\n\n` +
-        `⚠️ ATTENTION - SUPPRESSION PHYSIQUE :\nCette action supprimera DÉFINITIVEMENT l'élément de la base de données.\n` +
-        `L'élément sera PERDU à JAMAIS et ne pourra pas être récupéré.\n` +
-        `Cette action est IRRÉVERSIBLE et sera tracée dans l'audit.\n\n` +
-        `🔐 CONFIRMATION REQUISE :\nTapez exactement "SUPPRIMER" pour confirmer la suppression physique :`;
+    console.log('✅ Suppression autorisée - affichage de la modal de confirmation');
+    // Afficher une modal de confirmation pour la suppression autorisée
+    showForceDeleteConfirmationModal(objectId, modelName, objectName);
+}
+
+// Fonction pour afficher la modal de confirmation de suppression forcée
+function showForceDeleteConfirmationModal(objectId, modelName, objectName) {
+    const modalHtml = `
+        <div class="modal fade" id="forceDeleteConfirmationModal" tabindex="-1" aria-labelledby="forceDeleteConfirmationModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title" id="forceDeleteConfirmationModalLabel">
+                            <i class="bi bi-check-circle-fill"></i>
+                            ✅ SUPPRESSION FORCÉE AUTORISÉE
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-success" role="alert">
+                            <h6 class="alert-heading">✅ Vérification effectuée</h6>
+                            <p class="mb-0">L'élément <strong>"${objectName}"</strong> peut être supprimé car il n'est lié à aucun contrat actif.</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h6>📋 Détails de la suppression :</h6>
+                            <div class="bg-light p-3 rounded">
+                                <ul class="mb-0 small">
+                                    <li><strong>Type :</strong> Suppression physique définitive</li>
+                                    <li><strong>Élément :</strong> ${objectName}</li>
+                                    <li><strong>Modèle :</strong> ${modelName}</li>
+                                    <li><strong>Contrats actifs :</strong> Aucun détecté</li>
+                                    <li><strong>Récupération :</strong> Impossible après suppression</li>
+                                    <li><strong>Audit :</strong> Action tracée dans les logs</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-warning" role="alert">
+                            <h6 class="alert-heading">⚠️ ATTENTION - ACTION IRRÉVERSIBLE</h6>
+                            <p class="mb-0">Cette suppression est <strong>DÉFINITIVE</strong> et ne peut pas être annulée. L'élément sera perdu à jamais.</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="confirmationInput" class="form-label">
+                                <strong>🔐 Confirmation requise :</strong><br>
+                                Tapez exactement <code>SUPPRIMER</code> pour confirmer la suppression physique :
+                            </label>
+                            <input type="text" class="form-control" id="confirmationInput" placeholder="Tapez SUPPRIMER ici...">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle"></i> Annuler
+                        </button>
+                        <button type="button" class="btn btn-danger" id="confirmForceDeleteBtn" disabled>
+                            <i class="bi bi-exclamation-triangle-fill"></i> Confirmer la suppression
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     
-    const userInput = prompt(confirmMessage);
-    
-    if (userInput === "SUPPRIMER") {
-        performForceDeleteAction('force_delete', objectId, modelName, objectName);
-    } else if (userInput !== null) {
-        showPrivilegeAlert('info', '❌ Suppression annulée', 'Vous devez taper exactement "SUPPRIMER" pour confirmer la suppression forcée.');
+    // Supprimer l'ancienne modal si elle existe
+    const existingModal = document.getElementById('forceDeleteConfirmationModal');
+    if (existingModal) {
+        existingModal.remove();
     }
+    
+    // Ajouter la nouvelle modal au DOM
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Afficher la modal
+    const modal = new bootstrap.Modal(document.getElementById('forceDeleteConfirmationModal'));
+    modal.show();
+    
+    // Gérer la validation de l'input
+    const confirmationInput = document.getElementById('confirmationInput');
+    const confirmBtn = document.getElementById('confirmForceDeleteBtn');
+    
+    confirmationInput.addEventListener('input', function() {
+        if (this.value === 'SUPPRIMER') {
+            confirmBtn.disabled = false;
+            confirmBtn.classList.remove('btn-secondary');
+            confirmBtn.classList.add('btn-danger');
+        } else {
+            confirmBtn.disabled = true;
+            confirmBtn.classList.remove('btn-danger');
+            confirmBtn.classList.add('btn-secondary');
+        }
+    });
+    
+    // Gérer la confirmation
+    confirmBtn.addEventListener('click', function() {
+        if (confirmationInput.value === 'SUPPRIMER') {
+            modal.hide();
+            performForceDeleteAction('force_delete', objectId, modelName, objectName);
+        }
+    });
+    
+    // Gérer la touche Entrée
+    confirmationInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && this.value === 'SUPPRIMER') {
+            confirmBtn.click();
+        }
+    });
 }
 
 // Fonction pour effectuer l'action de privilège

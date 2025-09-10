@@ -288,10 +288,11 @@ def ajouter_en_tete_entreprise_reportlab(story, config):
     # Style pour l'en-tête
     header_style = ParagraphStyle(
         'HeaderStyle',
-        fontSize=14,
+        fontSize=16,
         spaceAfter=10,
         alignment=1,  # Centré
-        textColor=colors.darkblue
+        textColor=colors.darkblue,
+        fontName='Helvetica-Bold'
     )
     
     # Style pour les informations de contact
@@ -302,6 +303,31 @@ def ajouter_en_tete_entreprise_reportlab(story, config):
         alignment=1,  # Centré
         textColor=colors.darkgrey
     )
+    
+    # Ajouter le nom de l'entreprise
+    story.append(Paragraph(
+        f"<b>{config.nom_entreprise}</b>",
+        header_style
+    ))
+    
+    # Ajouter l'adresse
+    story.append(Paragraph(
+        config.get_adresse_complete(),
+        contact_style
+    ))
+    
+    # Ajouter les informations de contact
+    story.append(Paragraph(
+        config.get_contact_complet(),
+        contact_style
+    ))
+    
+    # Ajouter les informations légales si disponibles
+    if config.get_informations_legales():
+        story.append(Paragraph(
+            config.get_informations_legales(),
+            contact_style
+        ))
     
     # Créer un tableau pour l'en-tête avec logo et texte
     logo_source = config.get_logo_prioritaire()
@@ -632,6 +658,13 @@ def check_group_permissions(user, allowed_groups, operation_type='modify'):
     # Vérification alternative avec la méthode is_privilege_user pour plus de robustesse
     if hasattr(user, 'is_privilege_user') and user.is_privilege_user():
         return {'allowed': True, 'message': 'Accès autorisé (groupe PRIVILEGE via is_privilege_user).'}
+    
+    # Vérifier si le groupe de l'utilisateur est dans la liste des groupes autorisés
+    if groupe_nom in [g.upper() for g in allowed_groups]:
+        return {'allowed': True, 'message': f'Accès autorisé (groupe {groupe_nom}).'}
+    
+    # Si aucun groupe n'est autorisé, refuser l'accès
+    return {'allowed': False, 'message': f'Accès refusé. Groupes autorisés: {", ".join(allowed_groups)}. Votre groupe: {groupe_nom}.'}
 
 
 def check_group_permissions_with_fallback(user, allowed_groups, operation_type='modify'):
@@ -866,6 +899,9 @@ def check_active_contracts_before_force_delete(model_instance):
     """
     from contrats.models import Contrat
     from django.utils import timezone
+    import logging
+    
+    logger = logging.getLogger(__name__)
     
     active_contracts = []
     can_force_delete = True
@@ -875,40 +911,48 @@ def check_active_contracts_before_force_delete(model_instance):
         # Vérifier selon le type de modèle
         if hasattr(model_instance, '_meta'):
             model_name = model_instance._meta.model_name.lower()
+            logger.info(f"🔍 Vérification des contrats pour {model_name} (ID: {model_instance.id})")
             
             if model_name == 'propriete':
                 # Vérifier les contrats actifs pour cette propriété
-                active_contracts = Contrat.objects.filter(
+                active_contracts = list(Contrat.objects.filter(
                     propriete=model_instance,
                     est_actif=True,
                     est_resilie=False
-                ).select_related('locataire').order_by('-date_debut')
+                ).select_related('locataire').order_by('-date_debut'))
+                logger.info(f"📋 Propriété: {len(active_contracts)} contrats actifs trouvés")
                 
             elif model_name == 'locataire':
                 # Vérifier les contrats actifs pour ce locataire
-                active_contracts = Contrat.objects.filter(
+                active_contracts = list(Contrat.objects.filter(
                     locataire=model_instance,
                     est_actif=True,
                     est_resilie=False
-                ).select_related('propriete').order_by('-date_debut')
+                ).select_related('propriete').order_by('-date_debut'))
+                logger.info(f"👤 Locataire: {len(active_contracts)} contrats actifs trouvés")
                 
             elif model_name == 'bailleur':
                 # Vérifier les contrats actifs pour les propriétés de ce bailleur
                 from proprietes.models import Propriete
                 proprietes_bailleur = Propriete.objects.filter(bailleur=model_instance)
-                active_contracts = Contrat.objects.filter(
+                active_contracts = list(Contrat.objects.filter(
                     propriete__in=proprietes_bailleur,
                     est_actif=True,
                     est_resilie=False
-                ).select_related('propriete', 'locataire').order_by('-date_debut')
+                ).select_related('propriete', 'locataire').order_by('-date_debut'))
+                logger.info(f"🏢 Bailleur: {len(active_contracts)} contrats actifs trouvés")
         
         # Déterminer si la suppression forcée est possible
-        if active_contracts.exists():
+        contracts_count = len(active_contracts)
+        logger.info(f"📊 Nombre total de contrats actifs: {contracts_count}")
+        
+        
+        if contracts_count > 0:
             can_force_delete = False
-            contracts_count = active_contracts.count()
+            logger.info("❌ Suppression impossible - contrats actifs détectés")
             
             if contracts_count == 1:
-                contrat = active_contracts.first()
+                contrat = active_contracts[0]
                 message = f"❌ SUPPRESSION IMPOSSIBLE ❌\n\n1 CONTRAT ACTIF DÉTECTÉ :\n• Contrat N°: {contrat.numero_contrat if hasattr(contrat, 'numero_contrat') else 'N/A'}\n• Locataire: {contrat.locataire if hasattr(contrat, 'locataire') else 'N/A'}\n• Propriété: {contrat.propriete if hasattr(contrat, 'propriete') else 'N/A'}\n• Date début: {contrat.date_debut if hasattr(contrat, 'date_debut') else 'N/A'}\n• Date fin: {contrat.date_fin if hasattr(contrat, 'date_fin') else 'N/A'}\n\n⚠️ ACTION REQUISE :\nVous devez d'abord RÉSILIER ce contrat avant de pouvoir supprimer l'élément.\n\n💡 ACTIONS DISPONIBLES :\n• Cliquez sur 'Voir les contrats actifs' pour accéder directement\n• Ou utilisez 'Contrats de cet élément' pour filtrer\n• Résiliez le contrat, puis revenez ici"
             else:
                 message = f"❌ SUPPRESSION IMPOSSIBLE ❌\n\n{contracts_count} CONTRATS ACTIFS DÉTECTÉS :\n\n"
@@ -921,18 +965,24 @@ def check_active_contracts_before_force_delete(model_instance):
                 message += f"⚠️ ACTION REQUISE :\nVous devez d'abord RÉSILIER TOUS ces contrats avant de pouvoir supprimer l'élément.\n\n💡 ACTIONS DISPONIBLES :\n• Cliquez sur 'Voir les contrats actifs' pour accéder directement\n• Ou utilisez 'Contrats de cet élément' pour filtrer\n• Résiliez tous les contrats, puis revenez ici"
         else:
             message = "✅ SUPPRESSION AUTORISÉE ✅\n\nAucun contrat actif détecté.\nLa suppression forcée peut être effectuée en toute sécurité."
+            logger.info("✅ Suppression autorisée - aucun contrat actif")
             
     except Exception as e:
         can_force_delete = False
         message = f"Erreur lors de la vérification des contrats : {str(e)}"
         active_contracts = []
+        contracts_count = 0
+        logger.error(f"❌ Erreur lors de la vérification: {str(e)}")
     
-    return {
+    result = {
         'can_force_delete': can_force_delete,
-        'active_contracts': list(active_contracts),
+        'active_contracts': active_contracts,
         'message': message,
-        'contracts_count': len(active_contracts)
+        'contracts_count': contracts_count
     }
+    
+    logger.info(f"🎯 Résultat final: can_force_delete={can_force_delete}, contracts_count={contracts_count}")
+    return result
 
 
 def get_force_delete_context(model_instance, request=None):

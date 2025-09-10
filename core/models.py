@@ -529,10 +529,32 @@ class ConfigurationEntreprise(models.Model):
     @classmethod
     def get_configuration_active(cls):
         """Retourne la configuration active de l'entreprise."""
+        # Récupérer la configuration active
         config = cls.objects.filter(actif=True).first()
+        
         if not config:
             # Créer une configuration par défaut si aucune n'existe
-            config = cls.objects.create()
+            config = cls.objects.create(
+                nom_entreprise="GESTIMMOB",
+                adresse="123 Rue de la Paix",
+                code_postal="75001",
+                ville="Paris",
+                pays="France",
+                telephone="01 23 45 67 89",
+                email="contact@gestimmob.fr",
+                siret="123 456 789 00012",
+                numero_licence="123456789",
+                forme_juridique="SARL",
+                couleur_principale="#2c3e50",
+                couleur_secondaire="#3498db",
+                actif=True
+            )
+        else:
+            # S'assurer que la configuration est bien active
+            if not config.actif:
+                config.actif = True
+                config.save()
+        
         return config
     
     def get_adresse_complete(self):

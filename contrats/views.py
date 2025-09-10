@@ -83,6 +83,11 @@ class ContratListView(PrivilegeButtonsMixin, IntelligentListView):
             count=Sum('loyer_mensuel')
         ).order_by('-count')
         
+        # Statistiques des propriétés disponibles
+        from core.property_utils import get_proprietes_disponibles_global
+        proprietes_disponibles = get_proprietes_disponibles_global()
+        context['proprietes_disponibles_pour_location'] = proprietes_disponibles.count()
+        
         return context
     
     def dispatch(self, request, *args, **kwargs):
@@ -275,13 +280,14 @@ def ajouter_contrat(request):
     else:
         form = ContratForm()
     
+    # Utiliser la logique simplifiée pour éviter les erreurs
+    from .utils import get_proprietes_disponibles
+    proprietes_disponibles = get_proprietes_disponibles()
+    
     context = {
         'form': form,
         'title': 'Ajouter un contrat',
-        'proprietes': Propriete.objects.filter(
-            models.Q(disponible=True) |
-            models.Q(unites_locatives__statut='disponible', unites_locatives__is_deleted=False)
-        ).distinct(),
+        'proprietes': proprietes_disponibles,
         'locataires': Locataire.objects.all(),
         'proprietes_data': form.proprietes_data,
     }
@@ -1311,7 +1317,7 @@ def imprimer_recu_caution(request, contrat_id):
     response['Content-Disposition'] = f'attachment; filename="recu_caution_{recu.numero_recu}.pdf"'
     
     # Créer le PDF avec ReportLab
-    p = canvas.Canvas(response, pagesize=A5)
+    p = canvas.Canvas(response, pagesize=A4)
     
     # Récupérer la configuration de l'entreprise
     from core.models import ConfigurationEntreprise
@@ -1470,9 +1476,9 @@ def imprimer_document_contrat(request, contrat_id):
     
     # Signature
     p.setFont("Helvetica", 10)
-    p.drawString(50, 150, "Signature du bailleur:")
+    p.drawString(50, 150, "Signature du locataire:")
     p.line(50, 140, 200, 140)
-    p.drawString(50, 100, "Signature du locataire:")
+    p.drawString(50, 100, "Signature de l'agent immobilier:")
     p.line(50, 90, 200, 90)
     
     # Pied de page avec informations de l'entreprise (bien séparé)

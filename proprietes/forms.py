@@ -1665,16 +1665,19 @@ class DocumentSearchForm(forms.Form):
     )
     
     propriete = forms.ModelChoiceField(
-        queryset=Propriete.objects.filter(
-            models.Q(disponible=True) |
-            models.Q(unites_locatives__statut='disponible', unites_locatives__is_deleted=False)
-        ).distinct(),
+        queryset=Propriete.objects.none(),  # Sera rempli dans __init__
         required=False,
         empty_label="Toutes les propriétés",
         widget=forms.Select(attrs={
             'class': 'form-select'
         })
     )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Utiliser la logique de filtrage des propriétés disponibles
+        from core.property_utils import get_proprietes_disponibles_global
+        self.fields['propriete'].queryset = get_proprietes_disponibles_global()
     
     date_debut = forms.DateField(
         required=False,
@@ -1708,7 +1711,7 @@ class UniteRechercheForm(forms.Form):
     )
     
     propriete = forms.ModelChoiceField(
-        queryset=Propriete.objects.filter(is_deleted=False),
+        queryset=Propriete.objects.none(),  # Sera rempli dans __init__
         required=False,
         empty_label="Toutes les propriétés",
         label="Propriété",
@@ -1717,6 +1720,12 @@ class UniteRechercheForm(forms.Form):
             'id': 'propriete-select'
         })
     )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Utiliser la logique de filtrage des propriétés disponibles
+        from core.property_utils import get_proprietes_disponibles_global
+        self.fields['propriete'].queryset = get_proprietes_disponibles_global()
     
     bailleur = forms.ModelChoiceField(
         queryset=Bailleur.objects.filter(is_deleted=False),
