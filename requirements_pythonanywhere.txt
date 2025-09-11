@@ -56,7 +56,6 @@ python-dotenv>=1.0.0
 # ===========================================
 # Gestion des polices (pour personnalisation PDF)
 fonttools>=4.0.0
-
 # Compression PDF (pour optimiser la taille)
 PyPDF2>=3.0.0
 

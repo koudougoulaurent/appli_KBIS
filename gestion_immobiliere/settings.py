@@ -20,7 +20,13 @@ SECRET_KEY = 'django-insecure-ics4n+vw1)3tlekunwt5b%(05ug)s&%*h-z&bmw1$_pd11_9nd
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
+ALLOWED_HOSTS = [
+    'localhost', 
+    '127.0.0.1', 
+    'testserver',
+    'laurenzo.pythonanywhere.com',  # Votre domaine PythonAnywhere
+    '.pythonanywhere.com'  # Tous les sous-domaines PythonAnywhere
+]
 
 
 # Application definition
@@ -185,6 +191,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom User Model
 AUTH_USER_MODEL = 'utilisateurs.Utilisateur'
+
+# Login/Logout URLs - CORRECTION POUR PYTHONANYWHERE
+LOGIN_URL = '/utilisateurs/connexion-groupes/'
+LOGIN_REDIRECT_URL = '/utilisateurs/dashboard/'
+LOGOUT_REDIRECT_URL = '/utilisateurs/connexion-groupes/'
 
 # Configuration pour les formulaires crispy
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
