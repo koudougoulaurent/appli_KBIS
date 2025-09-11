@@ -1,0 +1,44 @@
+# Dépendances pour le déploiement en production sur PythonAnywhere
+# Installation: pip3.10 install --user -r requirements_production.txt
+
+# Framework Django
+Django>=4.2.7,<5.0
+
+# Interface utilisateur et formulaires
+django-bootstrap5>=2.0
+django-crispy-forms>=2.0
+crispy-bootstrap5>=0.7
+
+# API REST
+djangorestframework>=3.14.0
+
+# Génération de PDF
+reportlab>=4.0.0
+xhtml2pdf>=0.2.5
+
+# Traitement d'images
+Pillow>=10.0.0
+
+# Extensions Django
+django-extensions>=3.2.0
+
+# Serveur de fichiers statiques
+whitenoise>=6.5.0
+
+# Serveur WSGI pour la production
+gunicorn>=21.2.0
+
+# Base de données (optionnel, SQLite est inclus)
+# psycopg2-binary>=2.9.0  # Pour PostgreSQL
+# mysqlclient>=2.1.0      # Pour MySQL
+
+# Sécurité et performance
+django-cors-headers>=4.0.0
+django-environ>=0.10.0
+
+# Logging et monitoring
+django-debug-toolbar>=4.1.0  # Seulement pour le développement
+
+# Utilitaires
+python-decouple>=3.8
+

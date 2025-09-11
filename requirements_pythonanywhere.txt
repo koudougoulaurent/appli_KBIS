@@ -1,0 +1,70 @@
+# Dépendances complètes pour le déploiement sur PythonAnywhere (gratuit)
+# Installation: pip install -r requirements_pythonanywhere.txt
+
+# ===========================================
+# CORE DJANGO FRAMEWORK
+# ===========================================
+Django>=4.2.7,<5.0
+
+# ===========================================
+# INTERFACE UTILISATEUR ET FORMULAIRES
+# ===========================================
+django-bootstrap5>=2.0
+django-crispy-forms>=2.0
+crispy-bootstrap5>=0.7
+
+# ===========================================
+# API REST
+# ===========================================
+djangorestframework>=3.14.0
+
+# ===========================================
+# GÉNÉRATION DE PDF (FONCTIONNALITÉS PRINCIPALES)
+# ===========================================
+reportlab>=4.0.0
+xhtml2pdf>=0.2.5
+
+# ===========================================
+# TRAITEMENT D'IMAGES
+# ===========================================
+Pillow>=10.0.0
+
+# ===========================================
+# EXTENSIONS DJANGO
+# ===========================================
+django-extensions>=3.2.0
+
+# ===========================================
+# SERVEUR DE FICHIERS STATIQUES (ESSENTIEL POUR PYTHONANYWHERE)
+# ===========================================
+whitenoise>=6.5.0
+
+# ===========================================
+# SÉCURITÉ ET PERFORMANCE
+# ===========================================
+django-cors-headers>=4.0.0
+django-environ>=0.10.0
+
+# ===========================================
+# UTILITAIRES
+# ===========================================
+python-decouple>=3.8
+python-dotenv>=1.0.0
+
+# ===========================================
+# PACKAGES OPTIONNELS POUR FONCTIONNALITÉS AVANCÉES
+# ===========================================
+# Gestion des polices (pour personnalisation PDF)
+fonttools>=4.0.0
+
+# Compression PDF (pour optimiser la taille)
+PyPDF2>=3.0.0
+
+# ===========================================
+# NOTES IMPORTANTES POUR PYTHONANYWHERE
+# ===========================================
+# 1. PythonAnywhere utilise Python 3.10 par défaut
+# 2. Utilisez pip install -r requirements_pythonanywhere.txt
+# 3. SQLite est inclus, pas besoin de packages de base de données
+# 4. Gunicorn n'est pas nécessaire sur PythonAnywhere (ils gèrent le serveur)
+# 5. WhiteNoise est essentiel pour servir les fichiers statiques

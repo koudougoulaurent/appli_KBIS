@@ -1,0 +1,117 @@
+# Configuration Apache pour Django sur LWS
+# Ce fichier doit être placé à la racine de votre site
+
+# Activer le module de réécriture
+RewriteEngine On
+
+# Rediriger toutes les requêtes vers Django
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ /appli_KBIS/wsgi.py/$1 [QSA,L]
+
+# Configuration des fichiers statiques
+Alias /static/ /www/appli_KBIS/staticfiles/
+Alias /media/ /www/appli_KBIS/media/
+
+# Sécurité - Autoriser l'accès au fichier wsgi.py
+<Files "wsgi.py">
+    Require all granted
+</Files>
+
+# Sécurité - Protéger les fichiers sensibles
+<Files "*.py">
+    Require all denied
+</Files>
+<Files "*.pyc">
+    Require all denied
+</Files>
+<Files "*.log">
+    Require all denied
+</Files>
+<Files "db.sqlite3">
+    Require all denied
+</Files>
+
+# Autoriser les fichiers statiques et média
+<FilesMatch "\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$">
+    Require all granted
+</FilesMatch>
+
+# Compression GZIP pour améliorer les performances
+<IfModule mod_deflate.c>
+    # Compresser les fichiers texte
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/json
+    
+    # Ne pas compresser les images déjà compressées
+    SetEnvIfNoCase Request_URI \
+        \.(?:gif|jpe?g|png|swf|woff|woff2)$ no-gzip dont-vary
+    SetEnvIfNoCase Request_URI \
+        \.(?:exe|t?gz|zip|bz2|sit|rar)$ no-gzip dont-vary
+</IfModule>
+
+# Cache des fichiers statiques
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/jpg "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/ico "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType font/woff "access plus 1 month"
+    ExpiresByType font/woff2 "access plus 1 month"
+    ExpiresByType application/font-woff "access plus 1 month"
+    ExpiresByType application/font-woff2 "access plus 1 month"
+</IfModule>
+
+# Headers de sécurité
+<IfModule mod_headers.c>
+    # Protection XSS
+    Header always set X-XSS-Protection "1; mode=block"
+    
+    # Protection contre le clickjacking
+    Header always set X-Frame-Options "DENY"
+    
+    # Protection MIME type sniffing
+    Header always set X-Content-Type-Options "nosniff"
+    
+    # Referrer Policy
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    
+    # Content Security Policy (optionnel, à adapter selon vos besoins)
+    # Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'"
+</IfModule>
+
+# Redirection HTTPS (si SSL est activé)
+# Décommentez les lignes suivantes si vous avez SSL activé
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Redirection www vers non-www (optionnel)
+# RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+# RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
+
+# Configuration des erreurs personnalisées
+ErrorDocument 404 /appli_KBIS/wsgi.py/
+ErrorDocument 500 /appli_KBIS/wsgi.py/
+
+# Limitation de la taille des uploads
+LimitRequestBody 10485760  # 10MB
+
+# Désactiver l'affichage du contenu des répertoires
+Options -Indexes
+
+# Suivre les liens symboliques
+Options +FollowSymLinks
+
