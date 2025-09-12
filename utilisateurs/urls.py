@@ -66,8 +66,6 @@ urlpatterns = [
     
     # Gestion des profils
     path('privilege/profiles/', views.privilege_profile_management, name='privilege_profile_management'),
-    path('privilege/profiles/ajouter/', views.PrivilegeUtilisateurCreateView.as_view(), name='privilege_utilisateur_create'),
-    path('privilege/profiles/<int:pk>/modifier/', views.PrivilegeUtilisateurUpdateView.as_view(), name='privilege_utilisateur_update'),
     path('privilege/profiles/<int:user_id>/delete/', views.privilege_delete_utilisateur, name='privilege_delete_utilisateur'),
     
     # Journal d'audit

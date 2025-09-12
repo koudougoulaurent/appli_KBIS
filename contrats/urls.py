@@ -2,10 +2,6 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views, api_views
 from .views import contrat_list, quittance_list, etat_lieux_list
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from . import views, api_views
-from .views import contrat_list, quittance_list, etat_lieux_list
 
 app_name = 'contrats'
 
@@ -20,11 +16,17 @@ urlpatterns = [
     # Autocomplete intelligent désactivé (DAL non compatible)
     # Dashboard principal des contrats
     path('', views.contrats_dashboard, name='dashboard'),
-    
     # API REST
     path('api/', include(router.urls)),
-    
     # URLs pour les pages web (avec aliases pour compatibilité)
+    path('liste/', contrat_list, name='liste'),
+    path('detail/<int:pk>/', views.detail_contrat, name='detail'),
+    path('ajouter/', views.ajouter_contrat, name='ajouter'),
+    path('modifier/<int:pk>/', views.modifier_contrat, name='modifier'),
+    path('resilier/<int:pk>/', views.resilier_contrat, name='resilier'),
+    path('supprimer/<int:pk>/', views.supprimer_contrat, name='supprimer'),
+    path('archiver-ressources/<int:pk>/', views.archiver_ressources_contrat, name='archiver_ressources'),
+    # ...existing code...
     path('liste/', contrat_list, name='liste'),
     path('detail/<int:pk>/', views.detail_contrat, name='detail'),
     path('ajouter/', views.ajouter_contrat, name='ajouter'),

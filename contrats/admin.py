@@ -48,7 +48,22 @@ class ContratAdmin(admin.ModelAdmin):
     
     readonly_fields = ('numero_contrat', 'date_creation', 'date_modification')
     
-    actions = ['activer_contrats', 'desactiver_contrats', 'resilier_contrats']
+    actions = ['activer_contrats', 'desactiver_contrats', 'resilier_contrats', 'archiver_ressources_contrats']
+    def archiver_ressources_contrats(self, request, queryset):
+        """Action pour archiver/désactiver toutes les ressources liées aux contrats sélectionnés (paiements, charges)."""
+        from paiements.models import Paiement, ChargeDeductible
+        from django.utils import timezone
+        total_paiements = 0
+        total_charges = 0
+        for contrat in queryset:
+            paiements = Paiement.objects.filter(contrat=contrat, is_deleted=False)
+            charges = ChargeDeductible.objects.filter(contrat=contrat, is_deleted=False)
+            total_paiements += paiements.count()
+            total_charges += charges.count()
+            paiements.update(is_deleted=True, deleted_at=timezone.now())
+            charges.update(is_deleted=True, deleted_at=timezone.now())
+        self.message_user(request, f"{total_paiements} paiement(s) et {total_charges} charge(s) archivés pour les contrats sélectionnés.")
+    archiver_ressources_contrats.short_description = _("Archiver toutes les ressources liées (paiements, charges)")
     
     def statut(self, obj):
         """Affiche le statut du contrat avec une couleur."""

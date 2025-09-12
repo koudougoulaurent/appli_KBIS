@@ -809,6 +809,11 @@ def privilege_force_delete_element(request, model_name, element_id):
         'chargesbailleur': ChargesBailleur,
         'utilisateur': Utilisateur,
         'contrat': 'contrats.models.Contrat',
+        'paiement': 'paiements.models.Paiement',
+        'recu': 'paiements.models.Recu',
+        'quittance': 'contrats.models.Quittance',
+        'chargedeductible': 'paiements.models.ChargeDeductible',
+        # Ajoutez ici tout autre modèle à supprimer physiquement
     }
     
     model_class = model_map.get(model_name.lower())
@@ -901,38 +906,77 @@ def privilege_profile_management(request):
     for groupe in GroupeTravail.objects.all():
         stats['par_groupe'][groupe.nom] = utilisateurs.filter(groupe_travail=groupe).count()
     
-    context = {
-        'utilisateurs': utilisateurs,
-        'stats': stats,
-        'groupes': GroupeTravail.objects.all(),
-        'groupe_nom': 'PRIVILEGE',
-        'page_title': 'Gestion des Profils - PRIVILEGE',
+    from core.utils import serialize_for_audit
+    # Mapper les noms de modèles
+    model_map = {
+        'bailleur': Bailleur,
+        'locataire': Locataire,
+        'propriete': Propriete,
+        'typebien': TypeBien,
+        'templaterecu': TemplateRecu,
+        'devise': Devise,
+        'chargesbailleur': ChargesBailleur,
+        'utilisateur': Utilisateur,
+        'contrat': 'contrats.models.Contrat',
+        'paiement': 'paiements.models.Paiement',
+        'recu': 'paiements.models.Recu',
+        'quittance': 'contrats.models.Quittance',
+        'chargedeductible': 'paiements.models.ChargeDeductible',
+        # Ajoutez ici tout autre modèle à supprimer physiquement
     }
-    
-    return render(request, 'utilisateurs/privilege_profile_management.html', context)
 
+    model_class = model_map.get(model_name.lower())
+    if not model_class:
+        return JsonResponse({'success': False, 'message': "Type d'élément non reconnu."})
 
-class PrivilegeUtilisateurCreateView(PrivilegeRequiredMixin, CreateView):
-    """Vue de création d'utilisateur pour le groupe PRIVILEGE"""
-    model = Utilisateur
-    form_class = UtilisateurForm
-    template_name = 'utilisateurs/privilege_utilisateur_form.html'
-    success_url = reverse_lazy('utilisateurs:privilege_profile_management')
-    
-    def form_valid(self, form):
-        response = super().form_valid(form)
-        messages.success(self.request, f"Utilisateur {self.object.username} créé avec succès.")
-        return response
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['groupe_nom'] = 'PRIVILEGE'
-        context['page_title'] = 'Créer un Utilisateur - PRIVILEGE'
-        context['action'] = 'create'
-        return context
+    # Importer le modèle si c'est une chaîne
+    if isinstance(model_class, str):
+        from django.apps import apps
+        app_name, model_name_import = model_class.split('.')
+        model_class = apps.get_model(app_name, model_name_import)
 
+    try:
+        element = model_class.objects.get(id=element_id)
+    except model_class.DoesNotExist:
+        return JsonResponse({'success': False, 'message': "Élément non trouvé."})
 
-class PrivilegeUtilisateurUpdateView(PrivilegeRequiredMixin, UpdateView):
+    try:
+        # Suppression forcée - suppression PHYSIQUE de la base de données
+        old_data = {f.name: getattr(element, f.name) for f in element._meta.fields}
+        object_repr = str(element)
+        model_name = element._meta.model_name
+
+        # SUPPRESSION PHYSIQUE RÉELLE de la base de données
+        element.delete()
+
+        # Log d'audit spécial pour suppression forcée
+        AuditLog.objects.create(
+            content_type=ContentType.objects.get_for_model(element.__class__),
+            object_id=element_id,
+            action='force_delete',
+            details={
+                'old_data': serialize_for_audit(old_data),
+                'force_delete': True,
+                'contracts_checked': True,
+                'contracts_count': 0,
+                'deleted_at': str(timezone.now()),
+                'deletion_type': 'PHYSICAL_DELETE',
+                'model_name': model_name
+            },
+            object_repr=object_repr,
+            user=request.user,
+            ip_address=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': f"L'élément '{object_repr}' a été supprimé définitivement.",
+            'object_name': object_repr,
+            'action': 'force_delete'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Erreur lors de la suppression: {str(e)}'})
     """Vue de modification d'utilisateur pour le groupe PRIVILEGE"""
     model = Utilisateur
     form_class = UtilisateurForm

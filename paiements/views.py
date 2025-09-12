@@ -47,7 +47,16 @@ def historique_paiements_partiels(request, contrat_id, mois, annee):
         mois_paye__month=mois,
         is_deleted=False
     ).order_by('date_paiement')
-    contrat = get_object_or_404(Contrat, pk=contrat_id)
+    try:
+        contrat = Contrat.objects.get(pk=contrat_id)
+    except Contrat.DoesNotExist:
+        messages.error(
+            request,
+            f"Aucun contrat trouvé avec l'identifiant {contrat_id}. "
+            "Vérifiez l'ID ou <a href='/contrats/liste/'>consultez la liste des contrats</a>. "
+            "Vous pouvez aussi <a href='/contrats/ajouter/'>ajouter un nouveau contrat</a>."
+        )
+        return render(request, 'paiements/historique_partiel.html', {'contrat': None, 'paiements': [], 'mois': mois, 'annee': annee})
     montant_du_mois = paiements.first().montant_du_mois if paiements.exists() else Decimal(contrat.loyer_mensuel)
     total_paye = sum([p.montant for p in paiements])
     montant_restant = max(montant_du_mois - total_paye, 0)

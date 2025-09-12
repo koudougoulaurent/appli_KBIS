@@ -318,10 +318,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     dateResiliation.addEventListener('change', function() {
         const selectedDate = this.value;
-        if (selectedDate < dateDebut || selectedDate > dateFin) {
-            this.setCustomValidity('La date de résiliation doit être comprise entre la date de début et la date de fin du contrat.');
+        let errorMsg = '';
+        if (!dateFin) {
+            // Si la date de fin n'est pas renseignée
+            if (selectedDate < dateDebut) {
+                errorMsg = `La date de résiliation doit être après le début du contrat (début : ${dateDebut.split('-').reverse().join('/')})`;
+                this.setCustomValidity(errorMsg);
+            } else {
+                this.setCustomValidity('');
+            }
         } else {
-            this.setCustomValidity('');
+            // Si la date de fin est renseignée
+            if (selectedDate < dateDebut || selectedDate > dateFin) {
+                errorMsg = `La date de résiliation doit être comprise entre le début (${dateDebut.split('-').reverse().join('/')}) et la fin (${dateFin.split('-').reverse().join('/')}) du contrat.`;
+                this.setCustomValidity(errorMsg);
+            } else {
+                this.setCustomValidity('');
+            }
         }
     });
 
@@ -349,8 +362,61 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Confirmation finale
     document.getElementById('confirmResiliation').addEventListener('click', function() {
-        form.submit();
+        // Afficher le loader
+        document.body.classList.add('modal-open');
+        const loader = document.createElement('div');
+        loader.id = 'globalLoader';
+        loader.style.position = 'fixed';
+        loader.style.top = '0';
+        loader.style.left = '0';
+        loader.style.width = '100vw';
+        loader.style.height = '100vh';
+        loader.style.background = 'rgba(255,255,255,0.7)';
+        loader.style.zIndex = '9999';
+        loader.innerHTML = '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);"><div class="spinner-border text-primary" style="width:3rem;height:3rem;"></div></div>';
+        document.body.appendChild(loader);
+
+        // Soumission AJAX
+        const formData = new FormData(form);
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.body.classList.remove('modal-open');
+            loader.remove();
+            if (data.success) {
+                showResiliationAlert('success', 'Résiliation réussie ! Le contrat a été désactivé.');
+                setTimeout(() => {
+                    window.location.href = '/contrats/liste/';
+                }, 1800);
+            } else {
+                showResiliationAlert('error', data.message || 'Erreur technique lors de la résiliation.');
+            }
+        })
+        .catch(error => {
+            document.body.classList.remove('modal-open');
+            loader.remove();
+            showResiliationAlert('error', 'Erreur technique lors de la résiliation.');
+        });
     });
+
+    // Fonction d'affichage du feedback
+    function showResiliationAlert(type, message) {
+        let alertDiv = document.getElementById('resiliationAlert');
+        if (!alertDiv) {
+            alertDiv = document.createElement('div');
+            alertDiv.id = 'resiliationAlert';
+            alertDiv.className = 'alert mt-3';
+            form.parentNode.insertBefore(alertDiv, form);
+        }
+        alertDiv.className = 'alert mt-3 alert-' + (type === 'success' ? 'success' : 'danger');
+        alertDiv.innerHTML = '<i class="bi bi-' + (type === 'success' ? 'check-circle' : 'exclamation-triangle') + '"></i> ' + message;
+    }
 
     // Validation en temps réel
     const requiredFields = form.querySelectorAll('[required]');
@@ -359,22 +425,30 @@ document.addEventListener('DOMContentLoaded', function() {
         field.addEventListener('change', validateForm);
     });
 
+    // Ajout d'un affichage d'erreur sous le bouton
+    const errorDiv = document.createElement('div');
+    errorDiv.id = 'formErrorMsg';
+    errorDiv.className = 'text-danger mt-2';
+    submitBtn.parentNode.appendChild(errorDiv);
+
     function validateForm() {
         let isValid = true;
+        let errorMsg = '';
         requiredFields.forEach(field => {
             if (!field.value.trim()) {
                 isValid = false;
+                errorMsg = 'Veuillez remplir tous les champs obligatoires.';
             }
         });
-        
         // Validation spécifique pour les champs de remboursement
         if (cautionCheckbox.checked) {
             if (!montantInput.value || !dateInput.value) {
                 isValid = false;
+                errorMsg = 'Veuillez renseigner le montant et la date de remboursement de la caution.';
             }
         }
-        
         submitBtn.disabled = !isValid;
+        errorDiv.textContent = isValid ? '' : errorMsg;
     }
 
     // Validation initiale

@@ -1,0 +1,22 @@
+# Sauvegarde du projet appli_KBIS
+# Date : 12 septembre 2025
+# Cette archive contient les fichiers essentiels du projet Django pour restauration ou migration.
+
+# Recommandations :
+# - Conservez ce fichier dans un emplacement sécurisé.
+# - Pour restaurer, copiez les fichiers dans le dossier du projet et relancez les migrations si nécessaire.
+# - Pensez à sauvegarder également la base de données (db.sqlite3) et le dossier media si utilisé.
+
+# Fichiers principaux à inclure :
+# - gestion_immobiliere/
+# - contrats/
+# - paiements/
+# - proprietes/
+# - core/
+# - db.sqlite3
+# - requirements.txt
+# - settings_backup.py
+# - templates/
+# - static/
+
+# Pour une sauvegarde complète, utilisez un outil d’archivage (zip, tar) ou un système de gestion de versions (git).
