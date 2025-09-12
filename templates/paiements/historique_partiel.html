@@ -3,10 +3,10 @@
 <h2>Historique des paiements partiels</h2>
 <p>Contrat : {{ contrat.numero_contrat }}<br>
 Mois : {{ mois }}/{{ annee }}<br>
-Montant dû : {{ montant_du_mois }} F CFA</p>
+Montant dû : {{ montant_du_mois|floatformat:0 }} F CFA</p>
 <p>Statut : <strong>{{ statut|title }}</strong></p>
 <p>Total payé : {{ total_paye }} F CFA<br>
-Montant restant : {{ montant_restant }} F CFA</p>
+Montant restant : {{ montant_restant|floatformat:0 }} F CFA</p>
 <table class="table table-bordered">
     <thead>
         <tr>
