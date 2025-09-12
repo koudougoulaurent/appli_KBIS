@@ -22,6 +22,9 @@ urlpatterns = [
     
     # URLs pour les paiements des locataires
     path('locataire/<int:locataire_id>/', views_quick_actions.liste_paiements, name='paiements_locataire'),
+
+    # Vue historique des paiements partiels
+    path('historique-partiel/<int:contrat_id>/<int:mois>/<int:annee>/', views.historique_paiements_partiels, name='historique_partiel'),
     # path('locataire/<int:locataire_id>/api/', views_locataire_paiements.paiements_locataire_json, name='paiements_locataire_json'),
     
     # Aliases pour compatibilité avec les templates existants

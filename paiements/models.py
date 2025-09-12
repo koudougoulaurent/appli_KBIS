@@ -303,6 +303,7 @@ class Paiement(models.Model):
         max_length=20,
         choices=[
             ('en_attente', 'En attente'),
+            ('partiellement_payé', 'Partiellement payé'),
             ('valide', 'Validé'),
             ('refuse', 'Refusé'),
             ('annule', 'Annulé'),
@@ -440,11 +441,31 @@ class Paiement(models.Model):
     def save(self, *args, **kwargs):
         if not self.reference_paiement:
             self.reference_paiement = self.generate_reference_paiement()
-        
+
         # Calculer automatiquement le montant net payé
         if self.montant_net_paye is None:
             self.montant_net_paye = self.montant - self.montant_charges_deduites
-        
+
+        # Logique paiement partiel : cumul des paiements pour le contrat et le mois
+        if self.contrat and self.mois_paye:
+            paiements = Paiement.objects.filter(
+                contrat=self.contrat,
+                mois_paye=self.mois_paye,
+                is_deleted=False
+            )
+            total_paye = sum([p.montant for p in paiements if p.pk != self.pk]) + self.montant
+            montant_du_mois = self.montant_du_mois or self.contrat.loyer
+            self.montant_restant_du = max(Decimal(montant_du_mois) - Decimal(total_paye), 0)
+            if total_paye < Decimal(montant_du_mois):
+                self.statut = 'partiellement_payé'
+                self.est_paiement_partiel = True
+            elif total_paye >= Decimal(montant_du_mois):
+                self.statut = 'valide'
+                self.est_paiement_partiel = False
+            # Optionnel : empêcher la saisie de plus que le montant dû
+            if total_paye > Decimal(montant_du_mois):
+                raise ValueError("Le total des paiements dépasse le montant dû pour ce mois.")
+
         super().save(*args, **kwargs)
     
     def generate_reference_paiement(self):

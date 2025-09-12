@@ -309,3 +309,5 @@ CMD ["gunicorn", "--bind", "0.0.0.0:8000", "gestion_immobiliere.wsgi:application
 
 **Voulez-vous que je vous aide à configurer le VPS ou préférez-vous commencer par l'hébergement partagé ?**
 
+
+

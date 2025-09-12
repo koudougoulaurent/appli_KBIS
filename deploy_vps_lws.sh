@@ -363,3 +363,5 @@ echo "   - Redémarrer: sudo systemctl restart gestimmob"
 echo ""
 echo "✅ Votre application Django est maintenant en ligne sur le VPS !"
 
+
+

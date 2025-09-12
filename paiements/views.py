@@ -37,6 +37,71 @@ try:
 except ImportError:
     Devise = None
 
+# -- VUE HISTORIQUE DES PAIEMENTS PARTIELS --
+@login_required
+def historique_paiements_partiels(request, contrat_id, mois, annee):
+    """Affiche l'historique des paiements partiels pour un contrat et un mois donné."""
+    paiements = Paiement.objects.filter(
+        contrat_id=contrat_id,
+        mois_paye__year=annee,
+        mois_paye__month=mois,
+        is_deleted=False
+    ).order_by('date_paiement')
+    contrat = get_object_or_404(Contrat, pk=contrat_id)
+    montant_du_mois = paiements.first().montant_du_mois if paiements.exists() else Decimal(contrat.loyer_mensuel)
+    total_paye = sum([p.montant for p in paiements])
+    montant_restant = max(montant_du_mois - total_paye, 0)
+    statut = 'valide' if montant_restant == 0 else 'partiellement_payé'
+    context = {
+        'paiements': paiements,
+        'contrat': contrat,
+        'mois': mois,
+        'annee': annee,
+        'montant_du_mois': montant_du_mois,
+        'total_paye': total_paye,
+        'montant_restant': montant_restant,
+        'statut': statut,
+    }
+    return render(request, 'paiements/historique_partiel.html', context)
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.http import require_http_methods, require_POST
+from django.views.generic import ListView, CreateView, UpdateView, DetailView, DeleteView
+from django.urls import reverse_lazy
+from django.db.models import Q, Sum, Count, F, Case, When, DecimalField
+from django.db.models.functions import Coalesce
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+from django.db import transaction
+from datetime import datetime, timedelta, date
+from django.core.paginator import Paginator
+from django.contrib.contenttypes.models import ContentType
+from django.template.loader import render_to_string
+from django.conf import settings
+from decimal import Decimal
+import json
+import os
+
+from .models import Paiement, ChargeDeductible, QuittancePaiement
+from .forms import PaiementForm, ChargeDeductibleForm, RetraitBailleurForm, GenererPDFLotForm
+from contrats.models import Contrat
+from proprietes.models import Propriete, Locataire, Bailleur
+from core.models import AuditLog, ConfigurationEntreprise
+from core.utils import check_group_permissions, check_group_permissions_with_fallback, get_context_with_entreprise_config
+from django.views.generic import ListView
+from .models import TableauBordFinancier
+from .forms import TableauBordFinancierForm
+from .models import RetraitBailleur
+from .models import RecapMensuel
+from .services import generate_recap_pdf, generate_recap_pdf_batch
+try:
+    from devises.models import Devise
+except ImportError:
+    Devise = None
+
 
 @login_required
 def paiements_dashboard(request):
@@ -211,24 +276,34 @@ def ajouter_paiement(request):
                 paiement = form.save(commit=False)
                 paiement.cree_par = request.user
                 paiement.save()
-                
-                messages.success(request, f'Paiement {paiement.reference_paiement} créé avec succès!')
-                return redirect('paiements:liste')
-                
+                messages.success(request, f'Paiement {paiement.reference_paiement} créé avec succès! Statut: {paiement.statut}')
+                # Rediriger vers l'historique des paiements partiels pour ce contrat/mois
+                return redirect('paiements:historique_partiel', contrat_id=paiement.contrat.id, mois=paiement.mois_paye.month, annee=paiement.mois_paye.year)
             except Exception as e:
                 messages.error(request, f'Erreur lors de la création: {str(e)}')
     else:
         form = PaiementForm()
-    
-    # Récupérer tous les contrats pour la sélection
+
     contrats = Contrat.objects.filter(is_deleted=False).select_related('locataire', 'propriete')
-    
-    # Récupérer la devise de base
     try:
         devise_base = Devise.objects.filter(is_devise_base=True).first()
     except:
         devise_base = None
-    
+
+    # Historique des paiements partiels si contrat et mois sélectionnés
+    historique = None
+    contrat_id = request.GET.get('contrat_id')
+    mois = request.GET.get('mois')
+    annee = request.GET.get('annee')
+    if contrat_id and mois and annee:
+        paiements = Paiement.objects.filter(
+            contrat_id=contrat_id,
+            mois_paye__year=annee,
+            mois_paye__month=mois,
+            is_deleted=False
+        ).order_by('date_paiement')
+        historique = paiements
+
     context = {
         'form': form,
         'contrats': contrats,
@@ -238,8 +313,8 @@ def ajouter_paiement(request):
         'charges_bailleur': [],
         'devise_base': devise_base,
         'title': 'Ajouter un Paiement - Contexte Intelligent',
+        'historique': historique,
     }
-    
     return render(request, 'paiements/ajouter.html', context)
 
 @login_required

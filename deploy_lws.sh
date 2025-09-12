@@ -158,3 +158,5 @@ echo "   - Contactez le support LWS si nécessaire"
 echo ""
 echo "✅ Votre application Django est maintenant déployée sur LWS !"
 
+
+

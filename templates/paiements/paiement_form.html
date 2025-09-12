@@ -270,9 +270,36 @@
                     </button>
                 </div>
             </form>
-        </div>
-    </div>
-</div>
+
+            {% if historique %}
+            <div class="mt-5">
+                <h4>Historique des paiements partiels pour ce contrat/mois</h4>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Montant</th>
+                            <th>Statut</th>
+                            <th>Mode</th>
+                            <th>Référence</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for paiement in historique %}
+                        <tr>
+                            <td>{{ paiement.date_paiement|date:"d/m/Y" }}</td>
+                            <td>{{ paiement.montant }} F CFA</td>
+                            <td>{{ paiement.get_statut_display }}</td>
+                            <td>{{ paiement.get_mode_paiement_display }}</td>
+                            <td>{{ paiement.reference_paiement }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5">Aucun paiement enregistré.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
 {% endblock %}
 
 {% block extra_js %}
