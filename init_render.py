@@ -52,9 +52,7 @@ def init_superuser():
         user = User.objects.create_superuser(
             username='admin',
             email='admin@gestimmob.com',
-            password='admin123',
-            prenom='Administrateur',
-            nom='Système'
+            password='admin123'
         )
         print("✅ Superutilisateur créé :")
         print(f"   - Username: admin")
