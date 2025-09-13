@@ -22,16 +22,24 @@ def init_groups():
     groupes = [
         {'nom': 'ADMINISTRATION', 'description': 'GESTION ADMINISTRATIVE'},
         {'nom': 'CAISSE', 'description': 'GESTION DES PAIEMENTS ET RETRAITS'},
-        {'nom': 'CONTROLE', 'description': 'GESTION DU CONTRÔLE'},
+        {'nom': 'CONTROLES', 'description': 'GESTION DU CONTRÔLE'},  # Note: CONTROLES pas CONTROLE
         {'nom': 'PRIVILEGE', 'description': 'ACCÈS COMPLET'}
     ]
     
     for groupe_data in groupes:
         groupe, created = GroupeTravail.objects.get_or_create(
             nom=groupe_data['nom'],
-            defaults={'description': groupe_data['description']}
+            defaults={
+                'description': groupe_data['description'],
+                'actif': True
+            }
         )
-        if created:
+        # S'assurer que le groupe est actif
+        if not groupe.actif:
+            groupe.actif = True
+            groupe.save()
+            print(f"✅ Groupe activé : {groupe.nom}")
+        elif created:
             print(f"✅ Groupe créé : {groupe.nom}")
         else:
             print(f"ℹ️  Groupe existant : {groupe.nom}")
