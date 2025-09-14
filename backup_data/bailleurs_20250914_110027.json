@@ -1,0 +1,32 @@
+[
+  {
+    "nom": "KOUDOUGOU",
+    "prenom": "Laurent",
+    "email": "koudougoulaurent7@gmail.com",
+    "telephone": "+22670090432",
+    "adresse": "ouagadougou",
+    "ville": "ouagadougou",
+    "code_postal": null,
+    "est_actif": true
+  },
+  {
+    "nom": "Test",
+    "prenom": "Bailleur",
+    "email": "test@example.com",
+    "telephone": "0123456789",
+    "adresse": null,
+    "ville": null,
+    "code_postal": null,
+    "est_actif": true
+  },
+  {
+    "nom": "kere",
+    "prenom": "Guillaume",
+    "email": "kereiu@gmail.com",
+    "telephone": "+22667304522",
+    "adresse": "ouagadougou",
+    "ville": "ouagadougou",
+    "code_postal": null,
+    "est_actif": true
+  }
+]

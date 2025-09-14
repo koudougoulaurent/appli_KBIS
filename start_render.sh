@@ -21,6 +21,10 @@ python manage.py migrate --noinput
 echo "📁 Collecte des fichiers statiques..."
 python manage.py collectstatic --noinput
 
+# Sauvegarder les données existantes (si elles existent)
+echo "💾 Sauvegarde des données existantes..."
+python sauvegarder_donnees.py || echo "ℹ️  Aucune donnée existante à sauvegarder"
+
 # Vérifier et créer les données automatiquement
 echo "🔧 Vérification automatique des données..."
 python verifier_donnees_automatique.py

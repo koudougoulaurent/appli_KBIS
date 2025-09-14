@@ -1,0 +1,62 @@
+[
+  {
+    "nom": "ADMINISTRATION",
+    "description": "Gestion administrative complète",
+    "permissions": {
+      "modules": [
+        "proprietes",
+        "contrats",
+        "paiements",
+        "utilisateurs",
+        "notifications"
+      ]
+    },
+    "actif": true,
+    "date_creation": "2025-09-09T06:59:28.949843+00:00",
+    "date_modification": "2025-09-09T06:59:28.949988+00:00"
+  },
+  {
+    "nom": "CAISSE",
+    "description": "Gestion des paiements et retraits",
+    "permissions": {
+      "modules": [
+        "paiements",
+        "proprietes"
+      ]
+    },
+    "actif": true,
+    "date_creation": "2025-09-09T06:59:28.953839+00:00",
+    "date_modification": "2025-09-09T06:59:28.953918+00:00"
+  },
+  {
+    "nom": "CONTROLES",
+    "description": "Contrôles et vérifications",
+    "permissions": {
+      "modules": [
+        "proprietes",
+        "contrats",
+        "paiements"
+      ]
+    },
+    "actif": true,
+    "date_creation": "2025-09-09T06:59:28.954406+00:00",
+    "date_modification": "2025-09-09T06:59:28.954464+00:00"
+  },
+  {
+    "nom": "PRIVILEGE",
+    "description": "Accès complet au système",
+    "permissions": {
+      "modules": [
+        "proprietes",
+        "contrats",
+        "paiements",
+        "utilisateurs",
+        "notifications",
+        "admin"
+      ]
+    },
+    "actif": true,
+    "date_creation": "2025-09-09T06:59:28.954964+00:00",
+    "date_modification": "2025-09-09T06:59:28.955022+00:00"
+  }
+]

@@ -20,10 +20,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 def creer_donnees_permanentes():
-    """Crée toutes les données permanentes nécessaires pour l'application"""
+    """Crée toutes les données permanentes nécessaires pour l'application
+    PROTECTION : Ne supprime JAMAIS les données existantes, ne fait que les compléter
+    """
     try:
-        print("🚀 CRÉATION DES DONNÉES PERMANENTES POUR RENDER")
-        print("=" * 50)
+        print("🚀 VÉRIFICATION ET CRÉATION DES DONNÉES PERMANENTES")
+        print("=" * 60)
+        print("🛡️  PROTECTION : Les données existantes ne seront JAMAIS supprimées")
+        print("=" * 60)
         
         # 1. Créer les groupes de travail avec permissions détaillées
         print("\n📋 Création des groupes de travail...")
