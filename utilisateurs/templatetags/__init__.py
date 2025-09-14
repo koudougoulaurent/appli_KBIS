@@ -1,1 +1,1 @@
-# Package pour les template tags personnalisés 
+# Template tags pour les utilisateurs

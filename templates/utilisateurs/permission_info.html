@@ -1,0 +1,50 @@
+{% load utilisateurs_extras %}
+
+<!-- Informations de permissions utilisateur -->
+<div class="permission-info card mb-3">
+    <div class="card-header bg-light">
+        <h6 class="mb-0">
+            <i class="bi bi-shield-check me-2"></i>Vos Permissions
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6 class="text-muted">Groupe de travail</h6>
+                <p class="mb-1">
+                    <strong>{{ group_name }}</strong>
+                    {% if group_description %}
+                        <br><small class="text-muted">{{ group_description }}</small>
+                    {% endif %}
+                </p>
+            </div>
+            <div class="col-md-6">
+                <h6 class="text-muted">Actions autorisées</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    {% if can_add %}
+                        <span class="badge bg-success">
+                            <i class="bi bi-plus-circle me-1"></i>Ajouter
+                        </span>
+                    {% endif %}
+                    {% if can_modify %}
+                        <span class="badge bg-warning">
+                            <i class="bi bi-pencil me-1"></i>Modifier
+                        </span>
+                    {% endif %}
+                    {% if can_delete %}
+                        <span class="badge bg-danger">
+                            <i class="bi bi-trash me-1"></i>Supprimer
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        {% if not is_privilege %}
+        <div class="alert alert-info mt-3 mb-0">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Information :</strong> Vous pouvez ajouter des éléments, mais seuls les utilisateurs du groupe PRIVILEGE peuvent les modifier ou les supprimer.
+        </div>
+        {% endif %}
+    </div>
+</div>
