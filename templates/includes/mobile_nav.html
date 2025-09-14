@@ -124,6 +124,23 @@
                                 <i class="bi bi-building-gear"></i> Configuration
                             </a>
                         </li>
+                        
+                        <!-- Séparateur -->
+                        <li class="nav-item mt-3">
+                            <hr class="my-2">
+                        </li>
+                        
+                        <!-- Bouton de déconnexion mobile -->
+                        <li class="nav-item">
+                            <form method="post" action="{% url 'utilisateurs:logout_groupe' %}" class="d-inline w-100">
+                                {% csrf_token %}
+                                <button type="submit" class="nav-link mobile-nav-link btn btn-link text-start w-100 border-0 bg-transparent p-0" 
+                                        style="color: #dc3545 !important; font-weight: 500;"
+                                        onclick="return confirm('Êtes-vous sûr de vouloir vous déconnecter ?')">
+                                    <i class="bi bi-box-arrow-right"></i> Déconnexion
+                                </button>
+                            </form>
+                        </li>
                     </ul>
                 </nav>
                 
