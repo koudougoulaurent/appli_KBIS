@@ -39,7 +39,7 @@ def mettre_a_jour_template(chemin_fichier):
     pattern_modifier = r'(<a[^>]*href="[^"]*modifier[^"]*"[^>]*>.*?</a>)'
     def masquer_modifier(match):
         bouton = match.group(1)
-        return f'{% if user.groupe_travail.nom == "PRIVILEGE" %}\n    {bouton}\n{% endif %}'
+        return f'{{% if user.groupe_travail.nom == "PRIVILEGE" %}}\n    {bouton}\n{{% endif %}}'
     
     contenu = re.sub(pattern_modifier, masquer_modifier, contenu)
     
@@ -47,7 +47,7 @@ def mettre_a_jour_template(chemin_fichier):
     pattern_supprimer = r'(<a[^>]*href="[^"]*supprimer[^"]*"[^>]*>.*?</a>)'
     def masquer_supprimer(match):
         bouton = match.group(1)
-        return f'{% if user.groupe_travail.nom == "PRIVILEGE" %}\n    {bouton}\n{% endif %}'
+        return f'{{% if user.groupe_travail.nom == "PRIVILEGE" %}}\n    {bouton}\n{{% endif %}}'
     
     contenu = re.sub(pattern_supprimer, masquer_supprimer, contenu)
     
@@ -55,7 +55,7 @@ def mettre_a_jour_template(chemin_fichier):
     pattern_form_supprimer = r'(<button[^>]*type="submit"[^>]*name="supprimer"[^>]*>.*?</button>)'
     def masquer_form_supprimer(match):
         bouton = match.group(1)
-        return f'{% if user.groupe_travail.nom == "PRIVILEGE" %}\n    {bouton}\n{% endif %}'
+        return f'{{% if user.groupe_travail.nom == "PRIVILEGE" %}}\n    {bouton}\n{{% endif %}}'
     
     contenu = re.sub(pattern_form_supprimer, masquer_form_supprimer, contenu)
     
@@ -63,7 +63,7 @@ def mettre_a_jour_template(chemin_fichier):
     pattern_liste_modifier = r'(<a[^>]*href="[^"]*modifier[^"]*"[^>]*class="[^"]*btn[^"]*"[^>]*>.*?</a>)'
     def masquer_liste_modifier(match):
         bouton = match.group(1)
-        return f'{% if user.groupe_travail.nom == "PRIVILEGE" %}\n    {bouton}\n{% endif %}'
+        return f'{{% if user.groupe_travail.nom == "PRIVILEGE" %}}\n    {bouton}\n{{% endif %}}'
     
     contenu = re.sub(pattern_liste_modifier, masquer_liste_modifier, contenu)
     
@@ -71,7 +71,7 @@ def mettre_a_jour_template(chemin_fichier):
     pattern_liste_supprimer = r'(<a[^>]*href="[^"]*supprimer[^"]*"[^>]*class="[^"]*btn[^"]*"[^>]*>.*?</a>)'
     def masquer_liste_supprimer(match):
         bouton = match.group(1)
-        return f'{% if user.groupe_travail.nom == "PRIVILEGE" %}\n    {bouton}\n{% endif %}'
+        return f'{{% if user.groupe_travail.nom == "PRIVILEGE" %}}\n    {bouton}\n{{% endif %}}'
     
     contenu = re.sub(pattern_liste_supprimer, masquer_liste_supprimer, contenu)
     
@@ -79,14 +79,14 @@ def mettre_a_jour_template(chemin_fichier):
     pattern_action_modifier = r'(<td[^>]*>.*?<a[^>]*href="[^"]*modifier[^"]*"[^>]*>.*?</a>.*?</td>)'
     def masquer_action_modifier(match):
         cellule = match.group(1)
-        return f'<td>{% if user.groupe_travail.nom == "PRIVILEGE" %}{cellule}{% else %}-{% endif %}</td>'
+        return f'<td>{{% if user.groupe_travail.nom == "PRIVILEGE" %}}{cellule}{{% else %}}-{{% endif %}}</td>'
     
     contenu = re.sub(pattern_action_modifier, masquer_action_modifier, contenu)
     
     pattern_action_supprimer = r'(<td[^>]*>.*?<a[^>]*href="[^"]*supprimer[^"]*"[^>]*>.*?</a>.*?</td>)'
     def masquer_action_supprimer(match):
         cellule = match.group(1)
-        return f'<td>{% if user.groupe_travail.nom == "PRIVILEGE" %}{cellule}{% else %}-{% endif %}</td>'
+        return f'<td>{{% if user.groupe_travail.nom == "PRIVILEGE" %}}{cellule}{{% else %}}-{{% endif %}}</td>'
     
     contenu = re.sub(pattern_action_supprimer, masquer_action_supprimer, contenu)
     
@@ -95,12 +95,12 @@ def mettre_a_jour_template(chemin_fichier):
     def ajouter_message_permissions(match):
         message_existant = match.group(1)
         message_permissions = '''
-{% if user.groupe_travail.nom != "PRIVILEGE" %}
+{{% if user.groupe_travail.nom != "PRIVILEGE" %}}
 <div class="alert alert-info">
     <i class="bi bi-info-circle me-2"></i>
     <strong>Information :</strong> Vous pouvez ajouter des éléments, mais seuls les utilisateurs du groupe PRIVILEGE peuvent les modifier ou les supprimer.
 </div>
-{% endif %}'''
+{{% endif %}}'''
         return message_existant + message_permissions
     
     # Ajouter le message après le premier alert
