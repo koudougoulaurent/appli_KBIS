@@ -1,106 +1,110 @@
 """
-Middleware pour optimiser les performances
+Middleware de vérification des données essentielles
+Vérifie à chaque requête que les données de base existent
 """
 
-from django.db import connection
-from django.core.cache import cache
-from django.utils.deprecation import MiddlewareMixin
-import time
+from django.http import HttpResponse
+from django.shortcuts import redirect
+from django.contrib import messages
+import logging
 
-class PerformanceMiddleware(MiddlewareMixin):
+logger = logging.getLogger(__name__)
+
+class DataVerificationMiddleware:
     """
-    Middleware pour optimiser les performances
+    Middleware qui vérifie que les données essentielles existent
     """
     
-    def process_request(self, request):
-        """Début de la requête"""
-        request.start_time = time.time()
-        request.query_count_start = len(connection.queries)
-        return None
-    
-    def process_response(self, request, response):
-        """Fin de la requête"""
-        if hasattr(request, 'start_time'):
-            # Calculer le temps de traitement
-            process_time = time.time() - request.start_time
-            
-            # Ajouter des headers de performance
-            response['X-Process-Time'] = f"{process_time:.3f}s"
-            
-            # Compter les requêtes
-            if hasattr(request, 'query_count_start'):
-                query_count = len(connection.queries) - request.query_count_start
-                response['X-Query-Count'] = str(query_count)
-                
-                # Avertir si trop de requêtes
-                if query_count > 50:
-                    response['X-Performance-Warning'] = 'High query count detected'
-            
-            # Mettre en cache les statistiques
-            cache_key = f"perf_stats_{request.path}"
-            cache.set(cache_key, {
-                'process_time': process_time,
-                'query_count': query_count if hasattr(request, 'query_count_start') else 0,
-                'timestamp': time.time()
-            }, 300)  # 5 minutes
-        
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self._data_verified = False
+
+    def __call__(self, request):
+        # Vérifier les données seulement une fois par session
+        if not self._data_verified and not request.path.startswith('/static/'):
+            self._verify_essential_data()
+            self._data_verified = True
+
+        response = self.get_response(request)
         return response
 
-class DatabaseOptimizationMiddleware(MiddlewareMixin):
-    """
-    Middleware pour optimiser les requêtes de base de données
-    """
-    
-    def process_request(self, request):
-        """Optimiser les requêtes"""
-        # Activer les logs de requêtes en mode debug
-        if hasattr(connection, 'queries'):
-            connection.queries_log.clear()
-        
-        return None
-    
-    def process_response(self, request, response):
-        """Analyser les requêtes après traitement"""
-        if hasattr(connection, 'queries') and len(connection.queries) > 0:
-            # Analyser les requêtes lentes
-            slow_queries = [
-                q for q in connection.queries 
-                if float(q['time']) > 0.1  # Plus de 100ms
+    def _verify_essential_data(self):
+        """Vérifie que les données essentielles existent"""
+        try:
+            from utilisateurs.models import GroupeTravail
+            from proprietes.models import TypeBien
+            
+            # Vérifier les groupes de travail
+            if not GroupeTravail.objects.filter(actif=True).exists():
+                logger.warning("⚠️  Aucun groupe de travail actif trouvé")
+                self._create_essential_data()
+            
+            # Vérifier les types de biens
+            if not TypeBien.objects.exists():
+                logger.warning("⚠️  Aucun type de bien trouvé")
+                self._create_essential_data()
+                
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de la vérification des données: {e}")
+
+    def _create_essential_data(self):
+        """Crée les données essentielles si elles n'existent pas"""
+        try:
+            from utilisateurs.models import GroupeTravail, Utilisateur
+            from proprietes.models import TypeBien
+            from django.contrib.auth.hashers import make_password
+            
+            logger.info("🔧 Création des données essentielles...")
+            
+            # Créer les groupes de travail
+            groupes_data = [
+                {'nom': 'CAISSE', 'description': 'Gestion des paiements et retraits'},
+                {'nom': 'CONTROLES', 'description': 'Contrôle et audit'},
+                {'nom': 'ADMINISTRATION', 'description': 'Gestion administrative'},
+                {'nom': 'PRIVILEGE', 'description': 'Accès complet'},
             ]
             
-            if slow_queries:
-                # Log des requêtes lentes
-                print(f"SLOW QUERIES detected on {request.path}:")
-                for query in slow_queries:
-                    print(f"  - {query['time']}s: {query['sql'][:100]}...")
-        
-        return response
-
-class CacheMiddleware(MiddlewareMixin):
-    """
-    Middleware pour la gestion du cache
-    """
-    
-    def process_request(self, request):
-        """Gérer le cache des requêtes"""
-        # Vérifier si la page est en cache
-        if request.method == 'GET' and not request.user.is_authenticated:
-            cache_key = f"page_cache_{request.path}_{request.GET.urlencode()}"
-            cached_response = cache.get(cache_key)
+            for groupe_data in groupes_data:
+                GroupeTravail.objects.update_or_create(
+                    nom=groupe_data['nom'],
+                    defaults={
+                        'description': groupe_data['description'],
+                        'actif': True,
+                        'permissions': {}
+                    }
+                )
             
-            if cached_response:
-                return cached_response
-        
-        return None
-    
-    def process_response(self, request, response):
-        """Mettre en cache les réponses"""
-        if (request.method == 'GET' and 
-            response.status_code == 200 and 
-            not request.user.is_authenticated and
-            'text/html' in response.get('Content-Type', '')):
+            # Créer les types de biens
+            types_data = [
+                {'nom': 'Appartement', 'description': 'Appartement en immeuble'},
+                {'nom': 'Maison', 'description': 'Maison individuelle'},
+                {'nom': 'Studio', 'description': 'Studio meublé'},
+                {'nom': 'Loft', 'description': 'Loft industriel'},
+                {'nom': 'Villa', 'description': 'Villa avec jardin'},
+            ]
             
-            cache_key = f"page_cache_{request.path}_{request.GET.urlencode()}"
-            cache.set(cache_key, response, 300)  # 5 minutes
-        
-        return response
+            for type_data in types_data:
+                TypeBien.objects.update_or_create(
+                    nom=type_data['nom'],
+                    defaults=type_data
+                )
+            
+            # Créer l'utilisateur admin s'il n'existe pas
+            if not Utilisateur.objects.filter(username='admin').exists():
+                groupe_privilege = GroupeTravail.objects.get(nom='PRIVILEGE')
+                Utilisateur.objects.create(
+                    username='admin',
+                    email='admin@gestimmob.com',
+                    first_name='Super',
+                    last_name='Administrateur',
+                    groupe_travail=groupe_privilege,
+                    is_staff=True,
+                    is_superuser=True,
+                    actif=True,
+                    password=make_password('password123')
+                )
+            
+            logger.info("✅ Données essentielles créées avec succès")
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de la création des données: {e}")

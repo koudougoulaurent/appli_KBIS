@@ -17,9 +17,9 @@ python manage.py migrate --noinput
 echo "📁 Collecte des fichiers statiques..."
 python manage.py collectstatic --noinput
 
-# Initialiser les données de base
-echo "🔧 Initialisation des données de base..."
-python manage.py init_render
+# Vérifier et créer les données automatiquement
+echo "🔧 Vérification automatique des données..."
+python verifier_donnees_automatique.py
 
 # Démarrer l'application
 echo "🌐 Démarrage de l'application..."
