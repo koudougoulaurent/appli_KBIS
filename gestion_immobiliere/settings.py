@@ -46,7 +46,6 @@ INSTALLED_APPS = [
     'contrats',
     'paiements',
     'notifications',
-    'bailleurs',
 ]
 
 MIDDLEWARE = [

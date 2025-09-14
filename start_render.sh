@@ -5,6 +5,10 @@
 echo "🚀 DÉMARRAGE DE L'APPLICATION SUR RENDER"
 echo "========================================"
 
+# Forcer la variable d'environnement Django
+export DJANGO_SETTINGS_MODULE=gestion_immobiliere.settings
+echo "✅ Configuration Django: $DJANGO_SETTINGS_MODULE"
+
 # Attendre que la base de données soit prête
 echo "⏳ Attente de la base de données..."
 sleep 5
