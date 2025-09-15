@@ -88,18 +88,13 @@ WSGI_APPLICATION = 'gestion_immobiliere.wsgi.application'
 # 🚨 CONFIGURATION CRITIQUE POUR RENDER - PERSISTANCE DES DONNÉES
 if os.environ.get('RENDER'):
     # Configuration pour Render avec base de données persistante
+    import dj_database_url
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('DATABASE_NAME', 'appli_kbis'),
-            'USER': os.environ.get('DATABASE_USER', 'appli_kbis_user'),
-            'PASSWORD': os.environ.get('DATABASE_PASSWORD', ''),
-            'HOST': os.environ.get('DATABASE_HOST', 'localhost'),
-            'PORT': os.environ.get('DATABASE_PORT', '5432'),
-            'OPTIONS': {
-                'sslmode': 'require',
-            },
-        }
+        'default': dj_database_url.parse(
+            os.environ.get('DATABASE_URL'),
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
 else:
     # Configuration locale avec SQLite
