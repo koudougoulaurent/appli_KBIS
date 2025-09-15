@@ -20,6 +20,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.shortcuts import redirect
 from django.contrib.auth.views import LogoutView
+from . import views
 
 def redirect_to_groupes(request):
     """Redirige vers la page de connexion des groupes"""
@@ -42,9 +43,13 @@ urlpatterns = [
     path('paiements/', include('paiements.urls')),
     path('notifications/', include('notifications.urls')),
     path('select2/', include('django_select2.urls')),
-    
-
 ]
+
+# Gestion des erreurs en production
+if not settings.DEBUG:
+    handler404 = views.custom_404
+    handler500 = views.custom_500
+    handler403 = views.custom_403
 
 # URLs pour les fichiers statiques et media en développement
 if settings.DEBUG:

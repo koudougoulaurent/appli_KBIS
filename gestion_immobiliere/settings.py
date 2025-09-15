@@ -22,6 +22,17 @@ DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver,appli-kbis.onrender.com,.onrender.com').split(',')
 
+# Configuration des URLs d'authentification
+LOGIN_URL = '/utilisateurs/connexion-groupes/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/utilisateurs/connexion-groupes/'
+
+# Configuration pour éviter les erreurs 404 en production
+if not DEBUG:
+    # En production, rediriger les URLs d'authentification par défaut
+    LOGIN_URL = '/utilisateurs/connexion-groupes/'
+    LOGIN_REDIRECT_URL = '/'
+    LOGOUT_REDIRECT_URL = '/utilisateurs/connexion-groupes/'
 
 # Application definition
 
@@ -113,7 +124,7 @@ LOGGING = {
     },
     'handlers': {
         'file': {
-            'level': 'INFO',
+            'level': 'WARNING',
             'class': 'logging.FileHandler',
             'filename': BASE_DIR / 'logs' / 'django.log',
             'formatter': 'verbose',
@@ -131,12 +142,17 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['console', 'file'],
-            'level': 'INFO',
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['file'],
+            'level': 'ERROR',
             'propagate': False,
         },
         'paiements': {
             'handlers': ['console', 'file'],
-            'level': 'DEBUG',
+            'level': 'WARNING',
             'propagate': False,
         },
     },
