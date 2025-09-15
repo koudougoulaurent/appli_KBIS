@@ -326,6 +326,55 @@ def ajouter_paiement(request):
     }
     return render(request, 'paiements/ajouter.html', context)
 
+
+@login_required
+def ajouter_paiement_partiel(request):
+    """Vue spécialisée pour ajouter un paiement partiel avec contexte intelligent."""
+    if request.method == 'POST':
+        form = PaiementForm(request.POST)
+        if form.is_valid():
+            try:
+                paiement = form.save(commit=False)
+                paiement.cree_par = request.user
+                # Forcer le statut à partiel pour cette vue
+                paiement.est_paiement_partiel = True
+                paiement.save()
+                messages.success(request, f'Paiement partiel {paiement.reference_paiement} créé avec succès!')
+                # Rediriger vers l'historique des paiements partiels pour ce contrat/mois
+                if paiement.mois_paye:
+                    return redirect('paiements:historique_partiel', 
+                                 contrat_id=paiement.contrat.id, 
+                                 mois=paiement.mois_paye.month, 
+                                 annee=paiement.mois_paye.year)
+                else:
+                    return redirect('paiements:liste')
+            except Exception as e:
+                messages.error(request, f'Erreur lors de la création du paiement partiel: {str(e)}')
+    else:
+        form = PaiementForm()
+
+    contrats = Contrat.objects.filter(is_deleted=False).select_related('locataire', 'propriete')
+    try:
+        devise_base = Devise.objects.filter(is_devise_base=True).first()
+    except:
+        devise_base = None
+
+    # Contexte pour les paiements partiels
+    context = {
+        'form': form,
+        'contrats': contrats,
+        'contrat_obj': None,
+        'total_charges_bailleur': 0,
+        'net_a_payer': 0,
+        'charges_bailleur': [],
+        'devise_base': devise_base,
+        'title': 'Ajouter un Paiement Partiel',
+        'is_paiement_partiel': True,
+        'historique': None,
+    }
+    return render(request, 'paiements/ajouter.html', context)
+
+
 @login_required
 def liste_paiements(request):
     """Liste des paiements avec recherche et filtres."""
