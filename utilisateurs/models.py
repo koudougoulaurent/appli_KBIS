@@ -94,6 +94,24 @@ class Utilisateur(AbstractUser):
         related_name='utilisateurs'
     )
     
+    # Override des champs de groupes et permissions pour éviter les conflits
+    groups = models.ManyToManyField(
+        'auth.Group',
+        verbose_name=_('groups'),
+        blank=True,
+        help_text=_('The groups this user belongs to. A user will get all permissions granted to each of their groups.'),
+        related_name='utilisateur_set',
+        related_query_name='utilisateur',
+    )
+    user_permissions = models.ManyToManyField(
+        'auth.Permission',
+        verbose_name=_('user permissions'),
+        blank=True,
+        help_text=_('Specific permissions for this user.'),
+        related_name='utilisateur_set',
+        related_query_name='utilisateur',
+    )
+    
     # Informations professionnelles
     poste = models.CharField(max_length=100, blank=True)
     departement = models.CharField(max_length=100, blank=True)
