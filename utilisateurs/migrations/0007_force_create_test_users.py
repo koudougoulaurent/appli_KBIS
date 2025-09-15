@@ -2,8 +2,8 @@ from django.db import migrations
 from django.contrib.auth import get_user_model
 from django.db import transaction
 
-def create_test_users(apps, schema_editor):
-    """Crée les utilisateurs de test lors de la migration."""
+def force_create_test_users(apps, schema_editor):
+    """Force la création des utilisateurs de test."""
     User = get_user_model()
     GroupeTravail = apps.get_model('utilisateurs', 'GroupeTravail')
     
@@ -56,6 +56,12 @@ def create_test_users(apps, schema_editor):
                     }
                 )
                 groupes[group_data['nom']] = groupe
+                print(f"✅ Groupe {groupe.nom} {'créé' if created else 'existe déjà'}")
+            
+            # Supprimer les utilisateurs existants s'ils existent
+            test_usernames = ['admin', 'caisse', 'admin_immobilier', 'controleur', 'test']
+            User.objects.filter(username__in=test_usernames).delete()
+            print("🗑️  Anciens utilisateurs de test supprimés")
             
             # Créer les utilisateurs de test
             users_data = [
@@ -129,29 +135,27 @@ def create_test_users(apps, schema_editor):
             for user_data in users_data:
                 groupe_nom = user_data.pop('groupe_nom')
                 
-                # Vérifier si l'utilisateur existe déjà
-                if not User.objects.filter(username=user_data['username']).exists():
-                    # Récupérer le groupe
-                    groupe = groupes.get(groupe_nom)
-                    if groupe:
-                        # Créer l'utilisateur
-                        user = User.objects.create_user(
-                            **user_data
-                        )
-                        user.groupe_travail = groupe
-                        user.save()
-                        print(f"✅ Utilisateur {user.username} créé (Groupe: {groupe.nom})")
-                    else:
-                        print(f"❌ Groupe {groupe_nom} non trouvé pour {user_data['username']}")
+                # Récupérer le groupe
+                groupe = groupes.get(groupe_nom)
+                if groupe:
+                    # Créer l'utilisateur
+                    user = User.objects.create_user(
+                        **user_data
+                    )
+                    user.groupe_travail = groupe
+                    user.save()
+                    print(f"✅ Utilisateur {user.username} créé (Groupe: {groupe.nom})")
                 else:
-                    print(f"ℹ️  Utilisateur {user_data['username']} existe déjà")
+                    print(f"❌ Groupe {groupe_nom} non trouvé pour {user_data['username']}")
+                    
+            print("🎉 Tous les utilisateurs de test ont été créés avec succès!")
                     
     except Exception as e:
         print(f"❌ Erreur lors de la création des utilisateurs de test: {e}")
         import traceback
         traceback.print_exc()
 
-def reverse_create_test_users(apps, schema_editor):
+def reverse_force_create_test_users(apps, schema_editor):
     """Supprime les utilisateurs de test lors du rollback."""
     User = get_user_model()
     
@@ -161,9 +165,9 @@ def reverse_create_test_users(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('utilisateurs', '0005_alter_utilisateur_telephone'),
+        ('utilisateurs', '0006_create_test_users'),
     ]
 
     operations = [
-        migrations.RunPython(create_test_users, reverse_create_test_users),
+        migrations.RunPython(force_create_test_users, reverse_force_create_test_users),
     ]
