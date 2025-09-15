@@ -487,7 +487,10 @@
                 <a href="{% url 'paiements:ajouter_partiel' %}" class="quick-action-btn success">
                     <i class="bi bi-pie-chart me-2"></i>Paiement Partiel
                 </a>
-                <a href="{% url 'paiements:historique_partiel' contrat_id=1 mois=9 annee=2025 %}" class="quick-action-btn warning">
+                <a href="{% url 'paiements:liste_partiels' %}" class="quick-action-btn warning">
+                    <i class="bi bi-list-ul me-2"></i>Liste Paiements Partiels
+                </a>
+                <a href="{% url 'paiements:historique_partiel' contrat_id=1 mois=9 annee=2025 %}" class="quick-action-btn info">
                     <i class="bi bi-clock-history me-2"></i>Historique Paiements Partiels
                 </a>
             </div>

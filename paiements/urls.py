@@ -20,6 +20,7 @@ urlpatterns = [
     path('detail/<int:pk>/', views.paiement_detail, name='detail'),  # Alias principal pour compatibilité
     path('ajouter/', views.ajouter_paiement, name='ajouter'),  # Alias principal pour compatibilité
     path('ajouter-partiel/', views.ajouter_paiement_partiel, name='ajouter_partiel'),  # Vue spécialisée pour paiements partiels
+    path('liste-partiels/', views.liste_paiements_partiels, name='liste_partiels'),  # Liste spécifique des paiements partiels
     
     # URLs pour les paiements des locataires
     path('locataire/<int:locataire_id>/', views_quick_actions.liste_paiements, name='paiements_locataire'),

@@ -436,11 +436,78 @@ def ajouter_paiement_partiel(request):
 
 
 @login_required
+def liste_paiements_partiels(request):
+    """Liste spécifique des paiements partiels."""
+    try:
+        # Récupérer tous les paiements partiels
+        paiements = Paiement.objects.filter(
+            is_deleted=False,
+            est_paiement_partiel=True
+        ).select_related(
+            'contrat__locataire', 'contrat__propriete', 'cree_par'
+        ).order_by('-date_creation')
+        
+        # Recherche
+        query = request.GET.get('q', '')
+        if query:
+            paiements = paiements.filter(
+                Q(reference_paiement__icontains=query) |
+                Q(contrat__numero_contrat__icontains=query) |
+                Q(contrat__locataire__nom__icontains=query) |
+                Q(contrat__locataire__prenom__icontains=query) |
+                Q(contrat__propriete__adresse__icontains=query)
+            )
+        
+        # Filtres
+        statut_filter = request.GET.get('statut', '')
+        if statut_filter:
+            paiements = paiements.filter(statut=statut_filter)
+        
+        type_filter = request.GET.get('type_paiement', '')
+        if type_filter:
+            paiements = paiements.filter(type_paiement=type_filter)
+        
+        # Pagination
+        paginator = Paginator(paiements, 20)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        
+        # Statistiques
+        total_paiements = paiements.count()
+        total_montant = paiements.aggregate(total=Sum('montant'))['total'] or 0
+        
+        context = {
+            'page_obj': page_obj,
+            'paiements': page_obj,
+            'query': query,
+            'statut_filter': statut_filter,
+            'type_filter': type_filter,
+            'total_paiements': total_paiements,
+            'total_montant': total_montant,
+            'title': 'Paiements Partiels',
+            'is_paiements_partiels': True,
+        }
+        
+        return render(request, 'paiements/liste_partiels.html', context)
+        
+    except Exception as e:
+        messages.error(request, f'Erreur lors du chargement des paiements partiels: {str(e)}')
+        return render(request, 'paiements/liste_partiels.html', {
+            'paiements': [],
+            'title': 'Paiements Partiels',
+            'is_paiements_partiels': True,
+        })
+
+
+@login_required
 def liste_paiements(request):
     """Liste des paiements avec recherche et filtres."""
     try:
-        # Récupérer tous les paiements non supprimés
-        paiements = Paiement.objects.filter(is_deleted=False).select_related(
+        # Récupérer tous les paiements non supprimés et définitifs (exclure les paiements partiels)
+        paiements = Paiement.objects.filter(
+            is_deleted=False,
+            est_paiement_partiel=False  # Exclure les paiements partiels de la liste principale
+        ).select_related(
             'contrat__locataire', 'contrat__propriete', 'cree_par'
         ).order_by('-date_creation')
         
@@ -1824,6 +1891,14 @@ def generer_quittance_manuelle(request, paiement_pk):
     
     try:
         paiement = get_object_or_404(Paiement, pk=paiement_pk)
+        
+        # Vérifier si le paiement peut générer une quittance
+        if not paiement.peut_generer_quittance():
+            if paiement.est_paiement_partiel:
+                messages.error(request, 'Les paiements partiels ne génèrent pas de quittance. Attendez la complétion du paiement.')
+            else:
+                messages.error(request, 'Ce paiement ne peut pas générer de quittance.')
+            return redirect('paiements:detail', pk=paiement_pk)
         
         # Vérifier si une quittance existe déjà
         if hasattr(paiement, 'quittance'):

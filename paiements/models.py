@@ -468,6 +468,22 @@ class Paiement(models.Model):
 
         super().save(*args, **kwargs)
     
+    def peut_generer_quittance(self):
+        """Vérifie si le paiement peut générer une quittance."""
+        # Les paiements partiels ne génèrent pas de quittance
+        if self.est_paiement_partiel:
+            return False
+        # Seuls les paiements validés et complets génèrent des quittances
+        return self.statut == 'valide' and not self.est_paiement_partiel
+    
+    def est_paiement_definitif(self):
+        """Vérifie si le paiement est définitif (complet et validé)."""
+        return self.statut == 'valide' and not self.est_paiement_partiel
+    
+    def est_paiement_partiel_en_cours(self):
+        """Vérifie si le paiement est partiel et en cours."""
+        return self.est_paiement_partiel and self.statut == 'partiellement_payé'
+    
     def generate_reference_paiement(self):
         """Génère une référence unique pour le paiement."""
         from django.utils.crypto import get_random_string

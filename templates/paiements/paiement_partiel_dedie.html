@@ -317,20 +317,31 @@
                                 </div>
                             </div>
                             
-                            <!-- Suggestions intelligentes -->
-                            {% if montant_restant > 0 %}
-                            <div class="smart-suggestions">
-                                <h5><i class="bi bi-lightbulb me-2"></i>Suggestions Intelligentes</h5>
-                                <div class="suggestion-item">
-                                    <strong>Montant suggéré:</strong> {{ montant_restant|floatformat:0 }} FCFA (montant restant)
-                                </div>
-                                {% if montant_restant > 50000 %}
-                                <div class="suggestion-item">
-                                    <strong>Paiement partiel recommandé:</strong> {{ montant_restant|floatformat:0|add:"-10000" }} FCFA (laisser 10,000 FCFA pour le prochain paiement)
-                                </div>
-                                {% endif %}
-                            </div>
-                            {% endif %}
+                    <!-- Suggestions intelligentes -->
+                    {% if montant_restant > 0 %}
+                    <div class="smart-suggestions">
+                        <h5><i class="bi bi-lightbulb me-2"></i>Suggestions Intelligentes</h5>
+                        <div class="suggestion-item">
+                            <strong>Montant suggéré:</strong> {{ montant_restant|floatformat:0 }} FCFA (montant restant)
+                        </div>
+                        {% if montant_restant > 50000 %}
+                        <div class="suggestion-item">
+                            <strong>Paiement partiel recommandé:</strong> {{ montant_restant|floatformat:0|add:"-10000" }} FCFA (laisser 10,000 FCFA pour le prochain paiement)
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Information importante sur les paiements partiels -->
+                    <div class="alert alert-info mt-3">
+                        <h6><i class="bi bi-info-circle me-2"></i>Important - Paiements Partiels</h6>
+                        <ul class="mb-0">
+                            <li><strong>Pas de reçu :</strong> Les paiements partiels ne génèrent pas de reçu automatiquement</li>
+                            <li><strong>Pas dans la liste :</strong> Ils n'apparaissent pas dans la liste des paiements définitifs</li>
+                            <li><strong>Complétion :</strong> Un reçu sera généré uniquement après complétion du paiement total</li>
+                            <li><strong>Suivi :</strong> Utilisez l'historique des paiements partiels pour suivre les montants</li>
+                        </ul>
+                    </div>
                             
                             <div class="text-center mt-4">
                                 <button type="submit" class="btn btn-paiement-partiel me-3">
