@@ -107,17 +107,9 @@ sleep 10
 echo "🔄 Application des migrations..."
 python manage.py migrate --noinput
 
-# Créer un superutilisateur si nécessaire
-echo "👤 Vérification du superutilisateur..."
-python manage.py shell -c "
-from django.contrib.auth import get_user_model
-User = get_user_model()
-if not User.objects.filter(username='admin').exists():
-    User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
-    print('Superutilisateur créé: admin/admin123')
-else:
-    print('Superutilisateur existe déjà')
-"
+# Créer les utilisateurs de test
+echo "👥 Création des utilisateurs de test..."
+python manage.py create_test_users --force
 
 # Collecter les fichiers statiques
 echo "📁 Collecte des fichiers statiques..."
