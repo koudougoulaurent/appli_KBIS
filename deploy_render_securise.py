@@ -107,9 +107,8 @@ sleep 10
 echo "🔄 Application des migrations..."
 python manage.py migrate --noinput
 
-# Créer les utilisateurs de test
-echo "👥 Création des utilisateurs de test..."
-python manage.py create_test_users --force
+# Les utilisateurs de test sont créés automatiquement par la migration 0006_create_test_users
+echo "👥 Utilisateurs de test créés automatiquement par migration"
 
 # Collecter les fichiers statiques
 echo "📁 Collecte des fichiers statiques..."

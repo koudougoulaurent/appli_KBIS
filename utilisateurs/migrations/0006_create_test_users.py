@@ -18,7 +18,7 @@ def reverse_create_test_users(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('utilisateurs', '0001_initial'),
+        ('utilisateurs', '0005_alter_utilisateur_telephone'),
     ]
 
     operations = [
