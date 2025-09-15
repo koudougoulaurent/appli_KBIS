@@ -329,7 +329,24 @@ def ajouter_paiement(request):
 
 @login_required
 def ajouter_paiement_partiel(request):
-    """Vue spécialisée pour ajouter un paiement partiel avec contexte intelligent."""
+    """Vue spécialisée pour ajouter un paiement partiel avec contexte intelligent et dynamique."""
+    contrat_obj = None
+    total_charges_bailleur = 0
+    net_a_payer = 0
+    charges_bailleur = []
+    historique = []
+    montant_restant = 0
+    paiements_partiels_existants = 0
+    
+    # Récupération des contrats actifs
+    contrats = Contrat.objects.filter(is_deleted=False).select_related('locataire', 'propriete')
+    
+    # Récupération de la devise de base
+    try:
+        devise_base = Devise.objects.filter(is_devise_base=True).first()
+    except:
+        devise_base = None
+
     if request.method == 'POST':
         form = PaiementForm(request.POST)
         if form.is_valid():
@@ -339,40 +356,83 @@ def ajouter_paiement_partiel(request):
                 # Forcer le statut à partiel pour cette vue
                 paiement.est_paiement_partiel = True
                 paiement.save()
-                messages.success(request, f'Paiement partiel {paiement.reference_paiement} créé avec succès!')
-                # Rediriger vers l'historique des paiements partiels pour ce contrat/mois
+                
+                # Logique de redirection intelligente
                 if paiement.mois_paye:
+                    messages.success(request, f'Paiement partiel {paiement.reference_paiement} créé avec succès!')
                     return redirect('paiements:historique_partiel', 
                                  contrat_id=paiement.contrat.id, 
                                  mois=paiement.mois_paye.month, 
                                  annee=paiement.mois_paye.year)
                 else:
-                    return redirect('paiements:liste')
+                    messages.success(request, f'Paiement partiel {paiement.reference_paiement} créé avec succès!')
+                    return redirect('paiements:ajouter_partiel')
             except Exception as e:
                 messages.error(request, f'Erreur lors de la création du paiement partiel: {str(e)}')
     else:
         form = PaiementForm()
 
-    contrats = Contrat.objects.filter(is_deleted=False).select_related('locataire', 'propriete')
-    try:
-        devise_base = Devise.objects.filter(is_devise_base=True).first()
-    except:
-        devise_base = None
-
-    # Contexte pour les paiements partiels
+    # Logique dynamique pour le contexte
+    contrat_id = request.GET.get('contrat_id')
+    mois_selectionne = request.GET.get('mois')
+    annee_selectionnee = request.GET.get('annee')
+    
+    if contrat_id:
+        try:
+            contrat_obj = Contrat.objects.get(id=contrat_id, is_deleted=False)
+            
+            # Calcul des charges et montants
+            if contrat_obj.propriete:
+                charges_bailleur = ChargeDeductible.objects.filter(
+                    propriete=contrat_obj.propriete,
+                    is_deleted=False
+                )
+                total_charges_bailleur = sum(charge.montant for charge in charges_bailleur)
+            
+            # Calcul du net à payer
+            loyer_mensuel = contrat_obj.montant_loyer_mensuel or 0
+            net_a_payer = loyer_mensuel - total_charges_bailleur
+            
+            # Récupération de l'historique des paiements partiels
+            if mois_selectionne and annee_selectionnee:
+                try:
+                    mois_date = datetime(int(annee_selectionnee), int(mois_selectionne), 1).date()
+                    historique = Paiement.objects.filter(
+                        contrat=contrat_obj,
+                        mois_paye=mois_date,
+                        is_deleted=False
+                    ).order_by('-date_paiement')
+                    
+                    # Calcul du montant restant
+                    montant_paye = sum(p.montant for p in historique)
+                    montant_restant = max(0, net_a_payer - montant_paye)
+                    paiements_partiels_existants = historique.count()
+                    
+                except (ValueError, TypeError):
+                    pass
+            
+        except Contrat.DoesNotExist:
+            messages.error(request, "Contrat non trouvé.")
+    
+    # Contexte enrichi pour les paiements partiels
     context = {
         'form': form,
         'contrats': contrats,
-        'contrat_obj': None,
-        'total_charges_bailleur': 0,
-        'net_a_payer': 0,
-        'charges_bailleur': [],
+        'contrat_obj': contrat_obj,
+        'total_charges_bailleur': total_charges_bailleur,
+        'net_a_payer': net_a_payer,
+        'charges_bailleur': charges_bailleur,
         'devise_base': devise_base,
-        'title': 'Ajouter un Paiement Partiel',
+        'title': 'Paiement Partiel - Gestion Intelligente',
         'is_paiement_partiel': True,
-        'historique': None,
+        'historique': historique,
+        'montant_restant': montant_restant,
+        'paiements_partiels_existants': paiements_partiels_existants,
+        'mois_selectionne': mois_selectionne,
+        'annee_selectionnee': annee_selectionnee,
+        'contrat_id': contrat_id,
     }
-    return render(request, 'paiements/paiement_partiel_form.html', context)
+    return render(request, 'paiements/paiement_partiel_dedie.html', context)
 
 
 @login_required
