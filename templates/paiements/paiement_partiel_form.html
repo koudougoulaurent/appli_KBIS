@@ -1,0 +1,217 @@
+{% extends 'base_dashboard.html' %}
+
+{% block title %}Paiement Partiel{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-pie-chart text-warning"></i> 
+            Paiement Partiel
+        </h1>
+        <div>
+            <a href="{% url 'paiements:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Retour au Dashboard
+            </a>
+            <a href="{% url 'paiements:historique_partiel' contrat_id=1 mois=9 annee=2025 %}" class="btn btn-warning">
+                <i class="bi bi-clock-history"></i> Historique Partiels
+            </a>
+        </div>
+    </div>
+
+    <!-- Alerte informative -->
+    <div class="alert alert-info mb-4">
+        <h5 class="alert-heading">
+            <i class="bi bi-info-circle"></i> Paiement Partiel
+        </h5>
+        <p class="mb-0">
+            Cette page est spécialement conçue pour les paiements partiels. 
+            Le système calculera automatiquement le montant restant et gérera l'historique des paiements.
+        </p>
+    </div>
+
+    <div class="row">
+        <!-- Formulaire de paiement partiel -->
+        <div class="col-lg-8">
+            <div class="card content-card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-plus-circle text-success"></i>
+                        Nouveau Paiement Partiel
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="paiementPartielForm">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.contrat.id_for_label }}" class="form-label">
+                                        <i class="bi bi-file-text"></i> Contrat *
+                                    </label>
+                                    {{ form.contrat }}
+                                    {% if form.contrat.errors %}
+                                        <div class="text-danger">{{ form.contrat.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.mois_paye.id_for_label }}" class="form-label">
+                                        <i class="bi bi-calendar-month"></i> Mois Payé *
+                                    </label>
+                                    {{ form.mois_paye }}
+                                    {% if form.mois_paye.errors %}
+                                        <div class="text-danger">{{ form.mois_paye.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.montant.id_for_label }}" class="form-label">
+                                        <i class="bi bi-currency-exchange"></i> Montant *
+                                    </label>
+                                    {{ form.montant }}
+                                    {% if form.montant.errors %}
+                                        <div class="text-danger">{{ form.montant.errors }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Montant partiel à payer</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.date_paiement.id_for_label }}" class="form-label">
+                                        <i class="bi bi-calendar"></i> Date de Paiement *
+                                    </label>
+                                    {{ form.date_paiement }}
+                                    {% if form.date_paiement.errors %}
+                                        <div class="text-danger">{{ form.date_paiement.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.mode_paiement.id_for_label }}" class="form-label">
+                                        <i class="bi bi-credit-card"></i> Mode de Paiement *
+                                    </label>
+                                    {{ form.mode_paiement }}
+                                    {% if form.mode_paiement.errors %}
+                                        <div class="text-danger">{{ form.mode_paiement.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.type_paiement.id_for_label }}" class="form-label">
+                                        <i class="bi bi-tag"></i> Type de Paiement *
+                                    </label>
+                                    {{ form.type_paiement }}
+                                    {% if form.type_paiement.errors %}
+                                        <div class="text-danger">{{ form.type_paiement.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">
+                                <i class="bi bi-chat-text"></i> Notes
+                            </label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="text-danger">{{ form.notes.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-warning btn-lg">
+                                <i class="bi bi-pie-chart"></i> Créer Paiement Partiel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations contextuelles -->
+        <div class="col-lg-4">
+            <div class="card content-card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-info-circle text-info"></i>
+                        Informations
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-warning">Paiements Partiels</h6>
+                    <p class="small">
+                        Les paiements partiels permettent de payer le loyer en plusieurs fois. 
+                        Le système calcule automatiquement le montant restant.
+                    </p>
+                    
+                    <h6 class="text-info mt-3">Historique</h6>
+                    <p class="small">
+                        Consultez l'historique des paiements partiels pour suivre l'évolution 
+                        des paiements d'un contrat et d'un mois donné.
+                    </p>
+                    
+                    <h6 class="text-success mt-3">Validation</h6>
+                    <p class="small">
+                        Une fois le montant total payé, le paiement sera automatiquement 
+                        marqué comme complet.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Statistiques rapides -->
+            <div class="card content-card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-graph-up text-primary"></i>
+                        Statistiques
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h4 class="text-warning">0</h4>
+                            <small>Partiels ce mois</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-success">0</h4>
+                            <small>Complets ce mois</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-remplir la date d'aujourd'hui
+    const dateInput = document.getElementById('{{ form.date_paiement.id_for_label }}');
+    if (dateInput && !dateInput.value) {
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
+    }
+    
+    // Auto-remplir le mois actuel
+    const moisInput = document.getElementById('{{ form.mois_paye.id_for_label }}');
+    if (moisInput && !moisInput.value) {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        moisInput.value = `${year}-${month}`;
+    }
+});
+</script>
+{% endblock %}

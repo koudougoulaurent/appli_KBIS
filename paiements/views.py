@@ -372,7 +372,7 @@ def ajouter_paiement_partiel(request):
         'is_paiement_partiel': True,
         'historique': None,
     }
-    return render(request, 'paiements/ajouter.html', context)
+    return render(request, 'paiements/paiement_partiel_form.html', context)
 
 
 @login_required
