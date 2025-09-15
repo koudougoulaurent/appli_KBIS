@@ -2,68 +2,24 @@ from django.db import migrations
 from django.contrib.auth import get_user_model
 from django.db import transaction
 
-def force_create_test_users(apps, schema_editor):
-    """Force la création des utilisateurs de test."""
+def fix_test_users(apps, schema_editor):
+    """Corrige la création des utilisateurs de test."""
     User = get_user_model()
     GroupeTravail = apps.get_model('utilisateurs', 'GroupeTravail')
     
     try:
         with transaction.atomic():
-            # Créer les groupes de travail s'ils n'existent pas
-            groupes_data = [
-                {
-                    'nom': 'PRIVILEGE',
-                    'description': 'Groupe avec tous les privilèges',
-                    'permissions': {
-                        'modules': ['all'],
-                        'actions': ['create', 'read', 'update', 'delete']
-                    }
-                },
-                {
-                    'nom': 'ADMINISTRATION',
-                    'description': 'Groupe d\'administration',
-                    'permissions': {
-                        'modules': ['utilisateurs', 'proprietes', 'contrats', 'paiements'],
-                        'actions': ['create', 'read', 'update']
-                    }
-                },
-                {
-                    'nom': 'CAISSE',
-                    'description': 'Groupe de gestion de la caisse',
-                    'permissions': {
-                        'modules': ['paiements', 'contrats'],
-                        'actions': ['create', 'read', 'update']
-                    }
-                },
-                {
-                    'nom': 'CONTROLES',
-                    'description': 'Groupe de contrôles',
-                    'permissions': {
-                        'modules': ['proprietes', 'contrats'],
-                        'actions': ['read', 'update']
-                    }
-                }
-            ]
-            
-            groupes = {}
-            for group_data in groupes_data:
-                groupe, created = GroupeTravail.objects.get_or_create(
-                    nom=group_data['nom'],
-                    defaults={
-                        'description': group_data['description'],
-                        'permissions': group_data['permissions'],
-                        'actif': True
-                    }
-                )
-                groupes[group_data['nom']] = groupe
-                print(f"✅ Groupe {groupe.nom} {'créé' if created else 'existe déjà'}")
-            
             # Supprimer les utilisateurs existants s'ils existent
             test_usernames = ['admin', 'caisse', 'admin_immobilier', 'controleur', 'test']
             User.objects.filter(username__in=test_usernames).delete()
             print("🗑️  Anciens utilisateurs de test supprimés")
             
-            # Créer les utilisateurs de test
+            # Récupérer les groupes existants
+            groupes = {}
+            for groupe in GroupeTravail.objects.all():
+                groupes[groupe.nom] = groupe
+            
+            # Créer les utilisateurs de test (sans les champs problématiques)
             users_data = [
                 {
                     'username': 'admin',
@@ -140,7 +96,7 @@ def force_create_test_users(apps, schema_editor):
         import traceback
         traceback.print_exc()
 
-def reverse_force_create_test_users(apps, schema_editor):
+def reverse_fix_test_users(apps, schema_editor):
     """Supprime les utilisateurs de test lors du rollback."""
     User = get_user_model()
     
@@ -150,9 +106,9 @@ def reverse_force_create_test_users(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('utilisateurs', '0006_create_test_users'),
+        ('utilisateurs', '0007_force_create_test_users'),
     ]
 
     operations = [
-        migrations.RunPython(force_create_test_users, reverse_force_create_test_users),
+        migrations.RunPython(fix_test_users, reverse_fix_test_users),
     ]
