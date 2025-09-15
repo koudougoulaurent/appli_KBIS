@@ -86,32 +86,16 @@ WSGI_APPLICATION = 'gestion_immobiliere.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 # 🚨 CONFIGURATION CRITIQUE POUR RENDER - PERSISTANCE DES DONNÉES
-if os.environ.get('RENDER'):
-    # Configuration pour Render avec base de données persistante
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('DATABASE_NAME', 'appli_kbis'),
-            'USER': os.environ.get('DATABASE_USER', 'appli_kbis_user'),
-            'PASSWORD': os.environ.get('DATABASE_PASSWORD', ''),
-            'HOST': os.environ.get('DATABASE_HOST', 'localhost'),
-            'PORT': os.environ.get('DATABASE_PORT', '5432'),
-            'OPTIONS': {
-                'sslmode': 'require',
-            },
-        }
+# Configuration de la base de données - SQLite pour l'instant
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+        'OPTIONS': {
+            'timeout': 30,
+        },
     }
-else:
-    # Configuration locale avec SQLite
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-            'OPTIONS': {
-                'timeout': 30,
-            },
-        }
-    }
+}
 
 # Configuration du logging simplifiée
 LOGGING = {
