@@ -1,0 +1,905 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Liste des Plans de Paiement Partiel - Version Pro{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components.css' %}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/datatables.net-bs5/css/dataTables.bootstrap5.min.css">
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    }
+    
+    .filter-panel {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    }
+    
+    .filter-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        align-items: end;
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .filter-label {
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .filter-input {
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+    }
+    
+    .filter-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .plan-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        border-left: 4px solid #667eea;
+        position: relative;
+    }
+    
+    .plan-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+    
+    .plan-card.actif {
+        border-left-color: #38a169;
+    }
+    
+    .plan-card.suspendu {
+        border-left-color: #f6ad55;
+    }
+    
+    .plan-card.termine {
+        border-left-color: #667eea;
+    }
+    
+    .plan-card.annule {
+        border-left-color: #e53e3e;
+    }
+    
+    .plan-header {
+        display: flex;
+        justify-content: between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+    
+    .plan-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 0.25rem;
+    }
+    
+    .plan-subtitle {
+        color: #718096;
+        font-size: 0.9rem;
+    }
+    
+    .plan-status {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+    }
+    
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .status-badge.actif {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .status-badge.suspendu {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    
+    .status-badge.termine {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    
+    .status-badge.annule {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .plan-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 0.75rem;
+        background: #f8f9fc;
+        border-radius: 10px;
+    }
+    
+    .stat-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem;
+        color: #718096;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .progress-container {
+        margin-bottom: 1rem;
+    }
+    
+    .progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .progress-label {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #2d3748;
+    }
+    
+    .progress-percentage {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #667eea;
+    }
+    
+    .progress-bar {
+        height: 8px;
+        background: #e2e8f0;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        transition: width 0.5s ease;
+    }
+    
+    .plan-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .action-btn {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .action-btn.primary {
+        background: #667eea;
+        color: white;
+    }
+    
+    .action-btn.primary:hover {
+        background: #5a67d8;
+        color: white;
+    }
+    
+    .action-btn.success {
+        background: #38a169;
+        color: white;
+    }
+    
+    .action-btn.success:hover {
+        background: #2f855a;
+        color: white;
+    }
+    
+    .action-btn.warning {
+        background: #f6ad55;
+        color: white;
+    }
+    
+    .action-btn.warning:hover {
+        background: #ed8936;
+        color: white;
+    }
+    
+    .action-btn.danger {
+        background: #e53e3e;
+        color: white;
+    }
+    
+    .action-btn.danger:hover {
+        background: #c53030;
+        color: white;
+    }
+    
+    .action-btn.secondary {
+        background: #f7fafc;
+        color: #4a5568;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .action-btn.secondary:hover {
+        background: #edf2f7;
+        color: #2d3748;
+    }
+    
+    .bulk-actions {
+        background: white;
+        border-radius: 15px;
+        padding: 1rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        display: none;
+    }
+    
+    .bulk-actions.show {
+        display: block;
+    }
+    
+    .bulk-actions-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .bulk-actions-count {
+        font-weight: 600;
+        color: #2d3748;
+    }
+    
+    .bulk-actions-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .view-toggle {
+        display: flex;
+        background: #f7fafc;
+        border-radius: 10px;
+        padding: 0.25rem;
+        margin-bottom: 1rem;
+    }
+    
+    .view-toggle-btn {
+        padding: 0.5rem 1rem;
+        border: none;
+        background: transparent;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #718096;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .view-toggle-btn.active {
+        background: white;
+        color: #667eea;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .table-container {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .data-table th {
+        background: #f8f9fc;
+        color: #2d3748;
+        font-weight: 600;
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .data-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #e2e8f0;
+        vertical-align: middle;
+    }
+    
+    .data-table tbody tr:hover {
+        background: #f8f9fc;
+    }
+    
+    .mobile-optimized {
+        display: none;
+    }
+    
+    @media (max-width: 768px) {
+        .desktop-only {
+            display: none;
+        }
+        
+        .mobile-optimized {
+            display: block;
+        }
+        
+        .filter-row {
+            grid-template-columns: 1fr;
+        }
+        
+        .plan-stats {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .plan-actions {
+            flex-direction: column;
+        }
+        
+        .action-btn {
+            text-align: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="h2 mb-2">
+                    <i class="fas fa-list-alt me-3"></i>
+                    Plans de Paiement Partiel
+                </h1>
+                <p class="mb-0 opacity-90">
+                    Gestion professionnelle de tous vos plans de paiement échelonnés
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="d-flex gap-2 flex-wrap justify-content-md-end">
+                    <button class="btn btn-light btn-sm" onclick="refreshData()">
+                        <i class="fas fa-sync-alt me-1"></i>Actualiser
+                    </button>
+                    <button class="btn btn-outline-light btn-sm" onclick="exportData()">
+                        <i class="fas fa-download me-1"></i>Exporter
+                    </button>
+                    <a href="{% url 'paiements:creer_plan_partiel' %}" class="btn btn-light">
+                        <i class="fas fa-plus me-2"></i>Nouveau Plan
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions en Lot -->
+    <div class="bulk-actions" id="bulkActions">
+        <div class="bulk-actions-header">
+            <div class="bulk-actions-count">
+                <span id="selectedCount">0</span> plan(s) sélectionné(s)
+            </div>
+            <div class="bulk-actions-buttons">
+                <button class="action-btn success" onclick="bulkAction('activate')">
+                    <i class="fas fa-play me-1"></i>Activer
+                </button>
+                <button class="action-btn warning" onclick="bulkAction('suspend')">
+                    <i class="fas fa-pause me-1"></i>Suspendre
+                </button>
+                <button class="action-btn danger" onclick="bulkAction('delete')">
+                    <i class="fas fa-trash me-1"></i>Supprimer
+                </button>
+                <button class="action-btn secondary" onclick="clearSelection()">
+                    <i class="fas fa-times me-1"></i>Annuler
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="filter-panel">
+        <div class="filter-row">
+            <div class="filter-group">
+                <label class="filter-label">Recherche</label>
+                <input type="text" class="filter-input" id="searchInput" 
+                       placeholder="Nom du plan, locataire, contrat...">
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Statut</label>
+                <select class="filter-input" id="statusFilter">
+                    <option value="">Tous les statuts</option>
+                    <option value="actif">Actif</option>
+                    <option value="suspendu">Suspendu</option>
+                    <option value="termine">Terminé</option>
+                    <option value="annule">Annulé</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Date de création</label>
+                <select class="filter-input" id="dateFilter">
+                    <option value="">Toutes les dates</option>
+                    <option value="today">Aujourd'hui</option>
+                    <option value="week">Cette semaine</option>
+                    <option value="month">Ce mois</option>
+                    <option value="year">Cette année</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Montant</label>
+                <select class="filter-input" id="amountFilter">
+                    <option value="">Tous les montants</option>
+                    <option value="0-50000">0 - 50,000 FCFA</option>
+                    <option value="50000-100000">50,000 - 100,000 FCFA</option>
+                    <option value="100000-500000">100,000 - 500,000 FCFA</option>
+                    <option value="500000+">500,000+ FCFA</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Actions</label>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary btn-sm" onclick="applyFilters()">
+                        <i class="fas fa-search me-1"></i>Filtrer
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="clearFilters()">
+                        <i class="fas fa-times me-1"></i>Effacer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toggle de Vue -->
+    <div class="view-toggle">
+        <button class="view-toggle-btn active" onclick="toggleView('grid')" id="gridViewBtn">
+            <i class="fas fa-th me-1"></i>Grille
+        </button>
+        <button class="view-toggle-btn" onclick="toggleView('list')" id="listViewBtn">
+            <i class="fas fa-list me-1"></i>Liste
+        </button>
+    </div>
+
+    <!-- Vue Grille -->
+    <div id="gridView" class="desktop-only">
+        <div class="row" id="plansGrid">
+            {% for plan in plans %}
+            <div class="col-xl-4 col-lg-6 mb-4 plan-item" 
+                 data-status="{{ plan.statut }}" 
+                 data-amount="{{ plan.montant_total }}"
+                 data-date="{{ plan.date_creation|date:'Y-m-d' }}">
+                <div class="plan-card {{ plan.statut }}">
+                    <div class="plan-header">
+                        <div class="flex-grow-1">
+                            <h5 class="plan-title">{{ plan.nom_plan }}</h5>
+                            <p class="plan-subtitle">
+                                <i class="fas fa-user me-1"></i>
+                                {{ plan.contrat.locataire.nom }} {{ plan.contrat.locataire.prenom }}
+                            </p>
+                        </div>
+                        <div class="plan-status">
+                            <span class="status-badge {{ plan.statut }}">
+                                {{ plan.get_statut_display }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="plan-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">{{ plan.montant_total|floatformat:0|intcomma }}</div>
+                            <div class="stat-label">Total</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value text-success">{{ plan.montant_deja_paye|floatformat:0|intcomma }}</div>
+                            <div class="stat-label">Payé</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value text-warning">{{ plan.montant_restant|floatformat:0|intcomma }}</div>
+                            <div class="stat-label">Restant</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-container">
+                        <div class="progress-header">
+                            <span class="progress-label">Progression</span>
+                            <span class="progress-percentage">{{ plan.calculer_progression|floatformat:1 }}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: {{ plan.calculer_progression|floatformat:0 }}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="plan-actions">
+                        <a href="{% url 'paiements:detail_plan_partiel' plan.id %}" 
+                           class="action-btn primary">
+                            <i class="fas fa-eye me-1"></i>Voir
+                        </a>
+                        <button class="action-btn success" onclick="addPayment({{ plan.id }})">
+                            <i class="fas fa-plus me-1"></i>Payer
+                        </button>
+                        <button class="action-btn secondary" onclick="editPlan({{ plan.id }})">
+                            <i class="fas fa-edit me-1"></i>Modifier
+                        </button>
+                        <button class="action-btn danger" onclick="deletePlan({{ plan.id }})">
+                            <i class="fas fa-trash me-1"></i>Supprimer
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-inbox fa-4x mb-3"></i>
+                    <h5>Aucun plan de paiement partiel</h5>
+                    <p>Commencez par créer votre premier plan de paiement partiel</p>
+                    <a href="{% url 'paiements:creer_plan_partiel' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Créer le premier plan
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Vue Liste -->
+    <div id="listView" class="table-container" style="display: none;">
+        <table class="data-table" id="plansTable">
+            <thead>
+                <tr>
+                    <th>
+                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                    </th>
+                    <th>Plan</th>
+                    <th>Locataire</th>
+                    <th>Montant Total</th>
+                    <th>Montant Payé</th>
+                    <th>Progression</th>
+                    <th>Statut</th>
+                    <th>Date Création</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for plan in plans %}
+                <tr class="plan-row" 
+                    data-status="{{ plan.statut }}" 
+                    data-amount="{{ plan.montant_total }}"
+                    data-date="{{ plan.date_creation|date:'Y-m-d' }}">
+                    <td>
+                        <input type="checkbox" class="plan-checkbox" value="{{ plan.id }}" 
+                               onchange="updateSelection()">
+                    </td>
+                    <td>
+                        <div>
+                            <strong>{{ plan.nom_plan }}</strong>
+                            <br>
+                            <small class="text-muted">{{ plan.numero_plan }}</small>
+                        </div>
+                    </td>
+                    <td>
+                        {{ plan.contrat.locataire.nom }} {{ plan.contrat.locataire.prenom }}
+                    </td>
+                    <td>
+                        <strong>{{ plan.montant_total|floatformat:0|intcomma }} FCFA</strong>
+                    </td>
+                    <td>
+                        <span class="text-success">{{ plan.montant_deja_paye|floatformat:0|intcomma }} FCFA</span>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="progress-bar me-2" style="width: 100px; height: 6px;">
+                                <div class="progress-fill" style="width: {{ plan.calculer_progression|floatformat:0 }}%"></div>
+                            </div>
+                            <span class="small">{{ plan.calculer_progression|floatformat:1 }}%</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-badge {{ plan.statut }}">
+                            {{ plan.get_statut_display }}
+                        </span>
+                    </td>
+                    <td>
+                        {{ plan.date_creation|date:"d/m/Y" }}
+                    </td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <a href="{% url 'paiements:detail_plan_partiel' plan.id %}" 
+                               class="action-btn primary" title="Voir">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <button class="action-btn success" onclick="addPayment({{ plan.id }})" title="Payer">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <button class="action-btn secondary" onclick="editPlan({{ plan.id }})" title="Modifier">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="action-btn danger" onclick="deletePlan({{ plan.id }})" title="Supprimer">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/datatables.net/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/datatables.net-bs5/js/dataTables.bootstrap5.min.js"></script>
+<script>
+let currentView = 'grid';
+let selectedPlans = new Set();
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeFilters();
+    initializeDataTable();
+});
+
+function initializeFilters() {
+    // Initialiser les filtres
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+    const dateFilter = document.getElementById('dateFilter');
+    const amountFilter = document.getElementById('amountFilter');
+    
+    [searchInput, statusFilter, dateFilter, amountFilter].forEach(input => {
+        input.addEventListener('change', applyFilters);
+    });
+    
+    searchInput.addEventListener('input', debounce(applyFilters, 300));
+}
+
+function initializeDataTable() {
+    // Initialiser DataTables pour la vue liste
+    $('#plansTable').DataTable({
+        responsive: true,
+        pageLength: 25,
+        order: [[7, 'desc']], // Trier par date de création
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json'
+        }
+    });
+}
+
+function toggleView(view) {
+    currentView = view;
+    
+    if (view === 'grid') {
+        document.getElementById('gridView').style.display = 'block';
+        document.getElementById('listView').style.display = 'none';
+        document.getElementById('gridViewBtn').classList.add('active');
+        document.getElementById('listViewBtn').classList.remove('active');
+    } else {
+        document.getElementById('gridView').style.display = 'none';
+        document.getElementById('listView').style.display = 'block';
+        document.getElementById('gridViewBtn').classList.remove('active');
+        document.getElementById('listViewBtn').classList.add('active');
+    }
+}
+
+function applyFilters() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const statusFilter = document.getElementById('statusFilter').value;
+    const dateFilter = document.getElementById('dateFilter').value;
+    const amountFilter = document.getElementById('amountFilter').value;
+    
+    const planItems = document.querySelectorAll('.plan-item, .plan-row');
+    
+    planItems.forEach(item => {
+        const planName = item.querySelector('.plan-title, strong')?.textContent.toLowerCase() || '';
+        const planStatus = item.dataset.status;
+        const planAmount = parseFloat(item.dataset.amount);
+        const planDate = item.dataset.date;
+        
+        let show = true;
+        
+        // Filtre par recherche
+        if (searchTerm && !planName.includes(searchTerm)) {
+            show = false;
+        }
+        
+        // Filtre par statut
+        if (statusFilter && planStatus !== statusFilter) {
+            show = false;
+        }
+        
+        // Filtre par montant
+        if (amountFilter) {
+            const [min, max] = amountFilter.split('-').map(x => x === '+' ? Infinity : parseInt(x));
+            if (planAmount < min || planAmount > max) {
+                show = false;
+            }
+        }
+        
+        // Filtre par date
+        if (dateFilter) {
+            const today = new Date();
+            const planDateObj = new Date(planDate);
+            
+            switch (dateFilter) {
+                case 'today':
+                    if (planDateObj.toDateString() !== today.toDateString()) show = false;
+                    break;
+                case 'week':
+                    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    if (planDateObj < weekAgo) show = false;
+                    break;
+                case 'month':
+                    const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    if (planDateObj < monthAgo) show = false;
+                    break;
+                case 'year':
+                    const yearAgo = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
+                    if (planDateObj < yearAgo) show = false;
+                    break;
+            }
+        }
+        
+        item.style.display = show ? '' : 'none';
+    });
+}
+
+function clearFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('dateFilter').value = '';
+    document.getElementById('amountFilter').value = '';
+    applyFilters();
+}
+
+function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.plan-checkbox');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+        if (selectAll.checked) {
+            selectedPlans.add(checkbox.value);
+        } else {
+            selectedPlans.delete(checkbox.value);
+        }
+    });
+    
+    updateSelection();
+}
+
+function updateSelection() {
+    const checkboxes = document.querySelectorAll('.plan-checkbox:checked');
+    selectedPlans.clear();
+    
+    checkboxes.forEach(checkbox => {
+        selectedPlans.add(checkbox.value);
+    });
+    
+    const selectedCount = selectedPlans.size;
+    document.getElementById('selectedCount').textContent = selectedCount;
+    
+    const bulkActions = document.getElementById('bulkActions');
+    if (selectedCount > 0) {
+        bulkActions.classList.add('show');
+    } else {
+        bulkActions.classList.remove('show');
+    }
+}
+
+function clearSelection() {
+    selectedPlans.clear();
+    document.querySelectorAll('.plan-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    document.getElementById('selectAll').checked = false;
+    updateSelection();
+}
+
+function bulkAction(action) {
+    if (selectedPlans.size === 0) {
+        alert('Aucun plan sélectionné');
+        return;
+    }
+    
+    const actionText = {
+        'activate': 'activer',
+        'suspend': 'suspendre',
+        'delete': 'supprimer'
+    };
+    
+    if (confirm(`Êtes-vous sûr de vouloir ${actionText[action]} ${selectedPlans.size} plan(s) ?`)) {
+        // Implémentation des actions en lot
+        console.log(`Action: ${action} sur les plans:`, Array.from(selectedPlans));
+        alert(`Action ${actionText[action]} effectuée sur ${selectedPlans.size} plan(s)`);
+        clearSelection();
+    }
+}
+
+function addPayment(planId) {
+    // Ouvrir le modal de paiement rapide
+    alert(`Ajouter un paiement pour le plan ${planId}`);
+}
+
+function editPlan(planId) {
+    // Rediriger vers la page d'édition
+    window.location.href = `/paiements/accords/${planId}/modifier/`;
+}
+
+function deletePlan(planId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce plan ?')) {
+        // Implémentation de la suppression
+        console.log(`Suppression du plan ${planId}`);
+        alert('Plan supprimé avec succès');
+    }
+}
+
+function refreshData() {
+    location.reload();
+}
+
+function exportData() {
+    // Implémentation de l'export
+    alert('Export en cours de développement');
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+</script>
+{% endblock %}

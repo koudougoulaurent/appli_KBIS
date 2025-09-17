@@ -3069,7 +3069,7 @@ def dashboard_paiements_partiels(request):
         'alertes_actives': alertes_actives,
     }
     
-    return render(request, 'paiements/partial_payment/dashboard.html', context)
+    return render(request, 'paiements/partial_payment/dashboard_enhanced.html', context)
 
 
 @login_required
@@ -3090,7 +3090,7 @@ def liste_plans_paiement(request):
         'plans': plans,
     }
     
-    return render(request, 'paiements/partial_payment/liste_plans.html', context)
+    return render(request, 'paiements/partial_payment/liste_plans_enhanced.html', context)
 
 
 @login_required
@@ -3150,4 +3150,4 @@ def creer_plan_paiement(request):
         'title': 'Créer un plan de paiement partiel',
     }
     
-    return render(request, 'paiements/partial_payment/creer_plan.html', context)
+    return render(request, 'paiements/partial_payment/creer_plan_enhanced.html', context)

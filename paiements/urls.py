@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_retraits_bailleur, views_quick_actions
+from . import views, views_ajax, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_retraits_bailleur, views_quick_actions
 # from . import views_locataire_paiements
 
 app_name = 'paiements'
@@ -19,6 +19,14 @@ urlpatterns = [
     path('accords/liste/', views.liste_plans_paiement, name='liste_plans_partiels'),
     path('accords/creer/', views.creer_plan_paiement, name='creer_plan_partiel'),
     path('accords/<uuid:plan_id>/', views.detail_plan_paiement, name='detail_plan_partiel'),
+    
+    # URLs AJAX pour les fonctionnalités avancées
+    path('api/plans/<uuid:plan_id>/', views_ajax.get_plan_details, name='api_plan_details'),
+    path('api/plans/quick-payment/', views_ajax.create_quick_payment, name='api_quick_payment'),
+    path('api/plans/bulk-update/', views_ajax.bulk_update_plans, name='api_bulk_update'),
+    path('api/plans/data/', views_ajax.get_plans_data, name='api_plans_data'),
+    path('api/plans/calculate-schedule/', views_ajax.calculate_plan_schedule, name='api_calculate_schedule'),
+    path('api/plans/search/', views_ajax.search_plans, name='api_search_plans'),
     
     # URLs pour les paiements (avec aliases pour compatibilité)
     path('dashboard/', views.paiements_dashboard, name='dashboard'),
