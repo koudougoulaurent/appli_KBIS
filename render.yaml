@@ -2,20 +2,20 @@ services:
   - type: web
     name: appli-kbis
     env: python
-    buildCommand: "./render-build.sh"
-    startCommand: "gunicorn gestion_immobiliere.wsgi:application"
-    plan: free
+    plan: starter
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+      python manage.py collectstatic --noinput --settings=gestion_immobiliere.performance_settings
+      python manage.py migrate --settings=gestion_immobiliere.performance_settings
+    startCommand: |
+      gunicorn gestion_immobiliere.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120 --max-requests 1000 --max-requests-jitter 100 --preload
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
-      - key: SECRET_KEY
-        generateValue: true
-      - key: DEBUG
-        value: False
-      - key: ALLOWED_HOSTS
-        value: "appli-kbis.onrender.com,.onrender.com"
-      - key: DATABASE_URL
-        fromDatabase:
-          name: appli-kbis-db
-          property: connectionString
-    healthCheckPath: "/"
+      - key: DJANGO_SETTINGS_MODULE
+        value: gestion_immobiliere.performance_settings
+      - key: PYTHONUNBUFFERED
+        value: 1
+      - key: DISABLE_COLLECTSTATIC
+        value: 1
+    healthCheckPath: /utilisateurs/connexion-groupes/
+    autoDeploy: true

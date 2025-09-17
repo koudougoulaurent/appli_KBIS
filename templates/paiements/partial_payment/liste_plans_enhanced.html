@@ -6,7 +6,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/components.css' %}">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/datatables.net-bs5/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/datatables.net-bs5/css/dataTables.bootstrap5.min.css" media="print" onload="this.media='all'">
 <style>
     .page-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -676,15 +676,50 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/datatables.net/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/datatables.net-bs5/js/dataTables.bootstrap5.min.js"></script>
 <script>
+// Chargement asynchrone de DataTables
+function loadDataTables() {
+    return new Promise((resolve, reject) => {
+        if (typeof $.fn.DataTable !== 'undefined') {
+            resolve();
+            return;
+        }
+        
+        const scripts = [
+            'https://cdn.jsdelivr.net/npm/datatables.net/js/jquery.dataTables.min.js',
+            'https://cdn.jsdelivr.net/npm/datatables.net-bs5/js/dataTables.bootstrap5.min.js'
+        ];
+        
+        let loaded = 0;
+        scripts.forEach((src, index) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = true;
+            script.onload = () => {
+                loaded++;
+                if (loaded === scripts.length) resolve();
+            };
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    });
+}
+
 let currentView = 'grid';
 let selectedPlans = new Set();
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeFilters();
-    initializeDataTable();
+    
+    // Charger DataTables de manière asynchrone
+    loadDataTables().then(() => {
+        initializeDataTable();
+    }).catch(() => {
+        console.warn('Erreur lors du chargement de DataTables');
+        // Fallback vers un tableau simple
+        document.getElementById('listView').style.display = 'none';
+        document.getElementById('gridView').style.display = 'block';
+    });
 });
 
 function initializeFilters() {

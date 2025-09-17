@@ -3022,45 +3022,44 @@ def creer_retrait_depuis_recap(request, recap_id):
 
 @login_required
 def dashboard_paiements_partiels(request):
-    """Dashboard principal des paiements partiels"""
+    """Dashboard principal des paiements partiels - Optimisé pour les performances"""
     
-    # Statistiques générales
+    # Optimisation : Une seule requête pour toutes les statistiques
+    from django.db.models import Count, Q
+    
+    # Statistiques générales avec requêtes optimisées
+    plans_queryset = PlanPaiementPartiel.objects.filter(is_deleted=False)
+    
     stats = {
-        'total_plans': PlanPaiementPartiel.objects.filter(is_deleted=False).count(),
-        'plans_actifs': PlanPaiementPartiel.objects.filter(
-            is_deleted=False, statut='actif'
-        ).count(),
-        'plans_termines': PlanPaiementPartiel.objects.filter(
-            is_deleted=False, statut='termine'
-        ).count(),
-        'montant_total_plans': PlanPaiementPartiel.objects.filter(
-            is_deleted=False
-        ).aggregate(total=Sum('montant_total'))['total'] or 0,
-        'montant_paye_total': PlanPaiementPartiel.objects.filter(
-            is_deleted=False
-        ).aggregate(total=Sum('montant_deja_paye'))['total'] or 0,
-        'echelons_en_retard': EchelonPaiement.objects.filter(
-            statut='en_retard'
-        ).count(),
-        'alertes_actives': AlertePaiementPartiel.objects.filter(
-            statut='active'
-        ).count(),
+        'total_plans': plans_queryset.count(),
+        'plans_actifs': plans_queryset.filter(statut='actif').count(),
+        'plans_termines': plans_queryset.filter(statut='termine').count(),
+        'montant_total_plans': plans_queryset.aggregate(total=Sum('montant_total'))['total'] or 0,
+        'montant_paye_total': plans_queryset.aggregate(total=Sum('montant_deja_paye'))['total'] or 0,
+        'echelons_en_retard': EchelonPaiement.objects.filter(statut='en_retard').count(),
+        'alertes_actives': AlertePaiementPartiel.objects.filter(statut='active').count(),
     }
     
-    # Plans récents
-    plans_recents = PlanPaiementPartiel.objects.filter(
-        is_deleted=False
-    ).select_related('contrat', 'contrat__locataire', 'contrat__propriete').order_by('-date_creation')[:5]
+    # Plans récents avec prefetch_related pour optimiser les requêtes
+    plans_recents = plans_queryset.select_related(
+        'contrat', 'contrat__locataire', 'contrat__propriete'
+    ).prefetch_related(
+        'echelons'
+    ).order_by('-date_creation')[:5]
     
-    # Échelons en retard
+    # Échelons en retard avec optimisations
     echelons_retard = EchelonPaiement.objects.filter(
         statut='en_retard'
-    ).select_related('plan', 'plan__contrat').order_by('date_echeance')[:10]
+    ).select_related(
+        'plan', 'plan__contrat', 'plan__contrat__locataire'
+    ).order_by('date_echeance')[:10]
     
-    # Alertes actives
+    # Alertes actives avec optimisations
     alertes_actives = AlertePaiementPartiel.objects.filter(
         statut='active'
-    ).select_related('plan', 'plan__contrat').order_by('-date_creation')[:10]
+    ).select_related(
+        'plan', 'plan__contrat', 'plan__contrat__locataire'
+    ).order_by('-date_creation')[:10]
     
     context = {
         'stats': stats,
@@ -3074,14 +3073,55 @@ def dashboard_paiements_partiels(request):
 
 @login_required
 def liste_plans_paiement(request):
-    """Liste des plans de paiement partiel avec filtres"""
+    """Liste des plans de paiement partiel avec filtres - Optimisé pour les performances"""
     
-    # Base queryset
+    # Base queryset avec optimisations
     queryset = PlanPaiementPartiel.objects.filter(is_deleted=False).select_related(
         'contrat', 'contrat__locataire', 'contrat__propriete', 'cree_par'
-    )
+    ).prefetch_related(
+        'echelons', 'paiements_partiels'
+    ).order_by('-date_creation')
     
-    # Pagination
+    # Filtres optimisés
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    date_filter = request.GET.get('date', '')
+    amount_min = request.GET.get('amount_min', '')
+    amount_max = request.GET.get('amount_max', '')
+    
+    if search_query:
+        queryset = queryset.filter(
+            Q(nom_plan__icontains=search_query) |
+            Q(contrat__locataire__nom__icontains=search_query) |
+            Q(contrat__locataire__prenom__icontains=search_query) |
+            Q(numero_plan__icontains=search_query)
+        )
+    
+    if status_filter:
+        queryset = queryset.filter(statut=status_filter)
+    
+    if amount_min:
+        queryset = queryset.filter(montant_total__gte=Decimal(amount_min))
+    if amount_max:
+        queryset = queryset.filter(montant_total__lte=Decimal(amount_max))
+    
+    if date_filter:
+        from datetime import datetime, timedelta
+        today = timezone.now().date()
+        
+        if date_filter == 'today':
+            queryset = queryset.filter(date_creation=today)
+        elif date_filter == 'week':
+            week_ago = today - timedelta(days=7)
+            queryset = queryset.filter(date_creation__gte=week_ago)
+        elif date_filter == 'month':
+            month_ago = today - timedelta(days=30)
+            queryset = queryset.filter(date_creation__gte=month_ago)
+        elif date_filter == 'year':
+            year_ago = today - timedelta(days=365)
+            queryset = queryset.filter(date_creation__gte=year_ago)
+    
+    # Pagination optimisée
     paginator = Paginator(queryset, 20)
     page_number = request.GET.get('page')
     plans = paginator.get_page(page_number)
