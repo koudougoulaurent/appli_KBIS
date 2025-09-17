@@ -17,6 +17,6 @@ python manage.py collectstatic --noinput
 
 # Create superuser and test users (always recreate for SQLite)
 echo "👤 Creating users for SQLite database..."
-python create_users.py
+python manage.py create_test_users
 
 echo "✅ Build process completed successfully!"
