@@ -3140,14 +3140,14 @@ def creer_plan_paiement(request):
             plan.cree_par = request.user
             plan.save()
             
-            messages.success(request, f'Accord de paiement "{plan.nom_plan}" créé avec succès!')
+            messages.success(request, f'Plan de paiement partiel "{plan.nom_plan}" créé avec succès!')
             return redirect('paiements:detail_plan_partiel', plan_id=plan.id)
     else:
         form = PlanPaiementPartielForm(user=request.user)
     
     context = {
         'form': form,
-        'title': 'Créer un accord de paiement',
+        'title': 'Créer un plan de paiement partiel',
     }
     
     return render(request, 'paiements/partial_payment/creer_plan.html', context)

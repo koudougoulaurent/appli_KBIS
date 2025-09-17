@@ -2,7 +2,7 @@
 {% load static %}
 {% load crispy_forms_tags %}
 
-{% block title %}Créer un Accord de Paiement{% endblock %}
+{% block title %}Créer un Plan de Paiement Partiel{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/components.css' %}">
@@ -216,10 +216,10 @@
                 <!-- Header -->
                 <div class="form-header">
                     <h1 class="form-title">
-                        <i class="fas fa-handshake text-primary me-2"></i>
+                        <i class="fas fa-calendar-check text-primary me-2"></i>
                         {{ title }}
                     </h1>
-                    <p class="form-subtitle">Créez un accord de paiement pour faciliter le règlement des loyers</p>
+                    <p class="form-subtitle">Créez un plan de paiement partiel pour faciliter le règlement des loyers</p>
                 </div>
 
                 <!-- Formulaire -->
@@ -256,10 +256,10 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="{{ form.nom_plan.id_for_label }}" class="form-label">
-                                        Nom de l'Accord <span class="text-danger">*</span>
+                                        Nom du Plan <span class="text-danger">*</span>
                                     </label>
                                     {{ form.nom_plan }}
-                                    <div class="help-text">Ex: Accord de paiement - Janvier 2025</div>
+                                    <div class="help-text">Ex: Plan de paiement partiel - Janvier 2025</div>
                                 </div>
                             </div>
                         </div>
@@ -269,7 +269,7 @@
                                 Description
                             </label>
                             {{ form.description }}
-                            <div class="help-text">Description de l'accord de paiement (optionnel)</div>
+                            <div class="help-text">Description du plan de paiement partiel (optionnel)</div>
                         </div>
                     </div>
 
@@ -294,10 +294,10 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="{{ form.statut.id_for_label }}" class="form-label">
-                                        État Initial
+                                        Statut Initial
                                     </label>
                                     {{ form.statut }}
-                                    <div class="help-text">État initial de l'accord</div>
+                                    <div class="help-text">Statut initial du plan</div>
                                 </div>
                             </div>
                         </div>
@@ -329,12 +329,12 @@
                     <div class="form-section">
                         <h3 class="section-title">
                             <i class="fas fa-eye"></i>
-                            Aperçu de l'Accord
+                            Aperçu du Plan
                         </h3>
                         
                         <div class="preview-card" id="planPreview">
                             <i class="fas fa-info-circle fa-2x mb-2"></i>
-                            <p class="mb-0">Remplissez le formulaire pour voir l'aperçu de l'accord</p>
+                            <p class="mb-0">Remplissez le formulaire pour voir l'aperçu du plan</p>
                         </div>
                     </div>
 
@@ -347,7 +347,7 @@
                             <span class="loading-spinner me-2">
                                 <i class="fas fa-spinner fa-spin"></i>
                             </span>
-                            <i class="fas fa-handshake me-2"></i>Créer l'Accord
+                            <i class="fas fa-calendar-check me-2"></i>Créer le Plan
                         </button>
                     </div>
                 </form>
@@ -407,7 +407,7 @@ document.addEventListener('DOMContentLoaded', function() {
             planPreview.classList.add('has-content');
             planPreview.innerHTML = `
                 <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
-                <h6 class="text-success mb-2">Aperçu de l'Accord</h6>
+                <h6 class="text-success mb-2">Aperçu du Plan</h6>
                 <p class="mb-1"><strong>Nom:</strong> ${nomPlan}</p>
                 <p class="mb-1"><strong>Montant:</strong> ${parseFloat(montantTotal).toLocaleString()} FCFA</p>
                 <p class="mb-1"><strong>Période:</strong> ${formatDate(dateDebut)} - ${formatDate(dateFin)}</p>
@@ -417,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
             planPreview.classList.remove('has-content');
             planPreview.innerHTML = `
                 <i class="fas fa-info-circle fa-2x mb-2"></i>
-                <p class="mb-0">Remplissez le formulaire pour voir l'aperçu de l'accord</p>
+                <p class="mb-0">Remplissez le formulaire pour voir l'aperçu du plan</p>
             `;
         }
     }

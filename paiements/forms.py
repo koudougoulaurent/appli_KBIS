@@ -945,12 +945,12 @@ class PlanPaiementPartielForm(forms.ModelForm):
             }),
             'nom_plan': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Ex: Accord de paiement - Janvier 2025'
+                'placeholder': 'Ex: Plan de paiement partiel - Janvier 2025'
             }),
             'description': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 3,
-                'placeholder': 'Description de l\'accord de paiement'
+                'placeholder': 'Description du plan de paiement partiel'
             }),
             'montant_total': forms.NumberInput(attrs={
                 'class': 'form-control',
@@ -986,10 +986,10 @@ class PlanPaiementPartielForm(forms.ModelForm):
                 field.widget.attrs.update({'class': 'form-control'})
         
         # Personnaliser les labels pour un vocabulaire plus simple
-        self.fields['nom_plan'].label = "Nom de l'Accord"
+        self.fields['nom_plan'].label = "Nom du Plan"
         self.fields['montant_total'].label = "Montant à Payer"
         self.fields['date_fin_prevue'].label = "Date Limite"
-        self.fields['statut'].label = "État"
+        self.fields['statut'].label = "Statut"
     
     def clean(self):
         cleaned_data = super().clean()
