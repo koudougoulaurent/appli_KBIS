@@ -31,25 +31,29 @@ for group_name in groups:
     group, created = Group.objects.get_or_create(name=group_name)
     print(f"✅ Groupe: {group_name}")
 
-# Create superuser
-admin, created = User.objects.get_or_create(username='admin')
-if created:
-    admin.set_password('admin123')
-    admin.email = 'admin@example.com'
-    admin.is_superuser = True
-    admin.is_staff = True
-    admin.save()
-    print("✅ Superuser 'admin' créé")
-else:
-    admin.set_password('admin123')
-    admin.save()
-    print("✅ Superuser 'admin' mis à jour")
+# Create superuser (force update for SQLite)
+try:
+    admin = User.objects.get(username='admin')
+    admin.delete()
+    print("🗑️ Ancien admin supprimé")
+except User.DoesNotExist:
+    pass
+
+admin = User.objects.create_user(
+    username='admin',
+    email='admin@example.com',
+    password='admin123'
+)
+admin.is_superuser = True
+admin.is_staff = True
+admin.save()
+print("✅ Superuser 'admin' créé")
 
 # Add admin to ADMINISTRATION group
 admin_group = Group.objects.get(name='ADMINISTRATION')
 admin.groups.add(admin_group)
 
-# Create test users
+# Create test users (force recreation for SQLite)
 test_users = [
     {'username': 'caisse1', 'email': 'caisse1@example.com', 'password': 'caisse123', 'groups': ['CAISSE']},
     {'username': 'controle1', 'email': 'controle1@example.com', 'password': 'controle123', 'groups': ['CONTROLES']},
@@ -58,9 +62,20 @@ test_users = [
 ]
 
 for user_data in test_users:
-    user, created = User.objects.get_or_create(username=user_data['username'])
-    user.set_password(user_data['password'])
-    user.email = user_data['email']
+    # Delete existing user if exists
+    try:
+        existing_user = User.objects.get(username=user_data['username'])
+        existing_user.delete()
+        print(f"🗑️ Ancien utilisateur {user_data['username']} supprimé")
+    except User.DoesNotExist:
+        pass
+    
+    # Create new user
+    user = User.objects.create_user(
+        username=user_data['username'],
+        email=user_data['email'],
+        password=user_data['password']
+    )
     user.is_staff = True
     user.save()
     
@@ -69,7 +84,7 @@ for user_data in test_users:
         group = Group.objects.get(name=group_name)
         user.groups.add(group)
     
-    print(f"✅ Utilisateur: {user_data['username']}")
+    print(f"✅ Utilisateur: {user_data['username']} créé")
 
 # Create property types
 types_bien = [
