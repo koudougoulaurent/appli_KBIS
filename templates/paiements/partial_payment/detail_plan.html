@@ -314,29 +314,29 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="action-buttons">
-                <a href="{% url 'paiements_partiels:effectuer_paiement' plan.id %}" 
+                <a href="{% url 'paiements:ajouter_partiel' plan.id %}" 
                    class="btn-action btn-success-action">
                     <i class="fas fa-credit-card"></i>Effectuer un Paiement
                 </a>
                 
-                <a href="{% url 'paiements_partiels:generer_echelons' plan.id %}" 
+                <a href="{% url 'paiements:generer_echelons' plan.id %}" 
                    class="btn-action btn-warning-action">
                     <i class="fas fa-calendar-plus"></i>Générer des Échelons
                 </a>
                 
-                <a href="{% url 'paiements_partiels:ajouter_echelon' plan.id %}" 
+                <a href="{% url 'paiements:ajouter_echelon' plan.id %}" 
                    class="btn-action btn-secondary-action">
                     <i class="fas fa-plus"></i>Ajouter un Échelon
                 </a>
                 
                 {% if plan.peut_etre_modifie %}
-                <a href="{% url 'paiements_partiels:modifier_plan' plan.id %}" 
+                <a href="{% url 'paiements:modifier_plan' plan.id %}" 
                    class="btn-action btn-primary-action">
                     <i class="fas fa-edit"></i>Modifier le Plan
                 </a>
                 {% endif %}
                 
-                <a href="{% url 'paiements_partiels:liste_plans' %}" 
+                <a href="{% url 'paiements:liste_plans_partiels' %}" 
                    class="btn-action btn-secondary-action">
                     <i class="fas fa-arrow-left"></i>Retour à la Liste
                 </a>
@@ -422,7 +422,7 @@
                         <div class="text-center text-muted py-4">
                             <i class="fas fa-calendar-plus fa-3x mb-3"></i>
                             <p>Aucun échelon défini pour ce plan</p>
-                            <a href="{% url 'paiements_partiels:generer_echelons' plan.id %}" class="btn btn-primary">
+                            <a href="{% url 'paiements:generer_echelons' plan.id %}" class="btn btn-primary">
                                 <i class="fas fa-calendar-plus me-2"></i>Générer des Échelons
                             </a>
                         </div>
@@ -500,7 +500,7 @@
                                     {{ alerte.get_niveau_urgence_display }}
                                 </span>
                                 <br>
-                                <a href="{% url 'paiements_partiels:traiter_alerte' alerte.id %}" 
+                                <a href="{% url 'paiements:traiter_alerte' alerte.id %}" 
                                    class="btn btn-sm btn-outline-primary mt-2">
                                     <i class="fas fa-check"></i> Traiter
                                 </a>

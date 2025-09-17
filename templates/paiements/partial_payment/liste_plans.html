@@ -256,7 +256,7 @@
                     </div>
                     <div class="col-md-6">
                         <div class="d-flex gap-2">
-                            <a href="{% url 'paiements_partiels:liste_plans' %}" class="btn btn-outline-secondary">
+                            <a href="{% url 'paiements:liste_plans_partiels' %}" class="btn btn-outline-secondary">
                                 <i class="fas fa-times me-1"></i>Effacer
                             </a>
                             <button type="button" class="btn btn-outline-info" onclick="exportPlans()">
@@ -338,24 +338,24 @@
                     <!-- Actions -->
                     <div class="mt-3">
                         <div class="action-buttons">
-                            <a href="{% url 'paiements_partiels:detail_plan' plan.id %}" 
+                            <a href="{% url 'paiements:detail_plan_partiel' plan.id %}" 
                                class="btn-action btn-primary-action">
                                 <i class="fas fa-eye"></i>Détails
                             </a>
                             
                             {% if plan.peut_etre_modifie %}
-                            <a href="{% url 'paiements_partiels:modifier_plan' plan.id %}" 
+                            <a href="{% url 'paiements:modifier_plan_partiel' plan.id %}" 
                                class="btn-action btn-secondary-action">
                                 <i class="fas fa-edit"></i>Modifier
                             </a>
                             {% endif %}
                             
-                            <a href="{% url 'paiements_partiels:effectuer_paiement' plan.id %}" 
+                            <a href="{% url 'paiements:ajouter_partiel' %}?plan={{ plan.id }}" 
                                class="btn-action btn-success-action">
                                 <i class="fas fa-credit-card"></i>Payer
                             </a>
                             
-                            <a href="{% url 'paiements_partiels:generer_echelons' plan.id %}" 
+                            <a href="{% url 'paiements:generer_echelons_partiel' plan.id %}" 
                                class="btn-action btn-secondary-action">
                                 <i class="fas fa-calendar-plus"></i>Échelons
                             </a>
@@ -370,7 +370,7 @@
                     <i class="fas fa-inbox"></i>
                     <h4>Aucun plan de paiement partiel trouvé</h4>
                     <p>Commencez par créer votre premier plan de paiement partiel.</p>
-                    <a href="{% url 'paiements_partiels:creer_plan' %}" class="btn btn-primary">
+                    <a href="{% url 'paiements:creer_plan_partiel' %}" class="btn btn-primary">
                         <i class="fas fa-plus me-2"></i>Créer un Plan
                     </a>
                 </div>

@@ -117,10 +117,10 @@
                     <p class="text-muted">Gestion professionnelle des paiements échelonnés</p>
                 </div>
                 <div>
-                    <a href="{% url 'paiements:creer_plan_partiel' %}" class="btn btn-primary">
+                    <a href="{% url 'paiements:creer_plan_partiel_partiel' %}" class="btn btn-primary">
                         <i class="fas fa-plus me-2"></i>Nouveau Plan
                     </a>
-                    <a href="{% url 'paiements:liste_plans_partiels' %}" class="btn btn-outline-primary">
+                    <a href="{% url 'paiements:liste_plans_partiels_partiels' %}" class="btn btn-outline-primary">
                         <i class="fas fa-list me-2"></i>Liste des Plans
                     </a>
                 </div>
@@ -276,7 +276,7 @@
                         <i class="fas fa-list text-primary me-2"></i>
                         Plans Récents
                     </h5>
-                    <a href="{% url 'paiements_partiels:liste_plans' %}" class="btn btn-sm btn-outline-primary">
+                    <a href="{% url 'paiements:liste_plans_partiels' %}" class="btn btn-sm btn-outline-primary">
                         Voir tous
                     </a>
                 </div>
@@ -328,7 +328,7 @@
                                             </span>
                                         </td>
                                         <td>
-                                            <a href="{% url 'paiements_partiels:detail_plan' plan.id %}" 
+                                            <a href="{% url 'paiements:detail_plan_partiel' plan.id %}" 
                                                class="btn btn-sm btn-outline-primary">
                                                 <i class="fas fa-eye"></i>
                                             </a>
@@ -342,7 +342,7 @@
                         <div class="text-center text-muted py-4">
                             <i class="fas fa-inbox fa-3x mb-3"></i>
                             <p>Aucun plan de paiement partiel</p>
-                            <a href="{% url 'paiements_partiels:creer_plan' %}" class="btn btn-primary">
+                            <a href="{% url 'paiements:creer_plan_partiel' %}" class="btn btn-primary">
                                 Créer le premier plan
                             </a>
                         </div>
@@ -358,7 +358,7 @@
                         <i class="fas fa-bell text-warning me-2"></i>
                         Alertes Actives
                     </h5>
-                    <a href="{% url 'paiements_partiels:alertes' %}" class="btn btn-sm btn-outline-warning">
+                    <a href="{% url 'paiements:alertes' %}" class="btn btn-sm btn-outline-warning">
                         Voir toutes
                     </a>
                 </div>
