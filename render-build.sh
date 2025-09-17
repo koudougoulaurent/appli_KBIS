@@ -1,22 +1,13 @@
-#!/usr/bin/env bash
-# Render build script for Django application
+#!/bin/bash
+echo "🚀 Démarrage du build sur Render..."
 
-echo "🚀 Starting Render build process..."
-
-# Install dependencies
-echo "📦 Installing Python dependencies..."
+# Installation des dépendances
 pip install -r requirements.txt
 
-# Run migrations
-echo "🗄️ Running database migrations..."
+# Application des migrations
 python manage.py migrate
 
-# Collect static files
-echo "📁 Collecting static files..."
-python manage.py collectstatic --noinput
+# Initialisation des données de test
+python init_render_users.py
 
-# Create PRIVILEGE user
-echo "👤 Creating PRIVILEGE user..."
-python create_privilege_user.py
-
-echo "✅ Build process completed successfully!"
+echo "✅ Build terminé avec succès!"

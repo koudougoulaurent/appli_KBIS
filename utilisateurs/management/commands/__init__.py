@@ -1,1 +1,1 @@
-# Commands package for utilisateurs app
+# Commands package

@@ -1,1 +1,1 @@
-# Management package for utilisateurs app
+# Management package
