@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from proprietes.models import TypeBien
 from core.models import ConfigurationEntreprise
+from utilisateurs.models import GroupeTravail
 
 User = get_user_model()
 
@@ -16,11 +17,57 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write("🚀 Création des utilisateurs et données...")
         
-        # Create groups
-        groups = ['ADMINISTRATION', 'PRIVILEGE', 'CAISSE', 'CONTROLES']
-        for group_name in groups:
-            group, created = Group.objects.get_or_create(name=group_name)
-            self.stdout.write(f"✅ Groupe: {group_name}")
+        # Create GroupeTravail (groupes de travail personnalisés)
+        groupes_data = [
+            {
+                'nom': 'PRIVILEGE',
+                'description': 'Groupe avec tous les privilèges',
+                'permissions': {
+                    'modules': ['all'],
+                    'actions': ['create', 'read', 'update', 'delete']
+                }
+            },
+            {
+                'nom': 'ADMINISTRATION',
+                'description': 'Groupe d\'administration',
+                'permissions': {
+                    'modules': ['utilisateurs', 'proprietes', 'contrats', 'paiements'],
+                    'actions': ['create', 'read', 'update']
+                }
+            },
+            {
+                'nom': 'CAISSE',
+                'description': 'Groupe de gestion de la caisse',
+                'permissions': {
+                    'modules': ['paiements', 'contrats'],
+                    'actions': ['create', 'read', 'update']
+                }
+            },
+            {
+                'nom': 'CONTROLES',
+                'description': 'Groupe de contrôles',
+                'permissions': {
+                    'modules': ['proprietes', 'contrats'],
+                    'actions': ['read', 'update']
+                }
+            }
+        ]
+        
+        groupes = {}
+        for group_data in groupes_data:
+            groupe, created = GroupeTravail.objects.get_or_create(
+                nom=group_data['nom'],
+                defaults={
+                    'description': group_data['description'],
+                    'permissions': group_data['permissions'],
+                    'actif': True
+                }
+            )
+            groupes[group_data['nom']] = groupe
+            if created:
+                self.stdout.write(f"✅ GroupeTravail: {group_data['nom']}")
+            else:
+                self.stdout.write(f"ℹ️ GroupeTravail: {group_data['nom']} existe déjà")
         
         # Create superuser (force update for SQLite)
         try:
@@ -37,19 +84,16 @@ class Command(BaseCommand):
         )
         admin.is_superuser = True
         admin.is_staff = True
+        admin.groupe_travail = groupes['ADMINISTRATION']
         admin.save()
         self.stdout.write("✅ Superuser 'admin' créé")
         
-        # Add admin to ADMINISTRATION group
-        admin_group = Group.objects.get(name='ADMINISTRATION')
-        admin.groups.add(admin_group)
-        
         # Create test users (force recreation for SQLite)
         test_users = [
-            {'username': 'caisse1', 'email': 'caisse1@example.com', 'password': 'caisse123', 'groups': ['CAISSE']},
-            {'username': 'controle1', 'email': 'controle1@example.com', 'password': 'controle123', 'groups': ['CONTROLES']},
-            {'username': 'admin1', 'email': 'admin1@example.com', 'password': 'admin123', 'groups': ['ADMINISTRATION']},
-            {'username': 'privilege1', 'email': 'privilege1@example.com', 'password': 'privilege123', 'groups': ['PRIVILEGE']},
+            {'username': 'caisse1', 'email': 'caisse1@example.com', 'password': 'caisse123', 'groupe': 'CAISSE'},
+            {'username': 'controle1', 'email': 'controle1@example.com', 'password': 'controle123', 'groupe': 'CONTROLES'},
+            {'username': 'admin1', 'email': 'admin1@example.com', 'password': 'admin123', 'groupe': 'ADMINISTRATION'},
+            {'username': 'privilege1', 'email': 'privilege1@example.com', 'password': 'privilege123', 'groupe': 'PRIVILEGE'},
         ]
         
         for user_data in test_users:
@@ -68,14 +112,10 @@ class Command(BaseCommand):
                 password=user_data['password']
             )
             user.is_staff = True
+            user.groupe_travail = groupes[user_data['groupe']]
             user.save()
             
-            # Add to groups
-            for group_name in user_data['groups']:
-                group = Group.objects.get(name=group_name)
-                user.groups.add(group)
-            
-            self.stdout.write(f"✅ Utilisateur: {user_data['username']} créé")
+            self.stdout.write(f"✅ Utilisateur: {user_data['username']} créé avec groupe {user_data['groupe']}")
         
         # Create property types
         types_bien = [
