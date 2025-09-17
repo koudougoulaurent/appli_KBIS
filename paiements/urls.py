@@ -14,6 +14,9 @@ urlpatterns = [
     # API REST
     path('', include(router.urls)),
     
+    # URLs pour les paiements partiels
+    path('partiels/', include('paiements.urls_partial_payment')),
+    
     # URLs pour les paiements (avec aliases pour compatibilité)
     path('dashboard/', views.paiements_dashboard, name='dashboard'),
     path('liste/', views.paiement_list, name='liste'),  # Alias principal pour compatibilité
