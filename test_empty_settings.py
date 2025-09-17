@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 """
-Test avec Django pur pour identifier le problème packages
+Test avec settings vides pour identifier le problème packages
 """
 
 import os
 import sys
 
-# Configuration Django pure
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings_test')
+# Configuration Django vide
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings_empty')
 
 try:
     import django

@@ -1,0 +1,45 @@
+[33ma413cf8[m  CORRECTION URGENTE: Erreur 500 en boucle - Templates manquants
+[33mb8e426d[m  CORRECTION FINALE: Utilisateurs de test sans champs problématiques
+[33ma889881[m  CORRECTION CRÉATION UTILISATEURS: Migration directe sans commande
+[33ma1b2dc5[m  CORRECTION CONFLIT MIGRATIONS: Fusion des migrations utilisateurs
+[33mf053b79[m  UTILISATEURS DE TEST PERSISTANTS: Création automatique sur Render
+[33m7a73211[m  CORRECTION PRODUCTION: URLs d'authentification et gestion d'erreurs
+[33m52761f2[m  LOGIQUE PAIEMENTS PARTIELS: Pas de reçu ni liste définitive
+[33med4361a[m  PAGE DÉDIÉE PAIEMENTS PARTIELS: Interface intelligente et dynamique
+[33m7b09bb1[m  RETOUR SQLITE: Configuration simplifiée
+[33me6b675a[m  CORRECTION CONFLIT: related_name pour groupes et permissions
+[33m3394d73[m  CORRECTION DATABASE_URL: Configuration PostgreSQL directe
+[33mbd0beef[m  CORRECTION VERSION: psycopg[binary]==3.2.10
+[33m4dac5da[m  CORRECTION PYTHON 3.13: Migration vers psycopg3
+[33m0361a07[m  CORRECTION RENDER: Ajout psycopg2-binary + render.yaml
+[33m1927f9c[m  CORRECTION CRITIQUE: Page dédiée paiements partiels + Persistance données Render
+[33m659bf0b[m  Amélioration système paiements partiels
+[33mc3c613a[m Feat: Système complet de protection des données permanentes
+[33me081bf1[m Feat: Création complète des utilisateurs de test et types de biens permanents pour Render
+[33m96fd0ff[m Fix: Correction des erreurs de déploiement Render - Middleware et variables d'environnement
+[33m00deba6[m  SOLUTION DÉFINITIVE - Données permanentes garanties
+[33m5af2763[m  Correction des scripts de permissions
+[33m0858e3e[m  Nouveau système de permissions ajusté
+[33ma80ab67[m  Solution déploiement permanent Render
+[33m6b88c9f[m  Ajout bouton de déconnexion fonctionnel dans la sidebar
+[33mac9e556[m Script de réparation COMPLÈTE - Migrations + Configuration
+[33m33dc096[m Script de configuration COMPLÈTE - Solution définitive pour tous les problèmes
+[33mb9bf25c[m Script de correction FORCÉE des groupes - SOLUTION DÉFINITIVE
+[33mf6a70ef[m Ajout script de correction automatique des groupes
+[33md3e9360[m Fix groupes de travail - activation et correction nom CONTROLES
+[33me3241f0[m Fix création superutilisateur - suppression paramètres prenom/nom
+[33mfff7dc1[m Ajout script d'initialisation pour Render - Groupes et superutilisateur
+[33ma7cc0e1[m Fix ALLOWED_HOSTS pour domaine Render appli-kbis.onrender.com
+[33mf83ebd7[m Finalisation merge pour déploiement Render
+[33mbd362ee[m Configuration pour déploiement Render - Variables d'environnement et whitenoise
+[33m72baaa7[m Préparation déploiement Render
+[33mdcdc8fe[m Mise à jour globale
+[33m48cb5f1[m Ajout du fichier requirements.txt pour le déploiement
+[33m6cef4b2[m Disable debug mode and update allowed hosts
+[33mda7be0c[m Sauvegarde complète du projet au 12 septembre 2025
+[33m2d9e2c1[m Suppression totale des décimales sur tous les montants affichés (F CFA)
+[33m465306b[m Ajout complet du système de paiement partiel (statut, vues, interface, correction loyer_mensuel)
+[33m34b9bdc[m  GUIDE DE DÉPLOIEMENT FINAL - Documentation complète pour résoudre définitivement tous les problèmes PythonAnywhere
+[33ma21cf5c[m  CORRECTION FINALE PYTHONANYWHERE - Scripts et configuration complets pour résoudre tous les ModuleNotFoundError et erreurs de déploiement
+[33m6b29779[m  Déploiement PythonAnywhere complet - Scripts automatiques et configuration optimisée
+[33m8945d1b[m Optimisation complète des documents - Format A4 professionnel et interface épurée

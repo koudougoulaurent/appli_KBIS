@@ -1,43 +1,49 @@
 #!/usr/bin/env python
 """
-Test Django avec settings de test
+Test avec Django apps pour identifier le problème packages
 """
 
 import os
 import sys
 
-# Ajouter le répertoire du projet au PYTHONPATH
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-print("🔍 Test Django avec settings de test...")
+# Configuration Django apps
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings_ultra_minimal')
 
 try:
-    print("\n1. Test import Django...")
     import django
-    print(f"   ✅ Django {django.get_version()}")
-except Exception as e:
-    print(f"   ❌ Erreur Django: {e}")
-    sys.exit(1)
-
-try:
-    print("\n2. Test configuration Django...")
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings_test')
+    print("✅ Django importé")
     
-    # Essayer d'importer les settings directement
-    print("   - Import des settings...")
-    from gestion_immobiliere import settings_test
-    print("   ✅ Settings importés")
+    # Test des settings
+    from django.conf import settings
+    print("✅ Settings chargés")
     
-    # Essayer de configurer Django
-    print("   - Configuration Django...")
+    # Test de setup Django
+    print("\n🔧 Test de django.setup()...")
     django.setup()
-    print("   ✅ Configuration Django OK")
+    print("✅ Django setup OK")
     
 except Exception as e:
-    print(f"   ❌ Erreur configuration: {e}")
-    print(f"   Type d'erreur: {type(e).__name__}")
+    print(f"❌ Erreur: {e}")
     if 'packages' in str(e):
         print("   🔍 Erreur 'packages' détectée!")
-    sys.exit(1)
-
-print("\n✅ Test terminé - Django fonctionne correctement!")
+    
+    # Test des imports individuels
+    try:
+        from django.conf import settings
+        print("✅ Settings importé")
+        
+        # Test des apps une par une
+        for app in settings.INSTALLED_APPS:
+            if not app.startswith('django.'):
+                try:
+                    __import__(app)
+                    print(f"✅ {app} OK")
+                except Exception as e2:
+                    print(f"❌ {app}: {e2}")
+                    if 'packages' in str(e2):
+                        print(f"   🔍 Erreur 'packages' dans {app}!")
+                        
+    except Exception as e3:
+        print(f"❌ Erreur settings: {e3}")
+        if 'packages' in str(e3):
+            print("   🔍 Erreur 'packages' dans settings!")

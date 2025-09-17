@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 """
-Test avec Django pur pour identifier le problème packages
+Test avec settings minimaux pour identifier le problème packages
 """
 
 import os
 import sys
 
-# Configuration Django pure
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings_test')
+# Configuration Django minimale
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings')
 
 try:
     import django
@@ -17,8 +17,16 @@ try:
     from django.conf import settings
     print("✅ Settings chargés")
     
+    # Test des INSTALLED_APPS
+    print(f"📋 INSTALLED_APPS: {settings.INSTALLED_APPS}")
+    
+    # Test des MIDDLEWARE
+    print(f"📋 MIDDLEWARE: {settings.MIDDLEWARE}")
+    
+    # Test des TEMPLATES
+    print(f"📋 TEMPLATES: {settings.TEMPLATES}")
+    
     # Test de setup Django
-    print("\n🔧 Test de django.setup()...")
     django.setup()
     print("✅ Django setup OK")
     

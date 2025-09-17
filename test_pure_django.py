@@ -7,7 +7,7 @@ import os
 import sys
 
 # Configuration Django pure
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings_test')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings_ultra_minimal')
 
 try:
     import django

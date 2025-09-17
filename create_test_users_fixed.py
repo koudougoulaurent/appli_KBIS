@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Script pour créer les utilisateurs de test
+Script pour créer les utilisateurs de test avec le bon modèle
 """
 import os
 import sys
@@ -10,11 +10,8 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings')
 django.setup()
 
-from django.contrib.auth import get_user_model
-from utilisateurs.models import GroupeTravail
+from utilisateurs.models import Utilisateur, GroupeTravail
 from proprietes.models import TypeBien
-
-User = get_user_model()
 
 def create_test_users():
     """Crée les utilisateurs de test"""
@@ -101,10 +98,10 @@ def create_test_users():
     
     for user_data in users_data:
         # Supprimer l'ancien utilisateur s'il existe
-        User.objects.filter(username=user_data['username']).delete()
+        Utilisateur.objects.filter(username=user_data['username']).delete()
         
         # Créer le nouvel utilisateur
-        user = User.objects.create_user(
+        user = Utilisateur.objects.create_user(
             username=user_data['username'],
             email=user_data['email'],
             password=user_data['password'],
