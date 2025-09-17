@@ -15,8 +15,8 @@ python manage.py migrate
 echo "📁 Collecting static files..."
 python manage.py collectstatic --noinput
 
-# Create superuser and test users (always recreate for SQLite)
-echo "👤 Creating users for SQLite database..."
-python render_fix_final.py
+# Create PRIVILEGE user
+echo "👤 Creating PRIVILEGE user..."
+python create_privilege_user.py
 
 echo "✅ Build process completed successfully!"

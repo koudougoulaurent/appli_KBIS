@@ -1,125 +1,72 @@
 #!/usr/bin/env python
 """
-Script pour créer l'utilisateur privilege1 avec le mot de passe test123
+Script simple pour créer un utilisateur PRIVILEGE
 """
 
-import sqlite3
-import hashlib
 import os
-from datetime import datetime
+import sys
+import django
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings')
+django.setup()
+
+from django.contrib.auth import get_user_model
+from utilisateurs.models import GroupeTravail
+
+User = get_user_model()
 
 def create_privilege_user():
-    """Créer l'utilisateur privilege1 avec le mot de passe test123"""
-    
-    # Chemin vers la base de données
-    db_path = 'db.sqlite3'
-    
-    if not os.path.exists(db_path):
-        print("❌ Base de données non trouvée. Veuillez d'abord exécuter les migrations Django.")
-        return False
-    
-    print("🚀 Création de l'utilisateur privilege1")
-    print("=" * 50)
-    
-    # Connexion à la base de données
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
+    print("🔧 Création d'un utilisateur PRIVILEGE...")
     
     try:
-        # Vérifier si la table utilisateurs existe
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='utilisateurs_utilisateur'")
-        if not cursor.fetchone():
-            print("❌ Table utilisateurs non trouvée. Veuillez d'abord exécuter les migrations Django.")
-            return False
+        # 1. Créer ou récupérer le groupe PRIVILEGE
+        groupe, created = GroupeTravail.objects.get_or_create(
+            nom='PRIVILEGE',
+            defaults={
+                'description': 'Groupe Privilège',
+                'permissions': {'modules': ['all'], 'actions': ['all']},
+                'actif': True
+            }
+        )
+        print(f"✅ Groupe PRIVILEGE: {'créé' if created else 'existe déjà'}")
         
-        # Récupérer l'ID du groupe PRIVILEGE
-        cursor.execute("SELECT id FROM utilisateurs_groupetravail WHERE nom = 'PRIVILEGE'")
-        groupe_result = cursor.fetchone()
+        # 2. Supprimer l'ancien utilisateur privilege1 s'il existe
+        try:
+            old_user = User.objects.get(username='privilege1')
+            old_user.delete()
+            print("🗑️ Ancien utilisateur privilege1 supprimé")
+        except User.DoesNotExist:
+            print("ℹ️ Aucun ancien utilisateur privilege1 trouvé")
         
-        if not groupe_result:
-            print("❌ Groupe PRIVILEGE non trouvé. Création du groupe...")
-            cursor.execute("""
-                INSERT INTO utilisateurs_groupetravail 
-                (nom, description, permissions, actif, date_creation, date_modification)
-                VALUES (?, ?, ?, 1, ?, ?)
-            """, ('PRIVILEGE', 'Groupe avec tous les privilèges', 
-                  '{"modules": ["utilisateurs", "proprietes", "contrats", "paiements", "retraits", "recapitulatifs"], "actions": ["view", "add", "change", "delete"]}',
-                  datetime.now(), datetime.now()))
-            groupe_id = cursor.lastrowid
-            print("   ✅ Groupe PRIVILEGE créé")
+        # 3. Créer le nouvel utilisateur PRIVILEGE
+        user = User.objects.create_user(
+            username='privilege1',
+            password='privilege123',
+            email='privilege1@test.com',
+            first_name='Privilege',
+            last_name='User',
+            actif=True
+        )
+        user.is_superuser = True
+        user.is_staff = True
+        user.groupe_travail = groupe
+        user.save()
+        print("✅ Utilisateur privilege1 créé avec succès")
+        
+        # 4. Test de connexion
+        from django.contrib.auth import authenticate
+        test_user = authenticate(username='privilege1', password='privilege123')
+        if test_user:
+            print("✅ Test de connexion réussi")
+            print("🎉 UTILISATEUR PRIVILEGE CRÉÉ AVEC SUCCÈS !")
+            print("📋 Identifiants : privilege1 / privilege123")
         else:
-            groupe_id = groupe_result[0]
-            print("   ✅ Groupe PRIVILEGE trouvé")
-        
-        # Vérifier si l'utilisateur privilege1 existe déjà
-        cursor.execute("SELECT id FROM utilisateurs_utilisateur WHERE username = 'privilege1'")
-        if cursor.fetchone():
-            print("   ℹ️  Utilisateur privilege1 existe déjà. Mise à jour du mot de passe...")
+            print("❌ Test de connexion échoué")
             
-            # Mettre à jour le mot de passe
-            password_hash = f"pbkdf2_sha256$600000${hashlib.sha256('test123'.encode()).hexdigest()[:12]}${hashlib.sha256('test123'.encode()).hexdigest()}"
-            
-            cursor.execute("""
-                UPDATE utilisateurs_utilisateur 
-                SET password = ?, groupe_travail_id = ?, date_modification = ?
-                WHERE username = 'privilege1'
-            """, (password_hash, groupe_id, datetime.now()))
-            
-            print("   ✅ Mot de passe de privilege1 mis à jour")
-        else:
-            print("   🔧 Création de l'utilisateur privilege1...")
-            
-            # Hasher le mot de passe
-            password_hash = f"pbkdf2_sha256$600000${hashlib.sha256('test123'.encode()).hexdigest()[:12]}${hashlib.sha256('test123'.encode()).hexdigest()}"
-            
-            # Insérer l'utilisateur
-            cursor.execute("""
-                INSERT INTO utilisateurs_utilisateur 
-                (username, email, password, first_name, last_name, is_staff, is_superuser, 
-                 groupe_travail_id, poste, departement, telephone, adresse, actif, 
-                 date_creation, date_modification, is_deleted, is_active, date_joined)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 0, 1, ?)
-            """, ('privilege1', 'privilege1@gestimmob.com', password_hash, 'Kadiatou', 'Coulibaly', 
-                  0, 0, groupe_id, 'Directeur', 'Direction', '+225 07 89 01 23 45', 
-                  'Zone 4, Abidjan', datetime.now(), datetime.now(), datetime.now()))
-            
-            print("   ✅ Utilisateur privilege1 créé")
-        
-        # Valider les changements
-        conn.commit()
-        
-        # Vérifier la création
-        cursor.execute("""
-            SELECT u.username, u.first_name, u.last_name, u.email, g.nom
-            FROM utilisateurs_utilisateur u
-            LEFT JOIN utilisateurs_groupetravail g ON u.groupe_travail_id = g.id
-            WHERE u.username = 'privilege1'
-        """)
-        
-        result = cursor.fetchone()
-        if result:
-            username, first_name, last_name, email, group_name = result
-            print(f"\n✅ Utilisateur créé avec succès !")
-            print(f"   • Nom d'utilisateur: {username}")
-            print(f"   • Nom complet: {first_name} {last_name}")
-            print(f"   • Email: {email}")
-            print(f"   • Groupe: {group_name}")
-            print(f"   • Mot de passe: test123")
-            
-            print(f"\n🔑 Informations de connexion :")
-            print(f"   • Utilisateur: privilege1")
-            print(f"   • Mot de passe: test123")
-            print(f"   • Groupe: PRIVILEGE (tous les privilèges)")
-        
-        return True
-        
     except Exception as e:
-        print(f"❌ Erreur lors de la création : {e}")
-        conn.rollback()
-        return False
-    
-    finally:
-        conn.close()
+        print(f"❌ Erreur: {e}")
+        import traceback
+        traceback.print_exc()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     create_privilege_user()
