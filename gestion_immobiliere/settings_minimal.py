@@ -17,6 +17,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',  # Pour les filtres de formatage des nombres
+    'crispy_forms',  # Pour les formulaires stylés
+    'crispy_bootstrap5',  # Pour l'intégration Bootstrap 5
     'core',
     'utilisateurs',
     'proprietes',
@@ -87,3 +90,7 @@ AUTH_USER_MODEL = 'utilisateurs.Utilisateur'
 LOGIN_URL = '/utilisateurs/connexion-groupes/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/utilisateurs/connexion-groupes/'
+
+# Configuration de Crispy Forms
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"

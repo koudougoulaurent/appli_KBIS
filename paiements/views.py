@@ -20,8 +20,8 @@ from decimal import Decimal
 import json
 import os
 
-from .models import Paiement, ChargeDeductible, QuittancePaiement, PlanPaiementPartiel
-from .forms import PaiementForm, ChargeDeductibleForm, RetraitBailleurForm, GenererPDFLotForm
+from .models import Paiement, ChargeDeductible, QuittancePaiement, PlanPaiementPartiel, EchelonPaiement, AlertePaiementPartiel
+from .forms import PaiementForm, ChargeDeductibleForm, RetraitBailleurForm, GenererPDFLotForm, PlanPaiementPartielForm
 from contrats.models import Contrat
 from proprietes.models import Propriete, Locataire, Bailleur
 from core.models import AuditLog, ConfigurationEntreprise
@@ -94,8 +94,8 @@ from decimal import Decimal
 import json
 import os
 
-from .models import Paiement, ChargeDeductible, QuittancePaiement, PlanPaiementPartiel
-from .forms import PaiementForm, ChargeDeductibleForm, RetraitBailleurForm, GenererPDFLotForm
+from .models import Paiement, ChargeDeductible, QuittancePaiement, PlanPaiementPartiel, EchelonPaiement, AlertePaiementPartiel
+from .forms import PaiementForm, ChargeDeductibleForm, RetraitBailleurForm, GenererPDFLotForm, PlanPaiementPartielForm
 from contrats.models import Contrat
 from proprietes.models import Propriete, Locataire, Bailleur
 from core.models import AuditLog, ConfigurationEntreprise
