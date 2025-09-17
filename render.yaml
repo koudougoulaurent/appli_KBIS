@@ -2,23 +2,20 @@ services:
   - type: web
     name: appli-kbis
     env: python
+    buildCommand: "./render-build.sh"
+    startCommand: "gunicorn gestion_immobiliere.wsgi:application"
     plan: free
-    buildCommand: pip install -r requirements.txt && python manage.py migrate
-    startCommand: python manage.py runserver 0.0.0.0:$PORT
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: False
+      - key: ALLOWED_HOSTS
+        value: "appli-kbis.onrender.com,.onrender.com"
       - key: DATABASE_URL
         fromDatabase:
           name: appli-kbis-db
           property: connectionString
-      - key: SECRET_KEY
-        generateValue: true
-      - key: DEBUG
-        value: "False"
-      - key: ALLOWED_HOSTS
-        value: "appli-kbis.onrender.com,.onrender.com"
-      - key: RENDER
-        value: "true"
-
-databases:
-  - name: appli-kbis-db
-    plan: free
+    healthCheckPath: "/"
