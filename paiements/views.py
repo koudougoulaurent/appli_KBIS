@@ -3016,3 +3016,138 @@ def creer_retrait_depuis_recap(request, recap_id):
     except Exception as e:
         messages.error(request, f"Erreur lors de la création du retrait: {str(e)}")
         return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
+
+
+# ===== VUES POUR LES PAIEMENTS PARTIELS =====
+
+@login_required
+def dashboard_paiements_partiels(request):
+    """Dashboard principal des paiements partiels"""
+    
+    # Statistiques générales
+    stats = {
+        'total_plans': PlanPaiementPartiel.objects.filter(is_deleted=False).count(),
+        'plans_actifs': PlanPaiementPartiel.objects.filter(
+            is_deleted=False, statut='actif'
+        ).count(),
+        'plans_termines': PlanPaiementPartiel.objects.filter(
+            is_deleted=False, statut='termine'
+        ).count(),
+        'montant_total_plans': PlanPaiementPartiel.objects.filter(
+            is_deleted=False
+        ).aggregate(total=Sum('montant_total'))['total'] or 0,
+        'montant_paye_total': PlanPaiementPartiel.objects.filter(
+            is_deleted=False
+        ).aggregate(total=Sum('montant_deja_paye'))['total'] or 0,
+        'echelons_en_retard': EchelonPaiement.objects.filter(
+            statut='en_retard'
+        ).count(),
+        'alertes_actives': AlertePaiementPartiel.objects.filter(
+            statut='active'
+        ).count(),
+    }
+    
+    # Plans récents
+    plans_recents = PlanPaiementPartiel.objects.filter(
+        is_deleted=False
+    ).select_related('contrat', 'contrat__locataire', 'contrat__propriete').order_by('-date_creation')[:5]
+    
+    # Échelons en retard
+    echelons_retard = EchelonPaiement.objects.filter(
+        statut='en_retard'
+    ).select_related('plan', 'plan__contrat').order_by('date_echeance')[:10]
+    
+    # Alertes actives
+    alertes_actives = AlertePaiementPartiel.objects.filter(
+        statut='active'
+    ).select_related('plan', 'plan__contrat').order_by('-date_creation')[:10]
+    
+    context = {
+        'stats': stats,
+        'plans_recents': plans_recents,
+        'echelons_retard': echelons_retard,
+        'alertes_actives': alertes_actives,
+    }
+    
+    return render(request, 'paiements/partial_payment/dashboard.html', context)
+
+
+@login_required
+def liste_plans_paiement(request):
+    """Liste des plans de paiement partiel avec filtres"""
+    
+    # Base queryset
+    queryset = PlanPaiementPartiel.objects.filter(is_deleted=False).select_related(
+        'contrat', 'contrat__locataire', 'contrat__propriete', 'cree_par'
+    )
+    
+    # Pagination
+    paginator = Paginator(queryset, 20)
+    page_number = request.GET.get('page')
+    plans = paginator.get_page(page_number)
+    
+    context = {
+        'plans': plans,
+    }
+    
+    return render(request, 'paiements/partial_payment/liste_plans.html', context)
+
+
+@login_required
+def detail_plan_paiement(request, plan_id):
+    """Détail d'un plan de paiement partiel"""
+    
+    plan = get_object_or_404(PlanPaiementPartiel, id=plan_id, is_deleted=False)
+    
+    # Échelons du plan
+    echelons = plan.echelons.all().order_by('numero_echelon')
+    
+    # Paiements partiels du plan
+    paiements = plan.paiements_partiels.filter(is_deleted=False).order_by('-date_paiement')
+    
+    # Statistiques du plan
+    stats = {
+        'total_echelons': echelons.count(),
+        'echelons_payes': echelons.filter(statut='paye').count(),
+        'echelons_en_attente': echelons.filter(statut='en_attente').count(),
+        'echelons_en_retard': echelons.filter(statut='en_retard').count(),
+        'progression_pourcentage': plan.calculer_progression(),
+        'montant_restant': plan.montant_restant,
+    }
+    
+    # Alertes du plan
+    alertes = plan.alertes.filter(statut='active').order_by('-date_creation')
+    
+    context = {
+        'plan': plan,
+        'echelons': echelons,
+        'paiements': paiements,
+        'stats': stats,
+        'alertes': alertes,
+    }
+    
+    return render(request, 'paiements/partial_payment/detail_plan.html', context)
+
+
+@login_required
+def creer_plan_paiement(request):
+    """Créer un nouveau plan de paiement partiel"""
+    
+    if request.method == 'POST':
+        form = PlanPaiementPartielForm(request.POST, user=request.user)
+        if form.is_valid():
+            plan = form.save(commit=False)
+            plan.cree_par = request.user
+            plan.save()
+            
+            messages.success(request, f'Plan de paiement partiel "{plan.nom_plan}" créé avec succès!')
+            return redirect('paiements:detail_plan_partiel', plan_id=plan.id)
+    else:
+        form = PlanPaiementPartielForm(user=request.user)
+    
+    context = {
+        'form': form,
+        'title': 'Créer un plan de paiement partiel',
+    }
+    
+    return render(request, 'paiements/partial_payment/creer_plan.html', context)

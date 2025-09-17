@@ -117,11 +117,11 @@
                     <p class="text-muted">Gestion professionnelle des paiements échelonnés</p>
                 </div>
                 <div>
-                    <a href="{% url 'paiements_partiels:creer_plan' %}" class="btn btn-primary">
+                    <a href="{% url 'paiements:creer_plan_partiel' %}" class="btn btn-primary">
                         <i class="fas fa-plus me-2"></i>Nouveau Plan
                     </a>
-                    <a href="{% url 'paiements_partiels:rapport' %}" class="btn btn-outline-primary">
-                        <i class="fas fa-chart-bar me-2"></i>Rapport
+                    <a href="{% url 'paiements:liste_plans_partiels' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-list me-2"></i>Liste des Plans
                     </a>
                 </div>
             </div>

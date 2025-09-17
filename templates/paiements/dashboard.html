@@ -484,14 +484,14 @@
                 </a>
 
                 <!-- Boutons paiements partiels -->
-                <a href="{% url 'paiements_partiels:dashboard' %}" class="quick-action-btn success">
+                <a href="{% url 'paiements:dashboard_partiels' %}" class="quick-action-btn success">
                     <i class="bi bi-pie-chart me-2"></i>Dashboard Paiements Partiels
                 </a>
-                <a href="{% url 'paiements_partiels:liste_plans' %}" class="quick-action-btn warning">
+                <a href="{% url 'paiements:liste_plans_partiels' %}" class="quick-action-btn warning">
                     <i class="bi bi-list-ul me-2"></i>Plans de Paiement
                 </a>
-                <a href="{% url 'paiements:ajouter_partiel' %}" class="quick-action-btn info">
-                    <i class="bi bi-plus-circle me-2"></i>Paiement Partiel Rapide
+                <a href="{% url 'paiements:creer_plan_partiel' %}" class="quick-action-btn info">
+                    <i class="bi bi-plus-circle me-2"></i>Créer un Plan
                 </a>
             </div>
         </div>
