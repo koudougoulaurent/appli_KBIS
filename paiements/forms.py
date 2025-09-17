@@ -945,12 +945,12 @@ class PlanPaiementPartielForm(forms.ModelForm):
             }),
             'nom_plan': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Ex: Plan de paiement échelonné - Janvier 2025'
+                'placeholder': 'Ex: Accord de paiement - Janvier 2025'
             }),
             'description': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 3,
-                'placeholder': 'Description détaillée du plan de paiement'
+                'placeholder': 'Description de l\'accord de paiement'
             }),
             'montant_total': forms.NumberInput(attrs={
                 'class': 'form-control',
@@ -984,6 +984,12 @@ class PlanPaiementPartielForm(forms.ModelForm):
         for field_name, field in self.fields.items():
             if field_name not in self.Meta.widgets:
                 field.widget.attrs.update({'class': 'form-control'})
+        
+        # Personnaliser les labels pour un vocabulaire plus simple
+        self.fields['nom_plan'].label = "Nom de l'Accord"
+        self.fields['montant_total'].label = "Montant à Payer"
+        self.fields['date_fin_prevue'].label = "Date Limite"
+        self.fields['statut'].label = "État"
     
     def clean(self):
         cleaned_data = super().clean()
@@ -991,17 +997,17 @@ class PlanPaiementPartielForm(forms.ModelForm):
         date_fin_prevue = cleaned_data.get('date_fin_prevue')
         montant_total = cleaned_data.get('montant_total')
         
-        # Vérifier que la date de fin est après la date de début
+        # Vérifier que la date limite est après la date de début
         if date_debut and date_fin_prevue:
             if date_fin_prevue <= date_debut:
                 raise ValidationError(
-                    "La date de fin prévue doit être postérieure à la date de début."
+                    "La date limite doit être après la date de début."
                 )
         
-        # Vérifier que le montant total est positif
+        # Vérifier que le montant à payer est positif
         if montant_total and montant_total <= 0:
             raise ValidationError(
-                "Le montant total doit être supérieur à zéro."
+                "Le montant à payer doit être supérieur à zéro."
             )
         
         return cleaned_data

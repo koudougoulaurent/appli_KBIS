@@ -3198,7 +3198,7 @@ class PlanPaiementPartiel(models.Model):
     numero_plan = models.CharField(
         max_length=50,
         unique=True,
-        verbose_name=_("Numéro du plan")
+        verbose_name=_("Numéro de l'accord")
     )
     
     # Contrat associé
@@ -3212,12 +3212,12 @@ class PlanPaiementPartiel(models.Model):
     # Informations du plan
     nom_plan = models.CharField(
         max_length=100,
-        verbose_name=_("Nom du plan"),
-        help_text=_("Ex: Plan de paiement échelonné - Janvier 2025")
+        verbose_name=_("Nom de l'accord"),
+        help_text=_("Ex: Accord de paiement - Janvier 2025")
     )
     description = models.TextField(
         blank=True,
-        verbose_name=_("Description du plan")
+        verbose_name=_("Description de l'accord")
     )
     
     # Montants
@@ -3225,7 +3225,7 @@ class PlanPaiementPartiel(models.Model):
         max_digits=10,
         decimal_places=2,
         validators=[MinValueValidator(0.01)],
-        verbose_name=_("Montant total à payer")
+        verbose_name=_("Montant à payer")
     )
     montant_deja_paye = models.DecimalField(
         max_digits=10,
@@ -3242,10 +3242,10 @@ class PlanPaiementPartiel(models.Model):
     
     # Dates
     date_debut = models.DateField(
-        verbose_name=_("Date de début du plan")
+        verbose_name=_("Date de début")
     )
     date_fin_prevue = models.DateField(
-        verbose_name=_("Date de fin prévue")
+        verbose_name=_("Date limite")
     )
     date_fin_reelle = models.DateField(
         null=True,
@@ -3263,7 +3263,7 @@ class PlanPaiementPartiel(models.Model):
             ('annule', 'Annulé'),
         ],
         default='actif',
-        verbose_name=_("Statut du plan")
+        verbose_name=_("État de l'accord")
     )
     
     # Métadonnées
@@ -3310,12 +3310,12 @@ class PlanPaiementPartiel(models.Model):
     )
     
     class Meta:
-        verbose_name = _("Plan de paiement partiel")
-        verbose_name_plural = _("Plans de paiement partiel")
+        verbose_name = _("Accord de paiement")
+        verbose_name_plural = _("Accords de paiement")
         ordering = ['-date_creation']
     
     def __str__(self):
-        return f"Plan {self.numero_plan} - {self.contrat}"
+        return f"Accord {self.numero_plan} - {self.contrat}"
     
     def save(self, *args, **kwargs):
         if not self.numero_plan:
@@ -3351,28 +3351,28 @@ class PlanPaiementPartiel(models.Model):
 
 
 class EchelonPaiement(models.Model):
-    """Échelon de paiement dans un plan"""
+    """Étape de paiement dans un accord"""
     
     # Identifiants
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
-    # Plan associé
+    # Accord associé
     plan = models.ForeignKey(
         PlanPaiementPartiel,
         on_delete=models.CASCADE,
         related_name='echelons',
-        verbose_name=_("Plan de paiement")
+        verbose_name=_("Accord de paiement")
     )
     
-    # Informations de l'échelon
+    # Informations de l'étape
     numero_echelon = models.PositiveIntegerField(
-        verbose_name=_("Numéro d'échelon")
+        verbose_name=_("Numéro d'étape")
     )
     montant = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         validators=[MinValueValidator(0.01)],
-        verbose_name=_("Montant de l'échelon")
+        verbose_name=_("Montant de l'étape")
     )
     date_echeance = models.DateField(
         verbose_name=_("Date d'échéance")
@@ -3449,14 +3449,14 @@ class EchelonPaiement(models.Model):
 
 
 class PaiementPartiel(models.Model):
-    """Paiement partiel spécialisé"""
+    """Acompte spécialisé"""
     
     # Identifiants
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     numero_paiement_partiel = models.CharField(
         max_length=50,
         unique=True,
-        verbose_name=_("Numéro de paiement partiel")
+        verbose_name=_("Numéro d'acompte")
     )
     
     # Relations
@@ -3464,7 +3464,7 @@ class PaiementPartiel(models.Model):
         PlanPaiementPartiel,
         on_delete=models.CASCADE,
         related_name='paiements_partiels',
-        verbose_name=_("Plan de paiement")
+        verbose_name=_("Accord de paiement")
     )
     echelon = models.ForeignKey(
         EchelonPaiement,
@@ -3472,7 +3472,7 @@ class PaiementPartiel(models.Model):
         related_name='paiements',
         null=True,
         blank=True,
-        verbose_name=_("Échelon associé")
+        verbose_name=_("Étape associée")
     )
     paiement_principal = models.ForeignKey(
         Paiement,
@@ -3486,7 +3486,7 @@ class PaiementPartiel(models.Model):
         max_digits=10,
         decimal_places=2,
         validators=[MinValueValidator(0.01)],
-        verbose_name=_("Montant du paiement partiel")
+        verbose_name=_("Montant de l'acompte")
     )
     montant_restant_apres = models.DecimalField(
         max_digits=10,
@@ -3498,7 +3498,7 @@ class PaiementPartiel(models.Model):
     # Informations
     motif = models.CharField(
         max_length=200,
-        verbose_name=_("Motif du paiement partiel")
+        verbose_name=_("Motif de l'acompte")
     )
     description = models.TextField(
         blank=True,
@@ -3565,12 +3565,12 @@ class PaiementPartiel(models.Model):
     )
     
     class Meta:
-        verbose_name = _("Paiement partiel")
-        verbose_name_plural = _("Paiements partiels")
+        verbose_name = _("Acompte")
+        verbose_name_plural = _("Acomptes")
         ordering = ['-date_paiement']
     
     def __str__(self):
-        return f"Paiement partiel {self.numero_paiement_partiel} - {self.montant} FCFA"
+        return f"Acompte {self.numero_paiement_partiel} - {self.montant} FCFA"
     
     def save(self, *args, **kwargs):
         if not self.numero_paiement_partiel:

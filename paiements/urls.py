@@ -14,11 +14,11 @@ urlpatterns = [
     # API REST
     path('', include(router.urls)),
     
-    # URLs pour les paiements partiels
-    path('partiels/dashboard/', views.dashboard_paiements_partiels, name='dashboard_partiels'),
-    path('partiels/plans/', views.liste_plans_paiement, name='liste_plans_partiels'),
-    path('partiels/plans/creer/', views.creer_plan_paiement, name='creer_plan_partiel'),
-    path('partiels/plans/<uuid:plan_id>/', views.detail_plan_paiement, name='detail_plan_partiel'),
+    # URLs pour les accords de paiement
+    path('accords/dashboard/', views.dashboard_paiements_partiels, name='dashboard_partiels'),
+    path('accords/liste/', views.liste_plans_paiement, name='liste_plans_partiels'),
+    path('accords/creer/', views.creer_plan_paiement, name='creer_plan_partiel'),
+    path('accords/<uuid:plan_id>/', views.detail_plan_paiement, name='detail_plan_partiel'),
     
     # URLs pour les paiements (avec aliases pour compatibilité)
     path('dashboard/', views.paiements_dashboard, name='dashboard'),
