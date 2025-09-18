@@ -156,12 +156,12 @@
     }
     
     .btn-login:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(
-            {% if groupe.nom == 'CAISSE' %}40, 167, 69, 0.3{% endif %}
-            {% if groupe.nom == 'CONTROLES' %}255, 193, 7, 0.3{% endif %}
-            {% if groupe.nom == 'ADMINISTRATION' %}23, 162, 184, 0.3{% endif %}
-            {% if groupe.nom == 'PRIVILEGE' %}220, 53, 69, 0.3{% endif %});
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(
+            {% if groupe.nom == 'CAISSE' %}40, 167, 69, 0.2{% endif %}
+            {% if groupe.nom == 'CONTROLES' %}255, 193, 7, 0.2{% endif %}
+            {% if groupe.nom == 'ADMINISTRATION' %}23, 162, 184, 0.2{% endif %}
+            {% if groupe.nom == 'PRIVILEGE' %}220, 53, 69, 0.2{% endif %});
     }
     
     .btn-login:active {
@@ -186,7 +186,6 @@
     
     .btn-back:hover {
         background: #5a6268;
-        transform: translateY(-1px);
     }
     
     .close-btn {
@@ -209,7 +208,6 @@
     
     .close-btn:hover {
         background: #c82333;
-        transform: scale(1.1);
     }
     
     .password-toggle {
@@ -338,17 +336,17 @@
 </div>
 
 <script>
-// Animation d'entrée
+// Animation d'entrée simplifiée
 document.addEventListener('DOMContentLoaded', function() {
     const loginCard = document.querySelector('.login-card');
     loginCard.style.opacity = '0';
-    loginCard.style.transform = 'translateY(20px)';
+    loginCard.style.transform = 'translateY(10px)';
     
     setTimeout(() => {
-        loginCard.style.transition = 'all 0.5s ease';
+        loginCard.style.transition = 'all 0.3s ease';
         loginCard.style.opacity = '1';
         loginCard.style.transform = 'translateY(0)';
-    }, 100);
+    }, 50);
     
     // Focus sur le champ username
     document.getElementById('username').focus();
