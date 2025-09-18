@@ -8,7 +8,7 @@ Usage: {% include 'includes/phone_input_widget.html' with field=form.telephone %
     <input type="hidden" name="country_code" id="country_code_{{ field.id_for_label }}" value="">
     
     <div class="row mb-2">
-        <div class="col-md-4">
+        <div class="col-12 col-md-4 mb-3 mb-md-0">
             <label for="country_selector_{{ field.id_for_label }}" class="form-label">
                 <i class="bi bi-flag"></i> Code pays
             </label>
@@ -32,7 +32,7 @@ Usage: {% include 'includes/phone_input_widget.html' with field=form.telephone %
                 <option value="228" data-flag="🇹🇬" data-format="+228" data-placeholder="90123456">🇹🇬 Togo (+228)</option>
             </select>
         </div>
-        <div class="col-md-8">
+        <div class="col-12 col-md-8">
             <label for="{{ field.id_for_label }}" class="form-label">
                 <i class="bi bi-telephone"></i> {{ field.label }}
             </label>
@@ -93,8 +93,12 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Activer le champ téléphone et placer le curseur après le code pays
             phoneInput.disabled = false;
-            phoneInput.focus();
-            phoneInput.setSelectionRange(format.length, format.length);
+            
+            // Délai pour mobile pour éviter les problèmes de focus
+            setTimeout(() => {
+                phoneInput.focus();
+                phoneInput.setSelectionRange(format.length, format.length);
+            }, 100);
         } else {
             // Réinitialiser
             countryCodeHidden.value = '';
