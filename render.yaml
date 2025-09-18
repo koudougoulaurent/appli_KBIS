@@ -6,13 +6,14 @@ services:
     buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
-      python manage.py collectstatic --noinput --settings=gestion_immobiliere.performance_settings
-      python manage.py migrate --settings=gestion_immobiliere.performance_settings
+      pip install whitenoise
+      python manage.py collectstatic --noinput --settings=gestion_immobiliere.render_settings
+      python manage.py migrate --settings=gestion_immobiliere.render_settings
     startCommand: |
       gunicorn gestion_immobiliere.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120 --max-requests 1000 --max-requests-jitter 100 --preload
     envVars:
       - key: DJANGO_SETTINGS_MODULE
-        value: gestion_immobiliere.performance_settings
+        value: gestion_immobiliere.render_settings
       - key: PYTHONUNBUFFERED
         value: 1
       - key: DISABLE_COLLECTSTATIC
