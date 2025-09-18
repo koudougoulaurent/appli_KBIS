@@ -342,6 +342,11 @@ class Propriete(models.Model):
         ('a_renover', 'À rénover'),
     ]
     
+    TYPE_GESTION_CHOICES = [
+        ('propriete_entiere', 'Propriété entière (louable en une seule fois)'),
+        ('unites_multiples', 'Propriété avec unités locatives multiples'),
+    ]
+    
     # Informations de base
     numero_propriete = models.CharField(
         max_length=20,
@@ -365,6 +370,13 @@ class Propriete(models.Model):
         on_delete=models.PROTECT,
         verbose_name=_("Type de bien")
     )
+    type_gestion = models.CharField(
+        max_length=20,
+        choices=TYPE_GESTION_CHOICES,
+        default='propriete_entiere',
+        verbose_name=_("Type de gestion"),
+        help_text=_("Définit si la propriété est louable entièrement ou par unités multiples")
+    )
     surface = models.DecimalField(
         max_digits=8,
         decimal_places=2,
@@ -373,15 +385,28 @@ class Propriete(models.Model):
         verbose_name=_("Surface (m²)"),
         help_text=_("Surface en mètres carrés (optionnel)")
     )
-    nombre_pieces = models.PositiveIntegerField(verbose_name=_("Nombre de pièces"))
-    nombre_chambres = models.PositiveIntegerField(verbose_name=_("Nombre de chambres"))
-    nombre_salles_bain = models.PositiveIntegerField(verbose_name=_("Nombre de salles de bain"))
+    nombre_pieces = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name=_("Nombre de pièces")
+    )
+    nombre_chambres = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name=_("Nombre de chambres")
+    )
+    nombre_salles_bain = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name=_("Nombre de salles de bain")
+    )
     
     # Équipements
     ascenseur = models.BooleanField(default=False, verbose_name=_("Ascenseur"))
     parking = models.BooleanField(default=False, verbose_name=_("Parking"))
     balcon = models.BooleanField(default=False, verbose_name=_("Balcon"))
     jardin = models.BooleanField(default=False, verbose_name=_("Jardin"))
+    cuisine = models.BooleanField(default=False, verbose_name=_("Cuisine"))
     
     # Informations financières
     prix_achat = models.DecimalField(
@@ -395,6 +420,8 @@ class Propriete(models.Model):
         max_digits=10,
         decimal_places=2,
         default=0.00,
+        blank=True,
+        null=True,
         verbose_name=_("Loyer mensuel")
     )
     charges_locataire = models.DecimalField(
@@ -449,61 +476,84 @@ class Propriete(models.Model):
     def get_absolute_url(self):
         return reverse('proprietes:detail', kwargs={'pk': self.pk})
     
+    def est_propriete_entiere(self):
+        """Vérifie si c'est une propriété louable entièrement."""
+        return self.type_gestion == 'propriete_entiere'
+    
+    def est_avec_unites_multiples(self):
+        """Vérifie si c'est une propriété avec unités locatives multiples."""
+        return self.type_gestion == 'unites_multiples'
+    
+    def get_pieces_louables_individuellement(self):
+        """
+        Retourne les pièces qui peuvent être louées individuellement.
+        Seulement pour les propriétés avec unités multiples.
+        """
+        if not self.est_avec_unites_multiples():
+            return self.pieces.none()
+        return self.pieces.filter(
+            unite_locative__isnull=True,
+            is_deleted=False
+        )
+    
+    def get_unites_locatives(self):
+        """
+        Retourne les unités locatives de cette propriété.
+        Seulement pour les propriétés avec unités multiples.
+        """
+        if not self.est_avec_unites_multiples():
+            return self.unites_locatives.none()
+        return self.unites_locatives.filter(is_deleted=False)
+    
     def est_disponible_pour_location(self):
         """
         Vérifie si la propriété est disponible pour une nouvelle location.
-        Une propriété est disponible si :
-        1. Elle n'a pas de contrat actif qui couvre la propriété entière, ET
-        2. Elle a au moins une unité locative disponible OU elle est marquée comme disponible, ET
-        3. Toutes ses unités/pièces ne sont pas déjà louées individuellement
+        La logique diffère selon le type de gestion :
+        - Propriété entière : vérifie s'il n'y a pas de contrat actif sur la propriété complète
+        - Unités multiples : vérifie s'il y a des unités locatives ou pièces disponibles
         """
         from django.utils import timezone
         from contrats.models import Contrat
         
-        # Vérifier s'il y a des contrats actifs qui couvrent la propriété entière
-        contrats_actifs_propriete_complete = Contrat.objects.filter(
-            propriete=self,
-            est_actif=True,
-            est_resilie=False,
-            date_debut__lte=timezone.now().date(),
-            date_fin__gte=timezone.now().date(),
-            is_deleted=False,
-            unite_locative__isnull=True  # Pas d'unité locative = propriété complète
-        ).exists()
+        if self.est_propriete_entiere():
+            # Pour une propriété entière, vérifier s'il n'y a pas de contrat actif
+            contrats_actifs = Contrat.objects.filter(
+                propriete=self,
+                est_actif=True,
+                est_resilie=False,
+                date_debut__lte=timezone.now().date(),
+                date_fin__gte=timezone.now().date(),
+                is_deleted=False,
+                unite_locative__isnull=True  # Pas d'unité locative = propriété complète
+            ).exists()
+            
+            return self.disponible and not contrats_actifs
+            
+        elif self.est_avec_unites_multiples():
+            # Pour les propriétés avec unités multiples, vérifier les unités et pièces disponibles
+            unites_disponibles = self.get_unites_locatives().filter(
+                statut='disponible'
+            ).exclude(
+                contrats__est_actif=True,
+                contrats__est_resilie=False,
+                contrats__date_debut__lte=timezone.now().date(),
+                contrats__date_fin__gte=timezone.now().date(),
+                contrats__is_deleted=False
+            ).exists()
+            
+            pieces_disponibles = self.get_pieces_louables_individuellement().filter(
+                statut='disponible'
+            ).exclude(
+                contrats__est_actif=True,
+                contrats__est_resilie=False,
+                contrats__date_debut__lte=timezone.now().date(),
+                contrats__date_fin__gte=timezone.now().date(),
+                contrats__is_deleted=False
+            ).exists()
+            
+            return unites_disponibles or pieces_disponibles
         
-        # Si la propriété a un contrat actif qui la couvre entièrement, elle n'est pas disponible
-        if contrats_actifs_propriete_complete:
-            return False
-        
-        # Vérifier s'il y a des unités locatives disponibles (non louées individuellement)
-        unites_disponibles = self.unites_locatives.filter(
-            statut='disponible',
-            is_deleted=False
-        ).exclude(
-            contrats__est_actif=True,
-            contrats__est_resilie=False,
-            contrats__date_debut__lte=timezone.now().date(),
-            contrats__date_fin__gte=timezone.now().date(),
-            contrats__is_deleted=False
-        ).exists()
-        
-        # Vérifier s'il y a des pièces disponibles (non louées individuellement)
-        pieces_disponibles = self.pieces.filter(
-            statut='disponible',
-            is_deleted=False
-        ).exclude(
-            contrats__est_actif=True,
-            contrats__est_resilie=False,
-            contrats__date_debut__lte=timezone.now().date(),
-            contrats__date_fin__gte=timezone.now().date(),
-            contrats__is_deleted=False
-        ).exists()
-        
-        # La propriété est disponible si :
-        # 1. Elle est marquée comme disponible ET n'a pas de contrat actif complet, OU
-        # 2. Elle a des unités locatives disponibles (non louées), OU
-        # 3. Elle a des pièces disponibles (non louées)
-        return (self.disponible and not contrats_actifs_propriete_complete) or unites_disponibles or pieces_disponibles
+        return False
     
     def get_unites_locatives_disponibles(self):
         """
@@ -1744,6 +1794,65 @@ class Piece(models.Model):
     
     def get_absolute_url(self):
         return reverse('proprietes:piece_detail', kwargs={'pk': self.pk})
+    
+    def peut_etre_louee_individuellement(self):
+        """
+        Détermine si cette pièce peut être louée individuellement.
+        Une pièce peut être louée individuellement si :
+        1. La propriété est de type 'unites_multiples'
+        2. La pièce n'est pas liée à une unité locative spécifique
+        3. La pièce n'est pas un espace partagé
+        """
+        return (
+            self.propriete.est_avec_unites_multiples() and
+            self.unite_locative is None and
+            not self.est_espace_partage
+        )
+    
+    def est_dans_propriete_entiere(self):
+        """
+        Détermine si cette pièce fait partie d'une propriété louable entièrement.
+        Dans ce cas, la pièce ne peut pas être louée individuellement.
+        """
+        return self.propriete.est_propriete_entiere()
+    
+    def get_statut_affichage(self):
+        """
+        Retourne le statut d'affichage de la pièce selon le type de propriété.
+        Pour les propriétés entières, les pièces ne sont pas "disponibles" individuellement.
+        """
+        if self.est_dans_propriete_entiere():
+            # Pour les propriétés entières, les pièces ne sont pas louables individuellement
+            return "incluse dans la propriété"
+        else:
+            # Pour les propriétés avec unités multiples, afficher le statut normal
+            return self.get_statut_display()
+    
+    def est_vraiment_disponible(self):
+        """
+        Vérifie si la pièce est vraiment disponible pour location.
+        Pour les propriétés entières, retourne False car les pièces ne se louent pas individuellement.
+        """
+        if self.est_dans_propriete_entiere():
+            return False
+        
+        if not self.peut_etre_louee_individuellement():
+            return False
+            
+        # Vérifier s'il n'y a pas de contrat actif sur cette pièce
+        from django.utils import timezone
+        from contrats.models import Contrat
+        
+        contrats_actifs = Contrat.objects.filter(
+            pieces=self,
+            est_actif=True,
+            est_resilie=False,
+            date_debut__lte=timezone.now().date(),
+            date_fin__gte=timezone.now().date(),
+            is_deleted=False
+        ).exists()
+        
+        return self.statut == 'disponible' and not contrats_actifs
     
     def est_disponible(self, date_debut=None, date_fin=None):
         """Vérifie si la pièce est disponible pour une période donnée."""

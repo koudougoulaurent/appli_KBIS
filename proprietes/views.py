@@ -2300,6 +2300,11 @@ def gestion_pieces(request, propriete_id):
     """Vue pour la gestion des pièces d'une propriété."""
     propriete = get_object_or_404(Propriete, pk=propriete_id, is_deleted=False)
     
+    # Vérifier que la propriété est de type "unités multiples"
+    if propriete.type_gestion != 'unites_multiples':
+        messages.warning(request, "La gestion des pièces n'est disponible que pour les propriétés avec unités multiples.")
+        return redirect('proprietes:detail', pk=propriete_id)
+    
     # Récupérer les pièces de la propriété
     pieces = propriete.pieces.filter(is_deleted=False)
     
@@ -2325,11 +2330,15 @@ def gestion_pieces(request, propriete_id):
     from .services import GestionPiecesService
     stats = GestionPiecesService.get_statistiques_pieces(propriete_id)
     
+    # Créer le formulaire pour l'ajout de pièces
+    from .forms import PieceForm
+    form = PieceForm(propriete=propriete)
     
     context = {
         'propriete': propriete,
         'pieces': pieces,
         'stats': stats,
+        'form': form,
         'filtres': {
             'statut': statut,
             'type_piece': type_piece,
@@ -2343,34 +2352,56 @@ def gestion_pieces(request, propriete_id):
 @login_required
 def creer_piece(request, propriete_id):
     """Vue pour créer une nouvelle pièce."""
+    from .forms import PieceForm
+    
     propriete = get_object_or_404(Propriete, pk=propriete_id, is_deleted=False)
     
-    if request.method == 'POST':
-        nom = request.POST.get('nom')
-        type_piece = request.POST.get('type_piece')
-        numero_piece = request.POST.get('numero_piece')
-        surface = request.POST.get('surface')
-        description = request.POST.get('description')
-        
-        try:
-            from .models import Piece
-            
-            piece = Piece.objects.create(
-                propriete=propriete,
-                nom=nom,
-                type_piece=type_piece,
-                numero_piece=numero_piece,
-                surface=surface if surface else None,
-                description=description
-            )
-            
-            messages.success(request, f'Pièce "{piece.nom}" créée avec succès.')
-            return redirect('proprietes:gestion_pieces', propriete_id=propriete_id)
-            
-        except Exception as e:
-            messages.error(request, f'Erreur lors de la création de la pièce : {str(e)}')
+    # Vérifier que la propriété est de type "unités multiples"
+    if propriete.type_gestion != 'unites_multiples':
+        messages.warning(request, "La création de pièces n'est disponible que pour les propriétés avec unités multiples.")
+        return redirect('proprietes:detail', pk=propriete_id)
     
-    return redirect('proprietes:gestion_pieces', propriete_id=propriete_id)
+    if request.method == 'POST':
+        form = PieceForm(propriete=propriete, data=request.POST)
+        if form.is_valid():
+            try:
+                piece = form.save(commit=False)
+                piece.propriete = propriete
+                piece.save()
+                
+                messages.success(request, f'Pièce "{piece.nom}" créée avec succès.')
+                return redirect('proprietes:gestion_pieces', propriete_id=propriete_id)
+                
+            except Exception as e:
+                messages.error(request, f'Erreur lors de la création de la pièce : {str(e)}')
+        else:
+            # Afficher les erreurs de validation
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
+    else:
+        form = PieceForm(propriete=propriete)
+    
+    # Récupérer les pièces existantes pour l'affichage
+    pieces = propriete.pieces.filter(is_deleted=False)
+    
+    # Statistiques des pièces
+    from .services import GestionPiecesService
+    stats = GestionPiecesService.get_statistiques_pieces(propriete_id)
+    
+    context = {
+        'propriete': propriete,
+        'pieces': pieces,
+        'stats': stats,
+        'form': form,
+        'filtres': {
+            'statut': None,
+            'type_piece': None,
+            'recherche': None
+        }
+    }
+    
+    return render(request, 'proprietes/pieces_gestion.html', context)
 
 
 @login_required

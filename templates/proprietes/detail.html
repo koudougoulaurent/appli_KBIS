@@ -316,22 +316,26 @@
                         <a href="{% url 'proprietes:bailleur_detail' propriete.bailleur.pk %}" class="btn btn-secondary">
                             <i class="bi bi-person"></i> Voir Bailleur
                         </a>
+                        {% if propriete.type_gestion == 'unites_multiples' %}
                         <a href="{% url 'proprietes:gestion_pieces' propriete.pk %}" class="btn btn-outline-primary">
                             <i class="bi bi-grid-3x3-gap"></i> Gestion des Pièces
                         </a>
+                        {% endif %}
                         
-                        <!-- Bouton pour le dashboard des unités locatives (grandes propriétés) -->
-                        {% if propriete.est_grande_propriete %}
+                        <!-- Bouton pour le dashboard des unités locatives (propriétés avec unités multiples) -->
+                        {% if propriete.type_gestion == 'unites_multiples' %}
                         <a href="{% url 'proprietes:dashboard_propriete' propriete.pk %}" class="btn btn-success">
                             <i class="fas fa-building"></i> Dashboard Unités Locatives
                             <span class="badge bg-light text-success ms-1">{{ propriete.get_nombre_unites_locatives }}</span>
                         </a>
                         {% endif %}
                         
-                        <!-- Bouton pour créer une nouvelle unité locative -->
+                        <!-- Bouton pour créer une nouvelle unité locative (seulement pour unités multiples) -->
+                        {% if propriete.type_gestion == 'unites_multiples' %}
                         <a href="{% url 'proprietes:unite_create_propriete' propriete.pk %}" class="btn btn-outline-success">
                             <i class="fas fa-plus"></i> Nouvelle Unité Locative
                         </a>
+                        {% endif %}
                         <a href="{% url 'proprietes:photo_gallery' propriete.pk %}" class="btn btn-outline-info">
                             <i class="bi bi-images"></i> Galerie Photos
                         </a>

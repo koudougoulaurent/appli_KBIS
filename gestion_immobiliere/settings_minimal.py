@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-test-key-for-local-development-only'
 DEBUG = True
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'appli-kbis.onrender.com', '.onrender.com']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -17,14 +17,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.humanize',  # Pour les filtres de formatage des nombres
-    'crispy_forms',  # Pour les formulaires stylés
-    'crispy_bootstrap5',  # Pour l'intégration Bootstrap 5
+    'crispy_forms',
+    'crispy_bootstrap5',
     'core',
-    'utilisateurs',
     'proprietes',
     'contrats',
     'paiements',
+    'utilisateurs',
     'notifications',
 ]
 
@@ -39,6 +38,16 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'gestion_immobiliere.urls'
+
+# Configuration d'authentification
+AUTH_USER_MODEL = 'utilisateurs.Utilisateur'
+LOGIN_URL = 'utilisateurs:connexion_groupes'
+LOGIN_REDIRECT_URL = 'utilisateurs:dashboard'
+LOGOUT_REDIRECT_URL = 'utilisateurs:connexion_groupes'
+
+# Configuration Crispy Forms
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 TEMPLATES = [
     {
@@ -81,19 +90,5 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
-]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# Configuration du modèle d'utilisateur personnalisé
-AUTH_USER_MODEL = 'utilisateurs.Utilisateur'
-
-LOGIN_URL = '/utilisateurs/connexion-groupes/'
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/utilisateurs/connexion-groupes/'
-
-# Configuration de Crispy Forms
-CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
-CRISPY_TEMPLATE_PACK = "bootstrap5"

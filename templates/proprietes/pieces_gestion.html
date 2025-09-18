@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load crispy_forms_tags %}
 
 {% block title %}Gestion des Pièces - {{ propriete.titre }}{% endblock %}
 
@@ -278,53 +279,59 @@
             <form method="POST" action="{% url 'proprietes:creer_piece' propriete.pk %}" id="creerPieceForm">
                 {% csrf_token %}
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Nom de la pièce *</label>
-                                <input type="text" name="nom" class="form-control" required>
+                    {% if form %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.nom|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.type_piece|as_crispy_field }}
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Type de pièce *</label>
-                                <select name="type_piece" class="form-select" required>
-                                    <option value="">Sélectionner...</option>
-                                    <option value="chambre">Chambre</option>
-                                    <option value="salon">Salon</option>
-                                    <option value="cuisine">Cuisine</option>
-                                    <option value="salle_bain">Salle de bain</option>
-                                    <option value="toilettes">Toilettes</option>
-                                    <option value="couloir">Couloir</option>
-                                    <option value="balcon">Balcon</option>
-                                    <option value="terrasse">Terrasse</option>
-                                    <option value="jardin">Jardin</option>
-                                    <option value="parking">Parking</option>
-                                    <option value="cave">Cave</option>
-                                    <option value="grenier">Grenier</option>
-                                    <option value="autre">Autre</option>
-                                </select>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.numero_piece|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.surface|as_crispy_field }}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Numéro de pièce</label>
-                                <input type="text" name="numero_piece" class="form-control">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.statut|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        {{ form.est_espace_partage|as_crispy_field }}
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Surface (m²)</label>
-                                <input type="number" name="surface" class="form-control" step="0.01" min="0">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    {{ form.description|as_crispy_field }}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea name="description" class="form-control" rows="3"></textarea>
-                    </div>
+                    {% else %}
+                        <!-- Fallback si le formulaire n'est pas disponible -->
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Le formulaire n'est pas disponible. Veuillez recharger la page.
+                        </div>
+                    {% endif %}
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>

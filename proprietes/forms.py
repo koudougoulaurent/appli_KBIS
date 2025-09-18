@@ -88,8 +88,8 @@ class ProprieteForm(forms.ModelForm):
         model = Propriete
         fields = [
             'numero_propriete', 'titre', 'adresse', 'code_postal', 'ville', 'pays',
-            'type_bien', 'bailleur', 'surface', 'nombre_pieces', 'nombre_chambres', 'nombre_salles_bain',
-            'ascenseur', 'parking', 'balcon', 'jardin',
+            'type_bien', 'type_gestion', 'bailleur', 'surface', 'nombre_pieces', 'nombre_chambres', 'nombre_salles_bain',
+            'ascenseur', 'parking', 'balcon', 'jardin', 'cuisine',
             'prix_achat', 'loyer_actuel', 'charges_locataire',
             'etat', 'disponible', 'notes'
         ]
@@ -127,6 +127,9 @@ class ProprieteForm(forms.ModelForm):
             'type_bien': forms.Select(attrs={
                 'class': 'form-select'
             }),
+            'type_gestion': forms.Select(attrs={
+                'class': 'form-select'
+            }),
             'surface': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'placeholder': '75.5 (optionnel)',
@@ -135,17 +138,17 @@ class ProprieteForm(forms.ModelForm):
             }),
             'nombre_pieces': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'placeholder': '3',
+                'placeholder': '3 (optionnel)',
                 'min': '1'
             }),
             'nombre_chambres': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'placeholder': '2',
+                'placeholder': '2 (optionnel)',
                 'min': '0'
             }),
             'nombre_salles_bain': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'placeholder': '1',
+                'placeholder': '1 (optionnel)',
                 'min': '0'
             }),
             'prix_achat': forms.NumberInput(attrs={
@@ -172,6 +175,21 @@ class ProprieteForm(forms.ModelForm):
             'disponible': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
             }),
+            'ascenseur': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'parking': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'balcon': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'jardin': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'cuisine': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
             'notes': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 4,
@@ -186,6 +204,7 @@ class ProprieteForm(forms.ModelForm):
             'ville': _('Ville'),
             'pays': _('Pays'),
             'type_bien': _('Type de bien'),
+            'type_gestion': _('Type de gestion'),
             'bailleur': _('Bailleur'),
             'surface': _('Surface (m²)'),
             'nombre_pieces': _('Nombre de pièces'),
@@ -195,6 +214,7 @@ class ProprieteForm(forms.ModelForm):
             'parking': _('Parking'),
             'balcon': _('Balcon'),
             'jardin': _('Jardin'),
+            'cuisine': _('Cuisine'),
             'prix_achat': _('Prix d\'achat (F CFA)'),
             'loyer_actuel': _('Loyer actuel (F CFA)'),
             'charges_locataire': _('Charges locataire (F CFA)'),
@@ -204,8 +224,12 @@ class ProprieteForm(forms.ModelForm):
         }
         help_texts = {
             'titre': _('Donnez un titre descriptif à la propriété'),
+            'type_gestion': _('Définit si la propriété est louable entièrement ou par unités multiples'),
             'bailleur': _('Sélectionnez le bailleur propriétaire de cette propriété'),
-            'surface': _('Surface en mètres carrés'),
+            'surface': _('Surface en mètres carrés (optionnel)'),
+            'nombre_pieces': _('Nombre total de pièces de la propriété (optionnel)'),
+            'nombre_chambres': _('Nombre de chambres à coucher (optionnel)'),
+            'nombre_salles_bain': _('Nombre de salles de bain (optionnel)'),
             'prix_achat': _('Prix d\'achat de la propriété (optionnel)'),
             'loyer_actuel': _('Loyer mensuel actuel (optionnel)'),
             'charges_locataire': _('Charges mensuelles à la charge du locataire (eau, électricité, etc.) - Optionnel'),
@@ -216,6 +240,7 @@ class ProprieteForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Personnalisation des champs
         self.fields['type_bien'].empty_label = "Sélectionnez un type de bien"
+        self.fields['type_gestion'].empty_label = "Sélectionnez le type de gestion"
         self.fields['bailleur'].empty_label = "Sélectionnez un bailleur"
         self.fields['etat'].empty_label = "Sélectionnez l'état"
         
@@ -229,6 +254,17 @@ class ProprieteForm(forms.ModelForm):
         # Rendre le champ numero_propriete optionnel (généré automatiquement)
         self.fields['numero_propriete'].required = False
         
+        # Rendre les champs de caractéristiques optionnels
+        self.fields['surface'].required = False
+        self.fields['nombre_pieces'].required = False
+        self.fields['nombre_chambres'].required = False
+        self.fields['nombre_salles_bain'].required = False
+        
+        # Rendre les champs financiers optionnels
+        self.fields['prix_achat'].required = False
+        # Le loyer_actuel sera rendu conditionnel selon le type de gestion
+        self.fields['loyer_actuel'].required = False
+        
         # Ajout de classes CSS pour les champs requis
         for field_name, field in self.fields.items():
             if field.required:
@@ -237,14 +273,14 @@ class ProprieteForm(forms.ModelForm):
     def clean_surface(self):
         """Validation de la surface."""
         surface = self.cleaned_data.get('surface')
-        if surface and surface <= 0:
+        if surface is not None and surface <= 0:
             raise ValidationError(_('La surface doit être supérieure à 0.'))
         return surface
 
     def clean_nombre_pieces(self):
         """Validation du nombre de pièces."""
         pieces = self.cleaned_data.get('nombre_pieces')
-        if pieces and pieces <= 0:
+        if pieces is not None and pieces <= 0:
             raise ValidationError(_('Le nombre de pièces doit être supérieur à 0.'))
         return pieces
 
@@ -273,12 +309,27 @@ class ProprieteForm(forms.ModelForm):
         """Validation globale du formulaire."""
         cleaned_data = super().clean()
         
-        # Vérification de la cohérence entre chambres et pièces
+        # Vérification de la cohérence entre chambres et pièces (seulement si les deux sont renseignés)
         nombre_pieces = cleaned_data.get('nombre_pieces')
         nombre_chambres = cleaned_data.get('nombre_chambres')
         
-        if nombre_pieces and nombre_chambres and nombre_chambres > nombre_pieces:
+        if nombre_pieces is not None and nombre_chambres is not None and nombre_chambres > nombre_pieces:
             raise ValidationError(_('Le nombre de chambres ne peut pas être supérieur au nombre de pièces.'))
+        
+        # Validation conditionnelle du loyer selon le type de gestion
+        type_gestion = cleaned_data.get('type_gestion')
+        loyer_actuel = cleaned_data.get('loyer_actuel')
+        
+        if type_gestion == 'propriete_entiere':
+            # Pour une propriété entière, le loyer actuel est obligatoire
+            if not loyer_actuel or loyer_actuel <= 0:
+                raise ValidationError(_('Le loyer actuel est obligatoire pour une propriété entière.'))
+        elif type_gestion == 'unites_multiples':
+            # Pour des unités multiples, le loyer actuel n'est pas utilisé (chaque pièce a son propre loyer)
+            # On peut le mettre à 0 ou le laisser vide
+            if loyer_actuel and loyer_actuel > 0:
+                # Avertir l'utilisateur que ce loyer ne sera pas utilisé
+                self.add_error('loyer_actuel', _('Pour des unités multiples, le loyer global n\'est pas utilisé. Chaque pièce aura son propre loyer.'))
         
         return cleaned_data
     
@@ -2010,6 +2061,66 @@ class PieceContratForm(forms.ModelForm):
                         fin=date_fin
                     )
                 )
+        
+        return cleaned_data
+
+
+class PieceForm(forms.ModelForm):
+    """Formulaire pour la création et modification de pièces."""
+    
+    class Meta:
+        model = Piece
+        fields = ['nom', 'type_piece', 'numero_piece', 'surface', 'description', 'statut', 'est_espace_partage']
+        widgets = {
+            'nom': forms.TextInput(attrs={'class': 'form-control'}),
+            'type_piece': forms.Select(attrs={'class': 'form-select'}),
+            'numero_piece': forms.TextInput(attrs={'class': 'form-control'}),
+            'surface': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'statut': forms.Select(attrs={'class': 'form-select'}),
+            'est_espace_partage': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+    
+    def __init__(self, propriete=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.propriete = propriete
+        
+        # Rendre le champ surface optionnel
+        self.fields['surface'].required = False
+        self.fields['numero_piece'].required = False
+        self.fields['description'].required = False
+        
+        # Ajouter des labels personnalisés
+        self.fields['nom'].label = _('Nom de la pièce')
+        self.fields['type_piece'].label = _('Type de pièce')
+        self.fields['numero_piece'].label = _('Numéro de pièce')
+        self.fields['surface'].label = _('Surface (m²)')
+        self.fields['description'].label = _('Description')
+        self.fields['statut'].label = _('Statut')
+        self.fields['est_espace_partage'].label = _('Espace partagé')
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        nom = cleaned_data.get('nom')
+        numero_piece = cleaned_data.get('numero_piece')
+        
+        if self.propriete and nom:
+            # Vérifier l'unicité du nom dans la propriété
+            queryset = Piece.objects.filter(propriete=self.propriete, nom=nom, is_deleted=False)
+            if self.instance.pk:
+                queryset = queryset.exclude(pk=self.instance.pk)
+            
+            if queryset.exists():
+                raise ValidationError(_('Une pièce avec ce nom existe déjà dans cette propriété.'))
+        
+        if self.propriete and numero_piece:
+            # Vérifier l'unicité du numéro de pièce dans la propriété
+            queryset = Piece.objects.filter(propriete=self.propriete, numero_piece=numero_piece, is_deleted=False)
+            if self.instance.pk:
+                queryset = queryset.exclude(pk=self.instance.pk)
+            
+            if queryset.exists():
+                raise ValidationError(_('Une pièce avec ce numéro existe déjà dans cette propriété.'))
         
         return cleaned_data
 
