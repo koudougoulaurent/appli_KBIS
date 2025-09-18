@@ -131,30 +131,49 @@ def unite_create(request, propriete_id=None):
     if request.method == 'POST':
         form = UniteLocativeForm(request.POST)
         if form.is_valid():
-            unite = form.save(commit=False)
-            if propriete:
-                unite.propriete = propriete
-            
-            # Si aucun bailleur spécifique n'est sélectionné, utiliser celui de la propriété
-            if not unite.bailleur and unite.propriete:
-                unite.bailleur = unite.propriete.bailleur
-            
-            unite.save()
-            
-            messages.success(
-                request, 
-                f"L'unité locative '{unite.numero_unite}' a été créée avec succès."
-            )
-            
-            # Si on vient de la création d'une propriété, proposer de créer une autre unité
-            if propriete and request.GET.get('from_property') == '1':
-                messages.info(
-                    request,
-                    f"Unité créée ! Souhaitez-vous créer une autre unité pour '{propriete.titre}' ?"
+            try:
+                unite = form.save(commit=False)
+                if propriete:
+                    unite.propriete = propriete
+                
+                # Si aucun bailleur spécifique n'est sélectionné, utiliser celui de la propriété
+                if not unite.bailleur and unite.propriete:
+                    unite.bailleur = unite.propriete.bailleur
+                
+                unite.save()
+                
+                messages.success(
+                    request, 
+                    f"L'unité locative '{unite.numero_unite}' a été créée avec succès."
                 )
-                return redirect('proprietes:unite_create_propriete', propriete_id=propriete.pk)
+                
+                # Si on vient de la création d'une propriété, proposer de créer une autre unité
+                if propriete and request.GET.get('from_property') == '1':
+                    messages.info(
+                        request,
+                        f"Unité créée ! Souhaitez-vous créer une autre unité pour '{propriete.titre}' ?"
+                    )
+                    return redirect('proprietes:unite_create_propriete', propriete_id=propriete.pk)
+                
+                return redirect('proprietes:unite_detail', pk=unite.pk)
+                
+            except Exception as e:
+                messages.error(
+                    request, 
+                    f"Erreur lors de la création de l'unité locative : {str(e)}"
+                )
+        else:
+            # Afficher les erreurs de validation
+            error_messages = []
+            for field, errors in form.errors.items():
+                for error in errors:
+                    error_messages.append(f"{field}: {error}")
             
-            return redirect('proprietes:unite_detail', pk=unite.pk)
+            if error_messages:
+                messages.error(
+                    request, 
+                    f"Erreurs de validation : {'; '.join(error_messages)}"
+                )
     else:
         initial = {}
         if propriete:

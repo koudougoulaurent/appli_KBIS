@@ -166,6 +166,22 @@
     </div>
     {% endif %}
 
+    <!-- Affichage des erreurs de validation -->
+    {% if form.errors %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>Erreurs de validation :</strong>
+        <ul class="mb-0 mt-2">
+            {% for field, errors in form.errors.items %}
+                {% for error in errors %}
+                    <li><strong>{{ field|title }}:</strong> {{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
     <form method="post" class="needs-validation" novalidate>
         {% csrf_token %}
         
@@ -466,11 +482,44 @@ $(document).ready(function() {
     
     // Validation du formulaire
     $('form').on('submit', function(e) {
+        console.log('Form submission started');
         const form = this;
-        if (!form.checkValidity()) {
+        let isValid = true;
+        
+        // Vérifier tous les champs requis
+        $('input[required], select[required]').each(function() {
+            if (!this.checkValidity()) {
+                isValid = false;
+                $(this).addClass('is-invalid');
+                // Afficher le message d'erreur
+                const feedback = $(this).siblings('.invalid-feedback');
+                if (feedback.length === 0) {
+                    $(this).after('<div class="invalid-feedback">Ce champ est obligatoire.</div>');
+                }
+            } else {
+                $(this).removeClass('is-invalid').addClass('is-valid');
+            }
+        });
+        
+        if (!isValid) {
+            console.log('Form validation failed, preventing submission');
             e.preventDefault();
             e.stopPropagation();
+            
+            // Afficher un message d'erreur global
+            if ($('.alert-danger').length === 0) {
+                $('form').prepend(`
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Erreur de validation :</strong> Veuillez remplir tous les champs obligatoires.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `);
+            }
+        } else {
+            console.log('Form validation passed, submitting...');
         }
+        
         form.classList.add('was-validated');
     });
     
@@ -478,8 +527,12 @@ $(document).ready(function() {
     $('input[required], select[required]').on('blur', function() {
         if (this.checkValidity()) {
             $(this).removeClass('is-invalid').addClass('is-valid');
+            $(this).siblings('.invalid-feedback').remove();
         } else {
             $(this).removeClass('is-valid').addClass('is-invalid');
+            if ($(this).siblings('.invalid-feedback').length === 0) {
+                $(this).after('<div class="invalid-feedback">Ce champ est obligatoire.</div>');
+            }
         }
     });
     
