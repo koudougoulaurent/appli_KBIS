@@ -13,6 +13,7 @@ import json
 
 from .security_monitoring import SecurityMonitor, DataIntegrityChecker, SecurityReportGenerator
 from .security import AccessControl
+from .adaptive_security import AdaptiveSecurity, UserFriendlySecurity
 
 
 @staff_member_required
@@ -71,6 +72,8 @@ def security_report(request):
 def user_security_status(request):
     """Statut de sécurité de l'utilisateur connecté"""
     user = request.user
+    adaptive_security = AdaptiveSecurity()
+    user_friendly = UserFriendlySecurity()
     
     # Vérifier les permissions
     can_access_sensitive = AccessControl.can_access_sensitive_data(user)
@@ -82,13 +85,26 @@ def user_security_status(request):
     # Vérifier les groupes
     user_groups = [group.name for group in user.groups.all()]
     
+    # Obtenir le niveau de confiance
+    trust_level = adaptive_security.get_user_trust_level(user)
+    security_params = adaptive_security.get_security_parameters(user, request)
+    
+    # Obtenir le message de statut convivial
+    status_message = user_friendly.get_security_status_message(user)
+    security_tips = adaptive_security.get_security_tips(user)
+    
     status = {
         'user': user.username,
         'groups': user_groups,
         'can_access_sensitive': can_access_sensitive,
         'last_login': last_login.isoformat() if last_login else None,
         'days_since_login': days_since_login,
-        'is_secure': days_since_login < 30 and can_access_sensitive
+        'is_secure': days_since_login < 30 and can_access_sensitive,
+        'trust_level': trust_level,
+        'security_params': security_params,
+        'status_message': status_message,
+        'security_tips': security_tips,
+        'show_warning': adaptive_security.should_show_security_warning(user)
     }
     
     return JsonResponse(status)
