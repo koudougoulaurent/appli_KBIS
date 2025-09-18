@@ -1,0 +1,316 @@
+{
+  "generated_at": "2025-09-18T11:30:00",
+  "description": "Schéma complet de la base de données KBIS INTERNATIONAL",
+  "version": "1.0.0",
+  "applications": {
+    "utilisateurs": {
+      "verbose_name": "Gestion des utilisateurs",
+      "models": {
+        "Utilisateur": {
+          "name": "Utilisateur",
+          "verbose_name": "Utilisateur",
+          "fields": [
+            {"name": "id", "type": "AutoField", "primary_key": true, "unique": true},
+            {"name": "username", "type": "CharField", "max_length": 150, "unique": true},
+            {"name": "email", "type": "EmailField", "null": true, "blank": true},
+            {"name": "first_name", "type": "CharField", "max_length": 150, "blank": true},
+            {"name": "last_name", "type": "CharField", "max_length": 150, "blank": true},
+            {"name": "telephone", "type": "CharField", "max_length": 100, "blank": true},
+            {"name": "adresse", "type": "TextField", "blank": true},
+            {"name": "groupe_travail", "type": "ForeignKey", "to": "GroupeTravail", "null": true},
+            {"name": "poste", "type": "CharField", "max_length": 100, "blank": true},
+            {"name": "actif", "type": "BooleanField", "default": true},
+            {"name": "is_deleted", "type": "BooleanField", "default": false}
+          ]
+        },
+        "GroupeTravail": {
+          "name": "GroupeTravail",
+          "verbose_name": "Groupe de travail",
+          "fields": [
+            {"name": "id", "type": "AutoField", "primary_key": true, "unique": true},
+            {"name": "nom", "type": "CharField", "max_length": 20, "unique": true},
+            {"name": "description", "type": "TextField", "blank": true},
+            {"name": "permissions", "type": "JSONField", "default": "dict"},
+            {"name": "actif", "type": "BooleanField", "default": true}
+          ]
+        }
+      }
+    },
+    "proprietes": {
+      "verbose_name": "Gestion immobilière",
+      "models": {
+        "Propriete": {
+          "name": "Propriete",
+          "verbose_name": "Propriété",
+          "fields": [
+            {"name": "id", "type": "AutoField", "primary_key": true, "unique": true},
+            {"name": "numero_propriete", "type": "CharField", "max_length": 50, "unique": true},
+            {"name": "adresse", "type": "TextField"},
+            {"name": "ville", "type": "CharField", "max_length": 100},
+            {"name": "code_postal", "type": "CharField", "max_length": 10, "blank": true},
+            {"name": "type_bien", "type": "ForeignKey", "to": "TypeBien"},
+            {"name": "bailleur", "type": "ForeignKey", "to": "Bailleur"},
+            {"name": "loyer_mensuel", "type": "CharField", "max_length": 20, "default": "0"},
+            {"name": "charges_mensuelles", "type": "CharField", "max_length": 20, "default": "0"},
+            {"name": "is_deleted", "type": "BooleanField", "default": false}
+          ]
+        },
+        "Bailleur": {
+          "name": "Bailleur",
+          "verbose_name": "Bailleur",
+          "fields": [
+            {"name": "id", "type": "AutoField", "primary_key": true, "unique": true},
+            {"name": "numero_bailleur", "type": "CharField", "max_length": 20, "unique": true},
+            {"name": "civilite", "type": "CharField", "max_length": 5, "default": "M"},
+            {"name": "nom", "type": "CharField", "max_length": 100},
+            {"name": "prenom", "type": "CharField", "max_length": 100},
+            {"name": "email", "type": "EmailField", "blank": true, "null": true},
+            {"name": "telephone", "type": "CharField", "max_length": 20},
+            {"name": "adresse", "type": "TextField", "blank": true, "null": true},
+            {"name": "iban", "type": "CharField", "max_length": 34, "blank": true},
+            {"name": "is_deleted", "type": "BooleanField", "default": false}
+          ]
+        },
+        "Locataire": {
+          "name": "Locataire",
+          "verbose_name": "Locataire",
+          "fields": [
+            {"name": "id", "type": "AutoField", "primary_key": true, "unique": true},
+            {"name": "numero_locataire", "type": "CharField", "max_length": 20, "unique": true},
+            {"name": "civilite", "type": "CharField", "max_length": 5, "default": "M"},
+            {"name": "nom", "type": "CharField", "max_length": 100},
+            {"name": "prenom", "type": "CharField", "max_length": 100},
+            {"name": "email", "type": "EmailField", "blank": true, "null": true},
+            {"name": "telephone", "type": "CharField", "max_length": 20},
+            {"name": "adresse", "type": "TextField", "blank": true, "null": true},
+            {"name": "is_deleted", "type": "BooleanField", "default": false}
+          ]
+        },
+        "TypeBien": {
+          "name": "TypeBien",
+          "verbose_name": "Type de bien",
+          "fields": [
+            {"name": "id", "type": "AutoField", "primary_key": true, "unique": true},
+            {"name": "nom", "type": "CharField", "max_length": 100},
+            {"name": "description", "type": "TextField", "blank": true}
+          ]
+        }
+      }
+    },
+    "contrats": {
+      "verbose_name": "Gestion des contrats",
+      "models": {
+        "Contrat": {
+          "name": "Contrat",
+          "verbose_name": "Contrat",
+          "fields": [
+            {"name": "id", "type": "AutoField", "primary_key": true, "unique": true},
+            {"name": "numero_contrat", "type": "CharField", "max_length": 50, "unique": true},
+            {"name": "propriete", "type": "ForeignKey", "to": "Propriete"},
+            {"name": "locataire", "type": "ForeignKey", "to": "Locataire"},
+            {"name": "date_debut", "type": "DateField"},
+            {"name": "date_fin", "type": "DateField", "blank": true, "null": true},
+            {"name": "loyer_mensuel", "type": "CharField", "max_length": 20, "default": "0"},
+            {"name": "charges_mensuelles", "type": "CharField", "max_length": 20, "default": "0"},
+            {"name": "depot_garantie", "type": "CharField", "max_length": 20, "default": "0"},
+            {"name": "caution_payee", "type": "BooleanField", "default": false}
+          ]
+        },
+        "Quittance": {
+          "name": "Quittance",
+          "verbose_name": "Quittance",
+          "fields": [
+            {"name": "id", "type": "AutoField", "primary_key": true, "unique": true},
+            {"name": "contrat", "type": "ForeignKey", "to": "Contrat"},
+            {"name": "numero_quittance", "type": "CharField", "max_length": 50, "unique": true},
+            {"name": "periode_debut", "type": "DateField"},
+            {"name": "periode_fin", "type": "DateField"},
+            {"name": "montant_loyer", "type": "CharField", "max_length": 20},
+            {"name": "montant_charges", "type": "CharField", "max_length": 20}
+          ]
+        }
+      }
+    },
+    "paiements": {
+      "verbose_name": "Gestion des paiements",
+      "models": {
+        "Paiement": {
+          "name": "Paiement",
+          "verbose_name": "Paiement",
+          "fields": [
+            {"name": "id", "type": "AutoField", "primary_key": true, "unique": true},
+            {"name": "contrat", "type": "ForeignKey", "to": "Contrat"},
+            {"name": "montant", "type": "DecimalField", "max_digits": 10, "decimal_places": 2},
+            {"name": "date_paiement", "type": "DateField"},
+            {"name": "mode_paiement", "type": "CharField", "max_length": 20},
+            {"name": "statut", "type": "CharField", "max_length": 20},
+            {"name": "reference", "type": "CharField", "max_length": 100, "blank": true}
+          ]
+        },
+        "Recu": {
+          "name": "Recu",
+          "verbose_name": "Reçu",
+          "fields": [
+            {"name": "id", "type": "AutoField", "primary_key": true, "unique": true},
+            {"name": "paiement", "type": "OneToOneField", "to": "Paiement"},
+            {"name": "numero_recu", "type": "CharField", "max_length": 50, "unique": true},
+            {"name": "date_emission", "type": "DateField"},
+            {"name": "montant", "type": "DecimalField", "max_digits": 10, "decimal_places": 2}
+          ]
+        },
+        "PlanPaiementPartiel": {
+          "name": "PlanPaiementPartiel",
+          "verbose_name": "Plan de paiement partiel",
+          "fields": [
+            {"name": "id", "type": "AutoField", "primary_key": true, "unique": true},
+            {"name": "numero_plan", "type": "CharField", "max_length": 50, "unique": true},
+            {"name": "nom_plan", "type": "CharField", "max_length": 200},
+            {"name": "contrat", "type": "ForeignKey", "to": "Contrat"},
+            {"name": "montant_total", "type": "DecimalField", "max_digits": 10, "decimal_places": 2},
+            {"name": "montant_deja_paye", "type": "DecimalField", "max_digits": 10, "decimal_places": 2},
+            {"name": "statut", "type": "CharField", "max_length": 20}
+          ]
+        }
+      }
+    },
+    "core": {
+      "verbose_name": "Fonctionnalités centrales",
+      "models": {
+        "NiveauAcces": {
+          "name": "NiveauAcces",
+          "verbose_name": "Niveau d'accès",
+          "fields": [
+            {"name": "id", "type": "AutoField", "primary_key": true, "unique": true},
+            {"name": "nom", "type": "CharField", "max_length": 50, "unique": true},
+            {"name": "niveau", "type": "CharField", "max_length": 20, "unique": true},
+            {"name": "description", "type": "TextField"},
+            {"name": "priorite", "type": "PositiveIntegerField"}
+          ]
+        },
+        "AuditLog": {
+          "name": "AuditLog",
+          "verbose_name": "Log d'audit",
+          "fields": [
+            {"name": "id", "type": "AutoField", "primary_key": true, "unique": true},
+            {"name": "utilisateur", "type": "ForeignKey", "to": "Utilisateur"},
+            {"name": "action", "type": "CharField", "max_length": 100},
+            {"name": "objet_type", "type": "CharField", "max_length": 100},
+            {"name": "objet_id", "type": "PositiveIntegerField"},
+            {"name": "timestamp", "type": "DateTimeField"}
+          ]
+        }
+      }
+    },
+    "notifications": {
+      "verbose_name": "Système de notifications",
+      "models": {
+        "Notification": {
+          "name": "Notification",
+          "verbose_name": "Notification",
+          "fields": [
+            {"name": "id", "type": "AutoField", "primary_key": true, "unique": true},
+            {"name": "utilisateur", "type": "ForeignKey", "to": "Utilisateur"},
+            {"name": "titre", "type": "CharField", "max_length": 200},
+            {"name": "message", "type": "TextField"},
+            {"name": "type_notification", "type": "CharField", "max_length": 50},
+            {"name": "lu", "type": "BooleanField", "default": false},
+            {"name": "date_creation", "type": "DateTimeField"}
+          ]
+        }
+      }
+    }
+  },
+  "relationships": [
+    {
+      "from_model": "utilisateurs.Utilisateur",
+      "to_model": "utilisateurs.GroupeTravail",
+      "field_name": "groupe_travail",
+      "relation_type": "ForeignKey"
+    },
+    {
+      "from_model": "proprietes.Propriete",
+      "to_model": "proprietes.TypeBien",
+      "field_name": "type_bien",
+      "relation_type": "ForeignKey"
+    },
+    {
+      "from_model": "proprietes.Propriete",
+      "to_model": "proprietes.Bailleur",
+      "field_name": "bailleur",
+      "relation_type": "ForeignKey"
+    },
+    {
+      "from_model": "contrats.Contrat",
+      "to_model": "proprietes.Propriete",
+      "field_name": "propriete",
+      "relation_type": "ForeignKey"
+    },
+    {
+      "from_model": "contrats.Contrat",
+      "to_model": "proprietes.Locataire",
+      "field_name": "locataire",
+      "relation_type": "ForeignKey"
+    },
+    {
+      "from_model": "paiements.Paiement",
+      "to_model": "contrats.Contrat",
+      "field_name": "contrat",
+      "relation_type": "ForeignKey"
+    },
+    {
+      "from_model": "paiements.Recu",
+      "to_model": "paiements.Paiement",
+      "field_name": "paiement",
+      "relation_type": "OneToOneField"
+    },
+    {
+      "from_model": "paiements.PlanPaiementPartiel",
+      "to_model": "contrats.Contrat",
+      "field_name": "contrat",
+      "relation_type": "ForeignKey"
+    },
+    {
+      "from_model": "core.AuditLog",
+      "to_model": "utilisateurs.Utilisateur",
+      "field_name": "utilisateur",
+      "relation_type": "ForeignKey"
+    },
+    {
+      "from_model": "notifications.Notification",
+      "to_model": "utilisateurs.Utilisateur",
+      "field_name": "utilisateur",
+      "relation_type": "ForeignKey"
+    }
+  ],
+  "constraints": {
+    "unique_fields": [
+      "utilisateurs.Utilisateur.username",
+      "utilisateurs.GroupeTravail.nom",
+      "proprietes.Propriete.numero_propriete",
+      "proprietes.Bailleur.numero_bailleur",
+      "proprietes.Locataire.numero_locataire",
+      "contrats.Contrat.numero_contrat",
+      "contrats.Quittance.numero_quittance",
+      "paiements.Recu.numero_recu",
+      "paiements.PlanPaiementPartiel.numero_plan"
+    ],
+    "protected_relationships": [
+      "contrats.Contrat.propriete",
+      "contrats.Contrat.locataire",
+      "paiements.Paiement.contrat"
+    ],
+    "logical_deletion": [
+      "utilisateurs.Utilisateur.is_deleted",
+      "proprietes.Propriete.is_deleted",
+      "proprietes.Bailleur.is_deleted",
+      "proprietes.Locataire.is_deleted"
+    ]
+  },
+  "statistics": {
+    "total_models": 12,
+    "total_relationships": 10,
+    "total_applications": 6,
+    "models_with_logical_deletion": 4,
+    "models_with_unique_fields": 9
+  }
+}
