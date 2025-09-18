@@ -349,11 +349,12 @@ class Propriete(models.Model):
     
     # Informations de base
     numero_propriete = models.CharField(
-        max_length=20,
+        max_length=50,  # Augmenté pour supporter les IDs avec timestamp/UUID
         unique=True,
         default='PR0001',
         verbose_name=_("Numéro propriété"),
-        help_text=_("Identifiant unique de la propriété")
+        help_text=_("Identifiant unique de la propriété"),
+        db_index=True  # Index pour les performances
     )
     titre = models.CharField(max_length=200, verbose_name=_("Titre"))
     description = models.TextField(blank=True, verbose_name=_("Description"))

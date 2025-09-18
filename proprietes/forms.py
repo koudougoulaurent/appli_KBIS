@@ -305,6 +305,22 @@ class ProprieteForm(forms.ModelForm):
             raise ValidationError(_('Les charges ne peuvent pas être négatives.'))
         return charges
 
+    def clean_numero_propriete(self):
+        """Validation du numéro de propriété pour garantir l'unicité absolue."""
+        from core.duplicate_prevention import DuplicatePreventionSystem
+        
+        numero_propriete = self.cleaned_data.get('numero_propriete')
+        
+        if numero_propriete:
+            # Utiliser le système de prévention des doublons
+            if not DuplicatePreventionSystem.check_property_number_uniqueness(
+                numero_propriete, 
+                exclude_pk=self.instance.pk if self.instance else None
+            ):
+                raise ValidationError(_('Un objet Propriété avec ce champ Numéro propriété existe déjà.'))
+        
+        return numero_propriete
+    
     def clean(self):
         """Validation globale du formulaire."""
         cleaned_data = super().clean()
@@ -349,6 +365,8 @@ class ProprieteForm(forms.ModelForm):
     def _create_documents_for_propriete(self, propriete, user):
         """Crée automatiquement les documents pour une propriété."""
         from .models import Document
+        from django.core.files.base import ContentFile
+        import os
         
         # Mapping des champs de fichiers vers les types de documents
         document_mapping = {
@@ -361,42 +379,97 @@ class ProprieteForm(forms.ModelForm):
         for field_name, (doc_type, description) in document_mapping.items():
             file_field = self.cleaned_data.get(field_name)
             if file_field:
-                Document.objects.create(
-                    nom=f"{description} - {propriete.titre}",
-                    type_document=doc_type,
-                    description=f"{description} pour la propriété {propriete.numero_propriete}",
-                    fichier=file_field,
-                    propriete=propriete,
-                    statut='valide',
-                    cree_par=user,
-                    confidentiel=False  # Les documents de propriété ne sont pas confidentiels
-                )
+                try:
+                    # Vérifier que c'est un objet File valide
+                    if hasattr(file_field, 'read') and hasattr(file_field, 'name'):
+                        # C'est déjà un objet File valide
+                        fichier = file_field
+                    else:
+                        # C'est probablement des bytes, créer un ContentFile
+                        if isinstance(file_field, bytes):
+                            fichier = ContentFile(file_field, name=f"{field_name}_{propriete.numero_propriete}.pdf")
+                        else:
+                            # Essayer de convertir en ContentFile
+                            fichier = ContentFile(file_field, name=f"{field_name}_{propriete.numero_propriete}.pdf")
+                    
+                    Document.objects.create(
+                        nom=f"{description} - {propriete.titre}",
+                        type_document=doc_type,
+                        description=f"{description} pour la propriété {propriete.numero_propriete}",
+                        fichier=fichier,
+                        propriete=propriete,
+                        statut='valide',
+                        cree_par=user,
+                        confidentiel=False  # Les documents de propriété ne sont pas confidentiels
+                    )
+                except Exception as e:
+                    print(f"Erreur lors de la création du document {field_name}: {e}")
+                    # Créer un document sans fichier pour éviter de bloquer la création
+                    Document.objects.create(
+                        nom=f"{description} - {propriete.titre} (Erreur fichier)",
+                        type_document=doc_type,
+                        description=f"{description} pour la propriété {propriete.numero_propriete} - Erreur: {str(e)}",
+                        propriete=propriete,
+                        statut='brouillon',
+                        cree_par=user,
+                        confidentiel=False
+                    )
         
         # Gestion spéciale pour les photos multiples
         photos_field = self.cleaned_data.get('photos_propriete')
         if photos_field:
-            # Si c'est un fichier multiple, créer un document pour chaque photo
-            if hasattr(photos_field, '__iter__'):
-                for i, photo in enumerate(photos_field):
+            try:
+                # Si c'est un fichier multiple, créer un document pour chaque photo
+                if hasattr(photos_field, '__iter__') and not hasattr(photos_field, 'read'):
+                    for i, photo in enumerate(photos_field):
+                        if hasattr(photo, 'read') and hasattr(photo, 'name'):
+                            fichier = photo
+                        else:
+                            # Créer un ContentFile pour les bytes
+                            if isinstance(photo, bytes):
+                                fichier = ContentFile(photo, name=f"photo_{i+1}_{propriete.numero_propriete}.jpg")
+                            else:
+                                fichier = ContentFile(photo, name=f"photo_{i+1}_{propriete.numero_propriete}.jpg")
+                        
+                        Document.objects.create(
+                            nom=f"Photo {i+1} - {propriete.titre}",
+                            type_document='autre',
+                            description=f"Photo de la propriété {propriete.numero_propriete}",
+                            fichier=fichier,
+                            propriete=propriete,
+                            statut='valide',
+                            cree_par=user,
+                            confidentiel=False
+                        )
+                else:
+                    # Si c'est un seul fichier
+                    if hasattr(photos_field, 'read') and hasattr(photos_field, 'name'):
+                        fichier = photos_field
+                    else:
+                        if isinstance(photos_field, bytes):
+                            fichier = ContentFile(photos_field, name=f"photo_{propriete.numero_propriete}.jpg")
+                        else:
+                            fichier = ContentFile(photos_field, name=f"photo_{propriete.numero_propriete}.jpg")
+                    
                     Document.objects.create(
-                        nom=f"Photo {i+1} - {propriete.titre}",
+                        nom=f"Photo - {propriete.titre}",
                         type_document='autre',
                         description=f"Photo de la propriété {propriete.numero_propriete}",
-                        fichier=photo,
+                        fichier=fichier,
                         propriete=propriete,
                         statut='valide',
                         cree_par=user,
                         confidentiel=False
                     )
-            else:
-                # Si c'est un seul fichier
+            except Exception as e:
+                print(f"Erreur lors de la création des photos: {e}")
+                # Créer un document d'erreur
                 Document.objects.create(
-                    nom=f"Photo - {propriete.titre}",
+                    nom=f"Photos - {propriete.titre} (Erreur)",
                     type_document='autre',
-                    description=f"Photo de la propriété {propriete.numero_propriete}",
-                    fichier=photos_field,
+                    description=f"Photos de la propriété {propriete.numero_propriete} - Erreur: {str(e)}",
                     propriete=propriete,
-                    statut='valide',
+                    statut='brouillon',
                     cree_par=user,
                     confidentiel=False
                 )
@@ -538,6 +611,7 @@ class ChargesBailleurForm(forms.ModelForm):
     def _create_documents_for_charge_bailleur(self, charge, user):
         """Crée automatiquement les documents pour une charge bailleur."""
         from .models import Document
+        from django.core.files.base import ContentFile
         
         # Mapping des champs de fichiers vers les types de documents
         document_mapping = {
@@ -549,16 +623,39 @@ class ChargesBailleurForm(forms.ModelForm):
         for field_name, (doc_type, description) in document_mapping.items():
             file_field = self.cleaned_data.get(field_name)
             if file_field:
-                Document.objects.create(
-                    nom=f"{description} - {charge.propriete.titre}",
-                    type_document=doc_type,
-                    description=f"{description} pour la charge {charge.titre}",
-                    fichier=file_field,
-                    propriete=charge.propriete,
-                    statut='valide',
-                    cree_par=user,
-                    confidentiel=False  # Les documents de charge ne sont pas confidentiels
-                )
+                try:
+                    # Vérifier que c'est un objet File valide
+                    if hasattr(file_field, 'read') and hasattr(file_field, 'name'):
+                        fichier = file_field
+                    else:
+                        # Créer un ContentFile pour les bytes
+                        if isinstance(file_field, bytes):
+                            fichier = ContentFile(file_field, name=f"{field_name}_{charge.id}.pdf")
+                        else:
+                            fichier = ContentFile(file_field, name=f"{field_name}_{charge.id}.pdf")
+                    
+                    Document.objects.create(
+                        nom=f"{description} - {charge.propriete.titre}",
+                        type_document=doc_type,
+                        description=f"{description} pour la charge {charge.titre}",
+                        fichier=fichier,
+                        propriete=charge.propriete,
+                        statut='valide',
+                        cree_par=user,
+                        confidentiel=False  # Les documents de charge ne sont pas confidentiels
+                    )
+                except Exception as e:
+                    print(f"Erreur lors de la création du document {field_name}: {e}")
+                    # Créer un document d'erreur
+                    Document.objects.create(
+                        nom=f"{description} - {charge.propriete.titre} (Erreur)",
+                        type_document=doc_type,
+                        description=f"{description} pour la charge {charge.titre} - Erreur: {str(e)}",
+                        propriete=charge.propriete,
+                        statut='brouillon',
+                        cree_par=user,
+                        confidentiel=False
+                    )
 
 
 class ChargesBailleurDeductionForm(forms.Form):
@@ -801,6 +898,7 @@ class BailleurForm(forms.ModelForm):
     def _create_documents_for_bailleur(self, bailleur, user):
         """Crée automatiquement les documents pour un bailleur."""
         from .models import Document
+        from django.core.files.base import ContentFile
         
         # Mapping des champs de fichiers vers les types de documents
         document_mapping = {
@@ -814,16 +912,39 @@ class BailleurForm(forms.ModelForm):
         for field_name, (doc_type, description) in document_mapping.items():
             file_field = self.cleaned_data.get(field_name)
             if file_field:
-                Document.objects.create(
-                    nom=f"{description} - {bailleur.nom} {bailleur.prenom}",
-                    type_document=doc_type,
-                    description=description,
-                    fichier=file_field,
-                    bailleur=bailleur,
-                    statut='valide',
-                    cree_par=user,
-                    confidentiel=True  # Les documents personnels sont confidentiels
-                )
+                try:
+                    # Vérifier que c'est un objet File valide
+                    if hasattr(file_field, 'read') and hasattr(file_field, 'name'):
+                        fichier = file_field
+                    else:
+                        # Créer un ContentFile pour les bytes
+                        if isinstance(file_field, bytes):
+                            fichier = ContentFile(file_field, name=f"{field_name}_{bailleur.id}.pdf")
+                        else:
+                            fichier = ContentFile(file_field, name=f"{field_name}_{bailleur.id}.pdf")
+                    
+                    Document.objects.create(
+                        nom=f"{description} - {bailleur.nom} {bailleur.prenom}",
+                        type_document=doc_type,
+                        description=description,
+                        fichier=fichier,
+                        bailleur=bailleur,
+                        statut='valide',
+                        cree_par=user,
+                        confidentiel=True  # Les documents personnels sont confidentiels
+                    )
+                except Exception as e:
+                    print(f"Erreur lors de la création du document {field_name}: {e}")
+                    # Créer un document d'erreur
+                    Document.objects.create(
+                        nom=f"{description} - {bailleur.nom} {bailleur.prenom} (Erreur)",
+                        type_document=doc_type,
+                        description=f"{description} - Erreur: {str(e)}",
+                        bailleur=bailleur,
+                        statut='brouillon',
+                        cree_par=user,
+                        confidentiel=True
+                    )
 
     def clean_telephone(self):
         """Validation du téléphone."""
@@ -1457,6 +1578,7 @@ class LocataireForm(forms.ModelForm):
     def _create_documents_for_locataire(self, locataire, user):
         """Crée automatiquement les documents pour un locataire."""
         from .models import Document
+        from django.core.files.base import ContentFile
         
         # Mapping des champs de fichiers vers les types de documents
         document_mapping = {
@@ -1470,16 +1592,39 @@ class LocataireForm(forms.ModelForm):
         for field_name, (doc_type, description) in document_mapping.items():
             file_field = self.cleaned_data.get(field_name)
             if file_field:
-                Document.objects.create(
-                    nom=f"{description} - {locataire.nom} {locataire.prenom}",
-                    type_document=doc_type,
-                    description=description,
-                    fichier=file_field,
-                    locataire=locataire,
-                    statut='valide',
-                    cree_par=user,
-                    confidentiel=True  # Les documents personnels sont confidentiels
-                )
+                try:
+                    # Vérifier que c'est un objet File valide
+                    if hasattr(file_field, 'read') and hasattr(file_field, 'name'):
+                        fichier = file_field
+                    else:
+                        # Créer un ContentFile pour les bytes
+                        if isinstance(file_field, bytes):
+                            fichier = ContentFile(file_field, name=f"{field_name}_{locataire.id}.pdf")
+                        else:
+                            fichier = ContentFile(file_field, name=f"{field_name}_{locataire.id}.pdf")
+                    
+                    Document.objects.create(
+                        nom=f"{description} - {locataire.nom} {locataire.prenom}",
+                        type_document=doc_type,
+                        description=description,
+                        fichier=fichier,
+                        locataire=locataire,
+                        statut='valide',
+                        cree_par=user,
+                        confidentiel=True  # Les documents personnels sont confidentiels
+                    )
+                except Exception as e:
+                    print(f"Erreur lors de la création du document {field_name}: {e}")
+                    # Créer un document d'erreur
+                    Document.objects.create(
+                        nom=f"{description} - {locataire.nom} {locataire.prenom} (Erreur)",
+                        type_document=doc_type,
+                        description=f"{description} - Erreur: {str(e)}",
+                        locataire=locataire,
+                        statut='brouillon',
+                        cree_par=user,
+                        confidentiel=True
+                    )
 
 
 class TypeBienForm(forms.ModelForm):

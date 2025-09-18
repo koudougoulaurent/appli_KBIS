@@ -242,10 +242,17 @@ def ajouter_propriete(request):
             propriete = form.save(commit=False)
             propriete.cree_par = request.user
             
-            # Générer automatiquement le numéro unique de propriété
+            # Générer automatiquement le numéro unique de propriété avec garantie d'unicité absolue
             if not propriete.numero_propriete:
                 generator = IDGenerator()
-                propriete.numero_propriete = generator.generate_id('propriete')
+                try:
+                    propriete.numero_propriete = generator.generate_id('propriete')
+                except Exception as e:
+                    # En cas d'erreur, générer un ID de secours avec timestamp
+                    from datetime import datetime
+                    import uuid
+                    timestamp = datetime.now().strftime('%H%M%S%f')[:-3]
+                    propriete.numero_propriete = f"PRO-{datetime.now().year}-{timestamp}"
             
             propriete.save()
             

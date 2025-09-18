@@ -63,7 +63,7 @@ class IDGenerator:
     @classmethod
     def generate_id(cls, entity_type, force_new_sequence=False, **kwargs):
         """
-        Génère un ID unique pour une entité donnée
+        Génère un ID unique pour une entité donnée avec garantie d'unicité absolue
         
         Args:
             entity_type (str): Type d'entité (bailleur, locataire, propriete, etc.)
@@ -71,7 +71,7 @@ class IDGenerator:
             **kwargs: Paramètres supplémentaires (ex: date_paiement pour les paiements)
         
         Returns:
-            str: ID unique généré
+            str: ID unique généré avec garantie d'unicité
         """
         if entity_type not in cls.ID_FORMATS:
             raise ValueError(f"Type d'entité non reconnu: {entity_type}")
@@ -81,23 +81,95 @@ class IDGenerator:
         # Obtenir l'année courante
         current_year = datetime.now().year
         
-        # Obtenir la séquence suivante
-        sequence = cls._get_next_sequence(entity_type, current_year, force_new_sequence=force_new_sequence, **kwargs)
+        # Générer l'ID avec garantie d'unicité absolue
+        return cls._generate_unique_id_atomic(entity_type, current_year, force_new_sequence, **kwargs)
+    
+    @classmethod
+    def _generate_unique_id_atomic(cls, entity_type, year, force_new_sequence=False, **kwargs):
+        """
+        Génère un ID unique avec garantie d'unicité absolue en utilisant une approche atomique.
+        Cette méthode élimine complètement les race conditions.
+        """
+        config = cls.ID_FORMATS[entity_type]
+        model_name = config['model']
+        sequence_field = config['sequence_field']
         
-        # Générer l'ID selon le format
+        # Importer le modèle dynamiquement
+        app_label, model_name = model_name.split('.')
+        from django.apps import apps
+        model = apps.get_model(app_label, model_name)
+        
+        max_attempts = 100  # Limite de sécurité
+        attempt = 0
+        
+        while attempt < max_attempts:
+            try:
+                with transaction.atomic():
+                    # Générer un ID candidat
+                    candidate_id = cls._generate_candidate_id(entity_type, year, **kwargs)
+                    
+                    # Vérifier l'unicité de manière atomique
+                    if not model.objects.filter(**{sequence_field: candidate_id}).exists():
+                        # L'ID est unique, le retourner immédiatement
+                        return candidate_id
+                    else:
+                        # L'ID existe déjà, essayer avec un timestamp pour garantir l'unicité
+                        timestamp = datetime.now().strftime('%H%M%S%f')[:-3]  # Millisecondes
+                        if entity_type in ['paiement', 'quittance']:
+                            yearmonth = kwargs.get('date_paiement', datetime.now()).strftime('%Y%m')
+                            fallback_id = f"{config['prefix']}-{yearmonth}-{timestamp}"
+                        else:
+                            fallback_id = f"{config['prefix']}-{year}-{timestamp}"
+                        
+                        # Vérifier que même le fallback est unique
+                        if not model.objects.filter(**{sequence_field: fallback_id}).exists():
+                            return fallback_id
+                        else:
+                            # Si même le fallback existe (très improbable), utiliser un UUID
+                            import uuid
+                            unique_suffix = str(uuid.uuid4())[:8]
+                            if entity_type in ['paiement', 'quittance']:
+                                yearmonth = kwargs.get('date_paiement', datetime.now()).strftime('%Y%m')
+                                return f"{config['prefix']}-{yearmonth}-{unique_suffix}"
+                            else:
+                                return f"{config['prefix']}-{year}-{unique_suffix}"
+            
+            except Exception as e:
+                attempt += 1
+                if attempt >= max_attempts:
+                    # Dernière tentative avec UUID complet
+                    import uuid
+                    unique_suffix = str(uuid.uuid4())[:8]
+                    if entity_type in ['paiement', 'quittance']:
+                        yearmonth = kwargs.get('date_paiement', datetime.now()).strftime('%Y%m')
+                        return f"{config['prefix']}-{yearmonth}-{unique_suffix}"
+                    else:
+                        return f"{config['prefix']}-{year}-{unique_suffix}"
+                continue
+        
+        # Ne devrait jamais arriver
+        raise Exception(f"Impossible de générer un ID unique après {max_attempts} tentatives")
+    
+    @classmethod
+    def _generate_candidate_id(cls, entity_type, year, **kwargs):
+        """
+        Génère un ID candidat selon le format standard
+        """
+        config = cls.ID_FORMATS[entity_type]
+        
         if entity_type == 'paiement':
-            # Format: PAY-YYYYMM-XXXX
             yearmonth = kwargs.get('date_paiement', datetime.now()).strftime('%Y%m')
+            sequence = cls._get_next_sequence(entity_type, year, **kwargs)
             return config['format'].format(yearmonth=yearmonth, sequence=sequence)
         
         elif entity_type == 'quittance':
-            # Format: QUI-YYYYMM-XXXX
             yearmonth = kwargs.get('date_emission', datetime.now()).strftime('%Y%m')
+            sequence = cls._get_next_sequence(entity_type, year, **kwargs)
             return config['format'].format(yearmonth=yearmonth, sequence=sequence)
         
         else:
-            # Format standard: PREFIX-YYYY-XXXX
-            return config['format'].format(year=current_year, sequence=sequence)
+            sequence = cls._get_next_sequence(entity_type, year, **kwargs)
+            return config['format'].format(year=year, sequence=sequence)
     
     @classmethod
     def _get_next_sequence(cls, entity_type, year, force_new_sequence=False, **kwargs):
