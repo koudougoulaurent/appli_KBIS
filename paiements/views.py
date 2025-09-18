@@ -182,13 +182,8 @@ def paiements_dashboard(request):
     recaps_payes = RecapMensuel.objects.filter(is_deleted=False, statut='paye').count()
     retraits_en_attente = RetraitBailleur.objects.filter(is_deleted=False, statut='en_attente').count()
     
-    # Calcul du montant total à payer (seulement pour les récapitulatifs validés)
-    montant_total_a_payer = RecapMensuel.objects.filter(
-        is_deleted=False, 
-        statut='valide'
-    ).aggregate(
-        total=models.Sum('total_net_a_payer')
-    )['total'] or 0
+    # Suppression du calcul des montants globaux pour la confidentialité
+    retraits_valides = RetraitBailleur.objects.filter(is_deleted=False, statut='valide').count()
     
     # Récapitulatifs récents (5 derniers)
     recaps_recents = RecapMensuel.objects.filter(
@@ -209,7 +204,7 @@ def paiements_dashboard(request):
         'recaps_valides': recaps_valides,
         'recaps_payes': recaps_payes,
         'retraits_en_attente': retraits_en_attente,
-        'montant_total_a_payer': montant_total_a_payer,
+        'retraits_valides': retraits_valides,
         'recaps_recents': recaps_recents,
     }
     
@@ -3034,8 +3029,7 @@ def dashboard_paiements_partiels(request):
         'total_plans': plans_queryset.count(),
         'plans_actifs': plans_queryset.filter(statut='actif').count(),
         'plans_termines': plans_queryset.filter(statut='termine').count(),
-        'montant_total_plans': plans_queryset.aggregate(total=Sum('montant_total'))['total'] or 0,
-        'montant_paye_total': plans_queryset.aggregate(total=Sum('montant_deja_paye'))['total'] or 0,
+        # Suppression des montants globaux pour la confidentialité
         'echelons_en_retard': EchelonPaiement.objects.filter(statut='en_retard').count(),
         'alertes_actives': AlertePaiementPartiel.objects.filter(statut='active').count(),
     }

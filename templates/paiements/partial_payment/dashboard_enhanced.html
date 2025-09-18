@@ -348,32 +348,28 @@
         </div>
         
         <div class="stat-card">
-            <div class="stat-label">Montant Total</div>
-            <div class="stat-value">{{ stats.montant_total_plans|floatformat:0|intcomma }}</div>
-            <div class="stat-change positive">
-                <i class="fas fa-arrow-up me-1"></i>+8% ce mois
+            <div class="stat-label">Échelons en Retard</div>
+            <div class="stat-value">{{ stats.echelons_en_retard|default:0 }}</div>
+            <div class="stat-change {% if stats.echelons_en_retard > 0 %}negative{% else %}positive{% endif %}">
+                <i class="fas fa-{% if stats.echelons_en_retard > 0 %}exclamation-triangle{% else %}check-circle{% endif %} me-1"></i>
+                {% if stats.echelons_en_retard > 0 %}Attention requise{% else %}Tout est à jour{% endif %}
             </div>
         </div>
         
         <div class="stat-card">
-            <div class="stat-label">Montant Payé</div>
-            <div class="stat-value">{{ stats.montant_paye_total|floatformat:0|intcomma }}</div>
-            <div class="stat-change positive">
-                <i class="fas fa-arrow-up me-1"></i>+15% ce mois
+            <div class="stat-label">Alertes Actives</div>
+            <div class="stat-value">{{ stats.alertes_actives|default:0 }}</div>
+            <div class="stat-change {% if stats.alertes_actives > 0 %}negative{% else %}positive{% endif %}">
+                <i class="fas fa-{% if stats.alertes_actives > 0 %}bell{% else %}bell-slash{% endif %} me-1"></i>
+                {% if stats.alertes_actives > 0 %}Vérification nécessaire{% else %}Aucune alerte{% endif %}
             </div>
         </div>
         
         <div class="stat-card">
-            <div class="stat-label">Taux de Réussite</div>
-            <div class="stat-value">
-                {% if stats.montant_total_plans > 0 %}
-                    {% widthratio stats.montant_paye_total stats.montant_total_plans 100 %}%
-                {% else %}
-                    0%
-                {% endif %}
-            </div>
+            <div class="stat-label">Plans Terminés</div>
+            <div class="stat-value">{{ stats.plans_termines|default:0 }}</div>
             <div class="stat-change positive">
-                <i class="fas fa-arrow-up me-1"></i>+5% ce mois
+                <i class="fas fa-check-circle me-1"></i>Réussis ce mois
             </div>
         </div>
     </div>

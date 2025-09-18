@@ -153,9 +153,15 @@ def dashboard_groupe(request, groupe_nom):
         stats_attente = Paiement.objects.filter(statut='en_attente').count()
         
         stats = {
-            'paiements_mois': stats_paiements['total_paiements'] or 0,
-            'retraits_mois': stats_retraits['total_retraits'] or 0,
-            'cautions_cours': stats_cautions['total_cautions'] or 0,
+            'paiements_mois': stats_paiements['count_paiements'] or 0,  # Seulement le nombre, pas le montant
+            'retraits_mois': Retrait.objects.filter(
+                date_demande__month=mois_courant,
+                date_demande__year=annee_courante
+            ).count(),  # Seulement le nombre, pas le montant
+            'cautions_cours': Paiement.objects.filter(
+                type_paiement='depot_garantie',
+                statut='valide'
+            ).count(),  # Seulement le nombre, pas le montant
             'paiements_attente': stats_attente,
         }
         
