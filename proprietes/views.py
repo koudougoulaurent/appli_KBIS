@@ -48,6 +48,19 @@ class ProprieteListView(PrivilegeButtonsMixin, IntelligentListView):
     paginate_by = 20
     page_title = 'Propriétés'
     page_icon = 'home'
+    
+    def get_queryset(self):
+        """Optimisation des requêtes avec select_related et prefetch_related"""
+        return Propriete.objects.filter(is_deleted=False).select_related(
+            'bailleur', 'type_bien', 'cree_par'
+        ).prefetch_related(
+            'unites_locatives', 'pieces'
+        ).only(
+            'id', 'numero_propriete', 'titre', 'surface', 'nombre_pieces', 
+            'nombre_chambres', 'nombre_salles_bain', 'etat', 'disponible',
+            'loyer_actuel', 'charges_locataire', 'date_creation', 'type_gestion',
+            'bailleur__nom', 'bailleur__prenom', 'type_bien__nom'
+        )
     add_url = 'proprietes:ajouter'
     add_text = 'Ajouter une propriété'
     search_fields = ['titre', 'adresse', 'ville', 'bailleur__nom', 'bailleur__prenom']
@@ -120,7 +133,7 @@ liste_proprietes = ProprieteListView.as_view()
 @login_required
 def detail_propriete(request, pk):
     """
-    Vue de détail d'une propriété
+    Vue de détail d'une propriété - Optimisée pour la performance
     """
     # Vérification des permissions : PRIVILEGE, ADMINISTRATION, CONTROLES peuvent voir les détails
     from core.utils import check_group_permissions
@@ -129,15 +142,21 @@ def detail_propriete(request, pk):
         messages.error(request, permissions['message'])
         return redirect('proprietes:liste')
     
-    propriete = get_object_or_404(Propriete, pk=pk)
+    # Optimisation : select_related pour éviter les requêtes N+1
+    propriete = get_object_or_404(
+        Propriete.objects.select_related('bailleur', 'type_bien', 'cree_par'),
+        pk=pk
+    )
     
-    # Récupérer les contrats associés
-    contrats = Contrat.objects.filter(propriete=propriete).order_by('-date_debut')
+    # Optimisation : requêtes limitées et optimisées
+    contrats = Contrat.objects.filter(propriete=propriete).select_related(
+        'locataire', 'propriete'
+    ).order_by('-date_debut')[:5]  # Limité à 5 contrats récents
     
-    # Récupérer les paiements associés
+    # Optimisation : paiements récents seulement
     paiements = Paiement.objects.filter(
         contrat__propriete=propriete
-    ).order_by('-date_paiement')[:10]
+    ).select_related('contrat__locataire').order_by('-date_paiement')[:5]  # Limité à 5 paiements récents
     
     # Récupérer les charges bailleur
     charges_bailleur = ChargesBailleur.objects.filter(
@@ -151,6 +170,56 @@ def detail_propriete(request, pk):
         'charges_bailleur': charges_bailleur,
     }
     return render(request, 'proprietes/detail.html', context)
+
+
+@login_required
+def detail_propriete_ajax(request, pk, section):
+    """
+    Vues AJAX pour le chargement différé des sections de détail
+    """
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
+    if not permissions['allowed']:
+        return JsonResponse({'error': 'Permission refusée'}, status=403)
+    
+    propriete = get_object_or_404(Propriete, pk=pk)
+    
+    if section == 'stats':
+        # Statistiques optimisées
+        context = {
+            'propriete': propriete,
+            'loyer_total': propriete.loyer_actuel or 0,
+            'charges_bailleur': propriete.charges_bailleur.filter(is_deleted=False).aggregate(
+                total=Sum('montant')
+            )['total'] or 0,
+        }
+        return render(request, 'proprietes/partials/stats.html', context)
+    
+    elif section == 'contrats':
+        # Contrats récents optimisés
+        contrats = Contrat.objects.filter(propriete=propriete).select_related(
+            'locataire', 'propriete'
+        ).order_by('-date_debut')[:5]
+        
+        context = {
+            'contrats': contrats,
+            'propriete': propriete
+        }
+        return render(request, 'proprietes/partials/contrats.html', context)
+    
+    elif section == 'paiements':
+        # Paiements récents optimisés
+        paiements = Paiement.objects.filter(
+            contrat__propriete=propriete
+        ).select_related('contrat__locataire').order_by('-date_paiement')[:5]
+        
+        context = {
+            'paiements': paiements,
+            'propriete': propriete
+        }
+        return render(request, 'proprietes/partials/paiements.html', context)
+    
+    return JsonResponse({'error': 'Section non trouvée'}, status=404)
 
 
 @login_required

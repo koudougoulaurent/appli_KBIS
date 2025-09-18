@@ -21,6 +21,7 @@ urlpatterns = [
     path('liste/', views.liste_proprietes, name='liste'),
     path('ajouter/', views.ajouter_propriete, name='ajouter'),
     path('<int:pk>/', views.detail_propriete, name='detail'),
+    path('<int:pk>/ajax/<str:section>/', views.detail_propriete_ajax, name='detail_ajax'),
     path('<int:pk>/modifier/', views.modifier_propriete, name='modifier'),
     
     # URLs pour les charges bailleur
