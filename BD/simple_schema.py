@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
 Générateur de schéma simple pour KBIS INTERNATIONAL
+Génère automatiquement la documentation de la base de données
 """
 import os
 import sys
@@ -9,7 +10,13 @@ from django.conf import settings
 
 # Configuration Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings_minimal')
-django.setup()
+
+try:
+    django.setup()
+except Exception as e:
+    print(f"⚠️ Erreur lors de l'initialisation de Django: {e}")
+    print("💡 Assurez-vous que le projet Django est correctement configuré")
+    sys.exit(1)
 
 from django.apps import apps
 import json
@@ -21,58 +28,76 @@ def generate_simple_schema():
     print("🚀 GÉNÉRATION DU SCHÉMA KBIS INTERNATIONAL")
     print("=" * 50)
     
-    # Analyser les modèles
-    models_data = {}
-    relationships = []
-    
-    for app_config in apps.get_app_configs():
-        if app_config.name.startswith('django.') or app_config.name in ['admin', 'auth', 'contenttypes', 'sessions']:
-            continue
-            
-        app_name = app_config.name
-        print(f"📱 Application: {app_name}")
+    try:
+        # Analyser les modèles
+        models_data = {}
+        relationships = []
+        apps_analyzed = 0
+        models_analyzed = 0
         
-        for model in app_config.get_models():
-            model_name = model.__name__
-            print(f"  📋 Modèle: {model_name}")
+        for app_config in apps.get_app_configs():
+            if app_config.name.startswith('django.') or app_config.name in ['admin', 'auth', 'contenttypes', 'sessions']:
+                continue
+                
+            app_name = app_config.name
+            print(f"📱 Application: {app_name}")
+            apps_analyzed += 1
             
-            # Analyser les champs
-            fields = []
-            for field in model._meta.get_fields():
-                if hasattr(field, 'name'):
-                    field_info = {
-                        'name': field.name,
-                        'type': field.__class__.__name__,
-                        'verbose_name': getattr(field, 'verbose_name', field.name),
-                        'null': getattr(field, 'null', False),
-                        'blank': getattr(field, 'blank', False),
-                        'unique': getattr(field, 'unique', False),
-                        'primary_key': getattr(field, 'primary_key', False),
-                    }
-                    fields.append(field_info)
+            try:
+                for model in app_config.get_models():
+                    model_name = model.__name__
+                    print(f"  📋 Modèle: {model_name}")
+                    models_analyzed += 1
                     
-                    # Analyser les relations
-                    if hasattr(field, 'related_model') and field.related_model:
-                        rel_info = {
-                            'from_model': f"{model._meta.app_label}.{model_name}",
-                            'to_model': f"{field.related_model._meta.app_label}.{field.related_model.__name__}",
-                            'field_name': field.name,
-                            'relation_type': field.__class__.__name__,
-                        }
-                        relationships.append(rel_info)
-            
-            models_data[f"{app_name}.{model_name}"] = {
-                'name': model_name,
-                'app': app_name,
-                'verbose_name': model._meta.verbose_name,
-                'fields': fields,
-            }
-    
-    # Sauvegarder les fichiers
-    save_documentation(models_data, relationships)
-    
-    print("\n🎉 GÉNÉRATION TERMINÉE !")
-    print("📁 Fichiers créés dans BD/:")
+                    # Analyser les champs
+                    fields = []
+                    for field in model._meta.get_fields():
+                        if hasattr(field, 'name'):
+                            field_info = {
+                                'name': field.name,
+                                'type': field.__class__.__name__,
+                                'verbose_name': getattr(field, 'verbose_name', field.name),
+                                'null': getattr(field, 'null', False),
+                                'blank': getattr(field, 'blank', False),
+                                'unique': getattr(field, 'unique', False),
+                                'primary_key': getattr(field, 'primary_key', False),
+                            }
+                            fields.append(field_info)
+                            
+                            # Analyser les relations
+                            if hasattr(field, 'related_model') and field.related_model:
+                                rel_info = {
+                                    'from_model': f"{model._meta.app_label}.{model_name}",
+                                    'to_model': f"{field.related_model._meta.app_label}.{field.related_model.__name__}",
+                                    'field_name': field.name,
+                                    'relation_type': field.__class__.__name__,
+                                }
+                                relationships.append(rel_info)
+                    
+                    models_data[f"{app_name}.{model_name}"] = {
+                        'name': model_name,
+                        'app': app_name,
+                        'verbose_name': model._meta.verbose_name,
+                        'fields': fields,
+                    }
+            except Exception as e:
+                print(f"  ⚠️ Erreur lors de l'analyse du modèle {model_name}: {e}")
+                continue
+        
+        # Sauvegarder les fichiers
+        save_documentation(models_data, relationships)
+        
+        print(f"\n🎉 GÉNÉRATION TERMINÉE !")
+        print(f"📊 Statistiques:")
+        print(f"   - Applications analysées: {apps_analyzed}")
+        print(f"   - Modèles analysés: {models_analyzed}")
+        print(f"   - Relations trouvées: {len(relationships)}")
+        print("📁 Fichiers créés dans BD/:")
+        
+    except Exception as e:
+        print(f"❌ Erreur lors de la génération: {e}")
+        print("💡 Vérifiez la configuration Django et réessayez")
+        sys.exit(1)
 
 
 def save_documentation(models_data, relationships):

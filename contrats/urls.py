@@ -15,7 +15,7 @@ router.register(r'api/cautions', api_views.CautionViewSet, basename='caution')
 urlpatterns = [
     # Autocomplete intelligent désactivé (DAL non compatible)
     # Dashboard principal des contrats
-    path('', views.contrats_dashboard, name='dashboard'),
+    path('', views.contrats_dashboard, name='contrats_dashboard'),
     # API REST
     path('api/', include(router.urls)),
     # URLs pour les pages web (avec aliases pour compatibilité)

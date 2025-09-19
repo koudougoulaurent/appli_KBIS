@@ -23,6 +23,8 @@
     <link href="{% static 'css/proprietes.css' %}" rel="stylesheet">
     <link href="{% static 'css/performance-optimizations.css' %}" rel="stylesheet">
     <link href="{% static 'css/quick-actions-enhanced.css' %}" rel="stylesheet">
+    <!-- Keyboard Search CSS -->
+    <link href="{% static 'css/keyboard-search.css' %}" rel="stylesheet">
     
     <style>
         /* Indicateur de chargement global */
@@ -404,7 +406,7 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.app_name == 'proprietes' %}active{% endif %}" href="{% url 'proprietes:dashboard' %}">
+                            <a class="nav-link {% if request.resolver_match.app_name == 'proprietes' %}active{% endif %}" href="{% url 'proprietes:proprietes_dashboard' %}">
                                 <i class="bi bi-house"></i> 
                                 <span class="d-none d-lg-inline">Propriétés</span>
                                 <span class="d-inline d-lg-none">Propriétés</span>
@@ -446,14 +448,14 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'contrats:dashboard' %}">
+                            <a class="nav-link" href="{% url 'contrats:contrats_dashboard' %}">
                                 <i class="bi bi-file-earmark-text"></i> 
                                 <span class="d-none d-lg-inline">Contrats</span>
                                 <span class="d-inline d-lg-none">Contrats</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'paiements:dashboard' %}">
+                            <a class="nav-link" href="{% url 'paiements:paiements_dashboard' %}">
                                 <i class="bi bi-cash-coin"></i> 
                                 <span class="d-none d-lg-inline">Paiements</span>
                                 <span class="d-inline d-lg-none">Paiements</span>
@@ -537,7 +539,7 @@
                         </li>
                         <li class="nav-item">
                             {% if user.groupe_travail.nom|upper != 'CAISSE' and user.groupe_travail.nom|upper != 'CONTROLES' and user.groupe_travail.nom|upper != 'CONTROLE' %}
-                            <a class="nav-link" href="{% url 'utilisateurs:dashboard' %}">
+                            <a class="nav-link" href="{% url 'utilisateurs:utilisateurs_dashboard' %}">
                                 <i class="bi bi-person-gear"></i> 
                                 <span class="d-none d-lg-inline">Utilisateurs</span>
                                 <span class="d-inline d-lg-none">Users</span>
@@ -792,6 +794,9 @@
             document.head.appendChild(script);
         });
     </script>
+    
+    <!-- Keyboard Search JavaScript -->
+    <script src="{% static 'js/keyboard-search-universal.js' %}"></script>
     
     {% block extra_js %}{% endblock %}
 </body>

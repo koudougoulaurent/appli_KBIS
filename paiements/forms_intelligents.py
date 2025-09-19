@@ -21,10 +21,10 @@ class PaiementFormIntelligent(forms.ModelForm):
         widget=forms.Select(attrs={
             'class': 'form-select form-select-lg',
             'data-toggle': 'select2',
-            'data-placeholder': 'Recherchez un contrat...',
+            'data-placeholder': 'Tapez pour rechercher un contrat...',
             'id': 'contrat-select'
         }),
-        help_text=_("Sélectionnez un contrat pour voir automatiquement toutes les informations")
+        help_text=_("Tapez directement au clavier pour rechercher un contrat")
     )
     
     # Champs automatiquement remplis

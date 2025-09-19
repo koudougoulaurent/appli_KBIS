@@ -15,7 +15,7 @@ app_name = 'proprietes'
 
 urlpatterns = [
     # Dashboard principal des propriétés
-    path('', views.proprietes_dashboard, name='dashboard'),
+    path('', views.proprietes_dashboard, name='proprietes_dashboard'),
     
     # URLs pour les propriétés (avec aliases pour compatibilité)
     path('liste/', views.liste_proprietes, name='liste'),
@@ -37,7 +37,6 @@ urlpatterns = [
     path('bailleurs/', views.liste_bailleurs, name='bailleurs_liste'),
     path('bailleurs/ajouter/', views.ajouter_bailleur, name='ajouter_bailleur'),
     path('bailleurs/<int:pk>/', views.detail_bailleur, name='detail_bailleur'),
-    path('bailleurs/<int:pk>/', views.detail_bailleur, name='bailleur_detail'),  # Alias pour compatibilité
     path('bailleurs/<int:pk>/modifier/', views.modifier_bailleur, name='modifier_bailleur'),
     path('bailleurs/<int:pk>/proprietes/', views.proprietes_bailleur, name='proprietes_bailleur'),
     path('bailleurs/<int:pk>/supprimer/', views.supprimer_bailleur, name='supprimer_bailleur'),
@@ -51,7 +50,6 @@ urlpatterns = [
     path('locataires/<int:pk>/modifier/', views.modifier_locataire, name='modifier_locataire'),
     path('locataires/<int:pk>/supprimer/', views.supprimer_locataire, name='supprimer_locataire'),
     path('locataires/recherche-avancee/', views.recherche_avancee_locataires, name='recherche_avancee_locataires'),
-    path('locataires/supprimer/<int:pk>/', views.supprimer_locataire, name='supprimer_locataire'),
     path('locataires/desactiver/<int:pk>/', views.desactiver_locataire, name='desactiver_locataire'),
     path('locataires/corbeille/', views.corbeille_locataires, name='corbeille_locataires'),
     

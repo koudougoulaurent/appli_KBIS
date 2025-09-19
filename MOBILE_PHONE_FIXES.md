@@ -84,3 +84,4 @@ Un fichier de test a été créé : `templates/test_mobile_phone.html`
 - Font-size de 16px pour éviter le zoom iOS
 - Timeout de 100ms pour le focus sur mobile
 - Masquage des éléments non essentiels sur petits écrans
+

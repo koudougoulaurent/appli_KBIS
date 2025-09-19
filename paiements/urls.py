@@ -29,7 +29,7 @@ urlpatterns = [
     path('api/plans/search/', views_ajax.search_plans, name='api_search_plans'),
     
     # URLs pour les paiements (avec aliases pour compatibilité)
-    path('dashboard/', views.paiements_dashboard, name='dashboard'),
+    path('dashboard/', views.paiements_dashboard, name='paiements_dashboard'),
     path('liste/', views.paiement_list, name='liste'),  # Alias principal pour compatibilité
     path('detail/<int:pk>/', views.paiement_detail, name='detail'),  # Alias principal pour compatibilité
     path('ajouter/', views.ajouter_paiement, name='ajouter'),  # Alias principal pour compatibilité
@@ -129,11 +129,7 @@ urlpatterns = [
     path('recu/<int:recu_id>/', views_retraits.recu_retrait_view, name='recu_view'),
     path('recu/<int:recu_id>/print/', views_retraits.recu_retrait_print, name='recu_print'),
     
-    # Alias pour compatibilité
-    path('retraits_liste/', views_retraits.retrait_list, name='retraits_liste'),
-    path('retrait_ajouter/', views_retraits.retrait_create, name='retrait_ajouter'),
-    path('retrait_detail/<int:pk>/', views_retraits.retrait_detail, name='retrait_detail'),
-    path('retrait_modifier/<int:pk>/', views_retraits.retrait_edit, name='retrait_modifier'),
+    # URLs principales conservées (doublons supprimés)
     
     # URLs pour les paiements de caution et avance
     path('caution-avance/ajouter/', views.paiement_caution_avance_create, name='paiement_caution_avance_create'),

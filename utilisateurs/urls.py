@@ -6,7 +6,7 @@ app_name = 'utilisateurs'
 
 urlpatterns = [
     # Dashboard principal des utilisateurs
-    path('', views.utilisateurs_dashboard, name='dashboard'),
+    path('', views.utilisateurs_dashboard, name='utilisateurs_dashboard'),
     
     # Pages de connexion des groupes
     path('connexion-groupes/', views.connexion_groupes, name='connexion_groupes'),

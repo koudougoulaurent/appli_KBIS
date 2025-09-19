@@ -211,7 +211,7 @@
                 <h6><i class="bi bi-house me-2"></i>Gestion des Propriétés</h6>
             </div>
             <div class="module-actions">
-                <a href="{% url 'proprietes:dashboard' %}" class="quick-action-btn">
+                <a href="{% url 'proprietes:proprietes_dashboard' %}" class="quick-action-btn">
                     <i class="bi bi-speedometer2 me-1"></i>Dashboard
                 </a>
                 <a href="{% url 'proprietes:ajouter' %}" class="quick-action-btn">
@@ -250,7 +250,7 @@
                 <h6><i class="bi bi-file-earmark-text me-2"></i>Gestion des Contrats</h6>
             </div>
             <div class="module-actions">
-                <a href="{% url 'contrats:dashboard' %}" class="quick-action-btn">
+                <a href="{% url 'contrats:contrats_dashboard' %}" class="quick-action-btn">
                     <i class="bi bi-speedometer2 me-1"></i>Dashboard
                 </a>
                 <a href="{% url 'contrats:ajouter' %}" class="quick-action-btn">
@@ -291,7 +291,7 @@
                 <h6><i class="bi bi-cash-coin me-2"></i>Gestion des Paiements</h6>
             </div>
             <div class="module-actions">
-                <a href="{% url 'paiements:dashboard' %}" class="quick-action-btn">
+                <a href="{% url 'paiements:paiements_dashboard' %}" class="quick-action-btn">
                     <i class="bi bi-speedometer2 me-1"></i>Dashboard
                 </a>
                 <a href="{% url 'paiements:ajouter' %}" class="quick-action-btn">
@@ -334,7 +334,7 @@
                 <h6><i class="bi bi-person-gear me-2"></i>Gestion des Utilisateurs</h6>
             </div>
             <div class="module-actions">
-                <a href="{% url 'utilisateurs:dashboard' %}" class="quick-action-btn">
+                <a href="{% url 'utilisateurs:utilisateurs_dashboard' %}" class="quick-action-btn">
                     <i class="bi bi-speedometer2 me-1"></i>Dashboard
                 </a>
                 <a href="{% url 'utilisateurs:liste_utilisateurs' %}" class="quick-action-btn">
@@ -387,12 +387,12 @@
                         </a>
                     </div>
                     <div class="col-md-3">
-                        <a href="{% url 'contrats:dashboard' %}#cautions" class="quick-action-btn warning w-100 text-center">
+                        <a href="{% url 'contrats:contrats_dashboard' %}#cautions" class="quick-action-btn warning w-100 text-center">
                             <i class="bi bi-shield-check me-2"></i>Gestion Cautions
                         </a>
                     </div>
                     <div class="col-md-3">
-                        <a href="{% url 'paiements:dashboard' %}#recaps" class="quick-action-btn info w-100 text-center">
+                        <a href="{% url 'paiements:paiements_dashboard' %}#recaps" class="quick-action-btn info w-100 text-center">
                             <i class="bi bi-calendar-month me-2"></i>Récaps Mensuels
                         </a>
                     </div>

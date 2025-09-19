@@ -36,3 +36,4 @@ def test_mobile_phone(request):
     }
     
     return render(request, 'test_mobile_phone.html', context)
+

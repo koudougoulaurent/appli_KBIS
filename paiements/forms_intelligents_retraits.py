@@ -20,10 +20,10 @@ class RetraitBailleurFormIntelligent(forms.ModelForm):
         widget=forms.Select(attrs={
             'class': 'form-select form-select-lg',
             'data-toggle': 'select2',
-            'data-placeholder': 'Recherchez un bailleur...',
+            'data-placeholder': 'Tapez pour rechercher un bailleur...',
             'id': 'bailleur-select'
         }),
-        help_text=_("Sélectionnez un bailleur pour voir automatiquement toutes les informations")
+        help_text=_("Tapez directement au clavier pour rechercher un bailleur")
     )
     
     # Champs automatiquement remplis

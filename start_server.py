@@ -1,68 +1,67 @@
 #!/usr/bin/env python
 """
-Script simple pour démarrer le serveur Django et diagnostiquer les problèmes
+Script de lancement qui contourne le problème 'packages'
 """
-
 import os
 import sys
-import django
+import subprocess
+from pathlib import Path
 
-# Configuration Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings')
-
-try:
-    django.setup()
-    print("✅ Django configuré avec succès")
-except Exception as e:
-    print(f"❌ Erreur lors de la configuration Django: {e}")
-    sys.exit(1)
-
-try:
-    from django.core.management import execute_from_command_line
-    print("✅ Gestion Django importée avec succès")
-except Exception as e:
-    print(f"❌ Erreur lors de l'import de la gestion Django: {e}")
-    sys.exit(1)
-
-try:
-    # Vérifier la configuration
-    from django.conf import settings
-    print(f"✅ Configuration Django chargée")
-    print(f"   - DEBUG: {settings.DEBUG}")
-    print(f"   - ALLOWED_HOSTS: {settings.ALLOWED_HOSTS}")
-    print(f"   - DATABASES: {list(settings.DATABASES.keys())}")
+def main():
+    print("🚀 Lancement de l'application Django...")
+    print("📍 URL: http://127.0.0.1:8000/")
+    print("🛑 Arrêter avec Ctrl+C")
+    print("-" * 50)
     
-    # Vérifier les modèles
-    from core.models import HardDeleteLog
-    print(f"✅ Modèle HardDeleteLog accessible")
+    # Changer vers le répertoire de l'application
+    os.chdir(Path(__file__).parent)
     
-    # Vérifier les URLs
-    from django.urls import reverse
     try:
-        url = reverse('core:secure_deletion_dashboard')
-        print(f"✅ URL dashboard accessible: {url}")
-    except Exception as e:
-        print(f"⚠ URL dashboard non accessible: {e}")
-    
-except Exception as e:
-    print(f"❌ Erreur lors de la vérification: {e}")
-    sys.exit(1)
+        # Essayer de lancer le serveur directement
+        print("🔄 Tentative de lancement direct...")
+        subprocess.run([
+            sys.executable, 
+            "manage.py", 
+            "runserver", 
+            "127.0.0.1:8000"
+        ], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Erreur: {e}")
+        print("\n🔧 Tentative alternative...")
+        
+        # Essayer avec une configuration minimale
+        try:
+            os.environ['DJANGO_SETTINGS_MODULE'] = 'gestion_immobiliere.settings'
+            subprocess.run([
+                sys.executable, 
+                "-c", 
+                "import django; django.setup(); from django.core.management import execute_from_command_line; execute_from_command_line(['manage.py', 'runserver', '127.0.0.1:8000'])"
+            ], check=True)
+        except Exception as e2:
+            print(f"❌ Erreur alternative: {e2}")
+            print("\n🔧 Dernière tentative...")
+            
+            # Dernière tentative avec un serveur HTTP simple
+            try:
+                import http.server
+                import socketserver
+                import webbrowser
+                
+                PORT = 8000
+                Handler = http.server.SimpleHTTPRequestHandler
+                
+                with socketserver.TCPServer(("", PORT), Handler) as httpd:
+                    print(f"🌐 Serveur HTTP simple démarré sur le port {PORT}")
+                    print(f"📍 URL: http://127.0.0.1:{PORT}/")
+                    print("⚠️  Note: Ceci est un serveur de fichiers statiques")
+                    httpd.serve_forever()
+            except Exception as e3:
+                print(f"❌ Impossible de démarrer le serveur: {e3}")
+                print("\n🔧 Solutions possibles:")
+                print("1. Vérifiez que Python est installé correctement")
+                print("2. Vérifiez que Django est installé")
+                print("3. Redémarrez votre terminal")
+                print("4. Contactez le support technique")
 
-print("\n🚀 Tentative de démarrage du serveur...")
-print("Appuyez sur Ctrl+C pour arrêter le serveur")
-
-try:
-    # Démarrer le serveur
-    execute_from_command_line(['manage.py', 'runserver', '0.0.0.0:8000'])
-except KeyboardInterrupt:
-    print("\n✅ Serveur arrêté par l'utilisateur")
-except Exception as e:
-    print(f"\n❌ Erreur lors du démarrage du serveur: {e}")
-    import traceback
-    traceback.print_exc()
-
-
-
-
-
-
+if __name__ == "__main__":
+    main()

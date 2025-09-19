@@ -1,250 +1,163 @@
-# 🗄️ **CODE SQL COMPLET - GESTIMMOB**
+# 🗄️ GUIDE D'UTILISATION DES FICHIERS SQL - KBIS INTERNATIONAL
 
-## 📋 **Vue d'ensemble**
+Ce guide explique comment utiliser les différents fichiers SQL fournis pour l'application KBIS INTERNATIONAL.
 
-Ce dossier contient tous les scripts SQL nécessaires pour créer et gérer la base de données de l'application GESTIMMOB (Gestion Immobilière).
+## 📁 Fichiers SQL disponibles
 
----
+### 🐬 MySQL
+- **`SCHEMA_MYSQL.sql`** - Schéma complet optimisé pour MySQL 8.0+
+- **Caractéristiques :**
+  - Utilise `AUTO_INCREMENT` pour les clés primaires
+  - Support des contraintes `CHECK` (MySQL 8.0+)
+  - Collation `utf8mb4_unicode_ci`
+  - Moteur `InnoDB` par défaut
 
-## 📁 **Fichiers disponibles**
+### 🐘 PostgreSQL
+- **`SCHEMA_POSTGRESQL.sql`** - Schéma complet optimisé pour PostgreSQL 12+
+- **Caractéristiques :**
+  - Utilise `SERIAL` pour les clés primaires
+  - Support complet des contraintes `CHECK`
+  - Types de données PostgreSQL natifs
+  - Index et contraintes optimisés
 
-### **1. Scripts SQL par SGBD**
+### 🔧 SQL Générique
+- **`SCHEMA_SQL_COMPLET.sql`** - Schéma compatible avec la plupart des SGBD
+- **Caractéristiques :**
+  - Syntaxe SQL standard
+  - Compatible avec SQLite, MySQL, PostgreSQL
+  - Contraintes de base uniquement
 
-| Fichier | SGBD | Description | Taille |
-|---------|------|-------------|---------|
-| `SCHEMA_SQL_COMPLET.sql` | SQLite | Script complet pour SQLite | ~50KB |
-| `SCHEMA_POSTGRESQL.sql` | PostgreSQL | Script optimisé pour PostgreSQL | ~14KB |
-| `SCHEMA_MYSQL.sql` | MySQL | Script optimisé pour MySQL | ~10KB |
+## 🚀 Utilisation
 
-### **2. Scripts Python d'automatisation**
-
-| Fichier | Description | Usage |
-|---------|-------------|-------|
-| `create_database.py` | Création automatique SQLite | `python create_database.py` |
-| `create_sqlite_direct.py` | Création directe SQLite | `python create_sqlite_direct.py` |
-| `generate_sql_other_dbms.py` | Génération multi-SGBD | `python generate_sql_other_dbms.py` |
-
-### **3. Documentation**
-
-| Fichier | Description |
-|---------|-------------|
-| `SCHEMA_BDD_COMPLET.md` | Documentation complète du schéma |
-| `SCHEMA_BDD_GESTIMMOB.pdf` | PDF du schéma (prêt à imprimer) |
-| `README_SQL.md` | Ce fichier de documentation |
-
----
-
-## 🚀 **Utilisation rapide**
-
-### **SQLite (Recommandé pour le développement)**
-```bash
-# Création automatique
-python create_sqlite_direct.py
-
-# Ou création manuelle
-sqlite3 gestimmob_database.sqlite3 < SCHEMA_SQL_COMPLET.sql
-```
-
-### **PostgreSQL (Production)**
+### Installation MySQL
 ```bash
 # Créer la base de données
-createdb gestimmob
+mysql -u root -p -e "CREATE DATABASE gestimmob CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-# Exécuter le script
-psql -d gestimmob -f SCHEMA_POSTGRESQL.sql
+# Importer le schéma
+mysql -u root -p gestimmob < BD/SCHEMA_MYSQL.sql
 ```
 
-### **MySQL (Production)**
+### Installation PostgreSQL
 ```bash
 # Créer la base de données
-mysql -u root -p -e "CREATE DATABASE gestimmob;"
+createdb -U postgres gestimmob
 
-# Exécuter le script
-mysql -u root -p gestimmob < SCHEMA_MYSQL.sql
+# Importer le schéma
+psql -U postgres -d gestimmob -f BD/SCHEMA_POSTGRESQL.sql
 ```
 
----
-
-## 🏗️ **Structure de la base de données**
-
-### **6 modules principaux :**
-
-1. **🔧 CORE** - Configuration et sécurité
-   - `core_configurationentreprise` - Configuration de l'entreprise
-   - `core_niveauacces` - Niveaux d'accès
-   - `core_devise` - Gestion des devises
-
-2. **👥 UTILISATEURS** - Gestion des utilisateurs
-   - `utilisateurs_utilisateur` - Utilisateurs du système
-   - `utilisateurs_groupetravail` - Groupes de travail
-
-3. **🏠 PROPRIETES** - Gestion immobilière
-   - `proprietes_propriete` - Propriétés
-   - `proprietes_bailleur` - Bailleurs
-   - `proprietes_locataire` - Locataires
-   - `proprietes_typebien` - Types de biens
-
-4. **📋 CONTRATS** - Gestion des contrats
-   - `contrats_contrat` - Contrats de location
-   - `contrats_quittance` - Quittances
-   - `contrats_etatlieux` - États des lieux
-
-5. **💰 PAIEMENTS** - Gestion financière
-   - `paiements_paiement` - Paiements
-   - `paiements_chargedeductible` - Charges déductibles
-   - `paiements_recapmensuel` - Récapitulatifs
-
-6. **🔔 NOTIFICATIONS** - Système de notifications
-   - `notifications_notification` - Notifications
-   - `notifications_notificationpreference` - Préférences
-
----
-
-## 📊 **Statistiques du schéma**
-
-- **13 tables principales** créées
-- **40+ relations** ForeignKey
-- **5 relations** ManyToMany
-- **4 relations** OneToOne
-- **15+ contraintes** d'unicité
-- **20+ champs** avec choix prédéfinis
-- **Suppression logique** implémentée
-- **Audit complet** des actions
-
----
-
-## 🔧 **Fonctionnalités avancées**
-
-### **Sécurité**
-- ✅ Niveaux d'accès granulaires
-- ✅ Permissions par type de données
-- ✅ Contrôle d'accès aux montants
-- ✅ Journalisation complète des actions
-
-### **Intégrité**
-- ✅ Contraintes de clés étrangères
-- ✅ Contraintes de validation
-- ✅ Suppression logique
-- ✅ Horodatage automatique
-
-### **Performance**
-- ✅ Index optimisés
-- ✅ Requêtes optimisées
-- ✅ Triggers pour audit
-- ✅ Métadonnées communes
-
----
-
-## 📝 **Données initiales incluses**
-
-### **Niveaux d'accès (5)**
-- Public, Interne, Confidentiel, Secret, Top Secret
-
-### **Types de biens (6)**
-- Appartement, Studio, Maison, Bureau, Commerce, Parking
-
-### **Devises (3)**
-- Euro (EUR), Dollar (USD), Franc CFA (XOF)
-
-### **Utilisateur admin**
-- Username: `admin`
-- Email: `admin@gestimmob.fr`
-
-### **Configuration entreprise**
-- Nom: `GESTIMMOB`
-- Actif par défaut
-
----
-
-## 🛠️ **Maintenance**
-
-### **Sauvegarde**
+### Installation SQLite
 ```bash
-# SQLite
-cp gestimmob_database.sqlite3 backup_$(date +%Y%m%d).sqlite3
+# Créer la base de données
+sqlite3 gestimmob.db < BD/SCHEMA_SQL_COMPLET.sql
+```
+
+## 📊 Structure des tables
+
+### Tables principales
+1. **core_configurationentreprise** - Configuration de l'entreprise
+2. **core_niveauacces** - Niveaux d'accès aux données
+3. **core_auditlog** - Journal d'audit
+4. **utilisateurs_utilisateur** - Utilisateurs du système
+5. **proprietes_propriete** - Propriétés immobilières
+6. **proprietes_bailleur** - Bailleurs
+7. **proprietes_locataire** - Locataires
+8. **contrats_contrat** - Contrats de location
+9. **paiements_paiement** - Paiements
+
+### Relations importantes
+- `contrats_contrat` → `proprietes_propriete` (PROTECT)
+- `contrats_contrat` → `proprietes_locataire` (PROTECT)
+- `paiements_paiement` → `contrats_contrat` (PROTECT)
+
+## ⚠️ Points d'attention
+
+### Suppression logique
+Les tables suivantes utilisent la suppression logique :
+- `utilisateurs_utilisateur` (is_deleted)
+- `proprietes_propriete` (is_deleted)
+- `proprietes_bailleur` (is_deleted)
+- `proprietes_locataire` (is_deleted)
+
+### Contraintes de clés étrangères
+- Toutes les relations critiques utilisent `ON DELETE PROTECT`
+- Les suppressions sont gérées par la suppression logique
+- Les contraintes `CHECK` valident les valeurs des champs
+
+### Index et performance
+- Index automatiques sur les clés primaires
+- Index sur les champs `unique`
+- Index sur les champs de recherche fréquents
+- Index composites pour les requêtes complexes
+
+## 🔧 Maintenance
+
+### Sauvegarde
+```bash
+# MySQL
+mysqldump -u root -p gestimmob > backup_gestimmob.sql
 
 # PostgreSQL
-pg_dump gestimmob > backup_$(date +%Y%m%d).sql
+pg_dump -U postgres gestimmob > backup_gestimmob.sql
 
-# MySQL
-mysqldump -u root -p gestimmob > backup_$(date +%Y%m%d).sql
-```
-
-### **Restauration**
-```bash
 # SQLite
-cp backup_20250910.sqlite3 gestimmob_database.sqlite3
-
-# PostgreSQL
-psql -d gestimmob < backup_20250910.sql
-
-# MySQL
-mysql -u root -p gestimmob < backup_20250910.sql
+cp gestimmob.db backup_gestimmob.db
 ```
 
----
-
-## 🔍 **Vérification de l'intégrité**
-
-### **SQLite**
+### Vérification de l'intégrité
 ```sql
--- Vérifier les tables
-.tables
+-- Vérifier les contraintes de clés étrangères
+SELECT * FROM information_schema.REFERENTIAL_CONSTRAINTS 
+WHERE CONSTRAINT_SCHEMA = 'gestimmob';
 
--- Vérifier les contraintes
-PRAGMA foreign_key_check;
-
--- Compter les enregistrements
-SELECT COUNT(*) FROM core_configurationentreprise;
+-- Vérifier les index
+SHOW INDEX FROM table_name;
 ```
 
-### **PostgreSQL**
-```sql
--- Vérifier les tables
-\dt
+### Mise à jour du schéma
+1. Sauvegarder la base de données
+2. Appliquer les nouvelles migrations
+3. Vérifier l'intégrité des données
+4. Tester les fonctionnalités
 
--- Vérifier les contraintes
-SELECT * FROM information_schema.table_constraints;
+## 📈 Optimisations
 
--- Compter les enregistrements
-SELECT COUNT(*) FROM core_configurationentreprise;
-```
+### MySQL
+- Utiliser `EXPLAIN` pour analyser les requêtes
+- Configurer `innodb_buffer_pool_size`
+- Optimiser les requêtes avec `SELECT_related`
 
-### **MySQL**
-```sql
--- Vérifier les tables
-SHOW TABLES;
+### PostgreSQL
+- Utiliser `EXPLAIN ANALYZE` pour analyser les requêtes
+- Configurer `shared_buffers` et `work_mem`
+- Utiliser les index partiels si nécessaire
 
--- Vérifier les contraintes
-SELECT * FROM information_schema.table_constraints;
+### SQLite
+- Utiliser `PRAGMA optimize` régulièrement
+- Configurer `PRAGMA journal_mode=WAL`
+- Analyser les requêtes avec `EXPLAIN QUERY PLAN`
 
--- Compter les enregistrements
-SELECT COUNT(*) FROM core_configurationentreprise;
-```
+## 🆘 Dépannage
+
+### Problèmes courants
+1. **Erreur de contrainte de clé étrangère**
+   - Vérifier l'ordre d'insertion des données
+   - Utiliser la suppression logique
+
+2. **Erreur de contrainte CHECK**
+   - Vérifier les valeurs des champs
+   - Consulter les choix disponibles
+
+3. **Problème de performance**
+   - Analyser les requêtes lentes
+   - Ajouter des index si nécessaire
+
+### Logs et monitoring
+- Surveiller les logs d'erreur du SGBD
+- Utiliser les outils de monitoring
+- Analyser les requêtes lentes
 
 ---
 
-## 📞 **Support**
-
-Pour toute question ou problème :
-
-1. **Vérifiez** les logs d'erreur
-2. **Consultez** la documentation du schéma
-3. **Testez** avec les scripts fournis
-4. **Contactez** l'équipe de développement
-
----
-
-## 🎯 **Prochaines étapes**
-
-1. ✅ **Créer la base de données** avec les scripts fournis
-2. ✅ **Configurer Django** pour utiliser cette base
-3. ✅ **Exécuter les migrations** Django si nécessaire
-4. ✅ **Créer un superutilisateur** : `python manage.py createsuperuser`
-5. ✅ **Démarrer l'application** : `python manage.py runserver`
-
----
-
-*Documentation générée le : 10/09/2025*  
-*Version de l'application : 1.0*  
-*Base de données : Multi-SGBD compatible*
+*Guide généré pour KBIS INTERNATIONAL - Gestion Immobilière*
