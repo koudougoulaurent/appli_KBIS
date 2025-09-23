@@ -101,9 +101,19 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 if os.environ.get('RENDER'):
     # Configuration de base de données pour Render
     import dj_database_url
-    DATABASES = {
-        'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
-    }
+    DATABASE_URL = os.environ.get('DATABASE_URL')
+    if DATABASE_URL:
+        DATABASES = {
+            'default': dj_database_url.parse(DATABASE_URL)
+        }
+    else:
+        # Fallback vers SQLite si pas de DATABASE_URL
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
     
     # Configuration statique pour Render
     STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')

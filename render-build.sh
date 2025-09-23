@@ -12,12 +12,9 @@ python manage.py collectstatic --noinput
 # Appliquer les migrations
 python manage.py migrate
 
-# Creer un superutilisateur si necessaire
+# Creer la configuration d'entreprise
 python manage.py shell -c "
-from django.contrib.auth import get_user_model
 from core.models import ConfigurationEntreprise
-
-User = get_user_model()
 
 # Creer la configuration d'entreprise si elle n'existe pas
 config, created = ConfigurationEntreprise.objects.get_or_create(
