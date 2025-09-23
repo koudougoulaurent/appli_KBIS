@@ -102,12 +102,24 @@ if os.environ.get('RENDER'):
     # Configuration de base de données pour Render
     import dj_database_url
     DATABASE_URL = os.environ.get('DATABASE_URL')
-    if DATABASE_URL:
-        DATABASES = {
-            'default': dj_database_url.parse(DATABASE_URL)
-        }
+    
+    # Validation de DATABASE_URL
+    if DATABASE_URL and DATABASE_URL.strip() and not DATABASE_URL.startswith("b'") and not DATABASE_URL.startswith("b\""):
+        try:
+            DATABASES = {
+                'default': dj_database_url.parse(DATABASE_URL)
+            }
+        except Exception as e:
+            print(f"Erreur parsing DATABASE_URL: {e}")
+            # Fallback vers SQLite en cas d'erreur
+            DATABASES = {
+                'default': {
+                    'ENGINE': 'django.db.backends.sqlite3',
+                    'NAME': BASE_DIR / 'db.sqlite3',
+                }
+            }
     else:
-        # Fallback vers SQLite si pas de DATABASE_URL
+        # Fallback vers SQLite si pas de DATABASE_URL valide
         DATABASES = {
             'default': {
                 'ENGINE': 'django.db.backends.sqlite3',

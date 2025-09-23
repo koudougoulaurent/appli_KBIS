@@ -6,6 +6,9 @@ echo "Demarrage du build sur Render..."
 # Installer les dependances
 pip install -r requirements.txt
 
+# Forcer l'utilisation de SQLite en supprimant DATABASE_URL invalide
+unset DATABASE_URL
+
 # Collecter les fichiers statiques
 python manage.py collectstatic --noinput
 
