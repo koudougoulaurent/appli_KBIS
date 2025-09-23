@@ -1,5 +1,5 @@
 """
-Système de sécurité adaptatif pour KBIS INTERNATIONAL
+Système de sécurité adaptatif pour KBIS IMMOBILIER
 Sécurité intelligente qui s'adapte à l'utilisateur
 """
 import logging

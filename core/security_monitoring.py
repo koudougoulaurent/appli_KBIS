@@ -1,5 +1,5 @@
 """
-Système de monitoring de sécurité pour KBIS INTERNATIONAL
+Système de monitoring de sécurité pour KBIS IMMOBILIER
 Surveillance en temps réel des menaces
 """
 import logging

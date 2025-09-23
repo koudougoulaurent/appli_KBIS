@@ -20,7 +20,7 @@ from datetime import datetime
 
 def migrate_to_pro():
     """Migrer vers le plan Pro (100 GB)"""
-    print("🚀 MIGRATION VERS PLAN PRO (100 GB) - KBIS INTERNATIONAL")
+    print("🚀 MIGRATION VERS PLAN PRO (100 GB) - KBIS IMMOBILIER")
     print("=" * 60)
     
     try:

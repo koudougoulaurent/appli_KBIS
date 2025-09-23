@@ -1,4 +1,4 @@
-# Configuration Render pour KBIS INTERNATIONAL
+# Configuration Render pour KBIS IMMOBILIER
 services:
   - type: web
     name: appli-kbis

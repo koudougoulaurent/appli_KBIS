@@ -20,7 +20,7 @@ from datetime import datetime
 
 def migrate_to_postgresql():
     """Migrer les données de SQLite vers PostgreSQL"""
-    print("🔄 MIGRATION SQLITE → POSTGRESQL - KBIS INTERNATIONAL")
+    print("🔄 MIGRATION SQLITE → POSTGRESQL - KBIS IMMOBILIER")
     print("=" * 60)
     
     try:

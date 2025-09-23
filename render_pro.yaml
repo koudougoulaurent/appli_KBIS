@@ -1,4 +1,4 @@
-# Configuration Render Pro pour KBIS INTERNATIONAL (100 GB)
+# Configuration Render Pro pour KBIS IMMOBILIER (100 GB)
 services:
   - type: web
     name: appli-kbis-pro

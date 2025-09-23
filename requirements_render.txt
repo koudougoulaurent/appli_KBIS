@@ -1,4 +1,4 @@
-# Requirements pour Render.com - KBIS INTERNATIONAL
+# Requirements pour Render.com - KBIS IMMOBILIER
 # Base de données PostgreSQL permanente
 
 # Django et extensions

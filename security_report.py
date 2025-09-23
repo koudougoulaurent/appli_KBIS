@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Rapport de sécurité pour KBIS INTERNATIONAL
+Rapport de sécurité pour KBIS IMMOBILIER
 Analyse de la configuration de sécurité
 """
 import os
@@ -14,7 +14,7 @@ django.setup()
 
 def generate_security_report():
     """Générer un rapport de sécurité"""
-    print("🔒 RAPPORT DE SÉCURITÉ KBIS INTERNATIONAL")
+    print("🔒 RAPPORT DE SÉCURITÉ KBIS IMMOBILIER")
     print("=" * 60)
     
     # Vérifications de base

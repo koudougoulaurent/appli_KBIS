@@ -1,5 +1,5 @@
 """
-Vues de sécurité pour KBIS INTERNATIONAL
+Vues de sécurité pour KBIS IMMOBILIER
 Tableau de bord de sécurité et monitoring
 """
 from django.shortcuts import render

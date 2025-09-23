@@ -1,8 +1,8 @@
-# 🚀 CONFIGURATION RENDER - KBIS INTERNATIONAL
+# 🚀 CONFIGURATION RENDER - KBIS IMMOBILIER
 
 ## 📋 Résumé de la configuration
 
-Votre application KBIS INTERNATIONAL est maintenant prête pour être déployée sur Render avec une base de données PostgreSQL permanente et une capacité de stockage élevée.
+Votre application KBIS IMMOBILIER est maintenant prête pour être déployée sur Render avec une base de données PostgreSQL permanente et une capacité de stockage élevée.
 
 ## 🗄️ Options de base de données disponibles
 
@@ -186,5 +186,5 @@ EMAIL_HOST_PASSWORD=your-app-password
 
 ---
 
-*Configuration créée pour KBIS INTERNATIONAL - Gestion Immobilière*
+*Configuration créée pour KBIS IMMOBILIER - Gestion Immobilière*
 *Prête pour le déploiement sur Render avec base de données permanente*

@@ -19,7 +19,7 @@ from django.apps import apps
 
 def test_postgresql_connection():
     """Tester la connexion PostgreSQL"""
-    print("🔍 TEST DE CONNEXION POSTGRESQL - KBIS INTERNATIONAL")
+    print("🔍 TEST DE CONNEXION POSTGRESQL - KBIS IMMOBILIER")
     print("=" * 60)
     
     try:

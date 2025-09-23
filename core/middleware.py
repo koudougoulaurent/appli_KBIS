@@ -203,7 +203,7 @@ class SecurityMiddleware(MiddlewareMixin):
         <body>
             <div class="error-container">
                 <div class="company-logo">
-                    <h2 style="color: #2c3e50; margin: 0;">🏢 KBIS INTERNATIONAL</h2>
+                    <h2 style="color: #2c3e50; margin: 0;">🏢 KBIS IMMOBILIER</h2>
                     <p style="color: #7f8c8d; margin: 0.5rem 0 0 0;">Immobilière et Construction</p>
                 </div>
                 <div class="error-icon">⚠️</div>

@@ -206,7 +206,7 @@ def send_storage_alert(alerts):
             message += f"Action: {alert['action']}\n\n"
         
         message += f"Timestamp: {datetime.now().isoformat()}\n"
-        message += "Application: KBIS INTERNATIONAL\n"
+        message += "Application: KBIS IMMOBILIER\n"
         
         # Envoyer l'email (si configuré)
         if hasattr(settings, 'EMAIL_HOST_USER') and settings.EMAIL_HOST_USER:

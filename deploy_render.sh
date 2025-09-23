@@ -1,7 +1,7 @@
 #!/bin/bash
-# Script de déploiement pour Render.com - KBIS INTERNATIONAL
+# Script de déploiement pour Render.com - KBIS IMMOBILIER
 
-echo "🚀 DÉPLOIEMENT KBIS INTERNATIONAL SUR RENDER"
+echo "🚀 DÉPLOIEMENT KBIS IMMOBILIER SUR RENDER"
 echo "=============================================="
 
 # Vérifier que nous sommes dans le bon répertoire

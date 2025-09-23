@@ -1,5 +1,5 @@
 """
-Module de sécurité pour KBIS INTERNATIONAL
+Module de sécurité pour KBIS IMMOBILIER
 Protection des données sensibles immobilières
 """
 import re

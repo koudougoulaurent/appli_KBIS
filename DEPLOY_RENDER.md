@@ -1,4 +1,4 @@
-# 🚀 GUIDE DE DÉPLOIEMENT RENDER - KBIS INTERNATIONAL
+# 🚀 GUIDE DE DÉPLOIEMENT RENDER - KBIS IMMOBILIER
 
 ## 📋 Prérequis
 
@@ -232,4 +232,4 @@ python manage.py migrate --settings=gestion_immobiliere.settings_render
 
 ---
 
-*Guide de déploiement pour KBIS INTERNATIONAL - Gestion Immobilière*
+*Guide de déploiement pour KBIS IMMOBILIER - Gestion Immobilière*

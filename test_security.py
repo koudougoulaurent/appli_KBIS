@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Script de test de sécurité pour KBIS INTERNATIONAL
+Script de test de sécurité pour KBIS IMMOBILIER
 Teste les vulnérabilités et la robustesse du système
 """
 import os
@@ -29,7 +29,7 @@ class SecurityTestSuite:
     
     def run_all_tests(self):
         """Exécuter tous les tests de sécurité"""
-        print("🔒 DÉMARRAGE DES TESTS DE SÉCURITÉ KBIS INTERNATIONAL")
+        print("🔒 DÉMARRAGE DES TESTS DE SÉCURITÉ KBIS IMMOBILIER")
         print("=" * 60)
         
         # Tests de validation

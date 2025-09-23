@@ -1,5 +1,5 @@
 """
-Configuration de sécurité renforcée pour KBIS INTERNATIONAL
+Configuration de sécurité renforcée pour KBIS IMMOBILIER
 Immobilier - Sécurité maximale requise
 """
 import os
