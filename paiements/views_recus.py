@@ -188,15 +188,54 @@ def imprimer_recu_recapitulatif(request, pk):
             }
         )
         
-        # Créer la réponse PDF
-        from xhtml2pdf import pisa
+        # Créer la réponse PDF avec reportlab
+        from reportlab.lib.pagesizes import A4
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib import colors
+        from reportlab.lib.units import inch
         from io import BytesIO
         
         pdf_buffer = BytesIO()
-        pisa_status = pisa.CreatePDF(html_content, dest=pdf_buffer)
+        doc = SimpleDocTemplate(pdf_buffer, pagesize=A4)
+        styles = getSampleStyleSheet()
+        story = []
         
-        if pisa_status.err:
-            raise Exception(f"Erreur lors de la génération du PDF: {pisa_status.err}")
+        # Titre
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            spaceAfter=30,
+            alignment=1  # Centré
+        )
+        story.append(Paragraph(f"Reçu de Récapitulatif - {recu.numero_recu}", title_style))
+        story.append(Spacer(1, 12))
+        
+        # Informations du reçu
+        info_data = [
+            ['Numéro de reçu:', recu.numero_recu],
+            ['Date:', recu.date_creation.strftime('%d/%m/%Y')],
+            ['Montant:', f"{recu.montant:,.0f} FCFA"],
+            ['Type:', recu.get_type_display()],
+        ]
+        
+        info_table = Table(info_data, colWidths=[2*inch, 4*inch])
+        info_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+            ('BACKGROUND', (1, 0), (1, -1), colors.beige),
+        ]))
+        
+        story.append(info_table)
+        story.append(Spacer(1, 20))
+        
+        # Construire le PDF
+        doc.build(story)
         
         # Marquer comme imprimé
         recu.marquer_imprime(request.user)
@@ -262,15 +301,54 @@ def imprimer_recu_recapitulatif_gestimmob(request, pk):
             }
         )
         
-        # Créer la réponse PDF
-        from xhtml2pdf import pisa
+        # Créer la réponse PDF avec reportlab
+        from reportlab.lib.pagesizes import A4
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib import colors
+        from reportlab.lib.units import inch
         from io import BytesIO
         
         pdf_buffer = BytesIO()
-        pisa_status = pisa.CreatePDF(html_content, dest=pdf_buffer)
+        doc = SimpleDocTemplate(pdf_buffer, pagesize=A4)
+        styles = getSampleStyleSheet()
+        story = []
         
-        if pisa_status.err:
-            raise Exception(f"Erreur lors de la génération du PDF: {pisa_status.err}")
+        # Titre
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            spaceAfter=30,
+            alignment=1  # Centré
+        )
+        story.append(Paragraph(f"Reçu de Récapitulatif - {recu.numero_recu}", title_style))
+        story.append(Spacer(1, 12))
+        
+        # Informations du reçu
+        info_data = [
+            ['Numéro de reçu:', recu.numero_recu],
+            ['Date:', recu.date_creation.strftime('%d/%m/%Y')],
+            ['Montant:', f"{recu.montant:,.0f} FCFA"],
+            ['Type:', recu.get_type_display()],
+        ]
+        
+        info_table = Table(info_data, colWidths=[2*inch, 4*inch])
+        info_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+            ('BACKGROUND', (1, 0), (1, -1), colors.beige),
+        ]))
+        
+        story.append(info_table)
+        story.append(Spacer(1, 20))
+        
+        # Construire le PDF
+        doc.build(story)
         
         # Marquer comme imprimé
         recu.marquer_imprime(request.user)

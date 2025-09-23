@@ -4,9 +4,8 @@ django-filter==23.5
 django-autocomplete-light==3.9.1
 django-extensions==3.2.3
 Pillow==10.4.0
-reportlab==3.6.13
+reportlab==4.0.7
 openpyxl==3.1.2
-xhtml2pdf==0.2.11
 django-crispy-forms==2.1
 crispy-bootstrap5==0.7
 django-select2==8.1.0

@@ -2749,31 +2749,76 @@ class RecapitulatifMensuelBailleur(models.Model):
     
     def generer_pdf_recapitulatif(self):
         """Génère le PDF du récapitulatif mensuel."""
-        from django.template.loader import render_to_string
-        from xhtml2pdf import pisa
-        import tempfile
-        import os
+        from reportlab.lib.pagesizes import A4
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib import colors
+        from reportlab.lib.units import inch
         from io import BytesIO
         
         # Récupérer les totaux globaux
         totaux = self.calculer_totaux_globaux()
         
-        # Rendre le template HTML
-        html_content = render_to_string(
-            'paiements/recapitulatifs/recapitulatif_mensuel_pdf.html',
-            {
-                'recapitulatif': self,
-                'totaux': totaux,
-                'date_generation': timezone.now(),
-            }
-        )
-        
-        # Créer le PDF avec xhtml2pdf
+        # Créer le PDF avec reportlab
         pdf_buffer = BytesIO()
-        pisa_status = pisa.CreatePDF(html_content, dest=pdf_buffer)
+        doc = SimpleDocTemplate(pdf_buffer, pagesize=A4)
+        styles = getSampleStyleSheet()
+        story = []
         
-        if pisa_status.err:
-            raise Exception(f"Erreur lors de la génération du PDF: {pisa_status.err}")
+        # Titre
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            spaceAfter=30,
+            alignment=1  # Centré
+        )
+        story.append(Paragraph(f"Récapitulatif Mensuel - {self.bailleur.get_nom_complet()}", title_style))
+        story.append(Spacer(1, 12))
+        
+        # Informations de base
+        info_data = [
+            ['Mois:', self.mois_recap.strftime('%B %Y')],
+            ['Bailleur:', self.bailleur.get_nom_complet()],
+            ['Date de génération:', timezone.now().strftime('%d/%m/%Y %H:%M')],
+        ]
+        
+        info_table = Table(info_data, colWidths=[2*inch, 4*inch])
+        info_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+            ('BACKGROUND', (1, 0), (1, -1), colors.beige),
+        ]))
+        
+        story.append(info_table)
+        story.append(Spacer(1, 20))
+        
+        # Totaux
+        totaux_data = [
+            ['Total des loyers:', f"{totaux.get('total_loyers', 0):,.0f} FCFA"],
+            ['Total des charges:', f"{totaux.get('total_charges', 0):,.0f} FCFA"],
+            ['Total net:', f"{totaux.get('total_net', 0):,.0f} FCFA"],
+        ]
+        
+        totaux_table = Table(totaux_data, colWidths=[3*inch, 3*inch])
+        totaux_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.lightblue),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        
+        story.append(totaux_table)
+        
+        # Construire le PDF
+        doc.build(story)
         
         pdf_content = pdf_buffer.getvalue()
         pdf_buffer.close()

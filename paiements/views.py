@@ -2900,31 +2900,108 @@ def generer_pdf_recap_detaille_paysage(request, recap_id):
         from core.models import ConfigurationEntreprise
         entreprise_config = ConfigurationEntreprise.get_configuration_active()
         
-        # Générer le PDF avec xhtml2pdf
-        from django.template.loader import render_to_string
-        from xhtml2pdf import pisa
+        # Générer le PDF avec reportlab
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib import colors
+        from reportlab.lib.units import inch
         from io import BytesIO
         from django.http import HttpResponse
         
-        html_content = render_to_string(
-            'paiements/recapitulatif_mensuel_detaille_paysage.html',
-            {
-                'recap': recap,
-                'proprietes_details': proprietes_details,
-                'stats_globales': stats_globales,
-                'historique_paiements': historique_paiements,
-                'entreprise_config': entreprise_config,
-                'date_generation': timezone.now(),
-            }
-        )
-        
         # Créer le PDF
         pdf_buffer = BytesIO()
-        pisa_status = pisa.CreatePDF(html_content, dest=pdf_buffer)
+        doc = SimpleDocTemplate(pdf_buffer, pagesize=landscape(A4))
+        styles = getSampleStyleSheet()
+        story = []
         
-        if pisa_status.err:
-            messages.error(request, f"Erreur lors de la génération du PDF: {pisa_status.err}")
-            return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap.id)
+        # Titre
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            spaceAfter=30,
+            alignment=1  # Centré
+        )
+        story.append(Paragraph(f"Récapitulatif Détaillé - {recap.bailleur.get_nom_complet()}", title_style))
+        story.append(Spacer(1, 12))
+        
+        # Informations de base
+        info_data = [
+            ['Mois:', recap.mois_recap.strftime('%B %Y')],
+            ['Bailleur:', recap.bailleur.get_nom_complet()],
+            ['Date de génération:', timezone.now().strftime('%d/%m/%Y %H:%M')],
+        ]
+        
+        info_table = Table(info_data, colWidths=[2*inch, 4*inch])
+        info_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+            ('BACKGROUND', (1, 0), (1, -1), colors.beige),
+        ]))
+        
+        story.append(info_table)
+        story.append(Spacer(1, 20))
+        
+        # Statistiques globales
+        stats_data = [
+            ['Statistiques Globales', ''],
+            ['Total des loyers:', f"{stats_globales['total_loyers']:,.0f} FCFA"],
+            ['Total des charges:', f"{stats_globales['total_charges']:,.0f} FCFA"],
+            ['Total net:', f"{stats_globales['total_net']:,.0f} FCFA"],
+        ]
+        
+        stats_table = Table(stats_data, colWidths=[3*inch, 3*inch])
+        stats_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
+        ]))
+        
+        story.append(stats_table)
+        story.append(Spacer(1, 20))
+        
+        # Détails par propriété
+        if proprietes_details:
+            story.append(Paragraph("Détails par Propriété", styles['Heading2']))
+            story.append(Spacer(1, 12))
+            
+            # En-têtes du tableau
+            headers = ['Propriété', 'Loyer', 'Charges', 'Net']
+            table_data = [headers]
+            
+            for prop_detail in proprietes_details:
+                table_data.append([
+                    prop_detail['propriete'].adresse,
+                    f"{prop_detail['loyer']:,.0f} FCFA",
+                    f"{prop_detail['charges']:,.0f} FCFA",
+                    f"{prop_detail['net']:,.0f} FCFA"
+                ])
+            
+            prop_table = Table(table_data, colWidths=[3*inch, 2*inch, 2*inch, 2*inch])
+            prop_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ]))
+            
+            story.append(prop_table)
+        
+        # Construire le PDF
+        doc.build(story)
         
         # Préparer la réponse
         pdf_content = pdf_buffer.getvalue()
