@@ -6,7 +6,6 @@ openpyxl==3.1.2
 django-crispy-forms==2.1
 crispy-bootstrap5==0.7
 django-select2==8.1.0
-django-humanize==4.8.0
 dj-database-url==2.1.0
 gunicorn==21.2.0
 whitenoise==6.6.0
