@@ -1,10 +1,10 @@
-# DOCUMENTATION COMPLÈTE - KBIS INTERNATIONAL
+# DOCUMENTATION COMPLÈTE - KBIS IMMOBILIER
 
 *Généré le 18/09/2025 à 11:30:00*
 
 ## 📋 Vue d'ensemble
 
-Cette documentation présente la structure complète de la base de données de l'application KBIS INTERNATIONAL - Gestion Immobilière.
+Cette documentation présente la structure complète de la base de données de l'application KBIS IMMOBILIER - Gestion Immobilière.
 
 **Nombre de modèles:** 25+  
 **Nombre de relations:** 50+  

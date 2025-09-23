@@ -1,6 +1,16 @@
-# 📊 SCHÉMA DE BASE DE DONNÉES - KBIS INTERNATIONAL
+# 📊 SCHÉMA DE BASE DE DONNÉES - KBIS IMMOBILIER
 
-Ce dossier contient la documentation complète de la base de données de l'application KBIS INTERNATIONAL - Gestion Immobilière.
+
+## 📝 Mise à jour - 23/09/2025 21:13
+
+### Changements récents :
+- ✅ Suppression de "INTERNATIONAL" du nom de l'entreprise
+- ✅ Remplacement par "KBIS IMMOBILIER" dans toute l'application
+- ✅ Ajout du processeur de contexte entreprise_config
+- ✅ Mise à jour des templates pour utiliser la configuration dynamique
+
+
+Ce dossier contient la documentation complète de la base de données de l'application KBIS IMMOBILIER - Gestion Immobilière.
 
 ## 📁 Fichiers disponibles
 
@@ -143,4 +153,4 @@ Pour toute question sur la structure de la base de données :
 
 ---
 
-*Documentation générée automatiquement pour KBIS INTERNATIONAL - Gestion Immobilière*
+*Documentation générée automatiquement pour KBIS IMMOBILIER - Gestion Immobilière*

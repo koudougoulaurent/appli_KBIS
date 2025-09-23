@@ -1,8 +1,8 @@
-# 📋 RÉSUMÉ DU DOSSIER BD - KBIS INTERNATIONAL
+# 📋 RÉSUMÉ DU DOSSIER BD - KBIS IMMOBILIER
 
 ## 🎯 Vue d'ensemble
 
-Le dossier `BD` contient toute la documentation et les outils nécessaires pour la gestion de la base de données de l'application KBIS INTERNATIONAL - Gestion Immobilière.
+Le dossier `BD` contient toute la documentation et les outils nécessaires pour la gestion de la base de données de l'application KBIS IMMOBILIER - Gestion Immobilière.
 
 ## 📁 Structure des fichiers
 
@@ -179,5 +179,5 @@ python validate_consistency.py
 
 ---
 
-*Résumé généré pour KBIS INTERNATIONAL - Gestion Immobilière*
+*Résumé généré pour KBIS IMMOBILIER - Gestion Immobilière*
 *Dernière mise à jour: {{ date_actuelle }}*
