@@ -18,6 +18,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',  # Pour les filtres de formatage des nombres
+    'rest_framework',  # Pour l'API REST
     'crispy_forms',  # Pour les formulaires stylés
     'crispy_bootstrap5',  # Pour l'intégration Bootstrap 5
     'core',
