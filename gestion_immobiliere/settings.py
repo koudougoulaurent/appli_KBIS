@@ -96,3 +96,26 @@ LOGOUT_REDIRECT_URL = '/utilisateurs/connexion-groupes/'
 # Configuration de Crispy Forms
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+# Configuration pour Render
+if os.environ.get('RENDER'):
+    # Configuration de base de données pour Render
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
+    }
+    
+    # Configuration statique pour Render
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+    STATICFILES_DIRS = [
+        os.path.join(BASE_DIR, 'static'),
+    ]
+    
+    # Configuration de sécurité pour production
+    DEBUG = False
+    ALLOWED_HOSTS = ['appli-kbis.onrender.com', '.onrender.com']
+    
+    # Configuration de session
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
