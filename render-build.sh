@@ -15,30 +15,25 @@ python manage.py collectstatic --noinput
 # Appliquer les migrations
 python manage.py migrate
 
-# Creer la configuration d'entreprise
+# Creer/Mettre a jour la configuration d'entreprise
 python manage.py shell -c "
 from core.models import ConfigurationEntreprise
 
-# Creer la configuration d'entreprise si elle n'existe pas
-config, created = ConfigurationEntreprise.objects.get_or_create(
+# Supprimer toutes les configurations existantes
+ConfigurationEntreprise.objects.all().delete()
+
+# Creer la nouvelle configuration
+config = ConfigurationEntreprise.objects.create(
     nom_entreprise='KBIS IMMOBILIER',
-    defaults={
-        'adresse': '123 Rue de l\\'Immobilier',
-        'ville': 'Ouagadougou',
-        'code_postal': '01 BP 1234',
-        'telephone': '+226 25 12 34 56',
-        'email': 'contact@kbis.bf',
-        'actif': True
-    }
+    adresse='123 Rue de l\\'Immobilier',
+    ville='Ouagadougou',
+    code_postal='01 BP 1234',
+    telephone='+226 25 12 34 56',
+    email='contact@kbis.bf',
+    actif=True
 )
 
-if created:
-    print('Configuration entreprise creee')
-else:
-    print('Configuration entreprise existante mise a jour')
-    config.nom_entreprise = 'KBIS IMMOBILIER'
-    config.save()
-
+print('Configuration entreprise KBIS IMMOBILIER creee avec succes!')
 print('Build termine avec succes!')
 "
 
