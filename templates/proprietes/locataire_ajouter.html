@@ -5,6 +5,46 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/phone_input_widget.css' %}">
+<style>
+    .document-section {
+        background: linear-gradient(135deg, #e2e3e5 0%, #d6d8db 100%);
+        border: 2px dashed #6c757d;
+        border-radius: 15px;
+        padding: 25px;
+        margin: 20px 0;
+        transition: all 0.3s ease;
+    }
+    .document-section:hover {
+        border-color: #5a6268;
+        box-shadow: 0 4px 15px rgba(108, 117, 125, 0.1);
+    }
+    .document-section h5 {
+        color: #6c757d;
+        font-weight: 600;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .file-input-wrapper {
+        position: relative;
+        margin-bottom: 15px;
+    }
+    .file-input-wrapper input[type="file"] {
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px;
+        transition: border-color 0.3s ease;
+    }
+    .file-input-wrapper input[type="file"]:focus {
+        border-color: #6c757d;
+        box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25);
+    }
+    .optional-field {
+        color: #6c757d;
+        font-style: italic;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -29,7 +69,7 @@
 
     <!-- Formulaire principal -->
     <div class="form-container">
-        <form method="POST" class="needs-validation" novalidate>
+        <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
             {% csrf_token %}
             
             <!-- Section Numéro unique -->
@@ -216,6 +256,268 @@
                 </div>
             </div>
 
+            <!-- Section Garant -->
+            <div class="form-section">
+                <h5><i class="bi bi-shield-check"></i> Informations du Garant</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.garant_civilite.id_for_label }}" class="form-label required">
+                                <i class="bi bi-person-badge"></i> {{ form.garant_civilite.label }}
+                            </label>
+                            {{ form.garant_civilite }}
+                            {% if form.garant_civilite.help_text %}
+                                <div class="form-text">{{ form.garant_civilite.help_text }}</div>
+                            {% endif %}
+                            {% if form.garant_civilite.errors %}
+                                <div class="invalid-feedback">{{ form.garant_civilite.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.garant_nom.id_for_label }}" class="form-label required">
+                                <i class="bi bi-person"></i> {{ form.garant_nom.label }}
+                            </label>
+                            {{ form.garant_nom }}
+                            {% if form.garant_nom.help_text %}
+                                <div class="form-text">{{ form.garant_nom.help_text }}</div>
+                            {% endif %}
+                            {% if form.garant_nom.errors %}
+                                <div class="invalid-feedback">{{ form.garant_nom.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.garant_prenom.id_for_label }}" class="form-label required">
+                                <i class="bi bi-person"></i> {{ form.garant_prenom.label }}
+                            </label>
+                            {{ form.garant_prenom }}
+                            {% if form.garant_prenom.help_text %}
+                                <div class="form-text">{{ form.garant_prenom.help_text }}</div>
+                            {% endif %}
+                            {% if form.garant_prenom.errors %}
+                                <div class="invalid-feedback">{{ form.garant_prenom.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.garant_telephone.id_for_label }}" class="form-label required">
+                                <i class="bi bi-telephone"></i> {{ form.garant_telephone.label }}
+                            </label>
+                            {{ form.garant_telephone }}
+                            {% if form.garant_telephone.help_text %}
+                                <div class="form-text">{{ form.garant_telephone.help_text }}</div>
+                            {% endif %}
+                            {% if form.garant_telephone.errors %}
+                                <div class="invalid-feedback">{{ form.garant_telephone.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.garant_email.id_for_label }}" class="form-label">
+                                <i class="bi bi-envelope"></i> {{ form.garant_email.label }}
+                            </label>
+                            {{ form.garant_email }}
+                            {% if form.garant_email.help_text %}
+                                <div class="form-text">{{ form.garant_email.help_text }}</div>
+                            {% endif %}
+                            {% if form.garant_email.errors %}
+                                <div class="invalid-feedback">{{ form.garant_email.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.garant_profession.id_for_label }}" class="form-label">
+                                <i class="bi bi-briefcase"></i> {{ form.garant_profession.label }}
+                            </label>
+                            {{ form.garant_profession }}
+                            {% if form.garant_profession.help_text %}
+                                <div class="form-text">{{ form.garant_profession.help_text }}</div>
+                            {% endif %}
+                            {% if form.garant_profession.errors %}
+                                <div class="invalid-feedback">{{ form.garant_profession.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label for="{{ form.garant_adresse.id_for_label }}" class="form-label optional-field">
+                                <i class="bi bi-geo-alt"></i> {{ form.garant_adresse.label }} <small class="text-muted">(Optionnel)</small>
+                            </label>
+                            {{ form.garant_adresse }}
+                            {% if form.garant_adresse.help_text %}
+                                <div class="form-text">{{ form.garant_adresse.help_text }}</div>
+                            {% endif %}
+                            {% if form.garant_adresse.errors %}
+                                <div class="invalid-feedback">{{ form.garant_adresse.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="{{ form.garant_ville.id_for_label }}" class="form-label required">
+                                <i class="bi bi-building"></i> {{ form.garant_ville.label }}
+                            </label>
+                            {{ form.garant_ville }}
+                            {% if form.garant_ville.help_text %}
+                                <div class="form-text">{{ form.garant_ville.help_text }}</div>
+                            {% endif %}
+                            {% if form.garant_ville.errors %}
+                                <div class="invalid-feedback">{{ form.garant_ville.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="{{ form.garant_code_postal.id_for_label }}" class="form-label">
+                                <i class="bi bi-mailbox"></i> {{ form.garant_code_postal.label }}
+                            </label>
+                            {{ form.garant_code_postal }}
+                            {% if form.garant_code_postal.help_text %}
+                                <div class="form-text">{{ form.garant_code_postal.help_text }}</div>
+                            {% endif %}
+                            {% if form.garant_code_postal.errors %}
+                                <div class="invalid-feedback">{{ form.garant_code_postal.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="{{ form.garant_pays.id_for_label }}" class="form-label required">
+                                <i class="bi bi-globe"></i> {{ form.garant_pays.label }}
+                            </label>
+                            {{ form.garant_pays }}
+                            {% if form.garant_pays.help_text %}
+                                <div class="form-text">{{ form.garant_pays.help_text }}</div>
+                            {% endif %}
+                            {% if form.garant_pays.errors %}
+                                <div class="invalid-feedback">{{ form.garant_pays.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Documents optionnels -->
+            <div class="document-section">
+                <h5><i class="bi bi-file-earmark-plus"></i> Documents optionnels</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="file-input-wrapper">
+                            <div class="form-group">
+                                <label for="{{ form.piece_identite.id_for_label }}" class="form-label optional-field">
+                                    <i class="bi bi-person-badge"></i> {{ form.piece_identite.label }} <small class="text-muted">(Optionnel)</small>
+                                </label>
+                                {{ form.piece_identite }}
+                                {% if form.piece_identite.help_text %}
+                                    <div class="form-text">{{ form.piece_identite.help_text }}</div>
+                                {% endif %}
+                                {% if form.piece_identite.errors %}
+                                    <div class="invalid-feedback">{{ form.piece_identite.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="file-input-wrapper">
+                            <div class="form-group">
+                                <label for="{{ form.justificatif_domicile.id_for_label }}" class="form-label">
+                                    <i class="bi bi-house"></i> {{ form.justificatif_domicile.label }}
+                                </label>
+                                {{ form.justificatif_domicile }}
+                                {% if form.justificatif_domicile.help_text %}
+                                    <div class="form-text">{{ form.justificatif_domicile.help_text }}</div>
+                                {% endif %}
+                                {% if form.justificatif_domicile.errors %}
+                                    <div class="invalid-feedback">{{ form.justificatif_domicile.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="file-input-wrapper">
+                            <div class="form-group">
+                                <label for="{{ form.justificatifs_revenus.id_for_label }}" class="form-label">
+                                    <i class="bi bi-cash-coin"></i> {{ form.justificatifs_revenus.label }}
+                                </label>
+                                {{ form.justificatifs_revenus }}
+                                {% if form.justificatifs_revenus.help_text %}
+                                    <div class="form-text">{{ form.justificatifs_revenus.help_text }}</div>
+                                {% endif %}
+                                {% if form.justificatifs_revenus.errors %}
+                                    <div class="invalid-feedback">{{ form.justificatifs_revenus.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="file-input-wrapper">
+                            <div class="form-group">
+                                <label for="{{ form.avis_imposition.id_for_label }}" class="form-label">
+                                    <i class="bi bi-file-earmark-text"></i> {{ form.avis_imposition.label }}
+                                </label>
+                                {{ form.avis_imposition }}
+                                {% if form.avis_imposition.help_text %}
+                                    <div class="form-text">{{ form.avis_imposition.help_text }}</div>
+                                {% endif %}
+                                {% if form.avis_imposition.errors %}
+                                    <div class="invalid-feedback">{{ form.avis_imposition.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="file-input-wrapper">
+                            <div class="form-group">
+                                <label for="{{ form.garant_caution.id_for_label }}" class="form-label">
+                                    <i class="bi bi-shield-check"></i> {{ form.garant_caution.label }}
+                                </label>
+                                {{ form.garant_caution }}
+                                {% if form.garant_caution.help_text %}
+                                    <div class="form-text">{{ form.garant_caution.help_text }}</div>
+                                {% endif %}
+                                {% if form.garant_caution.errors %}
+                                    <div class="invalid-feedback">{{ form.garant_caution.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="file-input-wrapper">
+                            <div class="form-group">
+                                <label for="{{ form.garant_piece_identite.id_for_label }}" class="form-label">
+                                    <i class="bi bi-person-badge"></i> {{ form.garant_piece_identite.label }}
+                                </label>
+                                {{ form.garant_piece_identite }}
+                                {% if form.garant_piece_identite.help_text %}
+                                    <div class="form-text">{{ form.garant_piece_identite.help_text }}</div>
+                                {% endif %}
+                                {% if form.garant_piece_identite.errors %}
+                                    <div class="invalid-feedback">{{ form.garant_piece_identite.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Section Notes -->
             <div class="form-section">
                 <h5><i class="bi bi-journal-text"></i> Notes</h5>
@@ -266,17 +568,21 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <h6><i class="bi bi-info-circle"></i> Informations obligatoires</h6>
-                        <p class="text-muted">Les champs marqués d'un astérisque (*) sont obligatoires pour créer un locataire. L'adresse, le code postal, la ville, le pays et l'email sont optionnels.</p>
+                        <p class="text-muted">Les champs marqués d'un astérisque (*) sont obligatoires pour créer un locataire.</p>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
+                        <h6><i class="bi bi-shield-check"></i> Garant</h6>
+                        <p class="text-muted">L'adresse du garant est optionnelle. Les autres informations du garant sont obligatoires.</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h6><i class="bi bi-file-earmark-plus"></i> Documents</h6>
+                        <p class="text-muted">Tous les documents sont optionnels, y compris la pièce d'identité.</p>
+                    </div>
+                    <div class="col-md-3">
                         <h6><i class="bi bi-bank"></i> Informations bancaires</h6>
                         <p class="text-muted">Les informations bancaires sont optionnelles mais recommandées pour les paiements.</p>
-                    </div>
-                    <div class="col-md-4">
-                        <h6><i class="bi bi-journal-text"></i> Notes</h6>
-                        <p class="text-muted">Utilisez les notes pour enregistrer des informations importantes sur le locataire.</p>
                     </div>
                 </div>
             </div>
@@ -306,8 +612,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const value = field.value.trim();
         const isRequired = field.hasAttribute('required') || field.classList.contains('required');
         
-        // Champs optionnels (adresse, code postal, ville, pays, email)
-        const optionalFields = ['adresse', 'code_postal', 'ville', 'pays', 'email'];
+        // Champs optionnels (adresse, code postal, ville, pays, email, garant_adresse, piece_identite)
+        const optionalFields = ['adresse', 'code_postal', 'ville', 'pays', 'email', 'garant_adresse', 'piece_identite'];
         const fieldName = field.name || field.id;
         const isOptional = optionalFields.some(opt => fieldName.includes(opt));
         

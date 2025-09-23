@@ -737,9 +737,9 @@ class BailleurForm(forms.ModelForm):
         })
     )
     
-    # Champs pour les documents requis
+    # Champs pour les documents optionnels
     piece_identite = forms.FileField(
-        required=True,
+        required=False,
         label=_('Pièce d\'identité'),
         help_text=_('CNI, passeport ou titre de séjour (PDF, JPG, PNG)'),
         widget=forms.FileInput(attrs={
@@ -749,7 +749,7 @@ class BailleurForm(forms.ModelForm):
     )
     
     justificatif_domicile = forms.FileField(
-        required=True,
+        required=False,
         label=_('Justificatif de domicile'),
         help_text=_('Facture EDF, téléphone, quittance de loyer (PDF, JPG, PNG)'),
         widget=forms.FileInput(attrs={
@@ -759,7 +759,7 @@ class BailleurForm(forms.ModelForm):
     )
     
     attestation_bancaire = forms.FileField(
-        required=True,
+        required=False,
         label=_('Attestation bancaire'),
         help_text=_('RIB ou attestation de compte bancaire (PDF, JPG, PNG)'),
         widget=forms.FileInput(attrs={
@@ -1032,15 +1032,14 @@ class LocataireForm(forms.ModelForm):
         widget=forms.HiddenInput()
     )
     
-    # Champs pour les documents requis
+    # Champs pour les documents optionnels
     piece_identite = forms.FileField(
-        required=True,
+        required=False,
         label=_('Pièce d\'identité'),
-        help_text=_('CNI, passeport ou titre de séjour (PDF, JPG, PNG)'),
+        help_text=_('CNI, passeport ou titre de séjour (PDF, JPG, PNG) - Optionnel'),
         widget=forms.FileInput(attrs={
             'class': 'form-control',
-            'accept': '.pdf,.jpg,.jpeg,.png',
-            'required': 'required'
+            'accept': '.pdf,.jpg,.jpeg,.png'
         })
     )
     
@@ -1176,13 +1175,12 @@ class LocataireForm(forms.ModelForm):
     )
     
     garant_adresse = forms.CharField(
-        required=True,
+        required=False,
         label=_('Adresse du garant'),
         widget=forms.Textarea(attrs={
             'class': 'form-control',
             'rows': 3,
-            'placeholder': 'Adresse complète du garant',
-            'required': 'required'
+            'placeholder': 'Adresse complète du garant (optionnel)'
         })
     )
     

@@ -5,6 +5,42 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/phone_input_widget.css' %}">
+<style>
+    .document-section {
+        background: linear-gradient(135deg, #e2e3e5 0%, #d6d8db 100%);
+        border: 2px dashed #6c757d;
+        border-radius: 15px;
+        padding: 25px;
+        margin: 20px 0;
+        transition: all 0.3s ease;
+    }
+    .document-section:hover {
+        border-color: #5a6268;
+        box-shadow: 0 4px 15px rgba(108, 117, 125, 0.1);
+    }
+    .document-section h5 {
+        color: #6c757d;
+        font-weight: 600;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .file-input-wrapper {
+        position: relative;
+        margin-bottom: 15px;
+    }
+    .file-input-wrapper input[type="file"] {
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px;
+        transition: border-color 0.3s ease;
+    }
+    .file-input-wrapper input[type="file"]:focus {
+        border-color: #6c757d;
+        box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25);
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -29,7 +65,7 @@
 
     <!-- Formulaire principal -->
     <div class="form-container">
-        <form method="POST" class="needs-validation" novalidate>
+        <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
             {% csrf_token %}
             
             <!-- Section Numéro unique -->
@@ -200,6 +236,97 @@
                 </div>
             </div>
 
+            <!-- Section Documents optionnels -->
+            <div class="document-section">
+                <h5><i class="bi bi-file-earmark-plus"></i> Documents optionnels</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="file-input-wrapper">
+                            <div class="form-group">
+                                <label for="{{ form.piece_identite.id_for_label }}" class="form-label">
+                                    <i class="bi bi-person-badge"></i> {{ form.piece_identite.label }}
+                                </label>
+                                {{ form.piece_identite }}
+                                {% if form.piece_identite.help_text %}
+                                    <div class="form-text">{{ form.piece_identite.help_text }}</div>
+                                {% endif %}
+                                {% if form.piece_identite.errors %}
+                                    <div class="invalid-feedback">{{ form.piece_identite.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="file-input-wrapper">
+                            <div class="form-group">
+                                <label for="{{ form.justificatif_domicile.id_for_label }}" class="form-label">
+                                    <i class="bi bi-house"></i> {{ form.justificatif_domicile.label }}
+                                </label>
+                                {{ form.justificatif_domicile }}
+                                {% if form.justificatif_domicile.help_text %}
+                                    <div class="form-text">{{ form.justificatif_domicile.help_text }}</div>
+                                {% endif %}
+                                {% if form.justificatif_domicile.errors %}
+                                    <div class="invalid-feedback">{{ form.justificatif_domicile.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="file-input-wrapper">
+                            <div class="form-group">
+                                <label for="{{ form.attestation_bancaire.id_for_label }}" class="form-label">
+                                    <i class="bi bi-bank"></i> {{ form.attestation_bancaire.label }}
+                                </label>
+                                {{ form.attestation_bancaire }}
+                                {% if form.attestation_bancaire.help_text %}
+                                    <div class="form-text">{{ form.attestation_bancaire.help_text }}</div>
+                                {% endif %}
+                                {% if form.attestation_bancaire.errors %}
+                                    <div class="invalid-feedback">{{ form.attestation_bancaire.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="file-input-wrapper">
+                            <div class="form-group">
+                                <label for="{{ form.declaration_revenus.id_for_label }}" class="form-label">
+                                    <i class="bi bi-file-earmark-text"></i> {{ form.declaration_revenus.label }}
+                                </label>
+                                {{ form.declaration_revenus }}
+                                {% if form.declaration_revenus.help_text %}
+                                    <div class="form-text">{{ form.declaration_revenus.help_text }}</div>
+                                {% endif %}
+                                {% if form.declaration_revenus.errors %}
+                                    <div class="invalid-feedback">{{ form.declaration_revenus.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="file-input-wrapper">
+                            <div class="form-group">
+                                <label for="{{ form.documents_propriete.id_for_label }}" class="form-label">
+                                    <i class="bi bi-file-earmark-check"></i> {{ form.documents_propriete.label }}
+                                </label>
+                                {{ form.documents_propriete }}
+                                {% if form.documents_propriete.help_text %}
+                                    <div class="form-text">{{ form.documents_propriete.help_text }}</div>
+                                {% endif %}
+                                {% if form.documents_propriete.errors %}
+                                    <div class="invalid-feedback">{{ form.documents_propriete.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Section Notes -->
             <div class="form-section">
                 <h5><i class="bi bi-journal-text"></i> Notes</h5>
@@ -257,6 +384,10 @@
                     <div class="col-md-4">
                         <h6><i class="bi bi-bank"></i> Informations bancaires</h6>
                         <p class="text-muted">Les informations bancaires sont optionnelles mais recommandées pour les paiements.</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="bi bi-file-earmark-plus"></i> Documents</h6>
+                        <p class="text-muted">Tous les documents sont optionnels. Vous pouvez les ajouter plus tard si nécessaire.</p>
                     </div>
                     <div class="col-md-4">
                         <h6><i class="bi bi-journal-text"></i> Notes</h6>
