@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
-# Script de build pour Render
+# Script de build pour Render avec PostgreSQL
 
-echo "Demarrage du build sur Render..."
+echo "Demarrage du build sur Render avec PostgreSQL..."
 
 # Installer les dependances
 pip install -r requirements.txt
-
-# Forcer l'utilisation de SQLite en supprimant DATABASE_URL invalide
-unset DATABASE_URL
 
 # Collecter les fichiers statiques
 python manage.py collectstatic --noinput
@@ -34,7 +31,8 @@ config = ConfigurationEntreprise.objects.create(
 )
 
 print('Configuration entreprise KBIS IMMOBILIER creee avec succes!')
+print('Base de donnees PostgreSQL configuree!')
 print('Build termine avec succes!')
 "
 
-echo "Build termine!"
+echo "Build termine avec PostgreSQL!"
