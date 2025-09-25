@@ -6,7 +6,7 @@ echo "🚀 Demarrage du build sur Render..."
 # Installer Django et les dependances essentielles
 echo "📦 Installation des dependances essentielles..."
 pip install Django==4.2.7
-pip install psycopg[binary]==3.1.18
+pip install psycopg[binary]==3.2.10
 pip install dj-database-url==2.1.0
 pip install gunicorn==21.2.0
 pip install whitenoise==6.6.0
