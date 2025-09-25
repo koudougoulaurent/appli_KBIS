@@ -112,8 +112,10 @@ if os.environ.get('RENDER'):
             DATABASES = {
                 'default': dj_database_url.parse(DATABASE_URL)
             }
+            print("✅ Utilisation de PostgreSQL")
         except Exception as e:
-            print(f"Erreur parsing DATABASE_URL: {e}")
+            print(f"❌ Erreur parsing DATABASE_URL: {e}")
+            print("🔄 Fallback vers SQLite")
             # Fallback vers SQLite en cas d'erreur
             DATABASES = {
                 'default': {
@@ -122,6 +124,7 @@ if os.environ.get('RENDER'):
                 }
             }
     else:
+        print("🔄 Pas de DATABASE_URL valide, utilisation de SQLite")
         # Fallback vers SQLite si pas de DATABASE_URL valide
         DATABASES = {
             'default': {
