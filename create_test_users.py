@@ -1,130 +1,161 @@
 #!/usr/bin/env python
 """
-Script pour créer les utilisateurs de test
+Script pour créer des utilisateurs de test
+Utilisez ce script pour ajouter des utilisateurs de test à la base de données
 """
+
 import os
 import sys
 import django
+from pathlib import Path
 
 # Configuration Django
+BASE_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(BASE_DIR))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings')
 django.setup()
 
 from django.contrib.auth import get_user_model
-from utilisateurs.models import GroupeTravail
-from proprietes.models import TypeBien
+from core.models import ConfigurationEntreprise
 
 User = get_user_model()
 
 def create_test_users():
-    """Crée les utilisateurs de test"""
-    print("🚀 Création des utilisateurs de test...")
+    """Crée des utilisateurs de test"""
+    print("👥 Création des utilisateurs de test...")
     
-    # Créer les groupes de travail
-    groupes_data = [
-        {'nom': 'PRIVILEGE', 'description': 'Groupe avec tous les privilèges'},
-        {'nom': 'ADMINISTRATION', 'description': 'Groupe d\'administration'},
-        {'nom': 'CAISSE', 'description': 'Groupe de gestion de la caisse'},
-        {'nom': 'CONTROLES', 'description': 'Groupe de contrôles'},
-    ]
-    
-    for groupe_data in groupes_data:
-        groupe, created = GroupeTravail.objects.get_or_create(
-            nom=groupe_data['nom'],
-            defaults={'description': groupe_data['description'], 'actif': True}
-        )
-        if created:
-            print(f"✅ Groupe {groupe.nom} créé")
-        else:
-            print(f"ℹ️  Groupe {groupe.nom} existe déjà")
-    
-    # Créer les types de biens
-    types_bien = [
-        'Appartement', 'Maison', 'Studio', 'Loft', 'Villa', 'Duplex',
-        'Penthouse', 'Château', 'Ferme', 'Bureau', 'Commerce', 'Entrepôt',
-        'Garage', 'Terrain', 'Autre'
-    ]
-    
-    for type_nom in types_bien:
-        type_bien, created = TypeBien.objects.get_or_create(
-            nom=type_nom,
-            defaults={'actif': True}
-        )
-        if created:
-            print(f"✅ Type {type_nom} créé")
-        else:
-            print(f"ℹ️  Type {type_nom} existe déjà")
-    
-    # Créer les utilisateurs de test
-    users_data = [
+    # Utilisateurs de test
+    test_users = [
         {
             'username': 'admin',
-            'email': 'admin@gestimmob.com',
+            'email': 'admin@kbis.bf',
             'password': 'admin123',
             'first_name': 'Administrateur',
-            'last_name': 'Principal',
-            'groupe': 'PRIVILEGE'
+            'last_name': 'Système',
+            'is_staff': True,
+            'is_superuser': True,
+            'is_active': True
         },
         {
-            'username': 'caisse1',
-            'email': 'caisse@gestimmob.com',
-            'password': 'caisse123',
-            'first_name': 'Caissier',
-            'last_name': 'Principal',
-            'groupe': 'CAISSE'
+            'username': 'gestionnaire',
+            'email': 'gestionnaire@kbis.bf',
+            'password': 'gestion123',
+            'first_name': 'Jean',
+            'last_name': 'Gestionnaire',
+            'is_staff': True,
+            'is_superuser': False,
+            'is_active': True
         },
         {
-            'username': 'controle1',
-            'email': 'controle@gestimmob.com',
-            'password': 'controle123',
-            'first_name': 'Contrôleur',
-            'last_name': 'Principal',
-            'groupe': 'CONTROLES'
+            'username': 'agent',
+            'email': 'agent@kbis.bf',
+            'password': 'agent123',
+            'first_name': 'Marie',
+            'last_name': 'Agent',
+            'is_staff': False,
+            'is_superuser': False,
+            'is_active': True
         },
         {
-            'username': 'admin1',
-            'email': 'admin1@gestimmob.com',
-            'password': 'admin123',
-            'first_name': 'Admin',
-            'last_name': 'Immobilier',
-            'groupe': 'ADMINISTRATION'
+            'username': 'comptable',
+            'email': 'comptable@kbis.bf',
+            'password': 'comptable123',
+            'first_name': 'Paul',
+            'last_name': 'Comptable',
+            'is_staff': False,
+            'is_superuser': False,
+            'is_active': True
         },
         {
-            'username': 'privilege1',
-            'email': 'privilege@gestimmob.com',
-            'password': 'privilege123',
-            'first_name': 'Privilège',
-            'last_name': 'Test',
-            'groupe': 'PRIVILEGE'
+            'username': 'demo',
+            'email': 'demo@kbis.bf',
+            'password': 'demo123',
+            'first_name': 'Demo',
+            'last_name': 'Utilisateur',
+            'is_staff': False,
+            'is_superuser': False,
+            'is_active': True
         }
     ]
     
-    for user_data in users_data:
-        # Supprimer l'ancien utilisateur s'il existe
-        User.objects.filter(username=user_data['username']).delete()
+    created_users = []
+    
+    for user_data in test_users:
+        try:
+            # Vérifier si l'utilisateur existe déjà
+            user, created = User.objects.get_or_create(
+                username=user_data['username'],
+                defaults={
+                    'email': user_data['email'],
+                    'first_name': user_data['first_name'],
+                    'last_name': user_data['last_name'],
+                    'is_staff': user_data['is_staff'],
+                    'is_superuser': user_data['is_superuser'],
+                    'is_active': user_data['is_active']
+                }
+            )
+            
+            if created:
+                user.set_password(user_data['password'])
+                user.save()
+                created_users.append(user)
+                print(f"✅ Utilisateur créé: {user.username} ({user.email})")
+            else:
+                print(f"ℹ️ Utilisateur existe déjà: {user.username}")
+                
+        except Exception as e:
+            print(f"❌ Erreur lors de la création de {user_data['username']}: {e}")
+    
+    return created_users
+
+def create_entreprise_config():
+    """Crée la configuration d'entreprise"""
+    print("🏢 Configuration de l'entreprise...")
+    
+    try:
+        # Supprimer les configurations existantes
+        ConfigurationEntreprise.objects.all().delete()
         
-        # Créer le nouvel utilisateur
-        user = User.objects.create_user(
-            username=user_data['username'],
-            email=user_data['email'],
-            password=user_data['password'],
-            first_name=user_data['first_name'],
-            last_name=user_data['last_name']
+        # Créer la nouvelle configuration
+        config = ConfigurationEntreprise.objects.create(
+            nom_entreprise='KBIS IMMOBILIER',
+            adresse='123 Rue de l\'Immobilier',
+            ville='Ouagadougou',
+            code_postal='01 BP 1234',
+            telephone='+226 25 12 34 56',
+            email='contact@kbis.bf',
+            actif=True
         )
         
-        # Assigner au groupe
-        groupe = GroupeTravail.objects.get(nom=user_data['groupe'])
-        user.groupe_travail = groupe
-        user.save()
+        print(f"✅ Configuration entreprise créée: {config.nom_entreprise}")
+        return config
         
-        print(f"✅ Utilisateur {user.username} créé (Groupe: {groupe.nom})")
-    
-    print("🎉 Tous les utilisateurs de test ont été créés avec succès!")
-    print("\n📋 Informations de connexion:")
-    print("=" * 50)
-    for user_data in users_data:
-        print(f"👤 {user_data['username']} / {user_data['password']} (Groupe: {user_data['groupe']})")
-    print("=" * 50)
+    except Exception as e:
+        print(f"❌ Erreur lors de la création de la configuration: {e}")
+        return None
 
-if __name__ == "__main__":
-    create_test_users()
+def main():
+    """Fonction principale"""
+    print("🚀 Création des utilisateurs de test et configuration...")
+    print("=" * 60)
+    
+    # Créer la configuration d'entreprise
+    config = create_entreprise_config()
+    
+    # Créer les utilisateurs de test
+    users = create_test_users()
+    
+    print("\n" + "=" * 60)
+    print("📋 RÉSUMÉ DES UTILISATEURS DE TEST")
+    print("=" * 60)
+    print("🔑 Identifiants de connexion:")
+    print("   • admin / admin123 (Administrateur)")
+    print("   • gestionnaire / gestion123 (Gestionnaire)")
+    print("   • agent / agent123 (Agent)")
+    print("   • comptable / comptable123 (Comptable)")
+    print("   • demo / demo123 (Démo)")
+    print("\n🌐 URL de connexion: https://appli-kbis.onrender.com/utilisateurs/connexion-groupes/")
+    print("=" * 60)
+
+if __name__ == '__main__':
+    main()
