@@ -3,13 +3,13 @@
 
 echo "🚀 Demarrage du build sur Render avec PostgreSQL..."
 
-# Installer les dependances avec Poetry
-echo "📦 Installation des dependances avec Poetry..."
-poetry install --no-dev
+# Installer les dependances avec pip
+echo "📦 Installation des dependances avec pip..."
+pip install -r requirements.txt
 
-# Activer l'environnement virtuel
-echo "🔧 Activation de l'environnement virtuel..."
-source $(poetry env info --path)/bin/activate
+# Installer gunicorn globalement
+echo "🔧 Installation de gunicorn..."
+pip install gunicorn
 
 # Collecter les fichiers statiques
 echo "📁 Collection des fichiers statiques..."
@@ -47,4 +47,4 @@ python migrate_users_to_production.py
 echo "🎉 Build termine avec PostgreSQL!"
 echo "📋 Commandes disponibles:"
 echo "   - python manage.py runserver"
-echo "   - poetry run gunicorn gestion_immobiliere.wsgi:application"
+echo "   - gunicorn gestion_immobiliere.wsgi:application"
