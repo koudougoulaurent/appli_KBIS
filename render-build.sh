@@ -38,6 +38,6 @@ python manage.py migrate
 
 # Creer/Mettre a jour la configuration d'entreprise et utilisateurs de test
 echo "🏢 Configuration de l'entreprise et utilisateurs de test..."
-python create_test_users.py
+python migrate_users_to_production.py
 
 echo "🎉 Build termine avec PostgreSQL!"
