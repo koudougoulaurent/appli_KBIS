@@ -47,37 +47,86 @@ config = ConfigurationEntreprise.objects.create(
 print('✅ Configuration entreprise creee!')
 "
 
-# Creer les utilisateurs de test
-echo "👥 Creation des utilisateurs de test..."
+# Creer les groupes de travail et utilisateurs de test
+echo "👥 Creation des groupes de travail et utilisateurs de test..."
 python manage.py shell -c "
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
+from utilisateurs.models import GroupeTravail
 User = get_user_model()
+
+# Creer les groupes de travail
+groupes_data = [
+    {
+        'nom': 'PRIVILEGE',
+        'description': 'Groupe avec tous les privilèges',
+        'permissions': {
+            'modules': ['all'],
+            'actions': ['create', 'read', 'update', 'delete']
+        }
+    },
+    {
+        'nom': 'ADMINISTRATION',
+        'description': 'Groupe d\\'administration',
+        'permissions': {
+            'modules': ['utilisateurs', 'proprietes', 'contrats', 'paiements'],
+            'actions': ['create', 'read', 'update']
+        }
+    },
+    {
+        'nom': 'CAISSE',
+        'description': 'Groupe de gestion de la caisse',
+        'permissions': {
+            'modules': ['paiements', 'contrats'],
+            'actions': ['create', 'read', 'update']
+        }
+    },
+    {
+        'nom': 'CONTROLES',
+        'description': 'Groupe de contrôles',
+        'permissions': {
+            'modules': ['proprietes', 'contrats'],
+            'actions': ['read', 'update']
+        }
+    }
+]
+
+groupes = {}
+for group_data in groupes_data:
+    groupe, created = GroupeTravail.objects.get_or_create(
+        nom=group_data['nom'],
+        defaults={
+            'description': group_data['description'],
+            'permissions': group_data['permissions'],
+            'actif': True
+        }
+    )
+    groupes[group_data['nom']] = groupe
+    if created:
+        print(f'✅ Groupe {groupe.nom} cree')
+    else:
+        print(f'ℹ️  Groupe {groupe.nom} existe deja')
 
 # Supprimer les utilisateurs existants
 User.objects.filter(username__in=['admin', 'gestionnaire', 'agent', 'comptable', 'demo']).delete()
 
-# Creer les utilisateurs
-admin = User.objects.create_user('admin', 'admin@kbis.bf', 'admin123', first_name='Admin', last_name='System', is_staff=True, is_superuser=True)
-gestionnaire = User.objects.create_user('gestionnaire', 'gestionnaire@kbis.bf', 'gestion123', first_name='Jean', last_name='Gestionnaire', is_staff=True)
-agent = User.objects.create_user('agent', 'agent@kbis.bf', 'agent123', first_name='Marie', last_name='Agent')
-comptable = User.objects.create_user('comptable', 'comptable@kbis.bf', 'comptable123', first_name='Paul', last_name='Comptable')
-demo = User.objects.create_user('demo', 'demo@kbis.bf', 'demo123', first_name='Demo', last_name='User')
+# Creer les utilisateurs avec groupe_travail
+admin = User.objects.create_user('admin', 'admin@kbis.bf', 'admin123', 
+    first_name='Admin', last_name='System', is_staff=True, is_superuser=True,
+    groupe_travail=groupes['PRIVILEGE'], actif=True)
+gestionnaire = User.objects.create_user('gestionnaire', 'gestionnaire@kbis.bf', 'gestion123', 
+    first_name='Jean', last_name='Gestionnaire', is_staff=True,
+    groupe_travail=groupes['ADMINISTRATION'], actif=True)
+agent = User.objects.create_user('agent', 'agent@kbis.bf', 'agent123', 
+    first_name='Marie', last_name='Agent',
+    groupe_travail=groupes['PRIVILEGE'], actif=True)
+comptable = User.objects.create_user('comptable', 'comptable@kbis.bf', 'comptable123', 
+    first_name='Paul', last_name='Comptable',
+    groupe_travail=groupes['CAISSE'], actif=True)
+demo = User.objects.create_user('demo', 'demo@kbis.bf', 'demo123', 
+    first_name='Demo', last_name='User',
+    groupe_travail=groupes['CONTROLES'], actif=True)
 
-# Creer les groupes
-admin_group, _ = Group.objects.get_or_create(name='ADMINISTRATION')
-privilege_group, _ = Group.objects.get_or_create(name='PRIVILEGE')
-caisse_group, _ = Group.objects.get_or_create(name='CAISSE')
-controle_group, _ = Group.objects.get_or_create(name='CONTROLE')
-
-# Assigner les groupes
-admin.groups.add(admin_group, privilege_group)
-gestionnaire.groups.add(admin_group)
-agent.groups.add(privilege_group)
-comptable.groups.add(caisse_group)
-demo.groups.add(controle_group)
-
-print('✅ Utilisateurs de test crees!')
+print('✅ Utilisateurs de test crees avec groupes de travail!')
 "
 
 echo "🎉 Build termine avec succes!"
