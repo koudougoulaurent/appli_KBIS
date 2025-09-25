@@ -16,6 +16,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings')
 django.setup()
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from core.models import ConfigurationEntreprise
 
 User = get_user_model()
@@ -24,7 +25,7 @@ def create_test_users():
     """Crée des utilisateurs de test"""
     print("👥 Création des utilisateurs de test...")
     
-    # Utilisateurs de test
+    # Utilisateurs de test avec groupes
     test_users = [
         {
             'username': 'admin',
@@ -34,7 +35,8 @@ def create_test_users():
             'last_name': 'Système',
             'is_staff': True,
             'is_superuser': True,
-            'is_active': True
+            'is_active': True,
+            'groups': ['ADMINISTRATION', 'PRIVILEGE']
         },
         {
             'username': 'gestionnaire',
@@ -44,7 +46,8 @@ def create_test_users():
             'last_name': 'Gestionnaire',
             'is_staff': True,
             'is_superuser': False,
-            'is_active': True
+            'is_active': True,
+            'groups': ['ADMINISTRATION']
         },
         {
             'username': 'agent',
@@ -54,7 +57,8 @@ def create_test_users():
             'last_name': 'Agent',
             'is_staff': False,
             'is_superuser': False,
-            'is_active': True
+            'is_active': True,
+            'groups': ['PRIVILEGE']
         },
         {
             'username': 'comptable',
@@ -64,7 +68,8 @@ def create_test_users():
             'last_name': 'Comptable',
             'is_staff': False,
             'is_superuser': False,
-            'is_active': True
+            'is_active': True,
+            'groups': ['CAISSE']
         },
         {
             'username': 'demo',
@@ -74,7 +79,8 @@ def create_test_users():
             'last_name': 'Utilisateur',
             'is_staff': False,
             'is_superuser': False,
-            'is_active': True
+            'is_active': True,
+            'groups': ['CONTROLE']
         }
     ]
     
@@ -102,6 +108,16 @@ def create_test_users():
                 print(f"✅ Utilisateur créé: {user.username} ({user.email})")
             else:
                 print(f"ℹ️ Utilisateur existe déjà: {user.username}")
+            
+            # Assigner les groupes
+            if 'groups' in user_data:
+                for group_name in user_data['groups']:
+                    try:
+                        group, created = Group.objects.get_or_create(name=group_name)
+                        user.groups.add(group)
+                        print(f"   📋 Groupe assigné: {group_name}")
+                    except Exception as e:
+                        print(f"   ❌ Erreur assignation groupe {group_name}: {e}")
                 
         except Exception as e:
             print(f"❌ Erreur lors de la création de {user_data['username']}: {e}")
@@ -149,11 +165,11 @@ def main():
     print("📋 RÉSUMÉ DES UTILISATEURS DE TEST")
     print("=" * 60)
     print("🔑 Identifiants de connexion:")
-    print("   • admin / admin123 (Administrateur)")
-    print("   • gestionnaire / gestion123 (Gestionnaire)")
-    print("   • agent / agent123 (Agent)")
-    print("   • comptable / comptable123 (Comptable)")
-    print("   • demo / demo123 (Démo)")
+    print("   • admin / admin123 (Administrateur) - Groupes: ADMINISTRATION, PRIVILEGE")
+    print("   • gestionnaire / gestion123 (Gestionnaire) - Groupe: ADMINISTRATION")
+    print("   • agent / agent123 (Agent) - Groupe: PRIVILEGE")
+    print("   • comptable / comptable123 (Comptable) - Groupe: CAISSE")
+    print("   • demo / demo123 (Démo) - Groupe: CONTROLE")
     print("\n🌐 URL de connexion: https://appli-kbis.onrender.com/utilisateurs/connexion-groupes/")
     print("=" * 60)
 
