@@ -7,6 +7,12 @@ echo "🚀 Demarrage du build sur Render avec PostgreSQL..."
 echo "📦 Installation des dependances..."
 pip install -r requirements.txt
 
+# Activer l'environnement virtuel si nécessaire
+if [ -d ".venv" ]; then
+    echo "🔧 Activation de l'environnement virtuel..."
+    source .venv/bin/activate
+fi
+
 # Collecter les fichiers statiques
 echo "📁 Collection des fichiers statiques..."
 python manage.py collectstatic --noinput
@@ -41,3 +47,6 @@ echo "🏢 Configuration de l'entreprise et utilisateurs de test..."
 python migrate_users_to_production.py
 
 echo "🎉 Build termine avec PostgreSQL!"
+echo "📋 Commandes disponibles:"
+echo "   - python manage.py runserver"
+echo "   - .venv/bin/gunicorn gestion_immobiliere.wsgi:application"
