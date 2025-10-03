@@ -1,0 +1,121 @@
+{% extends 'pdf/base_document_kbis.html' %}
+
+{% load static %}
+
+
+{% block extra_css %}
+{% include "includes/recu_header.html" %}
+{% endblock %}
+{% block title %}Reçu de Paiement - KBIS{% endblock %}
+
+{% block content %}
+<div class="document-title">
+    <h1>REÇU DE PAIEMENT</h1>
+    <p>N° {{ recu.numero_recu|default:"N/A" }}</p>
+</div>
+
+<div class="info-section">
+    <h3>Informations du Paiement</h3>
+    <div class="info-row">
+        <span class="info-label">Date :</span>
+        <span class="info-value">{{ recu.date_paiement|date:"d/m/Y" }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Montant :</span>
+        <span class="info-value">{{ recu.montant|floatformat:0 }} FCFA</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Mode de paiement :</span>
+        <span class="info-value">{{ recu.get_mode_paiement_display }}</span>
+    </div>
+    {% if recu.reference_paiement %}
+    <div class="info-row">
+        <span class="info-label">Référence :</span>
+        <span class="info-value">{{ recu.reference_paiement }}</span>
+    </div>
+    {% endif %}
+</div>
+
+{% if recu.bailleur %}
+<div class="info-section">
+    <h3>Informations du Bailleur</h3>
+    <div class="info-row">
+        <span class="info-label">Nom :</span>
+        <span class="info-value">{{ recu.bailleur.nom }} {{ recu.bailleur.prenom }}</span>
+    </div>
+    {% if recu.bailleur.telephone %}
+    <div class="info-row">
+        <span class="info-label">Téléphone :</span>
+        <span class="info-value">{{ recu.bailleur.telephone }}</span>
+    </div>
+    {% endif %}
+    {% if recu.bailleur.email %}
+    <div class="info-row">
+        <span class="info-label">Email :</span>
+        <span class="info-value">{{ recu.bailleur.email }}</span>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if recu.contrat %}
+<div class="info-section">
+    <h3>Informations du Contrat</h3>
+    <div class="info-row">
+        <span class="info-label">Numéro :</span>
+        <span class="info-value">{{ recu.contrat.numero_contrat }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Propriété :</span>
+        <span class="info-value">{{ recu.contrat.propriete.nom }}</span>
+    </div>
+    {% if recu.contrat.propriete.adresse %}
+    <div class="info-row">
+        <span class="info-label">Adresse :</span>
+        <span class="info-value">{{ recu.contrat.propriete.adresse }}</span>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if recu.description %}
+<div class="info-section">
+    <h3>Description</h3>
+    <p>{{ recu.description }}</p>
+</div>
+{% endif %}
+
+<div class="info-section">
+    <h3>Détails du Paiement</h3>
+    <table class="document-table">
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th>Période</th>
+                <th>Montant</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{ recu.get_type_paiement_display }}</td>
+                <td>
+                    {% if recu.date_debut and recu.date_fin %}
+                        Du {{ recu.date_debut|date:"d/m/Y" }} au {{ recu.date_fin|date:"d/m/Y" }}
+                    {% else %}
+                        {{ recu.date_paiement|date:"F Y" }}
+                    {% endif %}
+                </td>
+                <td>{{ recu.montant|floatformat:0 }} FCFA</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="info-section">
+    <h3>Signature</h3>
+    <div style="margin-top: 30px;">
+        <p><strong>Reçu par :</strong> {{ recu.recu_par|default:"Agent KBIS" }}</p>
+        <p><strong>Date :</strong> {{ recu.date_paiement|date:"d/m/Y à H:i" }}</p>
+    </div>
+</div>
+{% endblock %}

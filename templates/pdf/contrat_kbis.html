@@ -1,0 +1,181 @@
+{% extends 'pdf/base_document_kbis.html' %}
+
+{% load static %}
+
+
+{% block extra_css %}
+{% include "includes/recu_header.html" %}
+{% endblock %}
+{% block title %}Contrat de Location - KBIS{% endblock %}
+
+{% block content %}
+<div class="document-title">
+    <h1>CONTRAT DE LOCATION</h1>
+    <p>N° {{ contrat.numero_contrat|default:"N/A" }}</p>
+</div>
+
+<div class="info-section">
+    <h3>Informations du Contrat</h3>
+    <div class="info-row">
+        <span class="info-label">Numéro :</span>
+        <span class="info-value">{{ contrat.numero_contrat }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Date de début :</span>
+        <span class="info-value">{{ contrat.date_debut|date:"d/m/Y" }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Date de fin :</span>
+        <span class="info-value">{{ contrat.date_fin|date:"d/m/Y" }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Loyer mensuel :</span>
+        <span class="info-value">{{ contrat.loyer_mensuel|floatformat:0 }} FCFA</span>
+    </div>
+    {% if contrat.caution %}
+    <div class="info-row">
+        <span class="info-label">Caution :</span>
+        <span class="info-value">{{ contrat.caution|floatformat:0 }} FCFA</span>
+    </div>
+    {% endif %}
+</div>
+
+{% if contrat.bailleur %}
+<div class="info-section">
+    <h3>Informations du Bailleur</h3>
+    <div class="info-row">
+        <span class="info-label">Nom complet :</span>
+        <span class="info-value">{{ contrat.bailleur.nom }} {{ contrat.bailleur.prenom }}</span>
+    </div>
+    {% if contrat.bailleur.telephone %}
+    <div class="info-row">
+        <span class="info-label">Téléphone :</span>
+        <span class="info-value">{{ contrat.bailleur.telephone }}</span>
+    </div>
+    {% endif %}
+    {% if contrat.bailleur.email %}
+    <div class="info-row">
+        <span class="info-label">Email :</span>
+        <span class="info-value">{{ contrat.bailleur.email }}</span>
+    </div>
+    {% endif %}
+    {% if contrat.bailleur.adresse %}
+    <div class="info-row">
+        <span class="info-label">Adresse :</span>
+        <span class="info-value">{{ contrat.bailleur.adresse }}</span>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if contrat.locataire %}
+<div class="info-section">
+    <h3>Informations du Locataire</h3>
+    <div class="info-row">
+        <span class="info-label">Nom complet :</span>
+        <span class="info-value">{{ contrat.locataire.nom }} {{ contrat.locataire.prenom }}</span>
+    </div>
+    {% if contrat.locataire.telephone %}
+    <div class="info-row">
+        <span class="info-label">Téléphone :</span>
+        <span class="info-value">{{ contrat.locataire.telephone }}</span>
+    </div>
+    {% endif %}
+    {% if contrat.locataire.email %}
+    <div class="info-row">
+        <span class="info-label">Email :</span>
+        <span class="info-value">{{ contrat.locataire.email }}</span>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if contrat.propriete %}
+<div class="info-section">
+    <h3>Informations de la Propriété</h3>
+    <div class="info-row">
+        <span class="info-label">Nom :</span>
+        <span class="info-value">{{ contrat.propriete.nom }}</span>
+    </div>
+    {% if contrat.propriete.adresse %}
+    <div class="info-row">
+        <span class="info-label">Adresse :</span>
+        <span class="info-value">{{ contrat.propriete.adresse }}</span>
+    </div>
+    {% endif %}
+    {% if contrat.propriete.type_propriete %}
+    <div class="info-row">
+        <span class="info-label">Type :</span>
+        <span class="info-value">{{ contrat.propriete.type_propriete }}</span>
+    </div>
+    {% endif %}
+    {% if contrat.propriete.surface %}
+    <div class="info-row">
+        <span class="info-label">Surface :</span>
+        <span class="info-value">{{ contrat.propriete.surface }} m²</span>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if contrat.conditions_particulieres %}
+<div class="info-section">
+    <h3>Conditions Particulières</h3>
+    <p>{{ contrat.conditions_particulieres|linebreaks }}</p>
+</div>
+{% endif %}
+
+<div class="info-section">
+    <h3>Clauses du Contrat</h3>
+    <table class="document-table">
+        <thead>
+            <tr>
+                <th>Clause</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Durée</strong></td>
+                <td>Du {{ contrat.date_debut|date:"d/m/Y" }} au {{ contrat.date_fin|date:"d/m/Y" }}</td>
+            </tr>
+            <tr>
+                <td><strong>Loyer</strong></td>
+                <td>{{ contrat.loyer_mensuel|floatformat:0 }} FCFA par mois</td>
+            </tr>
+            <tr>
+                <td><strong>Caution</strong></td>
+                <td>{{ contrat.caution|floatformat:0 }} FCFA</td>
+            </tr>
+            <tr>
+                <td><strong>État</strong></td>
+                <td>{{ contrat.get_statut_display }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="info-section">
+    <h3>Signatures</h3>
+    <div style="margin-top: 40px; display: flex; justify-content: space-between;">
+        <div style="text-align: center; width: 45%;">
+            <p><strong>Bailleur</strong></p>
+            <p>{{ contrat.bailleur.nom }} {{ contrat.bailleur.prenom }}</p>
+            <p style="margin-top: 30px;">_________________________</p>
+            <p>Signature</p>
+        </div>
+        <div style="text-align: center; width: 45%;">
+            <p><strong>Locataire</strong></p>
+            <p>{{ contrat.locataire.nom }} {{ contrat.locataire.prenom }}</p>
+            <p style="margin-top: 30px;">_________________________</p>
+            <p>Signature</p>
+        </div>
+    </div>
+    <div style="margin-top: 20px; text-align: center;">
+        <p><strong>KBIS Immobilier & Construction</strong></p>
+        <p>Agent immobilier</p>
+        <p style="margin-top: 20px;">_________________________</p>
+        <p>Signature</p>
+    </div>
+</div>
+{% endblock %}

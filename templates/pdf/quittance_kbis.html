@@ -1,0 +1,153 @@
+{% extends 'pdf/base_document_kbis.html' %}
+
+{% load static %}
+
+
+{% block extra_css %}
+{% include "includes/recu_header.html" %}
+{% endblock %}
+{% block title %}Quittance de Loyer - KBIS{% endblock %}
+
+{% block content %}
+<div class="document-title">
+    <h1>QUITTANCE DE LOYER</h1>
+    <p>N° {{ quittance.numero_quittance|default:"N/A" }}</p>
+</div>
+
+<div class="info-section">
+    <h3>Informations de la Quittance</h3>
+    <div class="info-row">
+        <span class="info-label">Numéro :</span>
+        <span class="info-value">{{ quittance.numero_quittance }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Période :</span>
+        <span class="info-value">{{ quittance.mois|date:"F Y" }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Montant :</span>
+        <span class="info-value">{{ quittance.montant|floatformat:0 }} FCFA</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Date de paiement :</span>
+        <span class="info-value">{{ quittance.date_paiement|date:"d/m/Y" }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Mode de paiement :</span>
+        <span class="info-value">{{ quittance.get_mode_paiement_display }}</span>
+    </div>
+</div>
+
+{% if quittance.contrat %}
+<div class="info-section">
+    <h3>Informations du Contrat</h3>
+    <div class="info-row">
+        <span class="info-label">Numéro :</span>
+        <span class="info-value">{{ quittance.contrat.numero_contrat }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Loyer mensuel :</span>
+        <span class="info-value">{{ quittance.contrat.loyer_mensuel|floatformat:0 }} FCFA</span>
+    </div>
+</div>
+{% endif %}
+
+{% if quittance.contrat.bailleur %}
+<div class="info-section">
+    <h3>Informations du Bailleur</h3>
+    <div class="info-row">
+        <span class="info-label">Nom :</span>
+        <span class="info-value">{{ quittance.contrat.bailleur.nom }} {{ quittance.contrat.bailleur.prenom }}</span>
+    </div>
+    {% if quittance.contrat.bailleur.telephone %}
+    <div class="info-row">
+        <span class="info-label">Téléphone :</span>
+        <span class="info-value">{{ quittance.contrat.bailleur.telephone }}</span>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if quittance.contrat.locataire %}
+<div class="info-section">
+    <h3>Informations du Locataire</h3>
+    <div class="info-row">
+        <span class="info-label">Nom :</span>
+        <span class="info-value">{{ quittance.contrat.locataire.nom }} {{ quittance.contrat.locataire.prenom }}</span>
+    </div>
+    {% if quittance.contrat.locataire.telephone %}
+    <div class="info-row">
+        <span class="info-label">Téléphone :</span>
+        <span class="info-value">{{ quittance.contrat.locataire.telephone }}</span>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if quittance.contrat.propriete %}
+<div class="info-section">
+    <h3>Informations de la Propriété</h3>
+    <div class="info-row">
+        <span class="info-label">Nom :</span>
+        <span class="info-value">{{ quittance.contrat.propriete.nom }}</span>
+    </div>
+    {% if quittance.contrat.propriete.adresse %}
+    <div class="info-row">
+        <span class="info-label">Adresse :</span>
+        <span class="info-value">{{ quittance.contrat.propriete.adresse }}</span>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="info-section">
+    <h3>Détails du Paiement</h3>
+    <table class="document-table">
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th>Période</th>
+                <th>Montant</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Loyer mensuel</td>
+                <td>{{ quittance.mois|date:"F Y" }}</td>
+                <td>{{ quittance.montant|floatformat:0 }} FCFA</td>
+            </tr>
+            {% if quittance.charges %}
+            <tr>
+                <td>Charges</td>
+                <td>{{ quittance.mois|date:"F Y" }}</td>
+                <td>{{ quittance.charges|floatformat:0 }} FCFA</td>
+            </tr>
+            {% endif %}
+            <tr style="background: #f0f9ff; font-weight: bold;">
+                <td><strong>TOTAL</strong></td>
+                <td><strong>{{ quittance.mois|date:"F Y" }}</strong></td>
+                <td><strong>{{ quittance.montant|floatformat:0 }} FCFA</strong></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+{% if quittance.observations %}
+<div class="info-section">
+    <h3>Observations</h3>
+    <p>{{ quittance.observations|linebreaks }}</p>
+</div>
+{% endif %}
+
+<div class="info-section">
+    <h3>Signature</h3>
+    <div style="margin-top: 30px;">
+        <p><strong>Quittance établie par :</strong> {{ quittance.etabli_par|default:"Agent KBIS" }}</p>
+        <p><strong>Date :</strong> {{ quittance.date_creation|date:"d/m/Y à H:i" }}</p>
+        <p style="margin-top: 20px; text-align: center;">
+            <strong>KBIS Immobilier & Construction</strong><br>
+            Agent immobilier
+        </p>
+    </div>
+</div>
+{% endblock %}
