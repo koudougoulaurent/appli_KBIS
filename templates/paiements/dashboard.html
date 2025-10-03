@@ -870,8 +870,8 @@ function showQuickPaymentModal() {
         const modal = new bootstrap.Modal(modals[0]);
         modal.show();
     } else {
-        // Si aucun modal n'est disponible, rediriger vers la liste des bailleurs
-        window.location.href = "{% url 'paiements:liste_bailleurs_recaps' %}";
+        // Si aucun modal n'est disponible, rediriger vers la liste des paiements
+        window.location.href = "{% url 'paiements:liste' %}";
     }
 }
 </script>
