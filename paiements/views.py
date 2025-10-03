@@ -31,7 +31,7 @@ from .models import TableauBordFinancier
 from .forms import TableauBordFinancierForm
 from .models import RetraitBailleur
 from .models import RecapMensuel
-from .services import generate_recap_pdf, generate_recap_pdf_batch
+# from .services import generate_recap_pdf, generate_recap_pdf_batch  # Fonctions non disponibles
 try:
     from devises.models import Devise
 except ImportError:
@@ -105,7 +105,7 @@ from .models import TableauBordFinancier
 from .forms import TableauBordFinancierForm
 from .models import RetraitBailleur
 from .models import RecapMensuel
-from .services import generate_recap_pdf, generate_recap_pdf_batch
+# from .services import generate_recap_pdf, generate_recap_pdf_batch  # Fonctions non disponibles
 try:
     from devises.models import Devise
 except ImportError:
@@ -2323,10 +2323,10 @@ def generer_pdf_recap_mensuel(request, recap_id):
             return redirect('paiements:tableau_bord_recaps_mensuels')
         
         # Générer le PDF avec ReportLab (seule option disponible sur Windows)
-        pdf_response = generate_recap_pdf(recap, method='reportlab')
+        # pdf_response = generate_recap_pdf(recap, method='reportlab')  # Fonction non disponible
         
-        messages.success(request, f"PDF généré avec succès pour {recap.bailleur.get_nom_complet()} - {recap.mois_recap.strftime('%B %Y')}")
-        return pdf_response
+        messages.error(request, "Génération PDF temporairement désactivée - Fonction en cours de développement")
+        return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
         
     except Exception as e:
         messages.error(request, f"Erreur lors de la génération du PDF: {str(e)}")
@@ -2342,10 +2342,10 @@ def generer_pdf_recaps_lot(request):
             
             try:
                 # Générer le PDF en lot avec ReportLab (seule option disponible sur Windows)
-                pdf_response = generate_recap_pdf_batch(mois_recap, method='reportlab')
+                # pdf_response = generate_recap_pdf_batch(mois_recap, method='reportlab')  # Fonction non disponible
                 
-                messages.success(request, f"PDFs générés avec succès pour {mois_recap.strftime('%B %Y')}")
-                return pdf_response
+                messages.error(request, "Génération PDF en lot temporairement désactivée - Fonction en cours de développement")
+                return redirect('paiements:generer_pdf_lot')
                 
             except Exception as e:
                 messages.error(request, f"Erreur lors de la génération des PDFs en lot: {str(e)}")

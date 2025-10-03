@@ -250,7 +250,7 @@
                 <h6><i class="bi bi-file-earmark-text me-2"></i>Gestion des Contrats</h6>
             </div>
             <div class="module-actions">
-                <a href="{% url 'contrats:contrats_dashboard' %}" class="quick-action-btn">
+                <a href="{% url 'contrats:dashboard' %}" class="quick-action-btn">
                     <i class="bi bi-speedometer2 me-1"></i>Dashboard
                 </a>
                 <a href="{% url 'contrats:ajouter' %}" class="quick-action-btn">
@@ -334,7 +334,7 @@
                 <h6><i class="bi bi-person-gear me-2"></i>Gestion des Utilisateurs</h6>
             </div>
             <div class="module-actions">
-                <a href="{% url 'utilisateurs:utilisateurs_dashboard' %}" class="quick-action-btn">
+                <a href="{% url 'utilisateurs:dashboard' %}" class="quick-action-btn">
                     <i class="bi bi-speedometer2 me-1"></i>Dashboard
                 </a>
                 <a href="{% url 'utilisateurs:liste_utilisateurs' %}" class="quick-action-btn">
@@ -387,7 +387,7 @@
                         </a>
                     </div>
                     <div class="col-md-3">
-                        <a href="{% url 'contrats:contrats_dashboard' %}#cautions" class="quick-action-btn warning w-100 text-center">
+                        <a href="{% url 'contrats:dashboard' %}#cautions" class="quick-action-btn warning w-100 text-center">
                             <i class="bi bi-shield-check me-2"></i>Gestion Cautions
                         </a>
                     </div>
@@ -442,17 +442,17 @@
                     <div class="col-md-4">
                         <h6 class="text-info mb-3"><i class="bi bi-cash-coin me-2"></i>Paiements</h6>
                         <div class="d-grid gap-2">
-                            <a href="{% url 'paiements:charge_deductible_list' %}" class="btn btn-outline-info btn-sm">
-                                <i class="bi bi-calculator me-1"></i>Charges Déductibles
+                            <a href="{% url 'paiements:liste_charges_avancees' %}" class="btn btn-outline-info btn-sm">
+                                <i class="bi bi-calculator me-1"></i>Charges Avancées
                             </a>
-                            <a href="{% url 'paiements:tableau_bord_list' %}" class="btn btn-outline-info btn-sm">
-                                <i class="bi bi-bar-chart me-1"></i>Tableaux de Bord
+                            <a href="{% url 'paiements:dashboard' %}" class="btn btn-outline-info btn-sm">
+                                <i class="bi bi-bar-chart me-1"></i>Dashboard Paiements
                             </a>
                             <a href="{% url 'paiements:quittance_list' %}" class="btn btn-outline-info btn-sm">
                                 <i class="bi bi-receipt me-1"></i>Quittances
                             </a>
-                            <a href="{% url 'paiements:generer_quittances_kbis_tous_paiements' %}" class="btn btn-outline-success btn-sm">
-                                <i class="bi bi-file-earmark-text me-1"></i>Quittances KBIS
+                            <a href="{% url 'paiements:liste' %}" class="btn btn-outline-success btn-sm">
+                                <i class="bi bi-file-earmark-text me-1"></i>Liste Paiements
                             </a>
                         </div>
                     </div>

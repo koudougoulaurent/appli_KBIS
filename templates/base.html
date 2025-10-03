@@ -456,7 +456,7 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'contrats:contrats_dashboard' %}">
+                            <a class="nav-link" href="{% url 'contrats:dashboard' %}">
                                 <i class="bi bi-file-earmark-text"></i> 
                                 <span class="d-none d-lg-inline">Contrats</span>
                                 <span class="d-inline d-lg-none">Contrats</span>
@@ -547,7 +547,7 @@
                         </li>
                         <li class="nav-item">
                             {% if user.groupe_travail.nom|upper != 'CAISSE' and user.groupe_travail.nom|upper != 'CONTROLES' and user.groupe_travail.nom|upper != 'CONTROLE' %}
-                            <a class="nav-link" href="{% url 'utilisateurs:utilisateurs_dashboard' %}">
+                            <a class="nav-link" href="{% url 'utilisateurs:dashboard' %}">
                                 <i class="bi bi-person-gear"></i> 
                                 <span class="d-none d-lg-inline">Utilisateurs</span>
                                 <span class="d-inline d-lg-none">Users</span>
