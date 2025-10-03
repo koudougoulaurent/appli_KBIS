@@ -361,17 +361,17 @@
                             Gestion des Récapitulatifs
                         </h6>
                         <div class="d-grid gap-2">
-                            <a href="{% url 'paiements:liste_bailleurs_recaps' %}" class="btn btn-outline-primary">
+                            <a href="{% url 'paiements:liste' %}" class="btn btn-outline-primary">
                                 <i class="bi bi-list-ul me-2"></i>
-                                Liste des Bailleurs avec Récaps
+                                Liste des Paiements
                             </a>
-                            <a href="{% url 'paiements:tableau_bord_recaps_mensuels' %}" class="btn btn-outline-info">
+                            <a href="{% url 'paiements:dashboard' %}" class="btn btn-outline-info">
                                 <i class="bi bi-graph-up me-2"></i>
-                                Tableau de Bord Récaps
+                                Tableau de Bord Paiements
                             </a>
-                            <a href="{% url 'paiements:creer_recap_mensuel_auto' %}" class="btn btn-outline-success">
+                            <a href="{% url 'paiements:ajouter' %}" class="btn btn-outline-success">
                                 <i class="bi bi-plus-circle me-2"></i>
-                                Créer un Récapitulatif
+                                Ajouter un Paiement
                             </a>
                         </div>
                     </div>
