@@ -432,8 +432,8 @@
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="{% url 'paiements:detail_recap_mensuel_auto' recap_id=recap.id %}" 
-                                           class="btn btn-outline-primary btn-sm" title="Voir le détail">
+                                        <a href="{% url 'paiements:liste' %}" 
+                                           class="btn btn-outline-primary btn-sm" title="Voir les paiements">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                         {% if recap.statut == 'valide' and recap.total_net_a_payer > 0 %}
