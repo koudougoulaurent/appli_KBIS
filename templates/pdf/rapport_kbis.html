@@ -2,152 +2,200 @@
 
 {% load static %}
 
-
-{% block extra_css %}
-{% include "includes/recu_header.html" %}
-{% endblock %}
 {% block title %}{{ rapport.titre|default:"Rapport" }} - KBIS{% endblock %}
 
 {% block content %}
-<div class="document-title">
-    <h1>{{ rapport.titre|default:"RAPPORT"|upper }}</h1>
-    <p>Période : {{ rapport.date_debut|date:"d/m/Y" }} - {{ rapport.date_fin|date:"d/m/Y" }}</p>
-</div>
+<div class="rapport-container">
+    <!-- Titre du rapport -->
+    <div class="rapport-title">
+        <h1>{{ rapport.titre|default:"RAPPORT"|upper }}</h1>
+        <div class="rapport-period">Période : {{ rapport.date_debut|date:"d/m/Y" }} - {{ rapport.date_fin|date:"d/m/Y" }}</div>
+    </div>
 
-<div class="info-section">
-    <h3>Informations du Rapport</h3>
-    <div class="info-row">
-        <span class="info-label">Type :</span>
-        <span class="info-value">{{ rapport.type_rapport|default:"Général" }}</span>
+    <!-- Informations du rapport -->
+    <div class="info-section">
+        <h3>INFORMATIONS DU RAPPORT</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="label">Type :</span>
+                <span class="value">{{ rapport.type_rapport|default:"Général" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Période :</span>
+                <span class="value">Du {{ rapport.date_debut|date:"d/m/Y" }} au {{ rapport.date_fin|date:"d/m/Y" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Généré le :</span>
+                <span class="value">{{ rapport.date_creation|date:"d/m/Y à H:i" }}</span>
+            </div>
+        </div>
     </div>
-    <div class="info-row">
-        <span class="info-label">Période :</span>
-        <span class="info-value">Du {{ rapport.date_debut|date:"d/m/Y" }} au {{ rapport.date_fin|date:"d/m/Y" }}</span>
+
+    <!-- Résumé du rapport -->
+    <div class="info-section">
+        <h3>RÉSUMÉ</h3>
+        <div class="summary-content">
+            {{ rapport.resume|default:"Aucun résumé disponible."|linebreaks }}
+        </div>
     </div>
-    <div class="info-row">
-        <span class="info-label">Généré le :</span>
-        <span class="info-value">{{ rapport.date_creation|date:"d/m/Y à H:i" }}</span>
+
+    <!-- Détails du rapport -->
+    <div class="info-section">
+        <h3>DÉTAILS</h3>
+        <div class="details-content">
+            {{ rapport.contenu|default:"Aucun contenu disponible."|linebreaks }}
+        </div>
     </div>
-    {% if rapport.generateur %}
-    <div class="info-row">
-        <span class="info-label">Généré par :</span>
-        <span class="info-value">{{ rapport.generateur }}</span>
+
+    <!-- Statistiques si disponibles -->
+    {% if rapport.statistiques %}
+    <div class="info-section">
+        <h3>STATISTIQUES</h3>
+        <div class="stats-grid">
+            {% for stat in rapport.statistiques %}
+            <div class="stat-item">
+                <span class="stat-label">{{ stat.label }} :</span>
+                <span class="stat-value">{{ stat.value }}</span>
+            </div>
+            {% endfor %}
+        </div>
     </div>
     {% endif %}
-</div>
 
-{% if rapport.resume %}
-<div class="info-section">
-    <h3>Résumé Exécutif</h3>
-    <p>{{ rapport.resume|linebreaks }}</p>
-</div>
-{% endif %}
-
-{% if rapport.statistiques %}
-<div class="info-section">
-    <h3>Statistiques</h3>
-    <table class="document-table">
-        <thead>
-            <tr>
-                <th>Indicateur</th>
-                <th>Valeur</th>
-                <th>Évolution</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for stat in rapport.statistiques %}
-            <tr>
-                <td>{{ stat.nom }}</td>
-                <td>{{ stat.valeur }}</td>
-                <td>
-                    {% if stat.evolution > 0 %}
-                        <span style="color: green;">+{{ stat.evolution }}%</span>
-                    {% elif stat.evolution < 0 %}
-                        <span style="color: red;">{{ stat.evolution }}%</span>
-                    {% else %}
-                        <span style="color: gray;">0%</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% endif %}
-
-{% if rapport.donnees %}
-<div class="info-section">
-    <h3>Données Détaillées</h3>
-    <table class="document-table">
-        <thead>
-            <tr>
-                {% for colonne in rapport.colonnes %}
-                <th>{{ colonne }}</th>
-                {% endfor %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for ligne in rapport.donnees %}
-            <tr>
-                {% for cellule in ligne %}
-                <td>{{ cellule }}</td>
-                {% endfor %}
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% endif %}
-
-{% if rapport.graphiques %}
-<div class="info-section">
-    <h3>Graphiques</h3>
-    {% for graphique in rapport.graphiques %}
-    <div style="margin: 20px 0; text-align: center;">
-        <h4>{{ graphique.titre }}</h4>
-        {% if graphique.image %}
-        <img src="{{ graphique.image.url }}" alt="{{ graphique.titre }}" style="max-width: 100%; height: auto;">
-        {% else %}
-        <p style="color: #6b7280; font-style: italic;">Graphique non disponible</p>
-        {% endif %}
+    <!-- Zone de signature -->
+    <div class="signature-area">
+        <div class="signature-box">
+            <p>Cachet et signature de l'Agence KBIS</p>
+        </div>
     </div>
-    {% endfor %}
 </div>
-{% endif %}
 
-{% if rapport.analyses %}
-<div class="info-section">
-    <h3>Analyses</h3>
-    {% for analyse in rapport.analyses %}
-    <div style="margin: 15px 0; padding: 10px; background: #f8fafc; border-radius: 5px;">
-        <h4 style="color: #1e3c72; margin-bottom: 8px;">{{ analyse.titre }}</h4>
-        <p>{{ analyse.contenu|linebreaks }}</p>
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
+<style>
+.rapport-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background: white;
+}
 
-{% if rapport.recommandations %}
-<div class="info-section">
-    <h3>Recommandations</h3>
-    <ol style="margin-left: 20px;">
-        {% for recommandation in rapport.recommandations %}
-        <li style="margin: 8px 0;">{{ recommandation }}</li>
-        {% endfor %}
-    </ol>
-</div>
-{% endif %}
+.rapport-title {
+    text-align: center;
+    margin-bottom: 40px;
+    border-bottom: 3px solid #1e3c72;
+    padding-bottom: 20px;
+}
 
-{% if rapport.conclusion %}
-<div class="info-section">
-    <h3>Conclusion</h3>
-    <p>{{ rapport.conclusion|linebreaks }}</p>
-</div>
-{% endif %}
+.rapport-title h1 {
+    color: #1e3c72;
+    font-size: 28px;
+    font-weight: bold;
+    margin: 0 0 10px 0;
+}
 
-<div class="info-section">
-    <h3>Annexes</h3>
-    <p>Ce rapport a été généré automatiquement par le système de gestion KBIS Immobilier & Construction.</p>
-    <p>Pour toute question ou clarification, veuillez contacter notre équipe.</p>
-</div>
+.rapport-period {
+    font-size: 16px;
+    color: #666;
+    font-weight: bold;
+}
+
+.info-section {
+    margin-bottom: 30px;
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.info-section h3 {
+    color: #1e3c72;
+    font-size: 18px;
+    font-weight: bold;
+    margin: 0 0 15px 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+.label {
+    font-weight: bold;
+    color: #333;
+    min-width: 150px;
+}
+
+.value {
+    color: #666;
+    text-align: right;
+    flex: 1;
+}
+
+.summary-content, .details-content {
+    color: #333;
+    line-height: 1.6;
+    text-align: justify;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.stat-item {
+    background: white;
+    padding: 15px;
+    border-radius: 6px;
+    border-left: 4px solid #1e3c72;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.stat-label {
+    font-weight: bold;
+    color: #333;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    color: #1e3c72;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.signature-area {
+    margin-top: 60px;
+    text-align: center;
+}
+
+.signature-box {
+    border: 2px dashed #ccc;
+    padding: 30px 20px;
+    border-radius: 8px;
+    background: #f8fafc;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.signature-box p {
+    margin: 0;
+    color: #666;
+    font-weight: bold;
+}
+</style>
 {% endblock %}
