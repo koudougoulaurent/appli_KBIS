@@ -2,152 +2,209 @@
 
 {% load static %}
 
-
-{% block extra_css %}
-{% include "includes/recu_header.html" %}
-{% endblock %}
-{% block title %}Quittance de Loyer - KBIS{% endblock %}
+{% block title %}Quittance de Caution - KBIS{% endblock %}
 
 {% block content %}
-<div class="document-title">
-    <h1>QUITTANCE DE LOYER</h1>
-    <p>N° {{ quittance.numero_quittance|default:"N/A" }}</p>
-</div>
+<div class="quittance-container">
+    <!-- Titre de la quittance -->
+    <div class="quittance-title">
+        <h1>QUITTANCE DE CAUTION N° {{ quittance.numero_quittance|default:"QUI-"|add:quittance.id|stringformat:"%010d" }}</h1>
+    </div>
 
-<div class="info-section">
-    <h3>Informations de la Quittance</h3>
-    <div class="info-row">
-        <span class="info-label">Numéro :</span>
-        <span class="info-value">{{ quittance.numero_quittance }}</span>
+    <!-- Informations principales -->
+    <div class="quittance-info">
+        <div class="info-left">
+            <div class="info-item">
+                <span class="label">Date :</span>
+                <span class="value">{{ quittance.date_paiement|date:"d-M-y" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Code location :</span>
+                <span class="value">{{ quittance.contrat.numero_contrat|default:"N/A" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Reçu de :</span>
+                <span class="value">{{ quittance.contrat.locataire.nom_complet|default:"N/A" }}</span>
+            </div>
+        </div>
+        
+        <div class="info-right">
+            <div class="amount-box">
+                <div class="amount-main">{{ quittance.montant|floatformat:0 }} F CFA</div>
+                <div class="amount-text">{{ quittance.montant|floatformat:0 }} francs CFA</div>
+            </div>
+            <div class="info-item">
+                <span class="label">Mois réglé :</span>
+                <span class="value">{{ quittance.mois|date:"F Y" }}</span>
+            </div>
+        </div>
     </div>
-    <div class="info-row">
-        <span class="info-label">Période :</span>
-        <span class="info-value">{{ quittance.mois|date:"F Y" }}</span>
-    </div>
-    <div class="info-row">
-        <span class="info-label">Montant :</span>
-        <span class="info-value">{{ quittance.montant|floatformat:0 }} FCFA</span>
-    </div>
-    <div class="info-row">
-        <span class="info-label">Date de paiement :</span>
-        <span class="info-value">{{ quittance.date_paiement|date:"d/m/Y" }}</span>
-    </div>
-    <div class="info-row">
-        <span class="info-label">Mode de paiement :</span>
-        <span class="info-value">{{ quittance.get_mode_paiement_display }}</span>
-    </div>
-</div>
 
-{% if quittance.contrat %}
-<div class="info-section">
-    <h3>Informations du Contrat</h3>
-    <div class="info-row">
-        <span class="info-label">Numéro :</span>
-        <span class="info-value">{{ quittance.contrat.numero_contrat }}</span>
-    </div>
-    <div class="info-row">
-        <span class="info-label">Loyer mensuel :</span>
-        <span class="info-value">{{ quittance.contrat.loyer_mensuel|floatformat:0 }} FCFA</span>
-    </div>
-</div>
-{% endif %}
-
-{% if quittance.contrat.bailleur %}
-<div class="info-section">
-    <h3>Informations du Bailleur</h3>
-    <div class="info-row">
-        <span class="info-label">Nom :</span>
-        <span class="info-value">{{ quittance.contrat.bailleur.nom }} {{ quittance.contrat.bailleur.prenom }}</span>
-    </div>
-    {% if quittance.contrat.bailleur.telephone %}
-    <div class="info-row">
-        <span class="info-label">Téléphone :</span>
-        <span class="info-value">{{ quittance.contrat.bailleur.telephone }}</span>
-    </div>
-    {% endif %}
-</div>
-{% endif %}
-
-{% if quittance.contrat.locataire %}
-<div class="info-section">
-    <h3>Informations du Locataire</h3>
-    <div class="info-row">
-        <span class="info-label">Nom :</span>
-        <span class="info-value">{{ quittance.contrat.locataire.nom }} {{ quittance.contrat.locataire.prenom }}</span>
-    </div>
-    {% if quittance.contrat.locataire.telephone %}
-    <div class="info-row">
-        <span class="info-label">Téléphone :</span>
-        <span class="info-value">{{ quittance.contrat.locataire.telephone }}</span>
-    </div>
-    {% endif %}
-</div>
-{% endif %}
-
-{% if quittance.contrat.propriete %}
-<div class="info-section">
-    <h3>Informations de la Propriété</h3>
-    <div class="info-row">
-        <span class="info-label">Nom :</span>
-        <span class="info-value">{{ quittance.contrat.propriete.nom }}</span>
-    </div>
-    {% if quittance.contrat.propriete.adresse %}
-    <div class="info-row">
-        <span class="info-label">Adresse :</span>
-        <span class="info-value">{{ quittance.contrat.propriete.adresse }}</span>
-    </div>
-    {% endif %}
-</div>
-{% endif %}
-
-<div class="info-section">
-    <h3>Détails du Paiement</h3>
-    <table class="document-table">
-        <thead>
+    <!-- Détails du paiement -->
+    <div class="payment-details">
+        <table class="details-table">
             <tr>
-                <th>Description</th>
-                <th>Période</th>
-                <th>Montant</th>
+                <td class="detail-label">Type de paiement :</td>
+                <td class="detail-value">Caution - {{ quittance.montant|floatformat:2 }} F CFA</td>
             </tr>
-        </thead>
-        <tbody>
             <tr>
-                <td>Loyer mensuel</td>
-                <td>{{ quittance.mois|date:"F Y" }}</td>
-                <td>{{ quittance.montant|floatformat:0 }} FCFA</td>
+                <td class="detail-label">Mode de paiement :</td>
+                <td class="detail-value">{{ quittance.get_mode_paiement_display|default:"Espèces" }}</td>
             </tr>
-            {% if quittance.charges %}
             <tr>
-                <td>Charges</td>
-                <td>{{ quittance.mois|date:"F Y" }}</td>
-                <td>{{ quittance.charges|floatformat:0 }} FCFA</td>
+                <td class="detail-label">Montant de la caution :</td>
+                <td class="detail-value">{{ quittance.montant|floatformat:0 }} F CFA</td>
             </tr>
-            {% endif %}
-            <tr style="background: #f0f9ff; font-weight: bold;">
-                <td><strong>TOTAL</strong></td>
-                <td><strong>{{ quittance.mois|date:"F Y" }}</strong></td>
-                <td><strong>{{ quittance.montant|floatformat:0 }} FCFA</strong></td>
+            <tr>
+                <td class="detail-label">Note :</td>
+                <td class="detail-value">Dépôt de garantie - Remboursable en fin de bail</td>
             </tr>
-        </tbody>
-    </table>
-</div>
+        </table>
+    </div>
 
-{% if quittance.observations %}
-<div class="info-section">
-    <h3>Observations</h3>
-    <p>{{ quittance.observations|linebreaks }}</p>
-</div>
-{% endif %}
-
-<div class="info-section">
-    <h3>Signature</h3>
-    <div style="margin-top: 30px;">
-        <p><strong>Quittance établie par :</strong> {{ quittance.etabli_par|default:"Agent KBIS" }}</p>
-        <p><strong>Date :</strong> {{ quittance.date_creation|date:"d/m/Y à H:i" }}</p>
-        <p style="margin-top: 20px; text-align: center;">
-            <strong>KBIS Immobilier & Construction</strong><br>
-            Agent immobilier
-        </p>
+    <!-- Zone de signature -->
+    <div class="signature-area">
+        <div class="signature-box">
+            <p>Cachet et signature de l'Agence</p>
+        </div>
     </div>
 </div>
+
+<style>
+.quittance-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background: white;
+}
+
+.quittance-title {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.quittance-title h1 {
+    color: #1e3c72;
+    font-size: 24px;
+    font-weight: bold;
+    margin: 0;
+}
+
+.quittance-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 30px;
+    align-items: flex-start;
+}
+
+.info-left {
+    flex: 1;
+}
+
+.info-right {
+    flex: 1;
+    text-align: right;
+}
+
+.info-item {
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.info-left .info-item {
+    justify-content: flex-start;
+}
+
+.info-right .info-item {
+    justify-content: flex-end;
+}
+
+.label {
+    font-weight: bold;
+    margin-right: 10px;
+    color: #333;
+}
+
+.value {
+    color: #666;
+}
+
+.amount-box {
+    background: #f8fafc;
+    border: 3px solid #1e3c72;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.amount-main {
+    font-size: 28px;
+    font-weight: bold;
+    color: #1e3c72;
+    margin-bottom: 5px;
+}
+
+.amount-text {
+    font-size: 14px;
+    color: #666;
+}
+
+.payment-details {
+    margin-bottom: 40px;
+}
+
+.details-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #f8fafc;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.details-table tr {
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.details-table tr:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    padding: 15px 20px;
+    font-weight: bold;
+    background: #e2e8f0;
+    color: #333;
+    width: 40%;
+}
+
+.detail-value {
+    padding: 15px 20px;
+    color: #666;
+    width: 60%;
+}
+
+.signature-area {
+    margin-top: 60px;
+    text-align: center;
+}
+
+.signature-box {
+    border: 2px dashed #ccc;
+    padding: 40px 20px;
+    border-radius: 8px;
+    background: #f8fafc;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.signature-box p {
+    margin: 0;
+    color: #666;
+    font-weight: bold;
+}
+</style>
 {% endblock %}

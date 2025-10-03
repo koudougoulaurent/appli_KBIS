@@ -2,120 +2,209 @@
 
 {% load static %}
 
-
-{% block extra_css %}
-{% include "includes/recu_header.html" %}
-{% endblock %}
-{% block title %}Reçu de Paiement - KBIS{% endblock %}
+{% block title %}Récépissé de Paiement - KBIS{% endblock %}
 
 {% block content %}
-<div class="document-title">
-    <h1>REÇU DE PAIEMENT</h1>
-    <p>N° {{ recu.numero_recu|default:"N/A" }}</p>
-</div>
+<div class="recu-container">
+    <!-- Titre du récépissé -->
+    <div class="recu-title">
+        <h1>RÉCÉPISSÉ DE PAIEMENT N° {{ recu.numero_recu|default:"REC-"|add:recu.id|stringformat:"%010d" }}</h1>
+    </div>
 
-<div class="info-section">
-    <h3>Informations du Paiement</h3>
-    <div class="info-row">
-        <span class="info-label">Date :</span>
-        <span class="info-value">{{ recu.date_paiement|date:"d/m/Y" }}</span>
+    <!-- Informations principales -->
+    <div class="recu-info">
+        <div class="info-left">
+            <div class="info-item">
+                <span class="label">Date :</span>
+                <span class="value">{{ recu.date_paiement|date:"d-M-y" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Référence :</span>
+                <span class="value">{{ recu.reference_paiement|default:"N/A" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Reçu de :</span>
+                <span class="value">{{ recu.contrat.locataire.nom_complet|default:"N/A" }}</span>
+            </div>
+        </div>
+        
+        <div class="info-right">
+            <div class="amount-box">
+                <div class="amount-main">{{ recu.montant|floatformat:0 }} F CFA</div>
+                <div class="amount-text">{{ recu.montant|floatformat:0 }} francs CFA</div>
+            </div>
+            <div class="info-item">
+                <span class="label">Période :</span>
+                <span class="value">{{ recu.mois|date:"F Y" }}</span>
+            </div>
+        </div>
     </div>
-    <div class="info-row">
-        <span class="info-label">Montant :</span>
-        <span class="info-value">{{ recu.montant|floatformat:0 }} FCFA</span>
-    </div>
-    <div class="info-row">
-        <span class="info-label">Mode de paiement :</span>
-        <span class="info-value">{{ recu.get_mode_paiement_display }}</span>
-    </div>
-    {% if recu.reference_paiement %}
-    <div class="info-row">
-        <span class="info-label">Référence :</span>
-        <span class="info-value">{{ recu.reference_paiement }}</span>
-    </div>
-    {% endif %}
-</div>
 
-{% if recu.bailleur %}
-<div class="info-section">
-    <h3>Informations du Bailleur</h3>
-    <div class="info-row">
-        <span class="info-label">Nom :</span>
-        <span class="info-value">{{ recu.bailleur.nom }} {{ recu.bailleur.prenom }}</span>
-    </div>
-    {% if recu.bailleur.telephone %}
-    <div class="info-row">
-        <span class="info-label">Téléphone :</span>
-        <span class="info-value">{{ recu.bailleur.telephone }}</span>
-    </div>
-    {% endif %}
-    {% if recu.bailleur.email %}
-    <div class="info-row">
-        <span class="info-label">Email :</span>
-        <span class="info-value">{{ recu.bailleur.email }}</span>
-    </div>
-    {% endif %}
-</div>
-{% endif %}
-
-{% if recu.contrat %}
-<div class="info-section">
-    <h3>Informations du Contrat</h3>
-    <div class="info-row">
-        <span class="info-label">Numéro :</span>
-        <span class="info-value">{{ recu.contrat.numero_contrat }}</span>
-    </div>
-    <div class="info-row">
-        <span class="info-label">Propriété :</span>
-        <span class="info-value">{{ recu.contrat.propriete.nom }}</span>
-    </div>
-    {% if recu.contrat.propriete.adresse %}
-    <div class="info-row">
-        <span class="info-label">Adresse :</span>
-        <span class="info-value">{{ recu.contrat.propriete.adresse }}</span>
-    </div>
-    {% endif %}
-</div>
-{% endif %}
-
-{% if recu.description %}
-<div class="info-section">
-    <h3>Description</h3>
-    <p>{{ recu.description }}</p>
-</div>
-{% endif %}
-
-<div class="info-section">
-    <h3>Détails du Paiement</h3>
-    <table class="document-table">
-        <thead>
+    <!-- Détails du paiement -->
+    <div class="payment-details">
+        <table class="details-table">
             <tr>
-                <th>Description</th>
-                <th>Période</th>
-                <th>Montant</th>
+                <td class="detail-label">Type de paiement :</td>
+                <td class="detail-value">{{ recu.get_type_paiement_display|default:"Loyer" }} - {{ recu.montant|floatformat:2 }} F CFA</td>
             </tr>
-        </thead>
-        <tbody>
             <tr>
-                <td>{{ recu.get_type_paiement_display }}</td>
-                <td>
-                    {% if recu.date_debut and recu.date_fin %}
-                        Du {{ recu.date_debut|date:"d/m/Y" }} au {{ recu.date_fin|date:"d/m/Y" }}
-                    {% else %}
-                        {{ recu.date_paiement|date:"F Y" }}
-                    {% endif %}
-                </td>
-                <td>{{ recu.montant|floatformat:0 }} FCFA</td>
+                <td class="detail-label">Mode de paiement :</td>
+                <td class="detail-value">{{ recu.get_mode_paiement_display|default:"Espèces" }}</td>
             </tr>
-        </tbody>
-    </table>
-</div>
+            <tr>
+                <td class="detail-label">Montant payé :</td>
+                <td class="detail-value">{{ recu.montant|floatformat:0 }} F CFA</td>
+            </tr>
+            <tr>
+                <td class="detail-label">Note :</td>
+                <td class="detail-value">Paiement reçu et enregistré</td>
+            </tr>
+        </table>
+    </div>
 
-<div class="info-section">
-    <h3>Signature</h3>
-    <div style="margin-top: 30px;">
-        <p><strong>Reçu par :</strong> {{ recu.recu_par|default:"Agent KBIS" }}</p>
-        <p><strong>Date :</strong> {{ recu.date_paiement|date:"d/m/Y à H:i" }}</p>
+    <!-- Zone de signature -->
+    <div class="signature-area">
+        <div class="signature-box">
+            <p>Cachet et signature de l'Agence</p>
+        </div>
     </div>
 </div>
+
+<style>
+.recu-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background: white;
+}
+
+.recu-title {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.recu-title h1 {
+    color: #1e3c72;
+    font-size: 24px;
+    font-weight: bold;
+    margin: 0;
+}
+
+.recu-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 30px;
+    align-items: flex-start;
+}
+
+.info-left {
+    flex: 1;
+}
+
+.info-right {
+    flex: 1;
+    text-align: right;
+}
+
+.info-item {
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.info-left .info-item {
+    justify-content: flex-start;
+}
+
+.info-right .info-item {
+    justify-content: flex-end;
+}
+
+.label {
+    font-weight: bold;
+    margin-right: 10px;
+    color: #333;
+}
+
+.value {
+    color: #666;
+}
+
+.amount-box {
+    background: #f8fafc;
+    border: 3px solid #1e3c72;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.amount-main {
+    font-size: 28px;
+    font-weight: bold;
+    color: #1e3c72;
+    margin-bottom: 5px;
+}
+
+.amount-text {
+    font-size: 14px;
+    color: #666;
+}
+
+.payment-details {
+    margin-bottom: 40px;
+}
+
+.details-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #f8fafc;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.details-table tr {
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.details-table tr:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    padding: 15px 20px;
+    font-weight: bold;
+    background: #e2e8f0;
+    color: #333;
+    width: 40%;
+}
+
+.detail-value {
+    padding: 15px 20px;
+    color: #666;
+    width: 60%;
+}
+
+.signature-area {
+    margin-top: 60px;
+    text-align: center;
+}
+
+.signature-box {
+    border: 2px dashed #ccc;
+    padding: 40px 20px;
+    border-radius: 8px;
+    background: #f8fafc;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.signature-box p {
+    margin: 0;
+    color: #666;
+    font-weight: bold;
+}
+</style>
 {% endblock %}
