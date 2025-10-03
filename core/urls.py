@@ -9,7 +9,6 @@ from .main_views import (
     detail_audit_log,
     audit_statistiques
 )
-# from .views.test_templates import test_template_kbis
 from .views import (
     configuration_entreprise_admin,
     supprimer_entete,
@@ -113,7 +112,4 @@ urlpatterns = [
     
     # Démonstration du design KBIS
     path('demo-kbis-design/', demo_kbis_design, name='demo_kbis_design'),
-    
-    # Test du système de templates KBIS - DÉSACTIVÉ TEMPORAIREMENT
-    # path('test-template-kbis/', test_template_kbis, name='test_template_kbis'),
 ]

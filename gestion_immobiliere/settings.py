@@ -7,10 +7,10 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-test-key-for-local-development-only'
-# Forcer DEBUG = True pour le développement local
 DEBUG = True
-# S'assurer que DEBUG reste True même avec des variables d'environnement
-os.environ['DEBUG'] = 'True'
+# Forcer DEBUG = True même si une variable d'environnement le définit autrement
+if os.environ.get('DEBUG') == 'False':
+    DEBUG = True
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'appli-kbis.onrender.com', '.onrender.com', '*']
 ROOT_URLCONF = 'gestion_immobiliere.urls'
 
@@ -105,13 +105,6 @@ LOGOUT_REDIRECT_URL = '/utilisateurs/connexion-groupes/'
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
-# Configuration statique pour développement local
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
-]
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
 # Configuration pour Render
 if os.environ.get('RENDER'):
     # Configuration de base de données pour Render
@@ -148,11 +141,11 @@ if os.environ.get('RENDER'):
         os.path.join(BASE_DIR, 'static'),
     ]
     
-    # Configuration de sécurité pour production - DÉSACTIVÉE EN DÉVELOPPEMENT
-    # DEBUG = False  
-    # ALLOWED_HOSTS = ['appli-kbis.onrender.com', '.onrender.com']
+    # Configuration de sécurité pour production
+    DEBUG = False
+    ALLOWED_HOSTS = ['appli-kbis.onrender.com', '.onrender.com']
     
-    # Configuration de session - DÉSACTIVÉE EN DÉVELOPPEMENT
-    # SESSION_COOKIE_SECURE = True
-    # CSRF_COOKIE_SECURE = True
-    # SECURE_SSL_REDIRECT = True
+    # Configuration de session
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True

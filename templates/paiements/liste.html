@@ -161,7 +161,7 @@
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                             {% if paiement.statut == 'valide' %}
-                                            <a href="{% url 'paiements:generer_quittance_kbis_dynamique' paiement.pk %}" class="btn btn-sm btn-success" title="Quittance KBIS dynamique">
+                                            <a href="{% url 'paiements:generer_quittance_manuelle' paiement.pk %}" class="btn btn-sm btn-success" title="Quittance KBIS">
                                                 <i class="bi bi-file-earmark-text"></i>
                                             </a>
                                             <a href="{% url 'paiements:generer_recu_kbis_dynamique' paiement.pk %}" class="btn btn-sm btn-info" title="Récépissé KBIS dynamique">

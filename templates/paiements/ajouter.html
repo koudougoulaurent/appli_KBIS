@@ -233,7 +233,20 @@
                                 {{ form.date_paiement|as_crispy_field }}
                             </div>
                             <div class="col-md-6">
-                                {{ form.mois_paye|as_crispy_field }}
+                                <div class="mb-3">
+                                    <label for="mois_paye" class="form-label">MOIS PAYÉ</label>
+                                    <input type="date" 
+                                           name="mois_paye" 
+                                           id="mois_paye"
+                                           class="form-control" 
+                                           value="">
+                                    <div class="form-text">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="auto-detect-month">
+                                            <i class="bi bi-magic"></i> Détecter automatiquement
+                                        </button>
+                                        <span class="ms-2" id="selected-month-display"></span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         
@@ -817,6 +830,61 @@ function verifierDoublonsPaiement() {
 $('#id_contrat, #id_mois_paye').on('change', function() {
     verifierDoublonsPaiement();
 });
+
+// Gestion du champ mois_paye (type date)
+const moisPayeInput = document.getElementById('mois_paye');
+const selectedMonthDisplay = document.getElementById('selected-month-display');
+const datePaiementInput = document.getElementById('id_date_paiement');
+const autoDetectButton = document.getElementById('auto-detect-month');
+
+// Fonction pour afficher la sélection
+function updateMoisPaye() {
+    if (moisPayeInput && moisPayeInput.value) {
+        const date = new Date(moisPayeInput.value);
+        if (!isNaN(date.getTime())) {
+            const mois = date.toLocaleDateString('fr-FR', { month: 'long' });
+            const annee = date.getFullYear();
+            const moisPayeValue = `${mois} ${annee}`;
+            selectedMonthDisplay.textContent = `Sélectionné: ${moisPayeValue}`;
+            selectedMonthDisplay.className = 'ms-2 text-success fw-bold';
+        }
+    } else {
+        selectedMonthDisplay.textContent = '';
+        selectedMonthDisplay.className = 'ms-2';
+    }
+}
+
+// Fonction pour détecter automatiquement le mois depuis la date de paiement
+function detectMonthFromDate() {
+    if (datePaiementInput && datePaiementInput.value) {
+        // Copier la date de paiement vers le champ mois_paye
+        moisPayeInput.value = datePaiementInput.value;
+        updateMoisPaye();
+        console.log('Mois détecté automatiquement depuis la date de paiement');
+    } else {
+        alert('Veuillez d\'abord sélectionner une date de paiement.');
+    }
+}
+
+// Événements pour le champ mois_paye
+if (moisPayeInput) {
+    moisPayeInput.addEventListener('change', updateMoisPaye);
+}
+
+// Événement pour le bouton de détection automatique
+if (autoDetectButton) {
+    autoDetectButton.addEventListener('click', detectMonthFromDate);
+}
+
+// Détection automatique lors du changement de date
+if (datePaiementInput) {
+    datePaiementInput.addEventListener('change', function() {
+        // Détecter automatiquement si aucun mois n'est sélectionné
+        if (!moisPayeInput.value) {
+            detectMonthFromDate();
+        }
+    });
+}
 
 console.log('🚀 Système intelligent chargé avec succès !');
 </script>

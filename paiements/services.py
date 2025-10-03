@@ -365,7 +365,7 @@ class QuittancePDFService:
         
         # Titre principal
         elements.append(Paragraph(
-            "QUITTANCE DE LOYER",
+            "RÉCÉPISSÉ DE LOYER",
             self.styles['CustomTitle']
         ))
         
@@ -390,11 +390,11 @@ class QuittancePDFService:
         """Crée la section des informations de la quittance"""
         elements = []
         
-        elements.append(Paragraph("INFORMATIONS DE LA QUITTANCE", self.styles['CustomHeading']))
+        elements.append(Paragraph("INFORMATIONS DU RÉCÉPISSÉ", self.styles['CustomHeading']))
         
         # Tableau des informations de la quittance
         data = [
-            ['Numéro de quittance:', self.quittance.numero_quittance],
+            ['Numéro de récépissé:', self.quittance.numero_quittance],
             ['Période:', f"{self.quittance.mois_quittance.strftime('%B %Y')}"],
             ['Loyer:', f"{self.quittance.montant_loyer} F CFA"],
             ['Charges:', f"{self.quittance.montant_charges} F CFA"],

@@ -2,7 +2,7 @@
 {% load static %}
 {% load humanize %}
 
-{% block title %}Quittance de paiement - {{ quittance.numero_quittance }}{% endblock %}
+{% block title %}Récépissé de paiement - {{ quittance.numero_quittance }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -1038,7 +1038,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <!-- Colonne gauche -->
                     <div class="quittance-left-column">
                         <div class="quittance-info">
-                            <p><strong>QUITTANCE N°:</strong> {{ quittance.numero_quittance }}</p>
+                            <p><strong>RÉCÉPISSÉ N°:</strong> {{ quittance.numero_quittance }}</p>
                             <p><strong>code location :</strong> {{ quittance.paiement.contrat.propriete.numero }}</p>
                         </div>
                         

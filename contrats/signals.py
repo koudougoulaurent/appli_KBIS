@@ -2,23 +2,6 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.db import transaction
 from .models import Contrat
-from paiements.models import Paiement, ChargeDeductible
-from django.utils import timezone
-
-# Signal automatique : gestion des ressources liées lors de la résiliation d'un contrat
-@receiver(post_save, sender=Contrat)
-def gestion_ressources_contrat_resilie(sender, instance, created, **kwargs):
-    """
-    Lorsqu'un contrat est résilié, archiver/désactiver toutes les ressources liées (paiements, charges, etc.)
-    """
-    if instance.est_resilie:
-        # Archiver/désactiver tous les paiements liés
-        Paiement.objects.filter(contrat=instance, is_deleted=False).update(is_deleted=True, deleted_at=timezone.now())
-        # Archiver/désactiver toutes les charges liées
-        ChargeDeductible.objects.filter(contrat=instance, is_deleted=False).update(is_deleted=True, deleted_at=timezone.now())
-        # TODO: Ajouter gestion pour autres ressources (retraits, cautions, etc.)
-        # Audit/log
-        print(f"[AUDIT] Contrat résilié : {instance.numero_contrat} - Ressources liées archivées.")
 from proprietes.models import Propriete
 
 

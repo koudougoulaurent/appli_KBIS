@@ -20,8 +20,6 @@ urlpatterns = [
     path('api/', include(router.urls)),
     # URLs pour les pages web (avec aliases pour compatibilité)
     # ...existing code...
-    path('archiver-ressources/<int:pk>/', views.archiver_ressources_contrat, name='archiver_ressources'),
-    # ...existing code...
     path('liste/', contrat_list, name='liste'),
     path('detail/<int:pk>/', views.detail_contrat, name='detail'),
     path('ajouter/', views.ajouter_contrat, name='ajouter'),

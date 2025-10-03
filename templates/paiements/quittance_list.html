@@ -2,7 +2,7 @@
 {% load static %}
 {% load crispy_forms_tags %}
 
-{% block title %}Liste des quittances de paiement{% endblock %}
+{% block title %}Liste des récépissés de paiement{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -170,19 +170,19 @@
                 <div class="col-md-3">
                     <div class="stat-card">
                         <div class="stat-number">{{ total_quittances }}</div>
-                        <div class="stat-label">Total des quittances</div>
+                        <div class="stat-label">Total des récépissés</div>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="stat-card">
                         <div class="stat-number">{{ quittances_imprimees }}</div>
-                        <div class="stat-label">Quittances imprimées</div>
+                        <div class="stat-label">Récépissés imprimés</div>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="stat-card">
                         <div class="stat-number">{{ quittances_envoyees }}</div>
-                        <div class="stat-label">Quittances envoyées</div>
+                        <div class="stat-label">Récépissés envoyés</div>
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -230,7 +230,7 @@
                 </form>
             </div>
 
-            <!-- Liste des quittances -->
+            <!-- Liste des récépissés -->
             <div class="row">
                 {% for quittance in quittances %}
                 <div class="col-lg-6 col-xl-4 mb-4">
@@ -285,8 +285,8 @@
                 <div class="col-12">
                     <div class="text-center py-5">
                         <i class="bi bi-receipt" style="font-size: 3rem; color: #6c757d;"></i>
-                        <h4 class="mt-3 text-muted">Aucune quittance trouvée</h4>
-                        <p class="text-muted">Les quittances apparaîtront ici après validation des paiements.</p>
+                        <h4 class="mt-3 text-muted">Aucun récépissé trouvé</h4>
+                        <p class="text-muted">Les récépissés apparaîtront ici après validation des paiements.</p>
                     </div>
                 </div>
                 {% endfor %}
@@ -294,7 +294,7 @@
 
             <!-- Pagination -->
             {% if quittances.has_other_pages %}
-            <nav aria-label="Pagination des quittances" class="mt-4">
+            <nav aria-label="Pagination des récépissés" class="mt-4">
                 <ul class="pagination justify-content-center">
                     {% if quittances.has_previous %}
                     <li class="page-item">

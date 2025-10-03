@@ -156,6 +156,21 @@
                                 </div>
                                 
                                 <div class="mb-3">
+                                    <label for="mois_paye" class="form-label">MOIS PAYÉ</label>
+                                    <input type="date" 
+                                           name="mois_paye" 
+                                           id="mois_paye"
+                                           class="form-control" 
+                                           value="">
+                                    <div class="form-text">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="auto-detect-month">
+                                            <i class="bi bi-magic"></i> Détecter automatiquement
+                                        </button>
+                                        <span class="ms-2" id="selected-month-display"></span>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
                                     <label for="{{ form.numero_cheque.id_for_label }}" class="form-label">{{ form.numero_cheque.label }}</label>
                                     {{ form.numero_cheque }}
                                     {% if form.numero_cheque.errors %}
@@ -298,8 +313,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let montantLoyerContrat = null;
                     montantLoyerContrat = data.contrat ? data.contrat.montant_loyer : (data.net_a_payer || '');
                     montantInput.value = montantLoyerContrat;
-                    montantInput.setAttribute('min', montantLoyerContrat);
-                    montantInput.setAttribute('max', montantLoyerContrat);
+                    // Suppression des contraintes min/max pour permettre tous les montants
+                    montantInput.removeAttribute('min');
+                    montantInput.removeAttribute('max');
     const contratSelect = document.getElementById('id_contrat');
     const montantInput = document.getElementById('id_montant');
     const appliquerChargesCheckbox = document.getElementById('appliquer_charges_deductibles');
@@ -318,6 +334,9 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success) {
                         montantInput.value = data.contrat ? data.contrat.montant_loyer : (data.net_a_payer || '');
+                        // Suppression des contraintes min/max pour permettre tous les montants
+                        montantInput.removeAttribute('min');
+                        montantInput.removeAttribute('max');
                 }
             })
             .catch(error => {
@@ -326,18 +345,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Fonction pour calculer et afficher le résumé
-    // Validation du montant à la soumission
+    // Validation du montant et du mois payé à la soumission
     const paiementForm = document.getElementById('paiement-form');
+    const moisPayeInput = document.getElementById('id_mois_paye');
+    
     if (paiementForm) {
         paiementForm.addEventListener('submit', function(e) {
             const montant = parseFloat(montantInput.value);
-            if (montantLoyerContrat !== null && montant !== parseFloat(montantLoyerContrat)) {
+            const moisPaye = moisPayeInput.value.trim();
+            
+            // Validation du montant
+            if (montant <= 0) {
                 e.preventDefault();
-                alert('Le montant doit être exactement égal au loyer mensuel du contrat sélectionné.');
+                alert('Le montant doit être positif.');
                 montantInput.focus();
+                return;
             }
+            
+            // Validation du mois payé - DÉSACTIVÉE
+            // Accepter tous les formats de mois
         });
     }
+    
+    // Validation du mois payé - COMPLÈTEMENT DÉSACTIVÉE
+    // Accepter tous les formats de mois sans validation
     function updateMontantSummary() {
         const montantBrut = parseFloat(montantInput.value) || 0;
         let totalCharges = 0;
@@ -411,6 +442,61 @@ document.addEventListener('DOMContentLoaded', function() {
     // Gérer les changements du montant du loyer
     if (montantInput) {
         montantInput.addEventListener('input', updateMontantSummary);
+    }
+    
+    // Gestion du champ mois_paye (type date)
+    const moisPayeInput = document.getElementById('mois_paye');
+    const selectedMonthDisplay = document.getElementById('selected-month-display');
+    const datePaiementInput = document.getElementById('id_date_paiement');
+    const autoDetectButton = document.getElementById('auto-detect-month');
+    
+    // Fonction pour afficher la sélection
+    function updateMoisPaye() {
+        if (moisPayeInput && moisPayeInput.value) {
+            const date = new Date(moisPayeInput.value);
+            if (!isNaN(date.getTime())) {
+                const mois = date.toLocaleDateString('fr-FR', { month: 'long' });
+                const annee = date.getFullYear();
+                const moisPayeValue = `${mois} ${annee}`;
+                selectedMonthDisplay.textContent = `Sélectionné: ${moisPayeValue}`;
+                selectedMonthDisplay.className = 'ms-2 text-success fw-bold';
+            }
+        } else {
+            selectedMonthDisplay.textContent = '';
+            selectedMonthDisplay.className = 'ms-2';
+        }
+    }
+    
+    // Fonction pour détecter automatiquement le mois depuis la date de paiement
+    function detectMonthFromDate() {
+        if (datePaiementInput && datePaiementInput.value) {
+            // Copier la date de paiement vers le champ mois_paye
+            moisPayeInput.value = datePaiementInput.value;
+            updateMoisPaye();
+            console.log('Mois détecté automatiquement depuis la date de paiement');
+        } else {
+            alert('Veuillez d\'abord sélectionner une date de paiement.');
+        }
+    }
+    
+    // Événements pour le champ mois_paye
+    if (moisPayeInput) {
+        moisPayeInput.addEventListener('change', updateMoisPaye);
+    }
+    
+    // Événement pour le bouton de détection automatique
+    if (autoDetectButton) {
+        autoDetectButton.addEventListener('click', detectMonthFromDate);
+    }
+    
+    // Détection automatique lors du changement de date
+    if (datePaiementInput) {
+        datePaiementInput.addEventListener('change', function() {
+            // Détecter automatiquement si aucun mois n'est sélectionné
+            if (!moisPayeInput.value) {
+                detectMonthFromDate();
+            }
+        });
     }
     
     // Initialiser l'affichage

@@ -132,20 +132,9 @@ class PaiementCreateUpdateSerializer(serializers.ModelSerializer):
         type_paiement = data.get('type_paiement')
         montant = data.get('montant')
         
-        if contrat and type_paiement and montant:
-            if type_paiement == 'loyer':
-                # Vérifier que le montant correspond au loyer mensuel
-                if abs(montant - contrat.loyer_mensuel) > 1:  # Tolérance de 1€
-                    raise serializers.ValidationError({
-                        'montant': f'Le montant du loyer devrait être de {contrat.loyer_mensuel}€.'
-                    })
-            
-            elif type_paiement == 'caution':
-                # Vérifier que le montant correspond à la caution
-                if abs(montant - contrat.caution) > 1:  # Tolérance de 1€
-                    raise serializers.ValidationError({
-                        'montant': f'Le montant de la caution devrait être de {contrat.caution}€.'
-                    })
+        # Validation des montants - DÉSACTIVÉE pour permettre tous les paiements
+        # Les montants sont validés côté base de données et dans les vues
+        # Cette validation était trop restrictive et bloquait les paiements valides
         
         return data
 

@@ -664,7 +664,7 @@ class Propriete(models.Model):
         if self.surface and self.surface > 200:  # Plus de 200m²
             return True
         
-        if self.nombre_pieces and self.nombre_pieces > 8:  # Plus de 8 pièces
+        if self.nombre_pieces > 8:  # Plus de 8 pièces
             return True
         
         return False
@@ -683,7 +683,7 @@ class Propriete(models.Model):
             if self.surface and self.surface > 200:
                 suggestions.append(f"Avec {self.surface}m², cette propriété pourrait être divisée en plusieurs unités.")
             
-            if self.nombre_pieces and self.nombre_pieces > 8:
+            if self.nombre_pieces > 8:
                 suggestions.append(f"Avec {self.nombre_pieces} pièces, vous pourriez créer plusieurs unités locatives.")
             
             return " ".join(suggestions)

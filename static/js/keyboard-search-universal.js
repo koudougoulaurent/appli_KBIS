@@ -23,6 +23,7 @@ class KeyboardSearchUniversal {
      * Initialiser Select2 avec recherche clavier
      */
     initSelect2() {
+        const self = this; // Sauvegarder la référence à la classe
         $('[data-toggle="select2"]').each(function() {
             const $element = $(this);
             
@@ -79,7 +80,7 @@ class KeyboardSearchUniversal {
             });
 
             // Ajouter des événements clavier personnalisés
-            this.addKeyboardEvents($element);
+            self.addKeyboardEvents($element);
         });
     }
 

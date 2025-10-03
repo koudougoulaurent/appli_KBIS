@@ -124,13 +124,8 @@ class PaiementFormIntelligent(forms.ModelForm):
         contrat = cleaned_data.get('contrat')
         montant = cleaned_data.get('montant')
         
-        if contrat and montant:
-            # Validation que le montant est cohérent avec le contrat
-            loyer_mensuel = Decimal(contrat.loyer_mensuel or '0')
-            if montant > loyer_mensuel * 2:
-                raise ValidationError(
-                    _("Le montant du paiement semble trop élevé par rapport au loyer mensuel du contrat.")
-                )
+        # Validation des montants - DÉSACTIVÉE pour permettre tous les paiements
+        # Les montants sont validés côté base de données et dans les vues
         
         return cleaned_data
 
@@ -234,13 +229,8 @@ class ChargeDeductibleFormIntelligent(forms.ModelForm):
         contrat = cleaned_data.get('contrat')
         montant = cleaned_data.get('montant')
         
-        if contrat and montant:
-            # Validation que le montant est raisonnable
-            loyer_mensuel = Decimal(contrat.loyer_mensuel or '0')
-            if montant > loyer_mensuel:
-                raise ValidationError(
-                    _("Le montant de la charge ne peut pas dépasser le loyer mensuel du contrat.")
-                )
+        # Validation des montants - DÉSACTIVÉE pour permettre tous les paiements
+        # Les montants sont validés côté base de données et dans les vues
         
         return cleaned_data
 

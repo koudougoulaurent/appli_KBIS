@@ -1,26 +1,3 @@
-from django.contrib.auth.decorators import login_required
-
-@login_required
-def archiver_ressources_contrat(request, pk):
-    """
-    Vue pour archiver/désactiver toutes les ressources liées à un contrat résilié (paiements, charges).
-    """
-    contrat = get_object_or_404(Contrat, pk=pk)
-    if not contrat.est_resilie:
-        messages.error(request, "Le contrat doit être résilié avant d'archiver ses ressources.")
-        return redirect('contrats:detail', pk=pk)
-    from paiements.models import Paiement, ChargeDeductible
-    from django.utils import timezone
-    paiements = Paiement.objects.filter(contrat=contrat, is_deleted=False)
-    charges = ChargeDeductible.objects.filter(contrat=contrat, is_deleted=False)
-    total_paiements = paiements.count()
-    total_charges = charges.count()
-    paiements.update(is_deleted=True, deleted_at=timezone.now())
-    charges.update(is_deleted=True, deleted_at=timezone.now())
-    messages.success(request, f"{total_paiements} paiement(s) et {total_charges} charge(s) archivés pour ce contrat.")
-    # Audit/log
-    print(f"[AUDIT] Contrat résilié : {contrat.numero_contrat} - Ressources liées archivées manuellement.")
-    return redirect('contrats:detail', pk=pk)
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -449,33 +426,25 @@ def supprimer_contrat(request, pk):
         messages.error(request, permissions['message'])
         return redirect('contrats:liste')
     
-    try:
-        contrat = Contrat.objects.get(pk=pk)
-    except Contrat.DoesNotExist:
-        messages.error(request, "Ce contrat n'existe pas ou a déjà été supprimé.")
-        return redirect('contrats:liste')
-    if getattr(contrat, 'is_deleted', False):
-        messages.warning(request, "Ce contrat a déjà été supprimé.")
-        return redirect('contrats:liste')
+    contrat = get_object_or_404(Contrat, pk=pk)
     
     if request.method == 'POST':
         try:
             # Suppression logique
-            from core.utils import serialize_for_audit
             old_data = {f.name: getattr(contrat, f.name) for f in contrat._meta.fields}
             contrat.is_deleted = True
             contrat.deleted_at = timezone.now()
             contrat.deleted_by = request.user
             contrat.save()
-
+            
             # Log d'audit
             AuditLog.objects.create(
                 content_type=ContentType.objects.get_for_model(Contrat),
                 object_id=contrat.pk,
                 action='delete',
                 details={
-                    'old_data': serialize_for_audit(old_data),
-                    'new_data': serialize_for_audit({'is_deleted': True, 'deleted_at': contrat.deleted_at})
+                    'old_data': old_data,
+                    'new_data': {'is_deleted': True, 'deleted_at': str(timezone.now())}
                 },
                 object_repr=str(contrat),
                 user=request.user,
@@ -1590,15 +1559,9 @@ def creer_resiliation(request, contrat_id):
             resiliation.contrat = contrat
             resiliation.cree_par = request.user
             resiliation.save()
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                from django.http import JsonResponse
-                return JsonResponse({'success': True, 'resiliation_id': resiliation.id})
+            
             messages.success(request, 'Résiliation créée avec succès.')
             return redirect('contrats:detail_resiliation', resiliation_id=resiliation.id)
-        else:
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                from django.http import JsonResponse
-                return JsonResponse({'success': False, 'message': 'Formulaire invalide. Vérifiez les champs.'})
     else:
         form = ResiliationContratForm(initial={'contrat': contrat})
     

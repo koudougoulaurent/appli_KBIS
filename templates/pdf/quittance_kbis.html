@@ -2,13 +2,13 @@
 
 {% load static %}
 
-{% block title %}Quittance de Caution - KBIS{% endblock %}
+{% block title %}Récépissé de Caution - KBIS{% endblock %}
 
 {% block content %}
 <div class="quittance-container">
     <!-- Titre de la quittance -->
     <div class="quittance-title">
-        <h1>QUITTANCE DE CAUTION N° {{ quittance.numero_quittance|default:"QUI-"|add:quittance.id|stringformat:"%010d" }}</h1>
+        <h1>RÉCÉPISSÉ DE CAUTION N° {{ quittance.numero_quittance|default:"REC-"|add:quittance.id|stringformat:"%010d" }}</h1>
     </div>
 
     <!-- Informations principales -->

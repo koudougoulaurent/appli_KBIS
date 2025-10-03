@@ -21,20 +21,23 @@ urlpatterns = [
     path('detail/<int:pk>/', views.paiement_detail, name='detail'),  # Alias principal pour compatibilité
     path('ajouter/', views.ajouter_paiement, name='ajouter'),  # Alias principal pour compatibilité
     
-    # URLs pour les quittances de paiement bailleur
-    # path('quittances-bailleur/', views.liste_quittances_bailleur, name='liste_quittances_bailleur'),  # Fonction non disponible    # path('quittance-bailleur/<int:pk>/', views.quittance_bailleur_detail, name='quittance_bailleur_detail'),  # Fonction non disponible    # path('quittance-bailleur/<int:pk>/telecharger/', views.telecharger_quittance_bailleur, name='telecharger_quittance_bailleur'),  # Fonction non disponible    # path('generer-quittance-bailleur/<int:retrait_id>/', views.generer_quittance_bailleur, name='generer_quittance_bailleur'),  # Fonction non disponible    
+    # URLs pour les quittances de paiement bailleur (fonctions non disponibles)
+    # path('quittances-bailleur/', views.liste_quittances_bailleur, name='liste_quittances_bailleur'),
+    # path('quittance-bailleur/<int:pk>/', views.quittance_bailleur_detail, name='quittance_bailleur_detail'),
+    # path('quittance-bailleur/<int:pk>/telecharger/', views.telecharger_quittance_bailleur, name='telecharger_quittance_bailleur'),
+    # path('generer-quittance-bailleur/<int:retrait_id>/', views.generer_quittance_bailleur, name='generer_quittance_bailleur'),
+    
     # URLs pour les paiements des locataires
     path('locataire/<int:locataire_id>/', views_quick_actions.liste_paiements, name='paiements_locataire'),
-
-    # Vue historique des paiements partiels
-    # path('historique-partiel/<int:contrat_id>/<int:mois>/<int:annee>/', views.historique_paiements_partiels, name='historique_partiel'),  # Fonction non disponible    # path('locataire/<int:locataire_id>/api/', views_locataire_paiements.paiements_locataire_json, name='paiements_locataire_json'),
+    # path('locataire/<int:locataire_id>/api/', views_locataire_paiements.paiements_locataire_json, name='paiements_locataire_json'),
     
     # Aliases pour compatibilité avec les templates existants
     path('paiement_list/', views.paiement_list, name='paiement_list'),
     path('paiement_detail/<int:pk>/', views.paiement_detail, name='paiement_detail'),
     
     # URLs manquantes pour compatibilité avec les templates existants
-    # path('recus/', views.liste_recus, name='recus_liste'),  # Fonction non disponible    
+    path('recus/', views.liste_recus, name='recus_liste'),
+    
     # URLs pour la validation des paiements
     path('paiement/<int:pk>/valider/', views_validation.valider_paiement, name='valider_paiement'),
     path('paiement/<int:pk>/refuser/', views_validation.refuser_paiement, name='refuser_paiement'),
@@ -58,16 +61,30 @@ urlpatterns = [
     path('recaps-mensuels/generer-automatique/', views_recapitulatifs.generer_recapitulatif_automatique, name='generer_recap_automatique'),
     
     # NOUVELLES URLs pour le système automatisé
-    # path('recaps-mensuels-automatiques/', views.liste_recaps_mensuels, name='liste_recaps_mensuels_auto'),  # Fonction non disponible    # path('recaps-mensuels-automatiques/creer/', views.creer_recap_mensuel, name='creer_recap_mensuel_auto'),  # Fonction non disponible    # path('recaps-mensuels-automatiques/creer/<int:bailleur_id>/', views.creer_recap_mensuel_bailleur, name='creer_recap_mensuel_bailleur'),  # Fonction non disponible    # path('recaps-mensuels-automatiques/api/calcul-preview/', views.get_calculation_preview, name='api_calculation_preview'),  # Fonction non disponible    # path('recaps-mensuels-automatiques/creer-avec-detection/<int:bailleur_id>/', views.creer_recap_avec_detection_auto, name='creer_recap_avec_detection_auto'),  # Fonction non disponible    # path('recaps-mensuels-automatiques/<int:recap_id>/', views.detail_recap_mensuel, name='detail_recap_mensuel_auto'),  # Fonction non disponible    # path('recaps-mensuels-automatiques/<int:recap_id>/pdf-detaille/', views.generer_pdf_recap_detaille_paysage, name='generer_pdf_recap_detaille_paysage'),  # Fonction non disponible    # path('recaps-mensuels-automatiques/<int:recap_id>/creer-retrait/', views.creer_retrait_depuis_recap, name='creer_retrait_depuis_recap'),  # Fonction non disponible    # path('recaps-mensuels-automatiques/generer/', views.generer_recap_mensuel_automatique, name='generer_recap_mensuel_automatique'),  # Fonction non disponible    
+    path('recaps-mensuels-automatiques/', views.liste_recaps_mensuels, name='liste_recaps_mensuels_auto'),
+    path('recaps-mensuels-automatiques/creer/', views.creer_recap_mensuel, name='creer_recap_mensuel_auto'),
+    path('recaps-mensuels-automatiques/creer/<int:bailleur_id>/', views.creer_recap_mensuel_bailleur, name='creer_recap_mensuel_bailleur'),
+    path('recaps-mensuels-automatiques/api/calcul-preview/', views.get_calculation_preview, name='api_calculation_preview'),
+    path('recaps-mensuels-automatiques/creer-avec-detection/<int:bailleur_id>/', views.creer_recap_avec_detection_auto, name='creer_recap_avec_detection_auto'),
+    path('recaps-mensuels-automatiques/<int:recap_id>/', views.detail_recap_mensuel, name='detail_recap_mensuel_auto'),
+    path('recaps-mensuels-automatiques/<int:recap_id>/pdf-detaille/', views.generer_pdf_recap_detaille_paysage, name='generer_pdf_recap_detaille_paysage'),
+    path('recaps-mensuels-automatiques/<int:recap_id>/creer-retrait/', views.creer_retrait_depuis_recap, name='creer_retrait_depuis_recap'),
+    path('recaps-mensuels-automatiques/generer/', views.generer_recap_mensuel_automatique, name='generer_recap_mensuel_automatique'),
+    
     # Tableau de bord spécialisé
-    # path('recaps-mensuels-automatiques/tableau-bord/', views.tableau_bord_recaps_mensuels, name='tableau_bord_recaps_mensuels'),  # Fonction non disponible    # path('recaps-mensuels-automatiques/bailleurs/', views.liste_bailleurs_recaps, name='liste_bailleurs_recaps'),  # Fonction non disponible    
+    path('recaps-mensuels-automatiques/tableau-bord/', views.tableau_bord_recaps_mensuels, name='tableau_bord_recaps_mensuels'),
+    path('recaps-mensuels-automatiques/bailleurs/', views.liste_bailleurs_recaps, name='liste_bailleurs_recaps'),
+    
     path('retraits-bailleur/', views.liste_retraits_bailleur, name='liste_retraits_bailleur'),
     path('modifier/<int:pk>/', views.modifier_paiement, name='modifier_paiement'),
     path('supprimer/<int:pk>/', views.supprimer_paiement, name='supprimer_paiement'),
     path('valider/<int:pk>/', views.valider_paiement, name='valider_paiement'),
     
     # URLs pour les charges déductibles
-    # path('charges/', views.charge_deductible_list, name='charge_deductible_list'),  # Fonction non disponible    # path('charges/ajouter/', views.ajouter_charge_deductible, name='ajouter_charge_deductible'),  # Fonction non disponible    # path('charges/modifier/<int:pk>/', views.modifier_charge_deductible, name='modifier_charge_deductible'),  # Fonction non disponible    
+    path('charges/', views.charge_deductible_list, name='charge_deductible_list'),
+    path('charges/ajouter/', views.ajouter_charge_deductible, name='ajouter_charge_deductible'),
+    path('charges/modifier/<int:pk>/', views.modifier_charge_deductible, name='modifier_charge_deductible'),
+    
     # URLs pour la gestion avancée des charges
     path('charges-avancees/', views_charges_avancees.liste_charges_avancees, name='liste_charges_avancees'),
     path('charges-avancees/creer/', views_charges_avancees.creer_charge_avancee, name='creer_charge_avancee'),
@@ -80,9 +97,11 @@ urlpatterns = [
     path('api/charges-bailleur/<int:bailleur_id>/', views_charges_avancees.api_charges_bailleur, name='api_charges_bailleur'),
     
     # API pour les données des paiements
-    # path('api/data/', views.api_paiements_data, name='api_paiements_data'),  # Fonction non disponible    
+    path('api/data/', views.api_paiements_data, name='api_paiements_data'),
+    
     # Recherche intelligente
-    # path('recherche/', views.recherche_intelligente_paiements, name='recherche_intelligente'),  # Fonction non disponible    
+    path('recherche/', views.recherche_intelligente_paiements, name='recherche_intelligente'),
+    
     # URLs pour les retraits (placeholder views)
     path('retraits/', views_retraits.retrait_list, name='retraits_liste'),
     path('retrait/ajouter/', views_retraits.retrait_create, name='retrait_ajouter'),
@@ -105,18 +124,26 @@ urlpatterns = [
     path('retrait_modifier/<int:pk>/', views_retraits.retrait_edit, name='retrait_modifier'),
     
     # URLs pour les paiements de caution et avance
-    # path('caution-avance/ajouter/', views.paiement_caution_avance_create, name='paiement_caution_avance_create'),  # Fonction non disponible    # path('caution-avance/liste/', views.paiement_caution_avance_list, name='paiement_caution_avance_list'),  # Fonction non disponible    
+    path('caution-avance/ajouter/', views.paiement_caution_avance_create, name='paiement_caution_avance_create'),
+    path('caution-avance/liste/', views.paiement_caution_avance_list, name='paiement_caution_avance_list'),
+    
     # URLs pour les tableaux de bord
-    # path('tableaux-bord/', views.tableau_bord_list, name='tableau_bord_list'),  # Fonction non disponible    # path('tableaux-bord/dashboard/', views.tableau_bord_dashboard, name='tableau_bord_dashboard'),  # Fonction non disponible    # path('tableaux-bord/ajouter/', views.tableau_bord_create, name='tableau_bord_create'),  # Fonction non disponible    # path('tableaux-bord/<int:pk>/', views.tableau_bord_detail, name='tableau_bord_detail'),  # Fonction non disponible    # path('tableaux-bord/<int:pk>/modifier/', views.tableau_bord_update, name='tableau_bord_update'),  # Fonction non disponible    # path('tableaux-bord/<int:pk>/supprimer/', views.tableau_bord_delete, name='tableau_bord_delete'),  # Fonction non disponible    # path('tableaux-bord/<int:pk>/export-pdf/', views.tableau_bord_export_pdf, name='tableau_bord_export_pdf'),  # Fonction non disponible    
+    path('tableaux-bord/', views.tableau_bord_list, name='tableau_bord_list'),
+    path('tableaux-bord/dashboard/', views.tableau_bord_dashboard, name='tableau_bord_dashboard'),
+    path('tableaux-bord/ajouter/', views.tableau_bord_create, name='tableau_bord_create'),
+    path('tableaux-bord/<int:pk>/', views.tableau_bord_detail, name='tableau_bord_detail'),
+    path('tableaux-bord/<int:pk>/modifier/', views.tableau_bord_update, name='tableau_bord_update'),
+    path('tableaux-bord/<int:pk>/supprimer/', views.tableau_bord_delete, name='tableau_bord_delete'),
+    path('tableaux-bord/<int:pk>/export-pdf/', views.tableau_bord_export_pdf, name='tableau_bord_export_pdf'),
+    
     # URLs pour les quittances de paiement
     path('quittances/', views.quittance_list, name='quittance_list'),
     path('quittance/<int:pk>/', views.quittance_detail, name='quittance_detail'),
-    # path('quittance/<int:pk>/imprimee/', views.marquer_quittance_imprimee, name='marquer_quittance_imprimee'),  # Fonction non disponible    # path('quittance/<int:pk>/envoyee/', views.marquer_quittance_envoyee, name='marquer_quittance_envoyee'),  # Fonction non disponible    # path('quittance/<int:pk>/archivee/', views.marquer_quittance_archivee, name='marquer_quittance_archivee'),  # Fonction non disponible    path('paiement/<int:paiement_pk>/generer-quittance/', views.generer_quittance_manuelle, name='generer_quittance_manuelle'),
+    path('quittance/<int:pk>/imprimee/', views.marquer_quittance_imprimee, name='marquer_quittance_imprimee'),
+    path('quittance/<int:pk>/envoyee/', views.marquer_quittance_envoyee, name='marquer_quittance_envoyee'),
+    path('quittance/<int:pk>/archivee/', views.marquer_quittance_archivee, name='marquer_quittance_archivee'),
+    path('paiement/<int:paiement_pk>/generer-quittance/', views.generer_quittance_manuelle, name='generer_quittance_manuelle'),
     
-    # URLs pour le nouveau système KBIS IMMOBILIER dynamique
-    # path('paiement/<int:paiement_pk>/quittance-kbis-dynamique/', views.generer_quittance_kbis_dynamique, name='generer_quittance_kbis_dynamique'),  # Fonction non disponible    # path('quittances-kbis-dynamiques/', views.generer_quittance_kbis_tous_paiements, name='generer_quittances_kbis_tous_paiements'),  # Fonction non disponible    
-    # URLs pour les paiements partiels et plans de paiement
-    # path('dashboard-partiels/', views.dashboard_paiements_partiels, name='dashboard_partiels'),  # Fonction non disponible    # path('plans-paiement/', views.liste_plans_paiement, name='liste_plans_partiels'),  # Fonction non disponible    # path('plans-paiement/creer/', views.creer_plan_paiement, name='creer_plan_partiel'),  # Fonction non disponible    # path('plans-paiement/<int:plan_id>/', views.detail_plan_paiement, name='detail_plan_paiement'),  # Fonction non disponible    
     # URLs pour les retraits aux bailleurs (nouveau système)
     path('retraits-bailleurs/', include('paiements.urls_retraits')),
     
@@ -159,12 +186,20 @@ urlpatterns = [
     path('recus-recapitulatifs/creer-gestimmob/<int:recapitulatif_id>/', views_recus.creer_recu_gestimmob_recapitulatif, name='creer_recu_gestimmob_recapitulatif'),
 
     # URLs pour la génération PDF
-    # path('recaps-mensuels-automatiques/<int:recap_id>/pdf/', views.generer_pdf_recap_mensuel, name='generer_pdf_recap_mensuel'),  # Fonction non disponible    # path('recaps-mensuels-automatiques/<int:recap_id>/apercu/', views.apercu_pdf_recap_mensuel, name='apercu_pdf_recap_mensuel'),  # Fonction non disponible    # path('recaps-mensuels-automatiques/pdf-lot/', views.generer_pdf_recaps_lot, name='generer_pdf_recaps_lot'),  # Fonction non disponible
+    path('recaps-mensuels-automatiques/<int:recap_id>/pdf/', views.generer_pdf_recap_mensuel, name='generer_pdf_recap_mensuel'),
+    path('recaps-mensuels-automatiques/<int:recap_id>/apercu/', views.apercu_pdf_recap_mensuel, name='apercu_pdf_recap_mensuel'),
+    path('recaps-mensuels-automatiques/pdf-lot/', views.generer_pdf_recaps_lot, name='generer_pdf_recaps_lot'),
+
     # ✅ SYSTÈME DE VALIDATION DES PAIEMENTS
     path('paiement/<int:pk>/valider/', views.valider_paiement, name='valider_paiement'),
-    # path('paiement/<int:pk>/refuser/', views.refuser_paiement, name='refuser_paiement'),  # Fonction non disponible    
+    path('paiement/<int:pk>/refuser/', views.refuser_paiement, name='refuser_paiement'),
+    
     # 🔍 API DE RECHERCHE INTELLIGENTE
-    # path('api/recherche-rapide/', api_views.api_recherche_contrats_rapide, name='api_recherche_rapide'),  # Fonction non disponible    # path('api/recherche-bailleur/', api_views.api_recherche_bailleur, name='api_recherche_bailleur'),  # Fonction non disponible    # path('api/contexte-intelligent/contrat/<int:contrat_id>/', api_views.api_contexte_intelligent_contrat, name='api_contexte_intelligent'),  # Fonction non disponible    # path('api/verifier-doublon/', api_views.api_verifier_doublon_paiement, name='api_verifier_doublon'),  # Fonction non disponible    # 🚀 API INTELLIGENTE DES RETRAITS - NOUVEAU !
+    path('api/recherche-rapide/', api_views.api_recherche_contrats_rapide, name='api_recherche_rapide'),
+    path('api/recherche-bailleur/', api_views.api_recherche_bailleur, name='api_recherche_bailleur'),
+    path('api/contexte-intelligent/contrat/<int:contrat_id>/', api_views.api_contexte_intelligent_contrat, name='api_contexte_intelligent'),
+    path('api/verifier-doublon/', api_views.api_verifier_doublon_paiement, name='api_verifier_doublon'),
+    # 🚀 API INTELLIGENTE DES RETRAITS - NOUVEAU !
     path('api/contexte-bailleur/<int:bailleur_id>/', api_intelligente_retraits.APIContexteIntelligentRetraits.as_view(), name='api_contexte_bailleur'),
     path('api/retraits-intelligents/contexte/<int:bailleur_id>/', api_intelligente_retraits.APIContexteIntelligentRetraits.as_view(), name='api_retraits_intelligents_contexte'),
     path('api/retraits-intelligents/suggestions/<int:bailleur_id>/', api_intelligente_retraits.api_suggestions_retrait, name='api_retraits_intelligents_suggestions'),

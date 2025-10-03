@@ -261,11 +261,12 @@ class Paiement(models.Model):
         default=False,
         verbose_name=_("Paiement partiel")
     )
-    mois_paye = models.DateField(
+    mois_paye = models.CharField(
+        max_length=50,
         null=True,
         blank=True,
         verbose_name=_("Mois payé"),
-        help_text=_("Mois pour lequel ce paiement est effectué")
+        help_text=_("Mois pour lequel ce paiement est effectué (ex: octobre 2025)")
     )
     montant_du_mois = models.DecimalField(
         max_digits=10,
@@ -619,7 +620,8 @@ class Paiement(models.Model):
     
     def generer_quittance_kbis_dynamique(self):
         """Génère directement une quittance avec le système KBIS IMMOBILIER dynamique."""
-        return self._generer_quittance_kbis_dynamique()
+        # Utiliser la même méthode que les récépissés pour avoir la même apparence
+        return self._generer_recu_kbis_dynamique()
     
     def generer_recu_automatique(self, utilisateur):
         """Génère automatiquement un reçu de paiement avec template KBIS."""
@@ -657,7 +659,7 @@ class Paiement(models.Model):
             if type_document == 'recu':
                 return self._generer_recu_kbis_dynamique()
             elif type_document == 'quittance':
-                return self._generer_quittance_kbis_dynamique()
+                return self._generer_recu_kbis_dynamique()
             elif type_document == 'facture':
                 return self._generer_facture_kbis_dynamique()
             else:
@@ -680,31 +682,52 @@ class Paiement(models.Model):
             # Déterminer le type de récépissé selon le type de paiement
             type_recu = self._determiner_type_recu()
             
+            # Récupérer les informations de base de manière sécurisée
+            try:
+                code_location = self.contrat.numero_contrat if self.contrat and self.contrat.numero_contrat else 'N/A'
+            except:
+                code_location = 'N/A'
+                
+            try:
+                recu_de = self.contrat.locataire.get_nom_complet() if self.contrat and self.contrat.locataire else 'LOCATAIRE'
+            except:
+                recu_de = 'LOCATAIRE'
+                
+            try:
+                quartier = self.contrat.propriete.adresse if self.contrat and self.contrat.propriete else 'Non spécifié'
+            except:
+                quartier = 'Non spécifié'
+            
             # Données du récépissé
             donnees_recu = {
                 'numero': f"REC-{datetime.now().strftime('%Y%m%d%H%M%S')}",
                 'date': self.date_paiement.strftime('%d-%b-%y') if self.date_paiement else datetime.now().strftime('%d-%b-%y'),
-                'code_location': f"{self.contrat.numero_contrat if self.contrat and self.contrat.numero_contrat else 'N/A'}",
-                'recu_de': f"{self.contrat.locataire.get_nom_complet() if self.contrat and self.contrat.locataire else 'LOCATAIRE'}",
-                'montant': int(self.montant),
-                'loyer_base': int(self.montant),
-                'mois_regle': self.mois_paye.strftime('%B %Y') if self.mois_paye else datetime.now().strftime('%B %Y'),
+                'code_location': code_location,
+                'recu_de': recu_de,
+                'montant': int(self.montant) if self.montant else 0,
+                'loyer_base': int(self.montant) if self.montant else 0,
+                'mois_regle': self.mois_paye if self.mois_paye else datetime.now().strftime('%B %Y'),
                 'restant_du': 0,
                 'loyer_au_prorata': 0,
-                'quartier': f"{self.contrat.propriete.adresse}" if self.contrat and self.contrat.propriete else 'Non spécifié',
+                'quartier': quartier,
                 'timestamp': datetime.now().isoformat(),
                 'type_document': type_recu,
-                'type_paiement': self.get_type_paiement_display(),
-                'mode_paiement': self.get_mode_paiement_display()
+                'type_paiement': self.get_type_paiement_display() if hasattr(self, 'get_type_paiement_display') else 'Paiement',
+                'mode_paiement': self.get_mode_paiement_display() if hasattr(self, 'get_mode_paiement_display') else 'Espèces'
             }
             
             # Ajouter des données spécialisées selon le type
-            donnees_recu.update(self._ajouter_donnees_specialisees_recu(type_recu))
+            try:
+                donnees_recu.update(self._ajouter_donnees_specialisees_recu(type_recu))
+            except:
+                pass  # Ignorer les erreurs de données spécialisées
             
             return DocumentKBISUnifie.generer_document_unifie(donnees_recu, type_recu)
             
         except Exception as e:
             print(f"Erreur lors de la génération du récépissé KBIS: {e}")
+            import traceback
+            print(f"Détails: {traceback.format_exc()}")
             return None
     
     def _determiner_type_recu(self):
@@ -792,51 +815,9 @@ class Paiement(models.Model):
             return 'quittance_retrait'
     
     def generer_quittance_kbis_dynamique(self):
-        """Génère une quittance avec le nouveau système KBIS IMMOBILIER dynamique."""
-        import sys
-        import os
-        from datetime import datetime
-        
-        try:
-            # Utiliser le système unifié
-            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            from document_kbis_unifie import DocumentKBISUnifie
-            
-            # Déterminer le type de quittance selon le type de paiement
-            type_quittance = self._determiner_type_quittance_paiement()
-            
-            # Préparation des données basées sur le paiement Django
-            donnees_paiement = {
-                'numero': f"QUI-{datetime.now().strftime('%Y%m%d%H%M%S')}-{self._generer_code_unique()}",
-                'date': self.date_paiement.strftime('%d-%b-%y') if self.date_paiement else datetime.now().strftime('%d-%b-%y'),
-                'code_location': f"{self.contrat.numero_contrat if self.contrat and self.contrat.numero_contrat else 'N/A'}",
-                'recu_de': f"{self.contrat.locataire.get_nom_complet() if self.contrat and self.contrat.locataire else 'LOCATAIRE'}",
-                'montant': int(self.montant),
-                'loyer_base': int(self.montant),
-                'mois_regle': self.mois_paye.strftime('%B %Y') if self.mois_paye else datetime.now().strftime('%B %Y'),
-                'restant_du': 0,  # Calculé automatiquement
-                'loyer_au_prorata': 0,  # Calculé automatiquement
-                'quartier': f"{self.contrat.propriete.adresse}" if self.contrat and self.contrat.propriete else 'Non spécifié',
-                'timestamp': datetime.now().isoformat(),
-                'type_document': type_quittance,
-                'type_paiement': self.get_type_paiement_display(),
-                'mode_paiement': self.get_mode_paiement_display()
-            }
-            
-            # Calcul du restant dû basé sur les paiements du contrat
-            if self.contrat and self.contrat.loyer_mensuel:
-                loyer_mensuel = float(self.contrat.loyer_mensuel)
-                montant_paye = float(self.montant)
-                
-                if montant_paye < loyer_mensuel:
-                    donnees_paiement['restant_du'] = int(loyer_mensuel - montant_paye)
-            
-            # Génération du HTML avec le système unifié
-            return DocumentKBISUnifie.generer_document_unifie(donnees_paiement, type_quittance)
-            
-        except Exception as e:
-            print(f"Erreur lors de la génération de la quittance KBIS: {e}")
-            return None
+        """Génère une quittance avec le nouveau système KBIS IMMOBILIER dynamique - MÊME FORMAT QUE RÉCÉPISSÉ."""
+        # Utiliser exactement la même méthode que les récépissés pour avoir le même format
+        return self._generer_recu_kbis_dynamique()
     
     def _determiner_type_quittance_paiement(self):
         """Détermine le type de quittance selon le type de paiement"""
@@ -976,17 +957,17 @@ class Paiement(models.Model):
             contrat_id = getattr(self, 'contrat_id', None)
             if contrat_id and self.mois_paye:
                 # Vérifier s'il existe déjà un paiement pour ce contrat dans le même mois
+                # mois_paye est un CharField, on compare directement les strings
                 existing_payment = Paiement.objects.filter(
                     contrat_id=contrat_id,
-                    mois_paye__year=self.mois_paye.year,
-                    mois_paye__month=self.mois_paye.month,
+                    mois_paye=self.mois_paye,
                     is_deleted=False
                 ).exclude(pk=self.pk)
                 
                 if existing_payment.exists():
                     existing = existing_payment.first()
                     raise ValidationError({
-                        'mois_paye': f"Un paiement existe déjà pour ce contrat au mois de {self.mois_paye.strftime('%B %Y')}. "
+                        'mois_paye': f"Un paiement existe déjà pour ce contrat au mois de {self.mois_paye}. "
                                     f"Paiement existant: {existing.reference_paiement} du {existing.date_paiement.strftime('%d/%m/%Y')} "
                                     f"pour un montant de {existing.montant} F CFA."
                     })
@@ -1108,9 +1089,9 @@ class QuittancePaiement(models.Model):
         
         # Utiliser un système basé sur timestamp + random pour garantir l'unicité
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        prefix = "QUIT"
+        prefix = "REC"
         
-        # Format: QUIT-YYYYMMDDHHMMSS-XXXX
+        # Format: REC-YYYYMMDDHHMMSS-XXXX
         code = f"{prefix}-{timestamp}-{get_random_string(4, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')}"
         
         # Vérifier l'unicité et régénérer si nécessaire

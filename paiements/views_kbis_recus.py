@@ -33,7 +33,10 @@ def generer_recu_kbis_dynamique(request, paiement_pk):
             return redirect('paiements:detail', pk=paiement_pk)
             
     except Exception as e:
-        messages.error(request, f'Erreur lors de la génération: {str(e)}')
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Erreur détaillée génération récépissé: {error_details}")
+        messages.error(request, f'Erreur lors de la génération du récépissé: {str(e)}')
         return redirect('paiements:detail', pk=paiement_pk)
 
 

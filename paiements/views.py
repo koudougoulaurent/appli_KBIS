@@ -280,17 +280,44 @@ def ajouter_paiement(request):
     """Ajouter un nouveau paiement avec contexte intelligent."""
     if request.method == 'POST':
         form = PaiementForm(request.POST)
+        print(f"Données POST: {request.POST}")
+        print(f"Formulaire valide: {form.is_valid()}")
+        if not form.is_valid():
+            print(f"Erreurs du formulaire: {form.errors}")
         if form.is_valid():
             try:
                 paiement = form.save(commit=False)
                 paiement.cree_par = request.user
+                
+                # Gérer le champ mois_paye comme une date
+                mois_paye_date = request.POST.get('mois_paye', '')
+                if mois_paye_date:
+                    # Convertir la date en format "mois année" (ex: "octobre 2025")
+                    try:
+                        from datetime import datetime
+                        date_obj = datetime.strptime(mois_paye_date, '%Y-%m-%d')
+                        mois_nom = date_obj.strftime('%B').lower()
+                        annee = date_obj.year
+                        paiement.mois_paye = f"{mois_nom} {annee}"
+                    except ValueError:
+                        # Si la conversion échoue, utiliser la valeur telle quelle
+                        paiement.mois_paye = mois_paye_date
+                
                 paiement.save()
+                
+                # Générer la référence si elle n'existe pas
+                if not paiement.reference_paiement:
+                    paiement.reference_paiement = paiement.generate_reference_paiement()
+                    paiement.save()
                 
                 messages.success(request, f'Paiement {paiement.reference_paiement} créé avec succès!')
                 return redirect('paiements:liste')
                 
             except Exception as e:
-                messages.error(request, f'Erreur lors de la création: {str(e)}')
+                import traceback
+                error_details = traceback.format_exc()
+                print(f"Erreur détaillée: {error_details}")
+                messages.error(request, f'Erreur lors de la validation du paiement: {str(e)}')
     else:
         form = PaiementForm()
     
@@ -303,6 +330,10 @@ def ajouter_paiement(request):
     except:
         devise_base = None
     
+    # Générer les années disponibles (année actuelle ± 2 ans)
+    current_year = timezone.now().year
+    annees_disponibles = list(range(current_year - 2, current_year + 3))
+    
     context = {
         'form': form,
         'contrats': contrats,
@@ -311,6 +342,7 @@ def ajouter_paiement(request):
         'net_a_payer': 0,
         'charges_bailleur': [],
         'devise_base': devise_base,
+        'annees_disponibles': annees_disponibles,
         'title': 'Ajouter un Paiement - Contexte Intelligent',
     }
     
@@ -1540,7 +1572,7 @@ def tableau_bord_list(request):
 # Vues pour les quittances de paiement
 @login_required
 def quittance_detail(request, pk):
-    """Afficher le détail d'une quittance de paiement."""
+    """Afficher le détail d'une quittance de paiement avec le même format que recu-kbis."""
     # Vérification des permissions
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
     if not permissions['allowed']:
@@ -1556,17 +1588,26 @@ def quittance_detail(request, pk):
         pk=pk
     )
     
-    context = get_context_with_entreprise_config({
-        'quittance': quittance,
-        'title': f'Quittance {quittance.numero_quittance}',
-    })
-    
-    return render(request, 'paiements/quittance_detail.html', context)
+    try:
+        # Utiliser la même méthode de génération que recu-kbis
+        paiement = quittance.paiement
+        html_recu = paiement.generer_quittance_kbis_dynamique()
+        
+        if html_recu:
+            # Retourner directement le HTML (même format que recu-kbis)
+            return HttpResponse(html_recu, content_type='text/html')
+        else:
+            messages.error(request, 'Erreur lors de la génération du récépissé')
+            return redirect('paiements:quittance_list')
+            
+    except Exception as e:
+        messages.error(request, f'Erreur lors de la génération: {str(e)}')
+        return redirect('paiements:quittance_list')
 
 
 @login_required
 def quittance_list(request):
-    """Liste des quittances de paiement."""
+    """Liste des récépissés de paiement."""
     # Vérification des permissions
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
     if not permissions['allowed']:
@@ -1594,7 +1635,7 @@ def quittance_list(request):
         'total_quittances': total_quittances,
         'quittances_imprimees': quittances_imprimees,
         'quittances_envoyees': quittances_envoyees,
-        'title': 'Liste des quittances de paiement'
+        'title': 'Liste des récépissés de paiement'
     })
     
     return render(request, 'paiements/quittance_list.html', context)
@@ -1729,10 +1770,10 @@ def generer_quittance_manuelle(request, paiement_pk):
             user_agent=request.META.get('HTTP_USER_AGENT', '')
         )
         
-        messages.success(request, f'Quittance {quittance.numero_quittance} générée avec succès')
+        messages.success(request, f'Récépissé {quittance.numero_quittance} généré avec succès')
         return redirect('paiements:quittance_detail', pk=quittance.pk)
     except Exception as e:
-        messages.error(request, f'Erreur lors de la génération de la quittance: {str(e)}')
+        messages.error(request, f'Erreur lors de la génération du récépissé: {str(e)}')
         return redirect('paiements:detail', pk=paiement_pk)
 
 
