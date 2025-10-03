@@ -154,12 +154,20 @@
                                     </td>
                                     <td>
                                         <div class="btn-group" role="group">
-                                            <a href="{% url 'paiements:paiement_detail' paiement.pk %}" class="btn btn-sm btn-outline-primary">
+                                            <a href="{% url 'paiements:detail' paiement.pk %}" class="btn btn-sm btn-outline-primary" title="Voir détails">
                                                 <i class="bi bi-eye"></i>
                                             </a>
-                                            <a href="{% url 'paiements:modifier_paiement' paiement.pk %}" class="btn btn-sm btn-outline-warning">
+                                            <a href="{% url 'paiements:modifier_paiement' paiement.pk %}" class="btn btn-sm btn-outline-warning" title="Modifier">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
+                                            {% if paiement.statut == 'valide' %}
+                                            <a href="{% url 'paiements:generer_quittance_kbis_dynamique' paiement.pk %}" class="btn btn-sm btn-success" title="Quittance KBIS dynamique">
+                                                <i class="bi bi-file-earmark-text"></i>
+                                            </a>
+                                            <a href="{% url 'paiements:generer_recu_kbis_dynamique' paiement.pk %}" class="btn btn-sm btn-info" title="Récépissé KBIS dynamique">
+                                                <i class="bi bi-receipt"></i>
+                                            </a>
+                                            {% endif %}
                                         </div>
                                     </td>
                                 </tr>

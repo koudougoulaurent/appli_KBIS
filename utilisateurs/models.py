@@ -3,10 +3,11 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import RegexValidator
 from django.utils import timezone
-from core.models import AuditLog
+# from core.models import AuditLog  # Temporairement commenté
 from proprietes.managers import NonDeletedManager
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from core.duplicate_prevention import DuplicatePreventionMixin, validate_unique_contact_info
 
 
 class GroupeTravail(models.Model):
@@ -76,8 +77,11 @@ class UtilisateurManager(BaseUserManager):
         return self.create_user(username, email, password, **extra_fields)
 
 
-class Utilisateur(AbstractUser):
+class Utilisateur(DuplicatePreventionMixin, AbstractUser):
     """Modèle utilisateur étendu avec groupe de travail"""
+    
+    # Champs à vérifier pour les doublons
+    duplicate_check_fields = ['email', 'telephone']
     
     # Champs supplémentaires
     telephone = models.CharField(max_length=100, blank=True, null=True)  # Aucune validation - temporaire
@@ -368,16 +372,16 @@ class Utilisateur(AbstractUser):
             if new_data:
                 details['new_data'] = new_data
             
-            AuditLog.objects.create(
-                content_type=ContentType.objects.get_for_model(model_instance),
-                object_id=model_instance.pk,
-                action=action,
-                details=details if details else None,
-                object_repr=str(model_instance),
-                user=self,
-                ip_address=request.META.get('REMOTE_ADDR') if request else None,
-                user_agent=request.META.get('HTTP_USER_AGENT') if request else None,
-            )
+            # AuditLog.objects.create(
+            #     content_type=ContentType.objects.get_for_model(model_instance),
+            #     object_id=model_instance.pk,
+            #     action=action,
+            #     details=details if details else None,
+            #     object_repr=str(model_instance),
+            #     user=self,
+            #     ip_address=request.META.get('REMOTE_ADDR') if request else None,
+            #     user_agent=request.META.get('HTTP_USER_AGENT') if request else None,
+            # )
         except Exception as e:
             # Ignorer les erreurs de log
             pass

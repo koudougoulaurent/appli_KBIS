@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reçu de Récapitulatif - {{ recu.numero_recu }}</title>
     <style>
-        /* Styles pour impression A5 - Format optimisé */
+        /* Styles pour impression A4 Paysage - Format optimisé */
         @page {
-            size: A5;
-            margin: 8mm;
+            size: A4 landscape;
+            margin: 10mm;
         }
         
         * {
@@ -19,20 +19,21 @@
         
         body {
             font-family: 'Arial', sans-serif;
-            font-size: 8pt;
-            line-height: 1.2;
+            font-size: 9pt;
+            line-height: 1.3;
             color: #333;
             background: white;
+            width: 100%;
         }
         
-        /* En-tête principal - Format A5 */
+        /* En-tête principal - Format A4 Paysage */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 8mm;
+            margin-bottom: 6mm;
             border-bottom: 2px solid #2c3e50;
-            padding-bottom: 4mm;
+            padding-bottom: 3mm;
         }
         
         .logo-section {
@@ -162,7 +163,7 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 3mm;
-            font-size: 6pt;
+            font-size: 7pt;
         }
         
         .proprietes-table th {
@@ -273,10 +274,47 @@
             body {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+                margin: 0;
+                padding: 0;
+                font-size: 10pt;
+                line-height: 1.2;
             }
             
             .no-print {
                 display: none !important;
+            }
+            
+            .header {
+                margin-bottom: 20px;
+                page-break-inside: avoid;
+            }
+            
+            .logo-section img {
+                max-height: 3cm;
+                width: auto;
+                margin: 0 auto;
+                display: block;
+            }
+            
+            .document-info {
+                text-align: center;
+                margin-top: 10px;
+            }
+            
+            .proprietes-table {
+                font-size: 7pt;
+                page-break-inside: avoid;
+            }
+            
+            .proprietes-table th,
+            .proprietes-table td {
+                padding: 3px;
+                border: 1px solid #ddd;
+            }
+            
+            .footer {
+                page-break-inside: avoid;
+                margin-top: 20px;
             }
         }
         
@@ -300,86 +338,14 @@
     <!-- En-tête principal -->
     <div class="header">
         <div class="logo-section">
-            <div class="logo">RENTILA</div>
-            <div class="entreprise-info">
-                <strong>Agence Immobilière Professionnelle</strong><br>
-                123 Avenue de la République<br>
-                Ouagadougou, Burkina Faso<br>
-                Tél: +226 25 30 60 70<br>
-                Email: contact@rentila.bf<br>
-                Site: www.rentila.bf
-            </div>
+            <img src="{% load static %}{% static 'images/enteteEnImage.png' %}" 
+                 alt="KBIS IMMOBILIER" 
+                 style="width: 100%; max-width: 100%; height: auto; display: block; margin-bottom: 8px; max-height: 3cm;">
         </div>
         
-        <div class="document-info">
-            <div class="document-title">Reçu de Récapitulatif</div>
-            <div class="document-subtitle">{{ recu.get_type_recu_display }}</div>
-            <div class="document-number">N° {{ recu.numero_recu }}</div>
-            <div style="margin-top: 0.5cm;">
-                <span class="statut-badge statut-{{ recu.statut }}">
-                    {{ recu.get_statut_display }}
-                </span>
-            </div>
-        </div>
     </div>
     
-    <!-- Section bailleur -->
-    <div class="bailleur-section">
-        <div class="section-title">Informations du Bailleur</div>
-        <div class="bailleur-info">
-            <div>
-                <div class="info-group">
-                    <div class="info-label">Nom complet</div>
-                    <div class="info-value">{{ recu.recapitulatif.bailleur.get_nom_complet }}</div>
-                </div>
-                <div class="info-group">
-                    <div class="info-label">Téléphone</div>
-                    <div class="info-value">{{ recu.recapitulatif.bailleur.telephone|default:"Non renseigné" }}</div>
-                </div>
-                <div class="info-group">
-                    <div class="info-label">Email</div>
-                    <div class="info-value">{{ recu.recapitulatif.bailleur.email|default:"Non renseigné" }}</div>
-                </div>
-            </div>
-            <div>
-                <div class="info-group">
-                    <div class="info-label">Adresse</div>
-                    <div class="info-value">{{ recu.recapitulatif.bailleur.adresse|default:"Non renseignée" }}</div>
-                </div>
-                <div class="info-group">
-                    <div class="info-label">Ville</div>
-                    <div class="info-value">{{ recu.recapitulatif.bailleur.ville|default:"Non renseignée" }}</div>
-                </div>
-                <div class="info-group">
-                    <div class="info-label">Code postal</div>
-                    <div class="info-value">{{ recu.recapitulatif.bailleur.code_postal|default:"Non renseigné" }}</div>
-                </div>
-            </div>
-        </div>
-    </div>
     
-    <!-- Section récapitulatif -->
-    <div class="recapitulatif-section">
-        <div class="section-title">Récapitulatif Mensuel - {{ recu.recapitulatif.mois_recapitulatif|date:"F Y" }}</div>
-        <div class="recap-grid">
-            <div class="recap-item primary">
-                <div class="recap-value">{{ totaux.nombre_proprietes }}</div>
-                <div class="recap-label">Propriétés Louées</div>
-            </div>
-            <div class="recap-item success">
-                <div class="recap-value">{{ totaux.total_loyers_bruts|floatformat:0 }} F CFA</div>
-                <div class="recap-label">Loyers Attendus</div>
-            </div>
-            <div class="recap-item warning">
-                <div class="recap-value">{{ totaux.total_charges_deductibles|floatformat:0 }} F CFA</div>
-                <div class="recap-label">Charges Déductibles</div>
-            </div>
-            <div class="recap-item danger">
-                <div class="recap-value">{{ totaux.total_net_a_payer|floatformat:0 }} F CFA</div>
-                <div class="recap-label">Montant Net</div>
-            </div>
-        </div>
-    </div>
     
     <!-- Tableau des propriétés -->
     <div class="proprietes-section">
@@ -403,12 +369,13 @@
                 </tr>
             </thead>
             <tbody>
-                {% for detail in totaux.details_proprietes %}
+                {% if totaux.details_proprietes %}
+                    {% for detail in totaux.details_proprietes %}
                 <tr>
                     <td>
-                        <strong>{{ detail.propriete.nom }}</strong><br>
-                        <span class="text-muted">Adresse: {{ detail.propriete.adresse }}</span><br>
-                        <small>{{ detail.propriete.ville }}</small>
+                        <strong>{{ detail.propriete.nom|default:detail.propriete.adresse|default:"Propriété #"|add:detail.propriete.id|stringformat:"%s" }}</strong><br>
+                        <span class="text-muted">Adresse: {{ detail.propriete.adresse|default:"Non renseignée" }}</span><br>
+                        <small>{{ detail.propriete.ville|default:"" }}</small>
                     </td>
                     <td>
                         {% if detail.unite_locative %}
@@ -437,29 +404,18 @@
                         </span>
                     </td>
                 </tr>
-                {% endfor %}
+                    {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="13" style="text-align: center; color: #999; font-style: italic;">
+                        Aucune propriété trouvée pour ce récapitulatif
+                    </td>
+                </tr>
+                {% endif %}
             </tbody>
         </table>
     </div>
     
-    <!-- Section totaux -->
-    <div class="totaux-section">
-        <div class="section-title">Résumé Financier</div>
-        <div class="totaux-grid">
-            <div class="total-item loyers">
-                <div class="total-value">{{ totaux.total_loyers_bruts|floatformat:0 }} F CFA</div>
-                <div class="total-label">Total Loyers Attendus</div>
-            </div>
-            <div class="total-item charges">
-                <div class="total-value">{{ totaux.total_charges_deductibles|floatformat:0 }} F CFA</div>
-                <div class="total-label">Total Charges Déductibles</div>
-            </div>
-            <div class="total-item net">
-                <div class="total-value">{{ totaux.total_net_a_payer|floatformat:0 }} F CFA</div>
-                <div class="total-label">Montant Net à Payer</div>
-            </div>
-        </div>
-    </div>
     
     <!-- Pied de page -->
     <div class="footer">
@@ -468,21 +424,9 @@
             <div class="signature-label">Signature du Gestionnaire</div>
         </div>
         
-        <div class="document-info-footer">
-            <div><strong>Date d'émission:</strong> {{ recu.date_creation|date:"d/m/Y H:i" }}</div>
-            {% if recu.date_impression %}
-            <div><strong>Date d'impression:</strong> {{ recu.date_impression|date:"d/m/Y H:i" }}</div>
-            {% endif %}
-            {% if recu.imprime_par %}
-            <div><strong>Imprimé par:</strong> {{ recu.imprime_par.get_full_name }}</div>
-            {% endif %}
-            <div><strong>Template:</strong> {{ recu.get_template_utilise_display }}</div>
-            <div><strong>Format:</strong> {{ recu.get_format_impression_display }}</div>
-            {% if recu.hash_securite %}
-            <div class="hash-info">
-                <strong>Hash de sécurité:</strong> {{ recu.hash_securite|slice:":16" }}...
-            </div>
-            {% endif %}
+        <div class="signature-section">
+            <div class="signature-line"></div>
+            <div class="signature-label">Signature du Bailleur</div>
         </div>
     </div>
     

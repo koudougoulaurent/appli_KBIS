@@ -1,0 +1,416 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Génération Quittances KBIS IMMOBILIER{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kbis-header {
+        background: linear-gradient(135deg, #1976d2, #1565c0);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        text-align: center;
+        box-shadow: 0 8px 25px rgba(25, 118, 210, 0.3);
+    }
+    
+    .kbis-logo {
+        width: 80px;
+        height: 80px;
+        border: 3px solid white;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 20px;
+        font-size: 14px;
+        font-weight: bold;
+        vertical-align: middle;
+    }
+    
+    .selection-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        margin-bottom: 25px;
+    }
+    
+    .paiement-card {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .paiement-card:hover {
+        background: #e3f2fd;
+        border-color: #1976d2;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(25, 118, 210, 0.2);
+    }
+    
+    .paiement-card.selected {
+        background: #e8f5e8;
+        border-color: #4caf50;
+        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+    }
+    
+    .paiement-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        align-items: center;
+    }
+    
+    .paiement-detail {
+        font-size: 14px;
+    }
+    
+    .paiement-detail strong {
+        color: #1976d2;
+    }
+    
+    .montant-badge {
+        background: #1976d2;
+        color: white;
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 16px;
+        text-align: center;
+    }
+    
+    .actions-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        position: sticky;
+        top: 20px;
+    }
+    
+    .btn-kbis {
+        background: linear-gradient(45deg, #4caf50, #45a049);
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        width: 100%;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-kbis:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
+    }
+    
+    .btn-kbis:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+    
+    .stats-rapides {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .stat-card {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        border-left: 4px solid #1976d2;
+    }
+    
+    .stat-number {
+        font-size: 24px;
+        font-weight: bold;
+        color: #1976d2;
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        font-size: 12px;
+        color: #666;
+        text-transform: uppercase;
+    }
+    
+    .format-options {
+        background: #e8f5e8;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .checkbox-wrapper {
+        position: relative;
+        margin-bottom: 8px;
+    }
+    
+    .checkbox-wrapper input[type="checkbox"] {
+        margin-right: 8px;
+        transform: scale(1.2);
+    }
+    
+    .search-filter {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .search-input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+    
+    .search-input:focus {
+        border-color: #1976d2;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="kbis-header">
+        <div class="kbis-logo">🏠<br>KBIS</div>
+        <div style="display: inline-block; vertical-align: middle;">
+            <h1 style="margin: 0; font-size: 28px;">KBIS IMMOBILIER</h1>
+            <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 16px;">
+                Génération de Quittances Dynamiques • Format A5 • Impression Professionnelle
+            </p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="search-filter">
+                <h4 style="color: #1976d2; margin-top: 0;">🔍 Recherche et Filtres</h4>
+                <input type="text" id="searchInput" class="search-input" placeholder="Rechercher par nom du locataire, montant, date...">
+            </div>
+            
+            <form method="post" id="quittancesForm">
+                {% csrf_token %}
+                
+                <div class="selection-panel">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h4 style="color: #1976d2; margin: 0;">📋 Sélection des Paiements</h4>
+                        <div>
+                            <button type="button" id="selectAll" class="btn btn-outline-primary btn-sm">Tout sélectionner</button>
+                            <button type="button" id="deselectAll" class="btn btn-outline-secondary btn-sm ml-2">Tout désélectionner</button>
+                        </div>
+                    </div>
+                    
+                    <div id="paiementsList">
+                        {% for paiement in paiements %}
+                        <div class="paiement-card" data-paiement-id="{{ paiement.id }}">
+                            <div class="paiement-info">
+                                <div class="checkbox-wrapper">
+                                    <input type="checkbox" name="paiements" value="{{ paiement.id }}" id="paiement_{{ paiement.id }}">
+                                    <label for="paiement_{{ paiement.id }}" style="margin: 0; cursor: pointer;">
+                                        <strong>Paiement #{{ paiement.id }}</strong>
+                                    </label>
+                                </div>
+                                
+                                <div class="paiement-detail">
+                                    <strong>👤 Locataire:</strong><br>
+                                    {{ paiement.contrat.locataire.get_nom_complet|default:"Non défini" }}
+                                </div>
+                                
+                                <div class="paiement-detail">
+                                    <strong>🏠 Propriété:</strong><br>
+                                    {{ paiement.contrat.propriete.adresse|default:"Non définie" }}
+                                </div>
+                                
+                                <div class="paiement-detail">
+                                    <strong>📅 Date:</strong><br>
+                                    {{ paiement.date_paiement|date:"d/m/Y" }}
+                                </div>
+                                
+                                <div class="paiement-detail">
+                                    <strong>📆 Mois payé:</strong><br>
+                                    {{ paiement.mois_paye|date:"F Y"|default:"Non défini" }}
+                                </div>
+                                
+                                <div class="montant-badge">
+                                    {{ paiement.montant|floatformat:0 }} FCFA
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div style="text-align: center; padding: 40px; color: #666;">
+                            <h4>Aucun paiement trouvé</h4>
+                            <p>Il n'y a pas de paiements récents à afficher.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="actions-panel">
+                <h4 style="color: #1976d2; margin-top: 0;">⚡ Actions Rapides</h4>
+                
+                <div class="stats-rapides">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalPaiements">{{ paiements|length }}</div>
+                        <div class="stat-label">Paiements</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="selectionnes">0</div>
+                        <div class="stat-label">Sélectionnés</div>
+                    </div>
+                </div>
+                
+                <div class="format-options">
+                    <h5 style="color: #2e7d32; margin-top: 0;">📄 Format de Sortie</h5>
+                    <div>
+                        <input type="radio" name="format" value="html" id="formatHtml" checked>
+                        <label for="formatHtml">HTML (A5 - Impression directe)</label>
+                    </div>
+                    <div>
+                        <input type="radio" name="format" value="pdf" id="formatPdf" disabled>
+                        <label for="formatPdf">PDF (À venir)</label>
+                    </div>
+                </div>
+                
+                <button type="submit" form="quittancesForm" class="btn-kbis" id="genererBtn" disabled>
+                    🚀 Générer les Quittances KBIS
+                </button>
+                
+                <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                    <h5 style="color: #1976d2; margin-top: 0;">ℹ️ Informations</h5>
+                    <ul style="margin: 0; padding-left: 20px; color: #1976d2; font-size: 13px; line-height: 1.6;">
+                        <li><strong>Format A5:</strong> Optimisé pour impression</li>
+                        <li><strong>KBIS IMMOBILIER:</strong> En-tête officiel</li>
+                        <li><strong>Données dynamiques:</strong> Informations réelles</li>
+                        <li><strong>Bouton d'impression:</strong> Intégré dans chaque quittance</li>
+                    </ul>
+                </div>
+                
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="{% url 'paiements:liste' %}" class="btn btn-outline-secondary">
+                        ← Retour à la liste des paiements
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('input[name="paiements"]');
+    const selectAllBtn = document.getElementById('selectAll');
+    const deselectAllBtn = document.getElementById('deselectAll');
+    const genererBtn = document.getElementById('genererBtn');
+    const selectionnesCount = document.getElementById('selectionnes');
+    const searchInput = document.getElementById('searchInput');
+    const paiementCards = document.querySelectorAll('.paiement-card');
+    
+    // Fonction pour mettre à jour le compteur et l'état du bouton
+    function updateSelection() {
+        const selected = document.querySelectorAll('input[name="paiements"]:checked').length;
+        selectionnesCount.textContent = selected;
+        genererBtn.disabled = selected === 0;
+        
+        // Mettre à jour l'apparence des cartes
+        checkboxes.forEach(checkbox => {
+            const card = checkbox.closest('.paiement-card');
+            if (checkbox.checked) {
+                card.classList.add('selected');
+            } else {
+                card.classList.remove('selected');
+            }
+        });
+    }
+    
+    // Événements pour les checkboxes
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelection);
+    });
+    
+    // Clic sur la carte pour sélectionner/désélectionner
+    paiementCards.forEach(card => {
+        card.addEventListener('click', function(e) {
+            if (e.target.type !== 'checkbox' && e.target.tagName !== 'LABEL') {
+                const checkbox = card.querySelector('input[type="checkbox"]');
+                checkbox.checked = !checkbox.checked;
+                updateSelection();
+            }
+        });
+    });
+    
+    // Sélectionner tout
+    selectAllBtn.addEventListener('click', function() {
+        checkboxes.forEach(checkbox => {
+            if (!checkbox.closest('.paiement-card').style.display || 
+                checkbox.closest('.paiement-card').style.display !== 'none') {
+                checkbox.checked = true;
+            }
+        });
+        updateSelection();
+    });
+    
+    // Désélectionner tout
+    deselectAllBtn.addEventListener('click', function() {
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        updateSelection();
+    });
+    
+    // Recherche en temps réel
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        
+        paiementCards.forEach(card => {
+            const text = card.textContent.toLowerCase();
+            if (text.includes(searchTerm)) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+                // Désélectionner si masqué
+                const checkbox = card.querySelector('input[type="checkbox"]');
+                checkbox.checked = false;
+            }
+        });
+        
+        updateSelection();
+    });
+    
+    // Confirmation avant génération
+    document.getElementById('quittancesForm').addEventListener('submit', function(e) {
+        const selected = document.querySelectorAll('input[name="paiements"]:checked').length;
+        if (selected > 0) {
+            if (!confirm(`Voulez-vous vraiment générer ${selected} quittance(s) KBIS IMMOBILIER ?`)) {
+                e.preventDefault();
+            }
+        }
+    });
+    
+    // Initialisation
+    updateSelection();
+});
+</script>
+{% endblock %}

@@ -1,6 +1,1 @@
-# Package des commandes Django pour propriétés
-
-
-
-
-
+# Commands package

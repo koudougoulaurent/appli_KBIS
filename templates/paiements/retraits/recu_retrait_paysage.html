@@ -46,12 +46,14 @@
 </head>
 <body>
     <button class="print-button" onclick="window.print()"> Imprimer</button>
-    <div class="watermark">{{ config.nom_entreprise|default:"RENTILA" }}</div>
+    <div class="watermark">{{ config.nom_entreprise|default:"KBIS IMMOBILIER" }}</div>
     
     <!-- En-tête de l'entreprise -->
     <div class="header">
-        {% if config.logo_url %}<img src="{{ config.logo_url }}" alt="Logo {{ config.nom_entreprise }}" class="company-logo">{% endif %}
-        <div class="company-name">{{ config.nom_entreprise|default:"RENTILA" }}</div>
+        <img src="{% load static %}{% static 'images/enteteEnImage.png' %}" 
+             alt="KBIS IMMOBILIER" 
+             style="width: 100%; max-width: 100%; height: auto; display: block; margin-bottom: 15px;">
+        <div class="company-name">{{ config.nom_entreprise|default:"KBIS IMMOBILIER" }}</div>
         {% if config.slogan %}<div class="company-subtitle">{{ config.slogan }}</div>{% else %}<div class="company-subtitle">Gestion Immobilière Professionnelle</div>{% endif %}
         <div class="company-info">{{ config.get_adresse_complete|default:"Siège social: Abidjan, Côte d'Ivoire" }}{% if config.telephone %} | Tél: {{ config.telephone }}{% endif %}{% if config.email %} | Email: {{ config.email }}{% endif %}{% if config.site_web %} | Web: {{ config.site_web }}{% endif %}</div>
         {% if config.get_informations_legales %}<div class="company-info" style="margin-top: 10px; font-size: 12px;">{{ config.get_informations_legales }}</div>{% endif %}
@@ -134,7 +136,7 @@
     
     <!-- Informations de bas de page -->
     <div style="margin-top: 40px; text-align: center; font-size: 12px; color: #7f8c8d;">
-        <p>Ce document est généré automatiquement par le système de gestion {{ config.nom_entreprise|default:"Rentila" }}</p>
+        <p>Ce document est généré automatiquement par le système de gestion {{ config.nom_entreprise|default:"KBIS IMMOBILIER" }}</p>
         <p>Date d'émission: {{ recu.date_emission|date:"d/m/Y à H:i" }}</p>
         <p>Document valide sans signature pour les montants inférieurs à 100 000 F CFA</p>
     </div>

@@ -228,9 +228,16 @@
                                                 <i class="bi bi-x-circle"></i>
                                             </button>
                                         {% elif paiement.statut == 'valide' %}
-                                            <span class="btn btn-sm btn-outline-success disabled">
-                                                <i class="bi bi-check-circle me-1"></i>Validé
-                                            </span>
+                                            <a href="{% url 'paiements:generer_quittance_kbis_dynamique' paiement.pk %}" 
+                                               class="btn btn-sm btn-success"
+                                               title="Quittance KBIS dynamique">
+                                                <i class="bi bi-file-earmark-text me-1"></i>Quittance
+                                            </a>
+                                            <a href="{% url 'paiements:generer_recu_kbis_dynamique' paiement.pk %}" 
+                                               class="btn btn-sm btn-info"
+                                               title="Récépissé KBIS dynamique">
+                                                <i class="bi bi-receipt me-1"></i>Récépissé
+                                            </a>
                                         {% elif paiement.statut == 'refuse' %}
                                             <span class="btn btn-sm btn-outline-danger disabled">
                                                 <i class="bi bi-x-circle me-1"></i>Refusé

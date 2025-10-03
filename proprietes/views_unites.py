@@ -309,17 +309,32 @@ def reservation_create(request, unite_id):
         return redirect('proprietes:unite_detail', pk=unite.pk)
     
     if request.method == 'POST':
-        form = ReservationUniteForm(request.POST)
+        # Ajouter l'unité locative aux données POST
+        post_data = request.POST.copy()
+        post_data['unite_locative'] = unite.pk
+        
+        form = ReservationUniteForm(post_data, unite_locative=unite)
+        print(f"DEBUG - Formulaire valide: {form.is_valid()}")
+        if not form.is_valid():
+            print(f"DEBUG - Erreurs du formulaire: {form.errors}")
         if form.is_valid():
-            reservation = form.save(commit=False)
-            reservation.unite_locative = unite
-            reservation.cree_par = request.user
-            
-            # Définir la date d'expiration (7 jours par défaut)
-            if not reservation.date_expiration:
-                reservation.date_expiration = timezone.now() + timedelta(days=7)
-            
-            reservation.save()
+            try:
+                reservation = form.save(commit=False)
+                reservation.unite_locative = unite
+                reservation.cree_par = request.user
+                
+                # Définir la date d'expiration (7 jours par défaut)
+                if not reservation.date_expiration:
+                    reservation.date_expiration = timezone.now() + timedelta(days=7)
+                
+                reservation.save()
+            except Exception as e:
+                messages.error(request, f"Erreur lors de la création de la réservation : {str(e)}")
+                return render(request, 'proprietes/reservations/form.html', {
+                    'form': form,
+                    'unite': unite,
+                    'title': f'Réserver {unite.numero_unite}'
+                })
             
             # Vérifier si la conversion immédiate en contrat est demandée
             convertir_en_contrat = form.cleaned_data.get('convertir_en_contrat', False)
@@ -374,8 +389,17 @@ def reservation_create(request, unite_id):
                     f"Réservation créée pour l'unité '{unite.numero_unite}'."
                 )
                 return redirect('proprietes:unite_detail', pk=unite.pk)
+        else:
+            # Le formulaire n'est pas valide, afficher les erreurs
+            messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{form.fields[field].label}: {error}")
     else:
-        form = ReservationUniteForm()
+        form = ReservationUniteForm(unite_locative=unite)
+        # Pré-remplir l'unité locative
+        form.fields['unite_locative'].initial = unite
+        form.fields['unite_locative'].widget.attrs['readonly'] = True
     
     context = {
         'form': form,

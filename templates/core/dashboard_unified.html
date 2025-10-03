@@ -291,7 +291,7 @@
                 <h6><i class="bi bi-cash-coin me-2"></i>Gestion des Paiements</h6>
             </div>
             <div class="module-actions">
-                <a href="{% url 'paiements:paiements_dashboard' %}" class="quick-action-btn">
+                <a href="{% url 'paiements:dashboard' %}" class="quick-action-btn">
                     <i class="bi bi-speedometer2 me-1"></i>Dashboard
                 </a>
                 <a href="{% url 'paiements:ajouter' %}" class="quick-action-btn">
@@ -392,7 +392,7 @@
                         </a>
                     </div>
                     <div class="col-md-3">
-                        <a href="{% url 'paiements:paiements_dashboard' %}#recaps" class="quick-action-btn info w-100 text-center">
+                        <a href="{% url 'paiements:dashboard' %}#recaps" class="quick-action-btn info w-100 text-center">
                             <i class="bi bi-calendar-month me-2"></i>Récaps Mensuels
                         </a>
                     </div>
@@ -450,6 +450,9 @@
                             </a>
                             <a href="{% url 'paiements:quittance_list' %}" class="btn btn-outline-info btn-sm">
                                 <i class="bi bi-receipt me-1"></i>Quittances
+                            </a>
+                            <a href="{% url 'paiements:generer_quittances_kbis_tous_paiements' %}" class="btn btn-outline-success btn-sm">
+                                <i class="bi bi-file-earmark-text me-1"></i>Quittances KBIS
                             </a>
                         </div>
                     </div>

@@ -34,7 +34,7 @@ def test_configuration_entreprise():
     print("\n🏢 Test de la configuration de l'entreprise...")
     
     # Vérifier s'il existe une configuration
-    config = ConfigurationEntreprise.objects.filter(actif=True).first()
+    config = ConfigurationEntreprise.objects.filter(active=True).first()
     if config:
         print(f"✅ Configuration trouvée: {config.nom_entreprise}")
         print(f"   - Slogan: {config.slogan}")

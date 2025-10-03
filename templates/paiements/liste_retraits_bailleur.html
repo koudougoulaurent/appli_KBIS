@@ -132,6 +132,10 @@
                                             <i class="bi bi-cash"></i>
                                         </a>
                                     {% endif %}
+                                    <a href="{% url 'paiements:generer_quittance_bailleur' retrait.id %}" 
+                                       class="btn btn-outline-primary" title="Générer quittance">
+                                        <i class="bi bi-file-earmark-text"></i>
+                                    </a>
                                     <a href="{% url 'paiements:imprimer_recu_retrait' retrait.id %}" 
                                        class="btn btn-outline-secondary" title="Imprimer reçu" target="_blank">
                                         <i class="bi bi-printer"></i>

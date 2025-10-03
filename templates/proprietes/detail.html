@@ -41,7 +41,7 @@
                                 {% endif %}
                             </p>
                             <p><strong>Bailleur :</strong> 
-                                <a href="{% url 'proprietes:bailleur_detail' propriete.bailleur.pk %}">
+                                <a href="{% url 'proprietes:detail_bailleur' propriete.bailleur.pk %}">
                                     {{ propriete.bailleur.get_nom_complet }}
                                 </a>
                             </p>
@@ -313,7 +313,7 @@
                         <a href="{% url 'proprietes:modifier' propriete.pk %}" class="btn btn-primary">
                             <i class="bi bi-pencil"></i> Modifier Propriété
                         </a>
-                        <a href="{% url 'proprietes:bailleur_detail' propriete.bailleur.pk %}" class="btn btn-secondary">
+                        <a href="{% url 'proprietes:detail_bailleur' propriete.bailleur.pk %}" class="btn btn-secondary">
                             <i class="bi bi-person"></i> Voir Bailleur
                         </a>
                         {% if propriete.type_gestion == 'unites_multiples' %}

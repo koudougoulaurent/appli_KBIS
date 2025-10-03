@@ -5,7 +5,6 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.urls import reverse
 from decimal import Decimal
-import uuid
 from contrats.models import Contrat
 from proprietes.managers import NonDeletedManager
 from django.conf import settings
@@ -455,7 +454,12 @@ class Paiement(models.Model):
                 is_deleted=False
             )
             total_paye = sum([p.montant for p in paiements if p.pk != self.pk]) + self.montant
-            montant_du_mois = self.montant_du_mois or self.contrat.loyer
+            # Convertir le loyer_mensuel (CharField) en Decimal
+            try:
+                loyer_mensuel_decimal = Decimal(self.contrat.loyer_mensuel) if self.contrat.loyer_mensuel else Decimal('0')
+                montant_du_mois = self.montant_du_mois or loyer_mensuel_decimal
+            except (ValueError, TypeError):
+                montant_du_mois = self.montant_du_mois or Decimal('0')
             self.montant_restant_du = max(Decimal(montant_du_mois) - Decimal(total_paye), 0)
             if total_paye < Decimal(montant_du_mois):
                 self.statut = 'partiellement_payé'
@@ -468,22 +472,6 @@ class Paiement(models.Model):
                 raise ValueError("Le total des paiements dépasse le montant dû pour ce mois.")
 
         super().save(*args, **kwargs)
-    
-    def peut_generer_quittance(self):
-        """Vérifie si le paiement peut générer une quittance."""
-        # Les paiements partiels ne génèrent pas de quittance
-        if self.est_paiement_partiel:
-            return False
-        # Seuls les paiements validés et complets génèrent des quittances
-        return self.statut == 'valide' and not self.est_paiement_partiel
-    
-    def est_paiement_definitif(self):
-        """Vérifie si le paiement est définitif (complet et validé)."""
-        return self.statut == 'valide' and not self.est_paiement_partiel
-    
-    def est_paiement_partiel_en_cours(self):
-        """Vérifie si le paiement est partiel et en cours."""
-        return self.est_paiement_partiel and self.statut == 'partiellement_payé'
     
     def generate_reference_paiement(self):
         """Génère une référence unique pour le paiement."""
@@ -590,6 +578,12 @@ class Paiement(models.Model):
         """Vérifie si le paiement peut être validé."""
         return self.statut == 'en_attente'
     
+    def peut_generer_quittance(self):
+        """Vérifie si le paiement peut générer une quittance."""
+        # Un paiement peut générer une quittance s'il est validé
+        # et qu'il n'est pas un paiement partiel
+        return self.statut == 'valide' and not self.est_paiement_partiel
+    
     def valider_paiement(self, utilisateur):
         """Valide le paiement et génère automatiquement une quittance et un reçu."""
         if self.peut_etre_valide():
@@ -608,18 +602,27 @@ class Paiement(models.Model):
         return False
     
     def generer_quittance(self, utilisateur):
-        """Génère automatiquement une quittance de paiement."""
+        """Génère automatiquement une quittance de paiement avec nouveau système KBIS."""
         from .models import QuittancePaiement
         
         # Vérifier si une quittance existe déjà
         if not hasattr(self, 'quittance'):
-            QuittancePaiement.objects.create(
+            quittance = QuittancePaiement.objects.create(
                 paiement=self,
                 cree_par=utilisateur
             )
+            # Générer le document KBIS dynamique
+            quittance.contenu_html = self.generer_document_kbis('quittance')
+            quittance.save()
+            return quittance
+        return self.quittance
+    
+    def generer_quittance_kbis_dynamique(self):
+        """Génère directement une quittance avec le système KBIS IMMOBILIER dynamique."""
+        return self._generer_quittance_kbis_dynamique()
     
     def generer_recu_automatique(self, utilisateur):
-        """Génère automatiquement un reçu de paiement."""
+        """Génère automatiquement un reçu de paiement avec template KBIS."""
         try:
             # Vérifier si un reçu existe déjà
             if not hasattr(self, 'recu') or not self.recu:
@@ -632,7 +635,7 @@ class Paiement(models.Model):
                 Recu.objects.create(
                     paiement=self,
                     numero_recu=numero_recu,
-                    template_utilise='standard',
+                    template_utilise='kbis_standard',
                     format_impression='A4',
                     valide=True,
                     genere_automatiquement=True
@@ -641,6 +644,293 @@ class Paiement(models.Model):
         except Exception as e:
             print(f"Erreur lors de la génération du reçu: {e}")
             return False
+    
+    def generer_document_kbis(self, type_document='recu'):
+        """Génère un document avec le nouveau système KBIS IMMOBILIER dynamique."""
+        try:
+            # Utiliser le système unifié
+            import sys
+            import os
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from document_kbis_unifie import DocumentKBISUnifie
+            
+            if type_document == 'recu':
+                return self._generer_recu_kbis_dynamique()
+            elif type_document == 'quittance':
+                return self._generer_quittance_kbis_dynamique()
+            elif type_document == 'facture':
+                return self._generer_facture_kbis_dynamique()
+            else:
+                return None
+        except Exception as e:
+            print(f"Erreur lors de la génération du document KBIS: {e}")
+            return None
+    
+    def _generer_recu_kbis_dynamique(self):
+        """Génère un récépissé avec le système unifié KBIS IMMOBILIER."""
+        import sys
+        import os
+        from datetime import datetime
+        
+        try:
+            # Utiliser le système unifié
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from document_kbis_unifie import DocumentKBISUnifie
+            
+            # Déterminer le type de récépissé selon le type de paiement
+            type_recu = self._determiner_type_recu()
+            
+            # Données du récépissé
+            donnees_recu = {
+                'numero': f"REC-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                'date': self.date_paiement.strftime('%d-%b-%y') if self.date_paiement else datetime.now().strftime('%d-%b-%y'),
+                'code_location': f"{self.contrat.numero_contrat if self.contrat and self.contrat.numero_contrat else 'N/A'}",
+                'recu_de': f"{self.contrat.locataire.get_nom_complet() if self.contrat and self.contrat.locataire else 'LOCATAIRE'}",
+                'montant': int(self.montant),
+                'loyer_base': int(self.montant),
+                'mois_regle': self.mois_paye.strftime('%B %Y') if self.mois_paye else datetime.now().strftime('%B %Y'),
+                'restant_du': 0,
+                'loyer_au_prorata': 0,
+                'quartier': f"{self.contrat.propriete.adresse}" if self.contrat and self.contrat.propriete else 'Non spécifié',
+                'timestamp': datetime.now().isoformat(),
+                'type_document': type_recu,
+                'type_paiement': self.get_type_paiement_display(),
+                'mode_paiement': self.get_mode_paiement_display()
+            }
+            
+            # Ajouter des données spécialisées selon le type
+            donnees_recu.update(self._ajouter_donnees_specialisees_recu(type_recu))
+            
+            return DocumentKBISUnifie.generer_document_unifie(donnees_recu, type_recu)
+            
+        except Exception as e:
+            print(f"Erreur lors de la génération du récépissé KBIS: {e}")
+            return None
+    
+    def _determiner_type_recu(self):
+        """Détermine le type de récépissé selon le type de paiement"""
+        if self.type_paiement == 'caution':
+            return 'recu_caution'
+        elif self.type_paiement == 'avance':
+            return 'recu_avance'
+        elif self.type_paiement == 'caution_avance':
+            return 'recu_caution_avance'
+        else:
+            return 'recu'
+    
+    def _ajouter_donnees_specialisees_recu(self, type_recu):
+        """Ajoute des données spécialisées selon le type de récépissé"""
+        donnees_specialisees = {}
+        
+        if type_recu == 'recu_caution_avance' and self.contrat:
+            # Calculer les montants pour caution et avance
+            loyer_mensuel = float(self.contrat.loyer_mensuel) if self.contrat.loyer_mensuel else 0
+            charges_mensuelles = float(self.contrat.charges_mensuelles) if self.contrat.charges_mensuelles else 0
+            
+            donnees_specialisees.update({
+                'loyer_mensuel': int(loyer_mensuel),
+                'charges_mensuelles': int(charges_mensuelles),
+                'depot_garantie': int(loyer_mensuel * 2),  # 2 mois de loyer
+                'avance_loyer': int(loyer_mensuel),  # 1 mois de loyer
+                'montant_total': int(loyer_mensuel * 3)  # 3 mois au total
+            })
+        
+        return donnees_specialisees
+    
+    def _generer_quittance_retrait_kbis(self):
+        """Génère une quittance de retrait avec le système unifié KBIS IMMOBILIER."""
+        import sys
+        import os
+        from datetime import datetime
+        
+        try:
+            # Utiliser le système unifié
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from document_kbis_unifie import DocumentKBISUnifie
+            
+            # Déterminer le type de quittance selon le type de retrait
+            type_quittance = self._determiner_type_quittance_retrait()
+            
+            # Données de la quittance de retrait
+            donnees_quittance = {
+                'numero': f"QUI-RET-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                'date': self.date_versement.strftime('%d-%b-%y') if self.date_versement else datetime.now().strftime('%d-%b-%y'),
+                'code_location': f"RET-{self.bailleur.nom.upper()[:3]}-{self.mois_retrait.strftime('%Y%m')}",
+                'recu_de': f"{self.bailleur.get_nom_complet()}",
+                'montant': int(self.montant_net_a_payer),
+                'loyer_base': int(self.montant_loyers_bruts),
+                'mois_regle': self.mois_retrait.strftime('%B %Y'),
+                'restant_du': 0,
+                'loyer_au_prorata': 0,
+                'quartier': f"Retrait {self.get_type_retrait_display().lower()}",
+                'timestamp': datetime.now().isoformat(),
+                'type_document': type_quittance,
+                'type_retrait': self.get_type_retrait_display(),
+                'mode_retrait': self.get_mode_retrait_display(),
+                'montant_brut': int(self.montant_loyers_bruts),
+                'charges_deduites': int(self.montant_charges_deductibles),
+                'montant_net': int(self.montant_net_a_payer)
+            }
+            
+            return DocumentKBISUnifie.generer_document_unifie(donnees_quittance, type_quittance)
+            
+        except Exception as e:
+            print(f"Erreur lors de la génération de la quittance de retrait KBIS: {e}")
+            return None
+    
+    def _determiner_type_quittance_retrait(self):
+        """Détermine le type de quittance selon le type de retrait"""
+        if self.type_retrait == 'mensuel':
+            return 'quittance_retrait_mensuel'
+        elif self.type_retrait == 'trimestriel':
+            return 'quittance_retrait_trimestriel'
+        elif self.type_retrait == 'annuel':
+            return 'quittance_retrait_annuel'
+        elif self.type_retrait == 'exceptionnel':
+            return 'quittance_retrait_exceptionnel'
+        else:
+            return 'quittance_retrait'
+    
+    def generer_quittance_kbis_dynamique(self):
+        """Génère une quittance avec le nouveau système KBIS IMMOBILIER dynamique."""
+        import sys
+        import os
+        from datetime import datetime
+        
+        try:
+            # Utiliser le système unifié
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from document_kbis_unifie import DocumentKBISUnifie
+            
+            # Déterminer le type de quittance selon le type de paiement
+            type_quittance = self._determiner_type_quittance_paiement()
+            
+            # Préparation des données basées sur le paiement Django
+            donnees_paiement = {
+                'numero': f"QUI-{datetime.now().strftime('%Y%m%d%H%M%S')}-{self._generer_code_unique()}",
+                'date': self.date_paiement.strftime('%d-%b-%y') if self.date_paiement else datetime.now().strftime('%d-%b-%y'),
+                'code_location': f"{self.contrat.numero_contrat if self.contrat and self.contrat.numero_contrat else 'N/A'}",
+                'recu_de': f"{self.contrat.locataire.get_nom_complet() if self.contrat and self.contrat.locataire else 'LOCATAIRE'}",
+                'montant': int(self.montant),
+                'loyer_base': int(self.montant),
+                'mois_regle': self.mois_paye.strftime('%B %Y') if self.mois_paye else datetime.now().strftime('%B %Y'),
+                'restant_du': 0,  # Calculé automatiquement
+                'loyer_au_prorata': 0,  # Calculé automatiquement
+                'quartier': f"{self.contrat.propriete.adresse}" if self.contrat and self.contrat.propriete else 'Non spécifié',
+                'timestamp': datetime.now().isoformat(),
+                'type_document': type_quittance,
+                'type_paiement': self.get_type_paiement_display(),
+                'mode_paiement': self.get_mode_paiement_display()
+            }
+            
+            # Calcul du restant dû basé sur les paiements du contrat
+            if self.contrat and self.contrat.loyer_mensuel:
+                loyer_mensuel = float(self.contrat.loyer_mensuel)
+                montant_paye = float(self.montant)
+                
+                if montant_paye < loyer_mensuel:
+                    donnees_paiement['restant_du'] = int(loyer_mensuel - montant_paye)
+            
+            # Génération du HTML avec le système unifié
+            return DocumentKBISUnifie.generer_document_unifie(donnees_paiement, type_quittance)
+            
+        except Exception as e:
+            print(f"Erreur lors de la génération de la quittance KBIS: {e}")
+            return None
+    
+    def _determiner_type_quittance_paiement(self):
+        """Détermine le type de quittance selon le type de paiement"""
+        if self.type_paiement == 'loyer':
+            return 'quittance_loyer'
+        elif self.type_paiement == 'avance':
+            return 'quittance_avance'
+        elif self.type_paiement == 'caution':
+            return 'quittance_caution'
+        elif self.type_paiement == 'caution_avance':
+            return 'quittance_caution_avance'
+        elif self.type_paiement == 'charges':
+            return 'quittance_charges'
+        elif self.type_paiement == 'frais_agence':
+            return 'quittance_frais_agence'
+        else:
+            return 'quittance'
+    
+    def _generer_code_unique(self):
+        """Génère un code unique pour la quittance"""
+        from django.utils.crypto import get_random_string
+        return get_random_string(4, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+    
+    def _generer_facture_kbis_dynamique(self):
+        """Génère une facture avec le système unifié KBIS IMMOBILIER."""
+        import sys
+        import os
+        from datetime import datetime, timedelta
+        
+        try:
+            # Utiliser le système unifié
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from document_kbis_unifie import DocumentKBISUnifie
+            
+            # Données de facture (à échoir)
+            mois_suivant = datetime.now() + timedelta(days=30)
+            
+            donnees_facture = {
+                'numero': f"FACT-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                'date': datetime.now().strftime('%d-%b-%y'),
+                'code_location': f"{self.contrat.numero_contrat if self.contrat and self.contrat.numero_contrat else 'N/A'}",
+                'recu_de': f"{self.contrat.locataire.get_nom_complet() if self.contrat and self.contrat.locataire else 'LOCATAIRE'}",
+                'montant': int(float(self.contrat.loyer_mensuel) if self.contrat and self.contrat.loyer_mensuel else self.montant),
+                'loyer_base': int(float(self.contrat.loyer_mensuel) if self.contrat and self.contrat.loyer_mensuel else self.montant),
+                'mois_regle': mois_suivant.strftime('%B %Y'),
+                'restant_du': 0,
+                'loyer_au_prorata': 0,
+                'quartier': f"{self.contrat.propriete.adresse}" if self.contrat and self.contrat.propriete else 'Non spécifié',
+                'timestamp': datetime.now().isoformat(),
+                'type_document': 'facture'
+            }
+            
+            return DocumentKBISUnifie.generer_document_unifie(donnees_facture, 'facture')
+            
+        except Exception as e:
+            print(f"Erreur lors de la génération de la facture KBIS: {e}")
+            return None
+    
+    def _generer_facture_kbis_old(self):
+        """Génère une facture avec template KBIS (ancienne version)."""
+        from core.utils import KBISDocumentTemplate
+        
+        contenu = f"""
+        <div style="margin: 20px 0;">
+            <h3 style="color: #2c5aa0; border-bottom: 2px solid #2c5aa0; padding-bottom: 10px;">
+                FACTURE DE LOYER
+            </h3>
+            <table style="width: 100%; background: #f8f9fa; border-radius: 8px;">
+                <tr>
+                    <th style="background: #2c5aa0; color: white;">Description</th>
+                    <th style="background: #2c5aa0; color: white;">Montant</th>
+                </tr>
+                <tr>
+                    <td>Loyer mensuel - {self.mois_paye.strftime('%B %Y') if self.mois_paye else 'N/A'}</td>
+                    <td class="montant">{self.get_montant_formatted()}</td>
+                </tr>
+                <tr>
+                    <td><strong>TOTAL À PAYER</strong></td>
+                    <td class="montant"><strong>{self.get_montant_formatted()}</strong></td>
+                </tr>
+            </table>
+        </div>
+        
+        <div style="margin: 20px 0; padding: 15px; background: #fff3cd; border-radius: 8px;">
+            <h4 style="color: #856404; margin-top: 0;">INFORMATIONS DE PAIEMENT</h4>
+            <p><strong>Échéance:</strong> {self.date_paiement.strftime('%d/%m/%Y')}</p>
+            <p><strong>Référence:</strong> {self.reference_paiement}</p>
+            <p><strong>Locataire:</strong> {self.get_nom_complet_locataire()}</p>
+            <p><strong>Propriété:</strong> {self.get_adresse_propriete()}</p>
+        </div>
+        """
+        
+        titre = f"FACTURE N° {self.reference_paiement}"
+        return KBISDocumentTemplate.get_document_complet(titre, contenu, "Facture")
     
     def peut_etre_annule(self):
         """Vérifie si le paiement peut être annulé."""
@@ -814,11 +1104,20 @@ class QuittancePaiement(models.Model):
     def generate_numero_quittance(self):
         """Génère un numéro unique pour la quittance."""
         from django.utils.crypto import get_random_string
+        from datetime import datetime
+        
+        # Utiliser un système basé sur timestamp + random pour garantir l'unicité
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         prefix = "QUIT"
-        while True:
-            code = f"{prefix}-{get_random_string(8, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')}"
-            if not QuittancePaiement.objects.filter(numero_quittance=code).exists():
-                return code
+        
+        # Format: QUIT-YYYYMMDDHHMMSS-XXXX
+        code = f"{prefix}-{timestamp}-{get_random_string(4, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')}"
+        
+        # Vérifier l'unicité et régénérer si nécessaire
+        while QuittancePaiement.objects.filter(numero_quittance=code).exists():
+            code = f"{prefix}-{timestamp}-{get_random_string(4, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')}"
+        
+        return code
     
     def get_locataire(self):
         """Retourne le locataire associé à cette quittance."""
@@ -2626,6 +2925,152 @@ class RecapitulatifMensuelBailleur(models.Model):
         else:  # exceptionnel
             return f"Exceptionnel - {self.mois_recapitulatif.strftime('%B %Y')}"
 
+
+class QuittancePaiementBailleur(models.Model):
+    """Quittance de paiement pour un retrait de bailleur."""
+    
+    STATUT_CHOICES = [
+        ('en_attente', _('En attente')),
+        ('generee', _('Générée')),
+        ('envoyee', _('Envoyée')),
+        ('imprimee', _('Imprimée')),
+    ]
+    
+    # Informations de base
+    retrait = models.OneToOneField(
+        'RetraitBailleur', 
+        on_delete=models.CASCADE, 
+        related_name='quittance_paiement',
+        verbose_name=_("Retrait lié")
+    )
+    numero_quittance = models.CharField(
+        max_length=20, 
+        unique=True, 
+        verbose_name=_("Numéro de quittance")
+    )
+    
+    # Informations du paiement
+    montant_paye = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        verbose_name=_("Montant payé")
+    )
+    montant_en_lettres = models.CharField(
+        max_length=500, 
+        verbose_name=_("Montant en lettres")
+    )
+    mode_paiement = models.CharField(
+        max_length=50, 
+        verbose_name=_("Mode de paiement")
+    )
+    reference_paiement = models.CharField(
+        max_length=100, 
+        blank=True, 
+        null=True, 
+        verbose_name=_("Référence du paiement")
+    )
+    
+    # Informations de la période
+    mois_paye = models.CharField(
+        max_length=50, 
+        verbose_name=_("Mois payé")
+    )
+    montant_restant_due = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=0, 
+        verbose_name=_("Montant restant dû")
+    )
+    
+    # Statut et dates
+    statut = models.CharField(
+        max_length=20, 
+        choices=STATUT_CHOICES, 
+        default='en_attente',
+        verbose_name=_("Statut")
+    )
+    date_generation = models.DateTimeField(
+        auto_now_add=True, 
+        verbose_name=_("Date de génération")
+    )
+    date_envoi = models.DateTimeField(
+        blank=True, 
+        null=True, 
+        verbose_name=_("Date d'envoi")
+    )
+    
+    # Gestion
+    cree_par = models.ForeignKey(
+        'utilisateurs.Utilisateur', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='quittances_bailleur_creees',
+        verbose_name=_("Créé par")
+    )
+    
+    class Meta:
+        verbose_name = _("Quittance de paiement bailleur")
+        verbose_name_plural = _("Quittances de paiement bailleur")
+        ordering = ['-date_generation']
+        indexes = [
+            models.Index(fields=['numero_quittance']),
+            models.Index(fields=['statut', 'date_generation']),
+        ]
+    
+    def __str__(self):
+        return f"Quittance {self.numero_quittance} - {self.retrait.bailleur.get_nom_complet()}"
+    
+    def get_absolute_url(self):
+        return reverse('paiements:quittance_bailleur_detail', kwargs={'pk': self.pk})
+    
+    def save(self, *args, **kwargs):
+        if not self.numero_quittance:
+            self.numero_quittance = self.generate_numero_quittance()
+        super().save(*args, **kwargs)
+    
+    def generate_numero_quittance(self):
+        """Génère un numéro de quittance unique."""
+        from datetime import datetime
+        now = datetime.now()
+        # Format: Q + année + mois + jour + 3 chiffres aléatoires
+        base = f"Q{now.year}{now.month:02d}{now.day:02d}"
+        
+        # Chercher le dernier numéro du jour
+        last_quittance = QuittancePaiementBailleur.objects.filter(
+            numero_quittance__startswith=base
+        ).order_by('-numero_quittance').first()
+        
+        if last_quittance:
+            try:
+                last_number = int(last_quittance.numero_quittance[-3:])
+                new_number = last_number + 1
+            except (ValueError, IndexError):
+                new_number = 1
+        else:
+            new_number = 1
+        
+        return f"{base}{new_number:03d}"
+    
+    def get_montant_formatted(self):
+        """Retourne le montant formaté avec séparateurs."""
+        return f"{self.montant_paye:,.0f} F CFA"
+    
+    def get_statut_color(self):
+        """Retourne la couleur du statut."""
+        colors = {
+            'en_attente': 'secondary',
+            'generee': 'info',
+            'envoyee': 'success',
+            'imprimee': 'primary',
+        }
+        return colors.get(self.statut, 'secondary')
+    
+    def get_statut_display_color(self):
+        """Retourne le statut avec couleur Bootstrap."""
+        color = self.get_statut_color()
+        return f'<span class="badge bg-{color}">{self.get_statut_display()}</span>'
+
     def calculer_details_bailleur(self, bailleur):
         """Calcule les détails complets pour un bailleur spécifique selon la période."""
         from proprietes.models import ChargesBailleur
@@ -2749,76 +3194,31 @@ class RecapitulatifMensuelBailleur(models.Model):
     
     def generer_pdf_recapitulatif(self):
         """Génère le PDF du récapitulatif mensuel."""
-        from reportlab.lib.pagesizes import A4
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib import colors
-        from reportlab.lib.units import inch
+        from django.template.loader import render_to_string
+        from xhtml2pdf import pisa
+        import tempfile
+        import os
         from io import BytesIO
         
         # Récupérer les totaux globaux
         totaux = self.calculer_totaux_globaux()
         
-        # Créer le PDF avec reportlab
-        pdf_buffer = BytesIO()
-        doc = SimpleDocTemplate(pdf_buffer, pagesize=A4)
-        styles = getSampleStyleSheet()
-        story = []
-        
-        # Titre
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
-            fontSize=16,
-            spaceAfter=30,
-            alignment=1  # Centré
+        # Rendre le template HTML
+        html_content = render_to_string(
+            'paiements/recapitulatifs/recapitulatif_mensuel_pdf.html',
+            {
+                'recapitulatif': self,
+                'totaux': totaux,
+                'date_generation': timezone.now(),
+            }
         )
-        story.append(Paragraph(f"Récapitulatif Mensuel - {self.bailleur.get_nom_complet()}", title_style))
-        story.append(Spacer(1, 12))
         
-        # Informations de base
-        info_data = [
-            ['Mois:', self.mois_recap.strftime('%B %Y')],
-            ['Bailleur:', self.bailleur.get_nom_complet()],
-            ['Date de génération:', timezone.now().strftime('%d/%m/%Y %H:%M')],
-        ]
+        # Créer le PDF avec xhtml2pdf
+        pdf_buffer = BytesIO()
+        pisa_status = pisa.CreatePDF(html_content, dest=pdf_buffer)
         
-        info_table = Table(info_data, colWidths=[2*inch, 4*inch])
-        info_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-            ('BACKGROUND', (1, 0), (1, -1), colors.beige),
-        ]))
-        
-        story.append(info_table)
-        story.append(Spacer(1, 20))
-        
-        # Totaux
-        totaux_data = [
-            ['Total des loyers:', f"{totaux.get('total_loyers', 0):,.0f} FCFA"],
-            ['Total des charges:', f"{totaux.get('total_charges', 0):,.0f} FCFA"],
-            ['Total net:', f"{totaux.get('total_net', 0):,.0f} FCFA"],
-        ]
-        
-        totaux_table = Table(totaux_data, colWidths=[3*inch, 3*inch])
-        totaux_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), colors.lightblue),
-            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 12),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ]))
-        
-        story.append(totaux_table)
-        
-        # Construire le PDF
-        doc.build(story)
+        if pisa_status.err:
+            raise Exception(f"Erreur lors de la génération du PDF: {pisa_status.err}")
         
         pdf_content = pdf_buffer.getvalue()
         pdf_buffer.close()
@@ -3231,526 +3631,3 @@ class RecuRecapitulatif(models.Model):
     
     def get_absolute_url(self):
         return reverse('paiements:detail_recu_recapitulatif', kwargs={'pk': self.pk})
-
-
-# ===== MODÈLES POUR LES PAIEMENTS PARTIELS =====
-
-class PlanPaiementPartiel(models.Model):
-    """Plan de paiement partiel pour un contrat"""
-    
-    # Identifiants
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    numero_plan = models.CharField(
-        max_length=50,
-        unique=True,
-        verbose_name=_("Numéro du plan")
-    )
-    
-    # Contrat associé
-    contrat = models.ForeignKey(
-        Contrat,
-        on_delete=models.CASCADE,
-        related_name='plans_paiement_partiel',
-        verbose_name=_("Contrat")
-    )
-    
-    # Informations du plan
-    nom_plan = models.CharField(
-        max_length=100,
-        verbose_name=_("Nom du plan"),
-        help_text=_("Ex: Plan de paiement partiel - Janvier 2025")
-    )
-    description = models.TextField(
-        blank=True,
-        verbose_name=_("Description du plan")
-    )
-    
-    # Montants
-    montant_total = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        validators=[MinValueValidator(0.01)],
-        verbose_name=_("Montant à payer")
-    )
-    montant_deja_paye = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        verbose_name=_("Montant déjà payé")
-    )
-    montant_restant = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        verbose_name=_("Montant restant")
-    )
-    
-    # Dates
-    date_debut = models.DateField(
-        verbose_name=_("Date de début")
-    )
-    date_fin_prevue = models.DateField(
-        verbose_name=_("Date limite")
-    )
-    date_fin_reelle = models.DateField(
-        null=True,
-        blank=True,
-        verbose_name=_("Date de fin réelle")
-    )
-    
-    # Statut
-    statut = models.CharField(
-        max_length=20,
-        choices=[
-            ('actif', 'Actif'),
-            ('suspendu', 'Suspendu'),
-            ('termine', 'Terminé'),
-            ('annule', 'Annulé'),
-        ],
-        default='actif',
-        verbose_name=_("Statut du plan")
-    )
-    
-    # Métadonnées
-    cree_par = models.ForeignKey(
-        Utilisateur,
-        on_delete=models.PROTECT,
-        related_name='plans_paiement_crees',
-        verbose_name=_("Créé par")
-    )
-    date_creation = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name=_("Date de création")
-    )
-    modifie_par = models.ForeignKey(
-        Utilisateur,
-        on_delete=models.PROTECT,
-        related_name='plans_paiement_modifies',
-        null=True,
-        blank=True,
-        verbose_name=_("Modifié par")
-    )
-    date_modification = models.DateTimeField(
-        auto_now=True,
-        verbose_name=_("Date de modification")
-    )
-    
-    # Soft delete
-    is_deleted = models.BooleanField(
-        default=False,
-        verbose_name=_("Supprimé")
-    )
-    deleted_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name=_("Date de suppression")
-    )
-    deleted_by = models.ForeignKey(
-        Utilisateur,
-        on_delete=models.PROTECT,
-        related_name='plans_paiement_supprimes',
-        null=True,
-        blank=True,
-        verbose_name=_("Supprimé par")
-    )
-    
-    class Meta:
-        verbose_name = _("Plan de paiement partiel")
-        verbose_name_plural = _("Plans de paiement partiel")
-        ordering = ['-date_creation']
-    
-    def __str__(self):
-        return f"Plan {self.numero_plan} - {self.contrat}"
-    
-    def save(self, *args, **kwargs):
-        if not self.numero_plan:
-            self.numero_plan = self.generate_numero_plan()
-        
-        # Calculer le montant restant
-        self.montant_restant = self.montant_total - self.montant_deja_paye
-        
-        super().save(*args, **kwargs)
-    
-    def generate_numero_plan(self):
-        """Générer un numéro de plan unique"""
-        import datetime
-        date_str = timezone.now().strftime('%Y%m%d')
-        count = PlanPaiementPartiel.objects.filter(
-            numero_plan__startswith=f"PPP{date_str}"
-        ).count() + 1
-        return f"PPP{date_str}{count:03d}"
-    
-    def calculer_progression(self):
-        """Calculer le pourcentage de progression"""
-        if self.montant_total > 0:
-            return (self.montant_deja_paye / self.montant_total) * 100
-        return 0
-    
-    def est_termine(self):
-        """Vérifier si le plan est terminé"""
-        return self.montant_restant <= 0 or self.statut == 'termine'
-    
-    def peut_etre_modifie(self):
-        """Vérifier si le plan peut être modifié"""
-        return self.statut in ['actif', 'suspendu'] and not self.is_deleted
-
-
-class EchelonPaiement(models.Model):
-    """Étape de paiement dans un accord"""
-    
-    # Identifiants
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    
-    # Accord associé
-    plan = models.ForeignKey(
-        PlanPaiementPartiel,
-        on_delete=models.CASCADE,
-        related_name='echelons',
-        verbose_name=_("Accord de paiement")
-    )
-    
-    # Informations de l'étape
-    numero_echelon = models.PositiveIntegerField(
-        verbose_name=_("Numéro d'étape")
-    )
-    montant = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        validators=[MinValueValidator(0.01)],
-        verbose_name=_("Montant de l'étape")
-    )
-    date_echeance = models.DateField(
-        verbose_name=_("Date d'échéance")
-    )
-    
-    # Statut
-    statut = models.CharField(
-        max_length=20,
-        choices=[
-            ('en_attente', 'En attente'),
-            ('paye', 'Payé'),
-            ('en_retard', 'En retard'),
-            ('annule', 'Annulé'),
-        ],
-        default='en_attente',
-        verbose_name=_("Statut de l'échelon")
-    )
-    
-    # Paiement associé
-    paiement = models.ForeignKey(
-        Paiement,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='echelon_paiement',
-        verbose_name=_("Paiement associé")
-    )
-    
-    # Dates
-    date_paiement = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name=_("Date de paiement")
-    )
-    
-    # Métadonnées
-    cree_par = models.ForeignKey(
-        Utilisateur,
-        on_delete=models.PROTECT,
-        related_name='echelons_crees',
-        verbose_name=_("Créé par")
-    )
-    date_creation = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name=_("Date de création")
-    )
-    
-    class Meta:
-        verbose_name = _("Échelon de paiement")
-        verbose_name_plural = _("Échelons de paiement")
-        ordering = ['plan', 'numero_echelon']
-        unique_together = ['plan', 'numero_echelon']
-    
-    def __str__(self):
-        return f"Échelon {self.numero_echelon} - {self.plan.numero_plan} - {self.montant} FCFA"
-    
-    def est_en_retard(self):
-        """Vérifier si l'échelon est en retard"""
-        return self.statut == 'en_retard' or (
-            self.statut == 'en_attente' and 
-            timezone.now().date() > self.date_echeance
-        )
-    
-    def marquer_comme_paye(self, paiement, utilisateur):
-        """Marquer l'échelon comme payé"""
-        self.statut = 'paye'
-        self.paiement = paiement
-        self.date_paiement = timezone.now()
-        self.save()
-        
-        # Mettre à jour le plan
-        self.plan.montant_deja_paye += self.montant
-        self.plan.save()
-
-
-class PaiementPartiel(models.Model):
-    """Paiement partiel spécialisé"""
-    
-    # Identifiants
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    numero_paiement_partiel = models.CharField(
-        max_length=50,
-        unique=True,
-        verbose_name=_("Numéro de paiement partiel")
-    )
-    
-    # Relations
-    plan = models.ForeignKey(
-        PlanPaiementPartiel,
-        on_delete=models.CASCADE,
-        related_name='paiements_partiels',
-        verbose_name=_("Plan de paiement")
-    )
-    echelon = models.ForeignKey(
-        EchelonPaiement,
-        on_delete=models.CASCADE,
-        related_name='paiements',
-        null=True,
-        blank=True,
-        verbose_name=_("Étape associée")
-    )
-    paiement_principal = models.ForeignKey(
-        Paiement,
-        on_delete=models.CASCADE,
-        related_name='paiements_partiels',
-        verbose_name=_("Paiement principal")
-    )
-    
-    # Montants
-    montant = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        validators=[MinValueValidator(0.01)],
-        verbose_name=_("Montant du paiement partiel")
-    )
-    montant_restant_apres = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        verbose_name=_("Montant restant après ce paiement")
-    )
-    
-    # Informations
-    motif = models.CharField(
-        max_length=200,
-        verbose_name=_("Motif du paiement partiel")
-    )
-    description = models.TextField(
-        blank=True,
-        verbose_name=_("Description détaillée")
-    )
-    
-    # Statut
-    statut = models.CharField(
-        max_length=20,
-        choices=[
-            ('en_attente', 'En attente'),
-            ('valide', 'Validé'),
-            ('refuse', 'Refusé'),
-            ('annule', 'Annulé'),
-        ],
-        default='en_attente',
-        verbose_name=_("Statut")
-    )
-    
-    # Dates
-    date_paiement = models.DateTimeField(
-        default=timezone.now,
-        verbose_name=_("Date de paiement")
-    )
-    date_validation = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name=_("Date de validation")
-    )
-    
-    # Métadonnées
-    cree_par = models.ForeignKey(
-        Utilisateur,
-        on_delete=models.PROTECT,
-        related_name='paiements_partiels_crees',
-        verbose_name=_("Créé par")
-    )
-    valide_par = models.ForeignKey(
-        Utilisateur,
-        on_delete=models.PROTECT,
-        related_name='paiements_partiels_valides',
-        null=True,
-        blank=True,
-        verbose_name=_("Validé par")
-    )
-    
-    # Soft delete
-    is_deleted = models.BooleanField(
-        default=False,
-        verbose_name=_("Supprimé")
-    )
-    deleted_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name=_("Date de suppression")
-    )
-    deleted_by = models.ForeignKey(
-        Utilisateur,
-        on_delete=models.PROTECT,
-        related_name='paiements_partiels_supprimes',
-        null=True,
-        blank=True,
-        verbose_name=_("Supprimé par")
-    )
-    
-    class Meta:
-        verbose_name = _("Paiement partiel")
-        verbose_name_plural = _("Paiements partiels")
-        ordering = ['-date_paiement']
-    
-    def __str__(self):
-        return f"Paiement partiel {self.numero_paiement_partiel} - {self.montant} FCFA"
-    
-    def save(self, *args, **kwargs):
-        if not self.numero_paiement_partiel:
-            self.numero_paiement_partiel = self.generate_numero()
-        
-        # Calculer le montant restant après ce paiement
-        if self.plan:
-            self.montant_restant_apres = self.plan.montant_restant - self.montant
-        
-        super().save(*args, **kwargs)
-    
-    def generate_numero(self):
-        """Générer un numéro de paiement partiel unique"""
-        import datetime
-        date_str = timezone.now().strftime('%Y%m%d')
-        count = PaiementPartiel.objects.filter(
-            numero_paiement_partiel__startswith=f"PP{date_str}"
-        ).count() + 1
-        return f"PP{date_str}{count:04d}"
-    
-    def valider(self, utilisateur):
-        """Valider le paiement partiel"""
-        self.statut = 'valide'
-        self.valide_par = utilisateur
-        self.date_validation = timezone.now()
-        self.save()
-        
-        # Mettre à jour le plan
-        self.plan.montant_deja_paye += self.montant
-        self.plan.save()
-        
-        # Marquer l'échelon comme payé si applicable
-        if self.echelon:
-            self.echelon.marquer_comme_paye(self.paiement_principal, utilisateur)
-
-
-class AlertePaiementPartiel(models.Model):
-    """Alertes pour les paiements partiels"""
-    
-    # Identifiants
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    
-    # Relations
-    plan = models.ForeignKey(
-        PlanPaiementPartiel,
-        on_delete=models.CASCADE,
-        related_name='alertes',
-        verbose_name=_("Plan de paiement")
-    )
-    echelon = models.ForeignKey(
-        EchelonPaiement,
-        on_delete=models.CASCADE,
-        related_name='alertes',
-        null=True,
-        blank=True,
-        verbose_name=_("Échelon concerné")
-    )
-    
-    # Informations de l'alerte
-    type_alerte = models.CharField(
-        max_length=30,
-        choices=[
-            ('echeance_proche', 'Échéance proche'),
-            ('echeance_depassee', 'Échéance dépassée'),
-            ('montant_insuffisant', 'Montant insuffisant'),
-            ('plan_suspendu', 'Plan suspendu'),
-            ('plan_termine', 'Plan terminé'),
-        ],
-        verbose_name=_("Type d'alerte")
-    )
-    message = models.TextField(
-        verbose_name=_("Message d'alerte")
-    )
-    niveau_urgence = models.CharField(
-        max_length=20,
-        choices=[
-            ('faible', 'Faible'),
-            ('moyen', 'Moyen'),
-            ('eleve', 'Élevé'),
-            ('critique', 'Critique'),
-        ],
-        default='moyen',
-        verbose_name=_("Niveau d'urgence")
-    )
-    
-    # Statut
-    statut = models.CharField(
-        max_length=20,
-        choices=[
-            ('active', 'Active'),
-            ('traitee', 'Traitée'),
-            ('ignoree', 'Ignorée'),
-        ],
-        default='active',
-        verbose_name=_("Statut de l'alerte")
-    )
-    
-    # Dates
-    date_creation = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name=_("Date de création")
-    )
-    date_traitement = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name=_("Date de traitement")
-    )
-    
-    # Métadonnées
-    cree_par = models.ForeignKey(
-        Utilisateur,
-        on_delete=models.PROTECT,
-        related_name='alertes_paiement_crees',
-        verbose_name=_("Créé par")
-    )
-    traite_par = models.ForeignKey(
-        Utilisateur,
-        on_delete=models.PROTECT,
-        related_name='alertes_paiement_traitees',
-        null=True,
-        blank=True,
-        verbose_name=_("Traité par")
-    )
-    
-    class Meta:
-        verbose_name = _("Alerte de paiement partiel")
-        verbose_name_plural = _("Alertes de paiement partiel")
-        ordering = ['-date_creation']
-    
-    def __str__(self):
-        return f"Alerte {self.type_alerte} - {self.plan.numero_plan}"
-    
-    def traiter(self, utilisateur):
-        """Traiter l'alerte"""
-        self.statut = 'traitee'
-        self.traite_par = utilisateur
-        self.date_traitement = timezone.now()
-        self.save()

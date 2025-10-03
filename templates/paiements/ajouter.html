@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{# {% load crispy_forms_tags %} #}
+{% load crispy_forms_tags %}
 
 {% block title %}Ajouter un Paiement - Contexte Intelligent{% endblock %}
 
@@ -176,7 +176,7 @@
                 <h2 class="mb-0">
                     <i class="bi bi-plus-circle"></i> Ajouter un Paiement
                 </h2>
-                <a href="{% url 'paiements:paiements_dashboard' %}" class="btn btn-outline-secondary">
+                <a href="{% url 'paiements:dashboard' %}" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left"></i> Retour au Dashboard
                 </a>
             </div>
@@ -223,118 +223,41 @@
                                 </div>
                                 
                                 <div class="mb-3">
-                                    <label for="{{ form.contrat.id_for_label }}" class="form-label">{{ form.contrat.label }}</label>
-                                    <select name="{{ form.contrat.name }}" id="{{ form.contrat.id_for_label }}" class="form-control">
-                                        <option value="">Sélectionnez un contrat...</option>
-                                        {% for choice in form.contrat.field.queryset %}
-                                            <option value="{{ choice.pk }}" {% if form.contrat.value == choice.pk %}selected{% endif %}>
-                                                {{ choice.numero_contrat }} - {{ choice.locataire.nom }} {{ choice.locataire.prenom }} ({{ choice.propriete.adresse }})
-                                            </option>
-                                        {% endfor %}
-                                    </select>
-                                    {% if form.contrat.help_text %}
-                                        <div class="form-text">{{ form.contrat.help_text }}</div>
-                                    {% endif %}
-                                    {% if form.contrat.errors %}
-                                        <div class="text-danger">{{ form.contrat.errors }}</div>
-                                    {% endif %}
+                                    {{ form.contrat|as_crispy_field }}
                                 </div>
                             </div>
                         </div>
                         
                         <div class="row">
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.date_paiement.id_for_label }}" class="form-label">{{ form.date_paiement.label }}</label>
-                                    {{ form.date_paiement }}
-                                    {% if form.date_paiement.help_text %}
-                                        <div class="form-text">{{ form.date_paiement.help_text }}</div>
-                                    {% endif %}
-                                    {% if form.date_paiement.errors %}
-                                        <div class="text-danger">{{ form.date_paiement.errors }}</div>
-                                    {% endif %}
-                                </div>
+                                {{ form.date_paiement|as_crispy_field }}
                             </div>
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.mois_paye.id_for_label }}" class="form-label">{{ form.mois_paye.label }}</label>
-                                    {{ form.mois_paye }}
-                                    {% if form.mois_paye.help_text %}
-                                        <div class="form-text">{{ form.mois_paye.help_text }}</div>
-                                    {% endif %}
-                                    {% if form.mois_paye.errors %}
-                                        <div class="text-danger">{{ form.mois_paye.errors }}</div>
-                                    {% endif %}
-                                </div>
+                                {{ form.mois_paye|as_crispy_field }}
                             </div>
                         </div>
                         
                         <div class="row">
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.type_paiement.id_for_label }}" class="form-label">{{ form.type_paiement.label }}</label>
-                                    {{ form.type_paiement }}
-                                    {% if form.type_paiement.help_text %}
-                                        <div class="form-text">{{ form.type_paiement.help_text }}</div>
-                                    {% endif %}
-                                    {% if form.type_paiement.errors %}
-                                        <div class="text-danger">{{ form.type_paiement.errors }}</div>
-                                    {% endif %}
-                                </div>
+                                {{ form.type_paiement|as_crispy_field }}
                             </div>
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.mode_paiement.id_for_label }}" class="form-label">{{ form.mode_paiement.label }}</label>
-                                    {{ form.mode_paiement }}
-                                    {% if form.mode_paiement.help_text %}
-                                        <div class="form-text">{{ form.mode_paiement.help_text }}</div>
-                                    {% endif %}
-                                    {% if form.mode_paiement.errors %}
-                                        <div class="text-danger">{{ form.mode_paiement.errors }}</div>
-                                    {% endif %}
-                                </div>
+                                {{ form.mode_paiement|as_crispy_field }}
                             </div>
                         </div>
                         
                         <div class="row">
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.montant.id_for_label }}" class="form-label">{{ form.montant.label }}</label>
-                                    {{ form.montant }}
-                                    {% if form.montant.help_text %}
-                                        <div class="form-text">{{ form.montant.help_text }}</div>
-                                    {% endif %}
-                                    {% if form.montant.errors %}
-                                        <div class="text-danger">{{ form.montant.errors }}</div>
-                                    {% endif %}
-                                </div>
+                                {{ form.montant|as_crispy_field }}
                             </div>
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.numero_cheque.id_for_label }}" class="form-label">{{ form.numero_cheque.label }}</label>
-                                    {{ form.numero_cheque }}
-                                    {% if form.numero_cheque.help_text %}
-                                        <div class="form-text">{{ form.numero_cheque.help_text }}</div>
-                                    {% endif %}
-                                    {% if form.numero_cheque.errors %}
-                                        <div class="text-danger">{{ form.numero_cheque.errors }}</div>
-                                    {% endif %}
-                                </div>
+                                {{ form.numero_cheque|as_crispy_field }}
                             </div>
                         </div>
                         
                         <div class="row">
                             <div class="col-12">
-                                <div class="mb-3">
-                                    <label for="{{ form.notes.id_for_label }}" class="form-label">{{ form.notes.label }}</label>
-                                    {{ form.notes }}
-                                    {% if form.notes.help_text %}
-                                        <div class="form-text">{{ form.notes.help_text }}</div>
-                                    {% endif %}
-                                    {% if form.notes.errors %}
-                                        <div class="text-danger">{{ form.notes.errors }}</div>
-                                    {% endif %}
-                                </div>
+                                {{ form.notes|as_crispy_field }}
                             </div>
                         </div>
                         
@@ -431,42 +354,49 @@
 $(document).ready(function() {
     console.log('🚀 Système intelligent activé !');
     
-    // Initialiser Select2 avec recherche AJAX
-    $('#id_contrat').select2({
-        theme: 'bootstrap-5',
-        language: 'fr',
-        placeholder: 'Recherchez un contrat...',
-        allowClear: true,
-        minimumInputLength: 2,
-        ajax: {
-            url: '/paiements/api/recherche-rapide/',
-            dataType: 'json',
-            delay: 300,
-            data: function (params) {
-                return {
-                    q: params.term
-                };
-            },
-            processResults: function (data) {
-                if (data.success && data.data.length > 0) {
-                    return {
-                        results: data.data.map(function(item) {
-                            return {
-                                id: item.id,
-                                text: `${item.numero_contrat} - ${item.locataire_nom} (${item.propriete_adresse})`
-                            };
-                        })
-                    };
-                }
-                return { 
-                    results: [{
-                        id: null,
-                        text: 'Aucun contrat trouvé'
-                    }]
-                };
-            },
-            cache: true
-        }
+    // Désactiver Select2 pour les champs select simples - Priorité aux options visibles
+    // $('#id_contrat').select2({
+    //     theme: 'bootstrap-5',
+    //     language: 'fr',
+    //     placeholder: 'Recherchez un contrat...',
+    //     allowClear: true,
+    //     minimumInputLength: 2,
+    //     ajax: {
+    //         url: '/paiements/api/recherche-rapide/',
+    //         dataType: 'json',
+    //         delay: 300,
+    //         data: function (params) {
+    //             return {
+    //                 q: params.term
+    //             };
+    //         },
+    //         processResults: function (data) {
+    //             if (data.success && data.data.length > 0) {
+    //                 return {
+    //                     results: data.data.map(function(item) {
+    //                         return {
+    //                             id: item.id,
+    //                             text: `${item.numero_contrat} - ${item.locataire_nom} (${item.propriete_adresse})`
+    //                         };
+    //                     })
+    //                 };
+    //             }
+    //             return { 
+    //                 results: [{
+    //                     id: null,
+    //                     text: 'Aucun contrat trouvé'
+    //                 }]
+    //             };
+    //         },
+    //         cache: true
+    //     }
+    // });
+    
+    // S'assurer que le champ contrat affiche les options
+    $('#id_contrat').css({
+        'display': 'block',
+        'visibility': 'visible',
+        'opacity': '1'
     });
     
     // Activer le système de temps réel

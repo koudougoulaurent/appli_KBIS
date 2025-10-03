@@ -265,15 +265,12 @@
     </style>
 </head>
 <body>
-    <!-- En-tête -->
+    <!-- En-tête avec image personnalisée -->
     <div class="header">
-        <div class="company-name">
-            {% if entreprise_config %}
-                {{ entreprise_config.nom_entreprise|default:"ENTREPRISE DE GESTION IMMOBILIÈRE" }}
-            {% else %}
-                ENTREPRISE DE GESTION IMMOBILIÈRE
-            {% endif %}
-        </div>
+        <img src="{% load static %}{% static 'images/enteteEnImage.png' %}" 
+             alt="KBIS IMMOBILIER" 
+             style="width: 100%; max-width: 100%; height: auto; display: block; margin-bottom: 10px;">
+        
         <div class="document-title">RÉCAPITULATIF MENSUEL DÉTAILLÉ</div>
         <div class="document-info">
             {{ recap.mois_recap|date:"F Y"|upper }} | 

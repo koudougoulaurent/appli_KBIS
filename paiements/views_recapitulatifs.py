@@ -335,17 +335,25 @@ def apercu_recapitulatif(request, recapitulatif_id):
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
     
-    recapitulatif = get_object_or_404(RecapitulatifMensuelBailleur, pk=recapitulatif_id)
-    totaux = recapitulatif.calculer_totaux_bailleur()
-    
-    context = {
-        'recapitulatif': recapitulatif,
-        'totaux': totaux,
-        'date_generation': timezone.now(),
-        'apercu': True
-    }
-    
-    return render(request, 'paiements/recapitulatifs/apercu_recapitulatif.html', context)
+    try:
+        recapitulatif = RecapitulatifMensuelBailleur.objects.get(pk=recapitulatif_id)
+        totaux = recapitulatif.calculer_totaux_bailleur()
+        
+        context = {
+            'recapitulatif': recapitulatif,
+            'totaux': totaux,
+            'date_generation': timezone.now(),
+            'apercu': True
+        }
+        
+        return render(request, 'paiements/recapitulatifs/apercu_recapitulatif.html', context)
+        
+    except RecapitulatifMensuelBailleur.DoesNotExist:
+        messages.error(request, f"Récapitulatif avec l'ID {recapitulatif_id} introuvable.")
+        return redirect('paiements:liste_recaps_mensuels')
+    except Exception as e:
+        messages.error(request, f"Erreur lors de l'affichage du récapitulatif: {str(e)}")
+        return redirect('paiements:liste_recaps_mensuels')
 
 
 @login_required
@@ -403,6 +411,46 @@ def statistiques_recapitulatifs(request):
     }
     
     return render(request, 'paiements/recapitulatifs/statistiques_recapitulatifs.html', context)
+
+
+@login_required
+def creer_recapitulatif_test(request):
+    """Créer un récapitulatif de test pour résoudre le problème 404."""
+    
+    # Vérification des permissions
+    from core.utils import check_group_permissions_with_fallback
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'add')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:dashboard')
+    
+    try:
+        from proprietes.models import Bailleur
+        from datetime import date
+        
+        # Vérifier s'il y a des bailleurs
+        if not Bailleur.objects.exists():
+            messages.error(request, "Aucun bailleur trouvé. Veuillez d'abord créer des bailleurs.")
+            return redirect('paiements:liste_recaps_mensuels')
+        
+        # Prendre le premier bailleur disponible
+        bailleur = Bailleur.objects.first()
+        
+        # Créer un récapitulatif de test
+        recapitulatif = RecapitulatifMensuelBailleur.objects.create(
+            bailleur=bailleur,
+            mois_recapitulatif=date.today().replace(day=1),
+            type_recapitulatif='mensuel',
+            statut='en_preparation',
+            gestionnaire=request.user
+        )
+        
+        messages.success(request, f"Récapitulatif de test créé avec l'ID {recapitulatif.id}")
+        return redirect('paiements:apercu_recapitulatif', recapitulatif.id)
+        
+    except Exception as e:
+        messages.error(request, f"Erreur lors de la création du récapitulatif de test: {str(e)}")
+        return redirect('paiements:liste_recaps_mensuels')
 
 
 @login_required

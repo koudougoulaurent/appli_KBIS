@@ -20,9 +20,13 @@ class ConfigurationEntrepriseForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'Slogan de votre entreprise'
             }),
-            'adresse': forms.TextInput(attrs={
+            'adresse_ligne1': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Adresse complète'
+                'placeholder': 'Adresse ligne 1'
+            }),
+            'adresse_ligne2': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Adresse ligne 2 (optionnel)'
             }),
             'code_postal': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -40,6 +44,10 @@ class ConfigurationEntrepriseForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'Numéro de téléphone'
             }),
+            'telephone_2': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Téléphone secondaire (optionnel)'
+            }),
             'email': forms.EmailInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'adresse@email.com'
@@ -48,21 +56,17 @@ class ConfigurationEntrepriseForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'https://www.votre-site.com'
             }),
-            'siret': forms.TextInput(attrs={
+            'rccm': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Numéro SIRET'
+                'placeholder': 'RCCM'
             }),
-            'numero_licence': forms.TextInput(attrs={
+            'ifu': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Numéro de licence'
+                'placeholder': 'IFU'
             }),
-            'capital_social': forms.TextInput(attrs={
+            'numero_compte_contribuable': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Capital social'
-            }),
-            'forme_juridique': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'SARL, SAS, etc.'
+                'placeholder': 'N° Compte Contribuable'
             }),
             'entete_upload': forms.FileInput(attrs={
                 'class': 'form-control-file',
@@ -145,10 +149,12 @@ class ConfigurationEntrepriseForm(forms.ModelForm):
         
         return cleaned_data
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._warnings = {}
+    
     def add_warning(self, field, message):
         """Ajoute un avertissement pour un champ"""
-        if not hasattr(self, '_warnings'):
-            self._warnings = {}
         if field not in self._warnings:
             self._warnings[field] = []
         self._warnings[field].append(message)

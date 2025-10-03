@@ -2,6 +2,8 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from .models import Utilisateur, GroupeTravail
 from django.core.validators import RegexValidator
+from django.core.exceptions import ValidationError
+from core.duplicate_prevention import validate_unique_contact_info
 
 class UtilisateurForm(forms.ModelForm):
     """Formulaire pour créer/modifier un utilisateur"""
@@ -115,6 +117,26 @@ class UtilisateurForm(forms.ModelForm):
             user.save()
         
         return user
+    
+    def clean(self):
+        """Validation globale du formulaire avec prévention des doublons."""
+        cleaned_data = super().clean()
+        
+        # Vérifier les doublons d'informations de contact
+        try:
+            validate_unique_contact_info(
+                self._meta.model, 
+                self.instance, 
+                ['email', 'telephone']
+            )
+        except ValidationError as e:
+            # Ajouter l'erreur aux champs concernés
+            if 'email' in str(e):
+                self.add_error('email', e)
+            if 'telephone' in str(e):
+                self.add_error('telephone', e)
+        
+        return cleaned_data
 
 class GroupeTravailForm(forms.ModelForm):
     """Formulaire pour créer/modifier un groupe de travail"""

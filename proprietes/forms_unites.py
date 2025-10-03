@@ -87,19 +87,19 @@ class UniteLocativeForm(forms.ModelForm):
                 'class': 'form-control',
                 'step': '0.01',
                 'min': '0',
-                'placeholder': 'Montant en F CFA'
+                'placeholder': 'Loyer mensuel en F CFA'
             }),
             'charges_mensuelles': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
                 'min': '0',
-                'placeholder': 'Montant en F CFA'
+                'placeholder': 'Charges mensuelles en F CFA'
             }),
             'caution_demandee': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
                 'min': '0',
-                'placeholder': 'Montant en F CFA'
+                'placeholder': 'Caution demandée en F CFA'
             }),
             'statut': forms.Select(attrs={
                 'class': 'form-select'
@@ -110,88 +110,60 @@ class UniteLocativeForm(forms.ModelForm):
             }),
             'description': forms.Textarea(attrs={
                 'class': 'form-control',
-                'rows': '4',
-                'placeholder': 'Description détaillée de l\'unité'
+                'rows': 3,
+                'placeholder': 'Description de l\'unité locative'
             }),
             'notes_privees': forms.Textarea(attrs={
                 'class': 'form-control',
-                'rows': '3',
-                'placeholder': 'Notes internes (non visibles par les locataires)'
+                'rows': 2,
+                'placeholder': 'Notes privées (non visibles par les locataires)'
             }),
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # Limiter les propriétés aux propriétés actives
-        self.fields['propriete'].queryset = Propriete.objects.filter(is_deleted=False)
-        
-        # Limiter les bailleurs aux bailleurs actifs
-        self.fields['bailleur'].queryset = Bailleur.objects.filter(is_deleted=False, actif=True)
-        self.fields['bailleur'].empty_label = "Utiliser le bailleur de la propriété"
-        
-        # Si une propriété est pré-sélectionnée, définir le bailleur par défaut
-        if self.initial.get('propriete'):
-            propriete = self.initial['propriete']
-            if hasattr(propriete, 'bailleur'):
-                self.fields['bailleur'].initial = propriete.bailleur
-        
-        # Rendre certains champs requis
-        self.fields['numero_unite'].required = True
-        self.fields['nom'].required = True
+        # Définir les choix pour le champ type_unite
+        self.fields['type_unite'].choices = UniteLocative.TYPE_UNITE_CHOICES
         self.fields['type_unite'].required = True
-        self.fields['loyer_mensuel'].required = True
-    
-    def clean_numero_unite(self):
-        """Valider l'unicité du numéro d'unité dans la propriété."""
-        numero_unite = self.cleaned_data['numero_unite']
-        propriete = self.cleaned_data.get('propriete')
         
-        if propriete:
-            # Exclure l'instance actuelle si on modifie
-            queryset = UniteLocative.objects.filter(
-                propriete=propriete,
-                numero_unite=numero_unite,
-                is_deleted=False
-            )
-            
-            if self.instance.pk:
-                queryset = queryset.exclude(pk=self.instance.pk)
-            
-            if queryset.exists():
-                raise forms.ValidationError(
-                    f"Une unité avec le numéro '{numero_unite}' existe déjà dans cette propriété."
-                )
+        # Définir les choix pour le champ propriete
+        self.fields['propriete'].queryset = Propriete.objects.filter(is_deleted=False).order_by('titre')
+        self.fields['propriete'].required = True
         
-        return numero_unite
-    
-    def clean_surface(self):
-        """Valider la surface."""
-        surface = self.cleaned_data.get('surface')
-        if surface is not None and surface <= 0:
-            raise forms.ValidationError("La surface doit être supérieure à 0.")
-        return surface
-    
-    def clean_loyer_mensuel(self):
-        """Valider le loyer mensuel."""
-        loyer = self.cleaned_data.get('loyer_mensuel')
-        if loyer is not None and loyer < 0:
-            raise forms.ValidationError("Le loyer ne peut pas être négatif.")
-        return loyer
+        # Définir les choix pour le champ bailleur
+        self.fields['bailleur'].queryset = Bailleur.objects.filter(is_deleted=False, actif=True).order_by('nom', 'prenom')
+        self.fields['bailleur'].required = False
+        self.fields['bailleur'].empty_label = "Sélectionnez un bailleur (optionnel)"
+        
+        # Définir les choix pour le champ statut
+        self.fields['statut'].choices = UniteLocative.STATUT_CHOICES
+        self.fields['statut'].required = True
+        
+        # Valeurs par défaut
+        if not self.instance.pk:  # Nouvelle unité
+            self.fields['statut'].initial = 'disponible'
+            self.fields['date_disponibilite'].initial = timezone.now().date()
     
     def clean(self):
-        """Validation globale du formulaire."""
         cleaned_data = super().clean()
         
-        nombre_chambres = cleaned_data.get('nombre_chambres', 0)
-        nombre_salles_bain = cleaned_data.get('nombre_salles_bain', 0)
-        nombre_pieces = cleaned_data.get('nombre_pieces', 1)
+        # Validation des données
+        surface = cleaned_data.get('surface')
+        nombre_pieces = cleaned_data.get('nombre_pieces')
+        nombre_chambres = cleaned_data.get('nombre_chambres')
         
-        # Vérifier que le nombre de chambres et salles de bain ne dépasse pas le nombre de pièces
-        if nombre_chambres + nombre_salles_bain > nombre_pieces:
-            raise forms.ValidationError(
-                "Le nombre total de chambres et salles de bain ne peut pas dépasser le nombre de pièces."
-            )
+        if surface and surface <= 0:
+            raise forms.ValidationError("La surface doit être positive.")
+        
+        if nombre_pieces and nombre_pieces <= 0:
+            raise forms.ValidationError("Le nombre de pièces doit être positif.")
+        
+        if nombre_chambres and nombre_chambres < 0:
+            raise forms.ValidationError("Le nombre de chambres ne peut pas être négatif.")
+        
+        if nombre_chambres and nombre_pieces and nombre_chambres >= nombre_pieces:
+            raise forms.ValidationError("Le nombre de chambres doit être inférieur au nombre total de pièces.")
         
         return cleaned_data
 
@@ -199,12 +171,12 @@ class UniteLocativeForm(forms.ModelForm):
 class ReservationUniteForm(forms.ModelForm):
     """Formulaire pour créer/modifier une réservation d'unité."""
     
-    # Champ pour conversion immédiate en contrat
+    # Champ non-modèle pour la conversion en contrat
     convertir_en_contrat = forms.BooleanField(
         required=False,
         initial=False,
-        label=_('Convertir immédiatement en contrat'),
-        help_text=_('Cochez cette case pour créer automatiquement un contrat à partir de cette réservation'),
+        label=_("Convertir immédiatement en contrat"),
+        help_text=_("Si coché, la réservation sera immédiatement convertie en contrat de bail"),
         widget=forms.CheckboxInput(attrs={
             'class': 'form-check-input'
         })
@@ -213,10 +185,14 @@ class ReservationUniteForm(forms.ModelForm):
     class Meta:
         model = ReservationUnite
         fields = [
-            'locataire_potentiel', 'date_debut_souhaitee', 'date_fin_prevue',
-            'date_expiration', 'montant_reservation', 'statut', 'notes'
+            'unite_locative', 'locataire_potentiel', 'date_debut_souhaitee', 'date_fin_prevue', 'statut',
+            'montant_reservation', 'date_expiration', 'notes'
         ]
         widgets = {
+            'unite_locative': forms.Select(attrs={
+                'class': 'form-select',
+                'required': True
+            }),
             'locataire_potentiel': forms.Select(attrs={
                 'class': 'form-select',
                 'required': True
@@ -230,106 +206,128 @@ class ReservationUniteForm(forms.ModelForm):
                 'class': 'form-control',
                 'type': 'date'
             }),
-            'date_expiration': forms.DateTimeInput(attrs={
-                'class': 'form-control',
-                'type': 'datetime-local'
+            'statut': forms.Select(attrs={
+                'class': 'form-select',
+                'required': True
             }),
             'montant_reservation': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
                 'min': '0',
-                'placeholder': 'Montant en F CFA'
+                'placeholder': 'Montant de réservation en F CFA'
             }),
-            'statut': forms.Select(attrs={
-                'class': 'form-select'
+            'date_expiration': forms.DateTimeInput(attrs={
+                'class': 'form-control',
+                'type': 'datetime-local',
+                'required': True
             }),
             'notes': forms.Textarea(attrs={
                 'class': 'form-control',
-                'rows': '4',
+                'rows': 3,
                 'placeholder': 'Notes sur la réservation'
             }),
         }
     
     def __init__(self, *args, **kwargs):
+        unite_locative = kwargs.pop('unite_locative', None)
         super().__init__(*args, **kwargs)
         
-        # Limiter aux locataires actifs
-        self.fields['locataire_potentiel'].queryset = Locataire.objects.filter(is_deleted=False)
+        # Définir les choix pour le champ unite_locative
+        if unite_locative:
+            # Si une unité est spécifiée, la pré-sélectionner et la cacher
+            self.fields['unite_locative'].initial = unite_locative
+            self.fields['unite_locative'].queryset = UniteLocative.objects.filter(pk=unite_locative.pk)
+            self.fields['unite_locative'].widget = forms.HiddenInput()
+        else:
+            # Sinon, afficher toutes les unités disponibles
+            self.fields['unite_locative'].queryset = UniteLocative.objects.filter(
+                is_deleted=False, 
+                statut='disponible'
+            ).order_by('propriete__titre', 'numero_unite')
+        self.fields['unite_locative'].required = True
         
-        # Définir une date d'expiration par défaut (7 jours)
-        if not self.instance.pk:
+        # Définir les choix pour le champ locataire_potentiel
+        try:
+            locataires_actifs = Locataire.objects.filter(
+                is_deleted=False, 
+                statut='actif'
+            ).order_by('nom', 'prenom')
+            
+            self.fields['locataire_potentiel'].queryset = locataires_actifs
+            self.fields['locataire_potentiel'].required = True
+            self.fields['locataire_potentiel'].empty_label = "Sélectionnez un locataire" if locataires_actifs.exists() else "Aucun locataire actif disponible"
+            self.fields['locataire_potentiel'].label = "Locataire potentiel"
+            
+            # Si aucun locataire actif, rendre le champ optionnel temporairement
+            if not locataires_actifs.exists():
+                self.fields['locataire_potentiel'].required = False
+                # Ajouter un message d'aide
+                self.fields['locataire_potentiel'].help_text = "Aucun locataire actif trouvé. Veuillez d'abord créer des locataires dans la section 'Locataires'."
+        except Exception:  # pylint: disable=broad-except
+            # En cas d'erreur, utiliser un queryset vide
+            self.fields['locataire_potentiel'].queryset = Locataire.objects.none()
+            self.fields['locataire_potentiel'].empty_label = "Erreur de chargement des locataires"
+            self.fields['locataire_potentiel'].help_text = "Impossible de charger les locataires. Vérifiez la configuration de la base de données."
+        
+        # Définir les choix pour le champ statut
+        self.fields['statut'].choices = ReservationUnite.STATUT_CHOICES
+        self.fields['statut'].required = True
+        
+        # Valeurs par défaut
+        if not self.instance.pk:  # Nouvelle réservation
+            self.fields['statut'].initial = 'en_attente'
+            self.fields['date_debut_souhaitee'].initial = timezone.now().date()
+            # Date d'expiration par défaut : 7 jours
             self.fields['date_expiration'].initial = timezone.now() + timedelta(days=7)
     
-    def clean_date_debut_souhaitee(self):
-        """Valider la date de début souhaitée."""
-        date_debut = self.cleaned_data.get('date_debut_souhaitee')
-        
-        if date_debut and date_debut < timezone.now().date():
-            raise forms.ValidationError(
-                "La date de début souhaitée ne peut pas être dans le passé."
-            )
-        
-        return date_debut
-    
-    def clean_date_expiration(self):
-        """Valider la date d'expiration."""
-        date_expiration = self.cleaned_data.get('date_expiration')
-        
-        if date_expiration and date_expiration <= timezone.now():
-            raise forms.ValidationError(
-                "La date d'expiration doit être dans le futur."
-            )
-        
-        return date_expiration
-    
     def clean(self):
-        """Validation globale du formulaire."""
         cleaned_data = super().clean()
         
+        # Validation des dates
         date_debut = cleaned_data.get('date_debut_souhaitee')
         date_fin = cleaned_data.get('date_fin_prevue')
+        date_expiration = cleaned_data.get('date_expiration')
         
-        if date_debut and date_fin and date_fin <= date_debut:
-            raise forms.ValidationError(
-                "La date de fin prévue doit être postérieure à la date de début."
-            )
+        if date_debut and date_fin and date_debut >= date_fin:
+            raise forms.ValidationError("La date de fin doit être postérieure à la date de début.")
+        
+        if date_debut and date_debut < timezone.now().date():
+            raise forms.ValidationError("La date de début ne peut pas être dans le passé.")
+        
+        if date_expiration and date_expiration <= timezone.now():
+            raise forms.ValidationError("La date d'expiration doit être dans le futur.")
         
         return cleaned_data
 
 
-class FiltreUniteForm(forms.Form):
-    """Formulaire de filtrage pour la liste des unités."""
+class UniteLocativeSearchForm(forms.Form):
+    """Formulaire de recherche pour les unités locatives."""
+    
+    TYPE_UNITE_CHOICES = [('', 'Tous les types')] + list(UniteLocative.TYPE_UNITE_CHOICES)
+    STATUT_CHOICES = [('', 'Tous les statuts')] + list(UniteLocative.STATUT_CHOICES)
     
     propriete = forms.ModelChoiceField(
-        queryset=Propriete.objects.none(),  # Sera rempli dans __init__
+        queryset=Propriete.objects.filter(is_deleted=False).order_by('titre'),
         required=False,
         empty_label="Toutes les propriétés",
-        widget=forms.Select(attrs={'class': 'form-select'})
-    )
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Utiliser la logique de filtrage des propriétés disponibles
-        from core.property_utils import get_proprietes_disponibles_global
-        self.fields['propriete'].queryset = get_proprietes_disponibles_global()
-    
-    statut = forms.ChoiceField(
-        choices=[('', 'Tous les statuts')] + list(UniteLocative.STATUT_CHOICES),
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-select'})
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
     )
     
     type_unite = forms.ChoiceField(
-        choices=[('', 'Tous les types')] + list(UniteLocative.TYPE_UNITE_CHOICES),
+        choices=TYPE_UNITE_CHOICES,
         required=False,
-        widget=forms.Select(attrs={'class': 'form-select'})
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
     )
     
-    search = forms.CharField(
+    statut = forms.ChoiceField(
+        choices=STATUT_CHOICES,
         required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Rechercher par numéro, nom, propriété...'
+        widget=forms.Select(attrs={
+            'class': 'form-select'
         })
     )
     
@@ -337,7 +335,7 @@ class FiltreUniteForm(forms.Form):
         required=False,
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Étage min'
+            'placeholder': 'Étage minimum'
         })
     )
     
@@ -345,7 +343,25 @@ class FiltreUniteForm(forms.Form):
         required=False,
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Étage max'
+            'placeholder': 'Étage maximum'
+        })
+    )
+    
+    surface_min = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'placeholder': 'Surface minimum (m²)'
+        })
+    )
+    
+    surface_max = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'placeholder': 'Surface maximum (m²)'
         })
     )
     
@@ -353,8 +369,8 @@ class FiltreUniteForm(forms.Form):
         required=False,
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Loyer min',
-            'step': '0.01'
+            'step': '0.01',
+            'placeholder': 'Loyer minimum (F CFA)'
         })
     )
     
@@ -362,64 +378,66 @@ class FiltreUniteForm(forms.Form):
         required=False,
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Loyer max',
-            'step': '0.01'
+            'step': '0.01',
+            'placeholder': 'Loyer maximum (F CFA)'
         })
     )
-
-
-class RapportOccupationForm(forms.Form):
-    """Formulaire pour générer des rapports d'occupation."""
     
-    propriete = forms.ModelChoiceField(
-        queryset=Propriete.objects.filter(is_deleted=False),
+    meuble = forms.BooleanField(
         required=False,
-        empty_label="Toutes les propriétés",
-        widget=forms.Select(attrs={'class': 'form-select'})
-    )
-    
-    date_debut = forms.DateField(
-        required=True,
-        widget=forms.DateInput(attrs={
-            'class': 'form-control',
-            'type': 'date'
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
         })
     )
     
-    date_fin = forms.DateField(
-        required=True,
-        widget=forms.DateInput(attrs={
-            'class': 'form-control',
-            'type': 'date'
+    balcon = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
         })
     )
     
-    type_rapport = forms.ChoiceField(
-        choices=[
-            ('occupation', 'Taux d\'occupation'),
-            ('revenus', 'Revenus générés'),
-            ('disponibilite', 'Disponibilité des unités'),
-            ('complet', 'Rapport complet'),
-        ],
-        required=True,
-        widget=forms.Select(attrs={'class': 'form-select'})
+    parking_inclus = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        })
+    )
+    
+    climatisation = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        })
+    )
+    
+    internet_inclus = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        })
     )
     
     def clean(self):
-        """Validation des dates."""
         cleaned_data = super().clean()
-        date_debut = cleaned_data.get('date_debut')
-        date_fin = cleaned_data.get('date_fin')
         
-        if date_debut and date_fin:
-            if date_fin <= date_debut:
-                raise forms.ValidationError(
-                    "La date de fin doit être postérieure à la date de début."
-                )
-            
-            if (date_fin - date_debut).days > 365:
-                raise forms.ValidationError(
-                    "La période ne peut pas dépasser 365 jours."
-                )
+        # Validation des plages
+        etage_min = cleaned_data.get('etage_min')
+        etage_max = cleaned_data.get('etage_max')
+        
+        if etage_min is not None and etage_max is not None and etage_min > etage_max:
+            raise forms.ValidationError("L'étage minimum ne peut pas être supérieur à l'étage maximum.")
+        
+        surface_min = cleaned_data.get('surface_min')
+        surface_max = cleaned_data.get('surface_max')
+        
+        if surface_min is not None and surface_max is not None and surface_min > surface_max:
+            raise forms.ValidationError("La surface minimum ne peut pas être supérieure à la surface maximum.")
+        
+        loyer_min = cleaned_data.get('loyer_min')
+        loyer_max = cleaned_data.get('loyer_max')
+        
+        if loyer_min is not None and loyer_max is not None and loyer_min > loyer_max:
+            raise forms.ValidationError("Le loyer minimum ne peut pas être supérieur au loyer maximum.")
         
         return cleaned_data

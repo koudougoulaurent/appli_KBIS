@@ -91,21 +91,32 @@
                                             Adresse
                                         </h5>
                                     </div>
-                                    <div class="col-md-8">
+                                    <div class="col-md-6">
                                         <div class="form-group mb-3">
-                                            <label for="{{ form.adresse.id_for_label }}" class="form-label">
-                                                Adresse *
+                                            <label for="{{ form.adresse_ligne1.id_for_label }}" class="form-label">
+                                                Adresse ligne 1 *
                                             </label>
-                                            {{ form.adresse }}
-                                            {% if form.adresse.errors %}
-                                            <div class="text-danger">{{ form.adresse.errors }}</div>
+                                            {{ form.adresse_ligne1 }}
+                                            {% if form.adresse_ligne1.errors %}
+                                            <div class="text-danger">{{ form.adresse_ligne1.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.adresse_ligne2.id_for_label }}" class="form-label">
+                                                Adresse ligne 2
+                                            </label>
+                                            {{ form.adresse_ligne2 }}
+                                            {% if form.adresse_ligne2.errors %}
+                                            <div class="text-danger">{{ form.adresse_ligne2.errors }}</div>
                                             {% endif %}
                                         </div>
                                     </div>
                                     <div class="col-md-4">
                                         <div class="form-group mb-3">
                                             <label for="{{ form.code_postal.id_for_label }}" class="form-label">
-                                                Code postal *
+                                                Code postal
                                             </label>
                                             {{ form.code_postal }}
                                             {% if form.code_postal.errors %}
@@ -113,7 +124,7 @@
                                             {% endif %}
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <div class="form-group mb-3">
                                             <label for="{{ form.ville.id_for_label }}" class="form-label">
                                                 Ville *
@@ -124,7 +135,7 @@
                                             {% endif %}
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <div class="form-group mb-3">
                                             <label for="{{ form.pays.id_for_label }}" class="form-label">
                                                 Pays *
@@ -158,6 +169,17 @@
                                     </div>
                                     <div class="col-md-4">
                                         <div class="form-group mb-3">
+                                            <label for="{{ form.telephone_2.id_for_label }}" class="form-label">
+                                                Téléphone 2
+                                            </label>
+                                            {{ form.telephone_2 }}
+                                            {% if form.telephone_2.errors %}
+                                            <div class="text-danger">{{ form.telephone_2.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
                                             <label for="{{ form.email.id_for_label }}" class="form-label">
                                                 Email *
                                             </label>
@@ -167,7 +189,7 @@
                                             {% endif %}
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-6">
                                         <div class="form-group mb-3">
                                             <label for="{{ form.site_web.id_for_label }}" class="form-label">
                                                 Site web
@@ -190,45 +212,34 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group mb-3">
-                                            <label for="{{ form.siret.id_for_label }}" class="form-label">
-                                                SIRET *
+                                            <label for="{{ form.rccm.id_for_label }}" class="form-label">
+                                                RCCM
                                             </label>
-                                            {{ form.siret }}
-                                            {% if form.siret.errors %}
-                                            <div class="text-danger">{{ form.siret.errors }}</div>
+                                            {{ form.rccm }}
+                                            {% if form.rccm.errors %}
+                                            <div class="text-danger">{{ form.rccm.errors }}</div>
                                             {% endif %}
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group mb-3">
-                                            <label for="{{ form.numero_licence.id_for_label }}" class="form-label">
-                                                N° Licence *
+                                            <label for="{{ form.ifu.id_for_label }}" class="form-label">
+                                                IFU
                                             </label>
-                                            {{ form.numero_licence }}
-                                            {% if form.numero_licence.errors %}
-                                            <div class="text-danger">{{ form.numero_licence.errors }}</div>
+                                            {{ form.ifu }}
+                                            {% if form.ifu.errors %}
+                                            <div class="text-danger">{{ form.ifu.errors }}</div>
                                             {% endif %}
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group mb-3">
-                                            <label for="{{ form.capital_social.id_for_label }}" class="form-label">
-                                                Capital social
+                                            <label for="{{ form.numero_compte_contribuable.id_for_label }}" class="form-label">
+                                                N° Compte Contribuable
                                             </label>
-                                            {{ form.capital_social }}
-                                            {% if form.capital_social.errors %}
-                                            <div class="text-danger">{{ form.capital_social.errors }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group mb-3">
-                                            <label for="{{ form.forme_juridique.id_for_label }}" class="form-label">
-                                                Forme juridique *
-                                            </label>
-                                            {{ form.forme_juridique }}
-                                            {% if form.forme_juridique.errors %}
-                                            <div class="text-danger">{{ form.forme_juridique.errors }}</div>
+                                            {{ form.numero_compte_contribuable }}
+                                            {% if form.numero_compte_contribuable.errors %}
+                                            <div class="text-danger">{{ form.numero_compte_contribuable.errors }}</div>
                                             {% endif %}
                                         </div>
                                     </div>
@@ -242,12 +253,43 @@
                                             Personnalisation des reçus
                                         </h5>
                                     </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.entete_upload.id_for_label }}" class="form-label">
+                                                En-tête complet uploadé
+                                            </label>
+                                            {{ form.entete_upload }}
+                                            <small class="form-text text-muted">
+                                                En-tête complet de votre entreprise (remplace le logo et le texte)
+                                            </small>
+                                            {% if form.entete_upload.errors %}
+                                            <div class="text-danger">{{ form.entete_upload.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.logo_upload.id_for_label }}" class="form-label">
+                                                Logo uploadé
+                                            </label>
+                                            {{ form.logo_upload }}
+                                            <small class="form-text text-muted">
+                                                Logo de votre entreprise (PNG, JPG, GIF - max 5MB)
+                                            </small>
+                                            {% if form.logo_upload.errors %}
+                                            <div class="text-danger">{{ form.logo_upload.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
                                     <div class="col-md-4">
                                         <div class="form-group mb-3">
                                             <label for="{{ form.logo_url.id_for_label }}" class="form-label">
                                                 URL du logo
                                             </label>
                                             {{ form.logo_url }}
+                                            <small class="form-text text-muted">
+                                                URL externe du logo (optionnel si vous uploadez un fichier)
+                                            </small>
                                             {% if form.logo_url.errors %}
                                             <div class="text-danger">{{ form.logo_url.errors }}</div>
                                             {% endif %}
@@ -315,6 +357,44 @@
                                             {{ form.bic }}
                                             {% if form.bic.errors %}
                                             <div class="text-danger">{{ form.bic.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Textes personnalisés -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h5 class="mb-3">
+                                            <i class="fas fa-file-text me-2"></i>
+                                            Textes personnalisés
+                                        </h5>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.texte_contrat.id_for_label }}" class="form-label">
+                                                Texte personnalisé pour les contrats
+                                            </label>
+                                            {{ form.texte_contrat }}
+                                            <small class="form-text text-muted">
+                                                Texte personnalisé pour les obligations et conditions des contrats de bail
+                                            </small>
+                                            {% if form.texte_contrat.errors %}
+                                            <div class="text-danger">{{ form.texte_contrat.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.texte_resiliation.id_for_label }}" class="form-label">
+                                                Texte personnalisé pour les résiliations
+                                            </label>
+                                            {{ form.texte_resiliation }}
+                                            <small class="form-text text-muted">
+                                                Texte personnalisé pour les conditions de sortie des résiliations
+                                            </small>
+                                            {% if form.texte_resiliation.errors %}
+                                            <div class="text-danger">{{ form.texte_resiliation.errors }}</div>
                                             {% endif %}
                                         </div>
                                     </div>
@@ -435,32 +515,43 @@ $(document).ready(function() {
     function updatePreview() {
         const nom = $('#id_nom_entreprise').val() || 'GESTIMMOB';
         const slogan = $('#id_slogan').val() || '';
-        const adresse = $('#id_adresse').val() || '123 Rue de la Paix';
-        const codePostal = $('#id_code_postal').val() || '75001';
-        const ville = $('#id_ville').val() || 'Paris';
-        const pays = $('#id_pays').val() || 'France';
-        const telephone = $('#id_telephone').val() || '01 23 45 67 89';
-        const email = $('#id_email').val() || 'contact@gestimmob.fr';
-        const siteWeb = $('#id_site_web').val() || '';
-        const siret = $('#id_siret').val() || '123 456 789 00012';
-        const licence = $('#id_numero_licence').val() || '123456789';
-        const capital = $('#id_capital_social').val() || '';
-        const forme = $('#id_forme_juridique').val() || 'SARL';
+        const adresseLigne1 = $('#id_adresse_ligne1').val() || 'Avenue de la République';
+        const adresseLigne2 = $('#id_adresse_ligne2').val() || '';
+        const codePostal = $('#id_code_postal').val() || '00225';
+        const ville = $('#id_ville').val() || 'Abidjan';
+        const pays = $('#id_pays').val() || 'Côte d\'Ivoire';
+        const telephone = $('#id_telephone').val() || '+225 XX XX XX XX XX';
+        const telephone2 = $('#id_telephone_2').val() || '';
+        const email = $('#id_email').val() || 'contact@kbis-immobilier.ci';
+        const siteWeb = $('#id_site_web').val() || 'www.kbis-immobilier.ci';
+        const rccm = $('#id_rccm').val() || 'CI-ABJ-XXXX-X-XXXXX';
+        const ifu = $('#id_ifu').val() || 'XXXXXXXXXX';
+        const compteContribuable = $('#id_numero_compte_contribuable').val() || '';
         
         // Mise à jour de l'aperçu
         $('#preview-nom').text(nom);
         $('#preview-slogan').text(slogan);
-        $('#preview-adresse').text(`${adresse}, ${codePostal} ${ville}, ${pays}`);
         
+        // Construction de l'adresse
+        let adresseComplete = adresseLigne1;
+        if (adresseLigne2) adresseComplete += `, ${adresseLigne2}`;
+        if (codePostal && ville) adresseComplete += `, ${codePostal} ${ville}`;
+        else if (codePostal) adresseComplete += `, ${codePostal}`;
+        else if (ville) adresseComplete += `, ${ville}`;
+        if (pays) adresseComplete += `, ${pays}`;
+        $('#preview-adresse').text(adresseComplete);
+        
+        // Construction du contact
         let contact = `Tél: ${telephone}`;
+        if (telephone2) contact += ` / ${telephone2}`;
         if (email) contact += ` | Email: ${email}`;
         if (siteWeb) contact += ` | Web: ${siteWeb}`;
         $('#preview-contact').text(contact);
         
-        let legal = `SIRET: ${siret}`;
-        if (licence) legal += ` | N° Licence: ${licence}`;
-        if (capital) legal += ` | Capital: ${capital}`;
-        if (forme) legal += ` | ${forme}`;
+        // Construction des informations légales
+        let legal = `RCCM: ${rccm}`;
+        if (ifu) legal += ` | IFU: ${ifu}`;
+        if (compteContribuable) legal += ` | N° Compte: ${compteContribuable}`;
         $('#preview-legal').text(legal);
     }
     
@@ -470,25 +561,28 @@ $(document).ready(function() {
     // Réinitialiser aux valeurs par défaut
     $('#resetDefaults').click(function() {
         if (confirm('Êtes-vous sûr de vouloir réinitialiser toutes les informations aux valeurs par défaut ?')) {
-            $('#id_nom_entreprise').val('GESTIMMOB');
-            $('#id_slogan').val('');
-            $('#id_adresse').val('123 Rue de la Paix');
-            $('#id_code_postal').val('75001');
-            $('#id_ville').val('Paris');
-            $('#id_pays').val('France');
-            $('#id_telephone').val('01 23 45 67 89');
-            $('#id_email').val('contact@gestimmob.fr');
-            $('#id_site_web').val('');
-            $('#id_siret').val('123 456 789 00012');
-            $('#id_numero_licence').val('123456789');
-            $('#id_capital_social').val('');
-            $('#id_forme_juridique').val('SARL');
+            $('#id_nom_entreprise').val('KBIS IMMOBILIER');
+            $('#id_slogan').val('Votre Partenaire Immobilier de Confiance');
+            $('#id_adresse_ligne1').val('Avenue de la République');
+            $('#id_adresse_ligne2').val('Quartier Centre-Ville');
+            $('#id_code_postal').val('00225');
+            $('#id_ville').val('Abidjan');
+            $('#id_pays').val('Côte d\'Ivoire');
+            $('#id_telephone').val('+225 XX XX XX XX XX');
+            $('#id_telephone_2').val('');
+            $('#id_email').val('contact@kbis-immobilier.ci');
+            $('#id_site_web').val('www.kbis-immobilier.ci');
+            $('#id_rccm').val('CI-ABJ-XXXX-X-XXXXX');
+            $('#id_ifu').val('XXXXXXXXXX');
+            $('#id_numero_compte_contribuable').val('');
             $('#id_logo_url').val('');
             $('#id_couleur_principale').val('#2c3e50');
             $('#id_couleur_secondaire').val('#3498db');
             $('#id_banque').val('');
             $('#id_iban').val('');
             $('#id_bic').val('');
+            $('#id_texte_contrat').val('');
+            $('#id_texte_resiliation').val('');
             
             updatePreview();
             alert('Configuration réinitialisée. Cliquez sur "Enregistrer" pour appliquer les changements.');

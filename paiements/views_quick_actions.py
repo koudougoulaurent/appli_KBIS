@@ -55,7 +55,7 @@ def detail_paiement(request, pk):
     return render(request, 'paiements/detail_paiement.html', context)
 
 @login_required
-def liste_paiements(request):
+def liste_paiements(request, locataire_id=None):
     """Liste des paiements avec actions rapides"""
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
     if not permissions['allowed']:
@@ -63,10 +63,9 @@ def liste_paiements(request):
         return redirect('core:dashboard')
     
     paiements = Paiement.objects.all().order_by('-date_paiement')
-    
-    # Filtre par locataire si spécifié
-    locataire_id = request.GET.get('locataire', '')
     locataire_obj = None
+    
+    # Filtre par locataire si spécifié via URL ou GET
     if locataire_id:
         try:
             locataire_obj = Locataire.objects.get(pk=locataire_id)
@@ -74,6 +73,16 @@ def liste_paiements(request):
         except Locataire.DoesNotExist:
             messages.error(request, "Locataire introuvable.")
             return redirect('paiements:liste')
+    else:
+        # Fallback pour le paramètre GET (compatibilité)
+        locataire_id = request.GET.get('locataire', '')
+        if locataire_id:
+            try:
+                locataire_obj = Locataire.objects.get(pk=locataire_id)
+                paiements = paiements.filter(contrat__locataire=locataire_obj)
+            except Locataire.DoesNotExist:
+                messages.error(request, "Locataire introuvable.")
+                return redirect('paiements:liste')
     
     # Recherche
     query = request.GET.get('q', '')

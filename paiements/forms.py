@@ -2,7 +2,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from .models import Paiement, ChargeDeductible, RetraitBailleur, TableauBordFinancier, RecapitulatifMensuelBailleur, PlanPaiementPartiel, EchelonPaiement, PaiementPartiel, AlertePaiementPartiel
+from .models import Paiement, ChargeDeductible, RetraitBailleur, TableauBordFinancier, RecapitulatifMensuelBailleur
 from contrats.models import Contrat
 from proprietes.models import Bailleur
 from datetime import date, datetime
@@ -42,8 +42,8 @@ class PaiementForm(forms.ModelForm):
             'date_paiement': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'mois_paye': forms.DateInput(attrs={'type': 'month', 'class': 'form-control'}),
             'montant': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'type_paiement': forms.Select(attrs={'class': 'form-control'}),
-            'mode_paiement': forms.Select(attrs={'class': 'form-control'}),
+            'type_paiement': forms.Select(attrs={'class': 'form-select'}),
+            'mode_paiement': forms.Select(attrs={'class': 'form-select'}),
             'reference_paiement': forms.TextInput(attrs={'class': 'form-control'}),
             'numero_cheque': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -54,8 +54,8 @@ class PaiementForm(forms.ModelForm):
                 'placeholder': _('Référence virement (si applicable)')
             }),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'statut': forms.Select(attrs={'class': 'form-control'}),
-            'contrat': forms.Select(attrs={'class': 'form-control'}),
+            'statut': forms.Select(attrs={'class': 'form-select'}),
+            'contrat': forms.Select(attrs={'class': 'form-select'}),
         }
         labels = {
             'contrat': _('Contrat'),
@@ -72,6 +72,7 @@ class PaiementForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         contrat_id = kwargs.pop('contrat_id', None)
+        mois_suggere = kwargs.pop('mois_suggere', None)
         super().__init__(*args, **kwargs)
         
         # Filtrer les contrats actifs seulement
@@ -98,6 +99,9 @@ class PaiementForm(forms.ModelForm):
         # Valeur par défaut pour la date
         if not self.instance.pk:
             self.fields['date_paiement'].initial = timezone.now().date()
+            # Pré-remplir le mois suggéré si fourni
+            if mois_suggere:
+                self.fields['mois_paye'].initial = mois_suggere
         
         # Si un contrat est spécifié, le pré-sélectionner et charger ses charges
         if contrat_id:
@@ -210,11 +214,11 @@ class ChargeDeductibleForm(forms.ModelForm):
             'contrat', 'montant', 'libelle', 'description', 'type_charge'
         ]
         widgets = {
-            'contrat': forms.Select(attrs={'class': 'form-control'}),
+            'contrat': forms.Select(attrs={'class': 'form-select'}),
             'montant': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'libelle': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'type_charge': forms.Select(attrs={'class': 'form-control'}),
+            'type_charge': forms.Select(attrs={'class': 'form-select'}),
         }
         labels = {
             'contrat': _('Contrat'),
@@ -264,7 +268,7 @@ class RechercheAvanceePaiementsForm(forms.Form):
             ('autre', 'Autre'),
         ],
         required=False,
-        widget=forms.Select(attrs={'class': 'form-control'}),
+        widget=forms.Select(attrs={'class': 'form-select'}),
         label=_('Type de paiement')
     )
     
@@ -277,7 +281,7 @@ class RechercheAvanceePaiementsForm(forms.Form):
             ('carte', 'Carte bancaire'),
         ],
         required=False,
-        widget=forms.Select(attrs={'class': 'form-control'}),
+        widget=forms.Select(attrs={'class': 'form-select'}),
         label=_('Mode de paiement')
     )
     
@@ -289,7 +293,7 @@ class RechercheAvanceePaiementsForm(forms.Form):
             ('annule', 'Annulé'),
         ],
         required=False,
-        widget=forms.Select(attrs={'class': 'form-control'}),
+        widget=forms.Select(attrs={'class': 'form-select'}),
         label=_('Statut')
     )
     
@@ -327,7 +331,7 @@ class RechercheAvanceePaiementsForm(forms.Form):
     propriete = forms.ModelChoiceField(
         queryset=None,  # Sera défini dans __init__
         required=False,
-        widget=forms.Select(attrs={'class': 'form-control'}),
+        widget=forms.Select(attrs={'class': 'form-select'}),
         label=_('Propriété'),
         empty_label=_('Toutes les propriétés')
     )
@@ -336,7 +340,7 @@ class RechercheAvanceePaiementsForm(forms.Form):
     bailleur = forms.ModelChoiceField(
         queryset=Bailleur.objects.all(),
         required=False,
-        widget=forms.Select(attrs={'class': 'form-control'}),
+        widget=forms.Select(attrs={'class': 'form-select'}),
         label=_('Bailleur'),
         empty_label=_('Tous les bailleurs')
     )
@@ -406,13 +410,13 @@ class RetraitBailleurForm(forms.ModelForm):
                 'min': '0'
             }),
             'type_retrait': forms.Select(attrs={
-                'class': 'form-control'
+                'class': 'form-select'
             }),
             'statut': forms.Select(attrs={
-                'class': 'form-control'
+                'class': 'form-select'
             }),
             'mode_retrait': forms.Select(attrs={
-                'class': 'form-control'
+                'class': 'form-select'
             }),
             'date_demande': forms.DateInput(attrs={
                 'class': 'form-control',
@@ -508,7 +512,7 @@ class GestionChargesBailleurForm(forms.Form):
         label=_('Charge bailleur à déduire'),
         help_text=_('Sélectionnez la charge à déduire du retrait mensuel'),
         widget=forms.Select(attrs={
-            'class': 'form-control',
+            'class': 'form-select',
             'id': 'charge_bailleur_select'
         })
     )
@@ -610,15 +614,15 @@ class TableauBordFinancierForm(forms.ModelForm):
                 'placeholder': _('Description détaillée du tableau de bord...')
             }),
             'proprietes': forms.SelectMultiple(attrs={
-                'class': 'form-control select2',
+                'class': 'form-select select2',
                 'data-placeholder': _('Sélectionner les propriétés...')
             }),
             'bailleurs': forms.SelectMultiple(attrs={
-                'class': 'form-control select2',
+                'class': 'form-select select2',
                 'data-placeholder': _('Sélectionner les bailleurs...')
             }),
             'periode': forms.Select(attrs={
-                'class': 'form-control'
+                'class': 'form-select'
             }),
             'date_debut_personnalisee': forms.DateInput(attrs={
                 'class': 'form-control',
@@ -875,7 +879,7 @@ class RecapitulatifMensuelEnvoiForm(forms.Form):
             ('autre', 'Autre méthode')
         ],
         label="Méthode d'envoi",
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'form-select'})
     )
     
     destinataire = forms.CharField(
@@ -929,220 +933,220 @@ class GenererPDFLotForm(forms.Form):
 
 # ===== FORMULAIRES POUR LES PAIEMENTS PARTIELS =====
 
-class PlanPaiementPartielForm(forms.ModelForm):
-    """Formulaire pour créer/modifier un plan de paiement partiel"""
-    
-    class Meta:
-        model = PlanPaiementPartiel
-        fields = [
-            'contrat', 'nom_plan', 'description', 'montant_total',
-            'date_debut', 'date_fin_prevue', 'statut'
-        ]
-        widgets = {
-            'contrat': forms.Select(attrs={
-                'class': 'form-control select2',
-                'data-placeholder': 'Sélectionner un contrat'
-            }),
-            'nom_plan': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Ex: Plan de paiement partiel - Janvier 2025'
-            }),
-            'description': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'placeholder': 'Description du plan de paiement partiel'
-            }),
-            'montant_total': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01',
-                'min': '0.01'
-            }),
-            'date_debut': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
-            }),
-            'date_fin_prevue': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
-            }),
-            'statut': forms.Select(attrs={
-                'class': 'form-control'
-            })
-        }
-    
-    def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
-        super().__init__(*args, **kwargs)
-        
-        # Filtrer les contrats actifs
-        if user:
-            self.fields['contrat'].queryset = Contrat.objects.filter(
-                is_deleted=False
-            ).select_related('locataire', 'propriete')
-        
-        # Ajouter des classes CSS
-        for field_name, field in self.fields.items():
-            if field_name not in self.Meta.widgets:
-                field.widget.attrs.update({'class': 'form-control'})
-        
-        # Personnaliser les labels pour un vocabulaire plus simple
-        self.fields['nom_plan'].label = "Nom du Plan"
-        self.fields['montant_total'].label = "Montant à Payer"
-        self.fields['date_fin_prevue'].label = "Date Limite"
-        self.fields['statut'].label = "Statut"
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        date_debut = cleaned_data.get('date_debut')
-        date_fin_prevue = cleaned_data.get('date_fin_prevue')
-        montant_total = cleaned_data.get('montant_total')
-        
-        # Vérifier que la date limite est après la date de début
-        if date_debut and date_fin_prevue:
-            if date_fin_prevue <= date_debut:
-                raise ValidationError(
-                    "La date limite doit être après la date de début."
-                )
-        
-        # Vérifier que le montant à payer est positif
-        if montant_total and montant_total <= 0:
-            raise ValidationError(
-                "Le montant à payer doit être supérieur à zéro."
-            )
-        
-        return cleaned_data
+# class PlanPaiementPartielForm(forms.ModelForm):
+#     """Formulaire pour créer/modifier un plan de paiement partiel - DÉSACTIVÉ"""
+#     
+#     class Meta:
+#         model = PlanPaiementPartiel
+#         fields = [
+#             'contrat', 'nom_plan', 'description', 'montant_total',
+#             'date_debut', 'date_fin_prevue', 'statut'
+#         ]
+#         widgets = {
+#             'contrat': forms.Select(attrs={
+#                 'class': 'form-select select2',
+#                 'data-placeholder': 'Sélectionner un contrat'
+#             }),
+#             'nom_plan': forms.TextInput(attrs={
+#                 'class': 'form-control',
+#                 'placeholder': 'Ex: Plan de paiement partiel - Janvier 2025'
+#             }),
+#             'description': forms.Textarea(attrs={
+#                 'class': 'form-control',
+#                 'rows': 3,
+#                 'placeholder': 'Description du plan de paiement partiel'
+#             }),
+#             'montant_total': forms.NumberInput(attrs={
+#                 'class': 'form-control',
+#                 'step': '0.01',
+#                 'min': '0.01'
+#             }),
+#             'date_debut': forms.DateInput(attrs={
+#                 'class': 'form-control',
+#                 'type': 'date'
+#             }),
+#             'date_fin_prevue': forms.DateInput(attrs={
+#                 'class': 'form-control',
+#                 'type': 'date'
+#             }),
+#             'statut': forms.Select(attrs={
+#                 'class': 'form-select'
+#             })
+#         }
+#     
+#     def __init__(self, *args, **kwargs):
+#         user = kwargs.pop('user', None)
+#         super().__init__(*args, **kwargs)
+#         
+#         # Filtrer les contrats actifs
+#         if user:
+#             self.fields['contrat'].queryset = Contrat.objects.filter(
+#                 is_deleted=False
+#             ).select_related('locataire', 'propriete')
+#         
+#         # Ajouter des classes CSS
+#         for field_name, field in self.fields.items():
+#             if field_name not in self.Meta.widgets:
+#                 field.widget.attrs.update({'class': 'form-control'})
+#         
+#         # Personnaliser les labels pour un vocabulaire plus simple
+#         self.fields['nom_plan'].label = "Nom du Plan"
+#         self.fields['montant_total'].label = "Montant à Payer"
+#         self.fields['date_fin_prevue'].label = "Date Limite"
+#         self.fields['statut'].label = "Statut"
+#     
+#     def clean(self):
+#         cleaned_data = super().clean()
+#         date_debut = cleaned_data.get('date_debut')
+#         date_fin_prevue = cleaned_data.get('date_fin_prevue')
+#         montant_total = cleaned_data.get('montant_total')
+#         
+#         # Vérifier que la date limite est après la date de début
+#         if date_debut and date_fin_prevue:
+#             if date_fin_prevue <= date_debut:
+#                 raise ValidationError(
+#                     "La date limite doit être après la date de début."
+#                 )
+#         
+#         # Vérifier que le montant à payer est positif
+#         if montant_total and montant_total <= 0:
+#             raise ValidationError(
+#                 "Le montant à payer doit être supérieur à zéro."
+#             )
+#         
+#         return cleaned_data
 
 
-class EchelonPaiementForm(forms.ModelForm):
-    """Formulaire pour créer/modifier un échelon de paiement"""
-    
-    class Meta:
-        model = EchelonPaiement
-        fields = ['numero_echelon', 'montant', 'date_echeance', 'statut']
-        widgets = {
-            'numero_echelon': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': '1'
-            }),
-            'montant': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01',
-                'min': '0.01'
-            }),
-            'date_echeance': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
-            }),
-            'statut': forms.Select(attrs={
-                'class': 'form-control'
-            })
-        }
-    
-    def __init__(self, *args, **kwargs):
-        plan = kwargs.pop('plan', None)
-        super().__init__(*args, **kwargs)
-        
-        if plan:
-            self.fields['numero_echelon'].initial = plan.echelons.count() + 1
-        
-        # Ajouter des classes CSS
-        for field_name, field in self.fields.items():
-            if field_name not in self.Meta.widgets:
-                field.widget.attrs.update({'class': 'form-control'})
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        numero_echelon = cleaned_data.get('numero_echelon')
-        montant = cleaned_data.get('montant')
-        date_echeance = cleaned_data.get('date_echeance')
-        
-        # Vérifier que le montant est positif
-        if montant and montant <= 0:
-            raise ValidationError(
-                "Le montant de l'échelon doit être supérieur à zéro."
-            )
-        
-        # Vérifier que la date d'échéance est dans le futur
-        if date_echeance and date_echeance < timezone.now().date():
-            raise ValidationError(
-                "La date d'échéance ne peut pas être dans le passé."
-            )
-        
-        return cleaned_data
+# class EchelonPaiementForm(forms.ModelForm):
+#     """Formulaire pour créer/modifier un échelon de paiement - DÉSACTIVÉ"""
+#     
+#     class Meta:
+#         model = EchelonPaiement
+#         fields = ['numero_echelon', 'montant', 'date_echeance', 'statut']
+#         widgets = {
+#             'numero_echelon': forms.NumberInput(attrs={
+#                 'class': 'form-control',
+#                 'min': '1'
+#             }),
+#             'montant': forms.NumberInput(attrs={
+#                 'class': 'form-control',
+#                 'step': '0.01',
+#                 'min': '0.01'
+#             }),
+#             'date_echeance': forms.DateInput(attrs={
+#                 'class': 'form-control',
+#                 'type': 'date'
+#             }),
+#             'statut': forms.Select(attrs={
+#                 'class': 'form-select'
+#             })
+#         }
+#     
+#     def __init__(self, *args, **kwargs):
+#         plan = kwargs.pop('plan', None)
+#         super().__init__(*args, **kwargs)
+#         
+#         if plan:
+#             self.fields['numero_echelon'].initial = plan.echelons.count() + 1
+#         
+#         # Ajouter des classes CSS
+#         for field_name, field in self.fields.items():
+#             if field_name not in self.Meta.widgets:
+#                 field.widget.attrs.update({'class': 'form-control'})
+#     
+#     def clean(self):
+#         cleaned_data = super().clean()
+#         numero_echelon = cleaned_data.get('numero_echelon')
+#         montant = cleaned_data.get('montant')
+#         date_echeance = cleaned_data.get('date_echeance')
+#         
+#         # Vérifier que le montant est positif
+#         if montant and montant <= 0:
+#             raise ValidationError(
+#                 "Le montant de l'échelon doit être supérieur à zéro."
+#             )
+#         
+#         # Vérifier que la date d'échéance est dans le futur
+#         if date_echeance and date_echeance < timezone.now().date():
+#             raise ValidationError(
+#                 "La date d'échéance ne peut pas être dans le passé."
+#             )
+#         
+#         return cleaned_data
 
 
-class PaiementPartielForm(forms.ModelForm):
-    """Formulaire pour créer un paiement partiel"""
-    
-    class Meta:
-        model = PaiementPartiel
-        fields = ['plan', 'echelon', 'montant', 'motif', 'description']
-        widgets = {
-            'plan': forms.Select(attrs={
-                'class': 'form-control select2',
-                'data-placeholder': 'Sélectionner un plan'
-            }),
-            'echelon': forms.Select(attrs={
-                'class': 'form-control select2',
-                'data-placeholder': 'Sélectionner un échelon (optionnel)'
-            }),
-            'montant': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01',
-                'min': '0.01'
-            }),
-            'motif': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Ex: Paiement partiel du loyer de janvier'
-            }),
-            'description': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'placeholder': 'Description détaillée du paiement partiel'
-            })
-        }
-    
-    def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
-        super().__init__(*args, **kwargs)
-        
-        # Filtrer les plans actifs
-        if user:
-            self.fields['plan'].queryset = PlanPaiementPartiel.objects.filter(
-                is_deleted=False,
-                statut__in=['actif', 'suspendu']
-            ).select_related('contrat')
-        
-        # Ajouter des classes CSS
-        for field_name, field in self.fields.items():
-            if field_name not in self.Meta.widgets:
-                field.widget.attrs.update({'class': 'form-control'})
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        plan = cleaned_data.get('plan')
-        echelon = cleaned_data.get('echelon')
-        montant = cleaned_data.get('montant')
-        
-        # Vérifier que le montant est positif
-        if montant and montant <= 0:
-            raise ValidationError(
-                "Le montant du paiement partiel doit être supérieur à zéro."
-            )
-        
-        # Vérifier que le montant ne dépasse pas le montant restant du plan
-        if plan and montant:
-            if montant > plan.montant_restant:
-                raise ValidationError(
-                    f"Le montant du paiement partiel ({montant} FCFA) ne peut pas "
-                    f"dépasser le montant restant du plan ({plan.montant_restant} FCFA)."
-                )
-        
-        # Vérifier que l'échelon appartient au plan
-        if plan and echelon:
-            if echelon.plan != plan:
-                raise ValidationError(
-                    "L'échelon sélectionné n'appartient pas au plan sélectionné."
-                )
-        
-        return cleaned_data
+# class PaiementPartielForm(forms.ModelForm):
+#     """Formulaire pour créer un paiement partiel - DÉSACTIVÉ"""
+#     
+#     class Meta:
+#         model = PaiementPartiel
+#         fields = ['plan', 'echelon', 'montant', 'motif', 'description']
+#         widgets = {
+#             'plan': forms.Select(attrs={
+#                 'class': 'form-select select2',
+#                 'data-placeholder': 'Sélectionner un plan'
+#             }),
+#             'echelon': forms.Select(attrs={
+#                 'class': 'form-select select2',
+#                 'data-placeholder': 'Sélectionner un échelon (optionnel)'
+#             }),
+#             'montant': forms.NumberInput(attrs={
+#                 'class': 'form-control',
+#                 'step': '0.01',
+#                 'min': '0.01'
+#             }),
+#             'motif': forms.TextInput(attrs={
+#                 'class': 'form-control',
+#                 'placeholder': 'Ex: Paiement partiel du loyer de janvier'
+#             }),
+#             'description': forms.Textarea(attrs={
+#                 'class': 'form-control',
+#                 'rows': 3,
+#                 'placeholder': 'Description détaillée du paiement partiel'
+#             })
+#         }
+#     
+#     def __init__(self, *args, **kwargs):
+#         user = kwargs.pop('user', None)
+#         super().__init__(*args, **kwargs)
+#         
+#         # Filtrer les plans actifs - DÉSACTIVÉ
+#         # if user:
+#         #     self.fields['plan'].queryset = PlanPaiementPartiel.objects.filter(
+#         #         is_deleted=False,
+#         #         statut__in=['actif', 'suspendu']
+#         #     ).select_related('contrat')
+#         
+#         # Ajouter des classes CSS
+#         for field_name, field in self.fields.items():
+#             if field_name not in self.Meta.widgets:
+#                 field.widget.attrs.update({'class': 'form-control'})
+#     
+#     def clean(self):
+#         cleaned_data = super().clean()
+#         plan = cleaned_data.get('plan')
+#         echelon = cleaned_data.get('echelon')
+#         montant = cleaned_data.get('montant')
+#         
+#         # Vérifier que le montant est positif
+#         if montant and montant <= 0:
+#             raise ValidationError(
+#                 "Le montant du paiement partiel doit être supérieur à zéro."
+#             )
+#         
+#         # Vérifier que le montant ne dépasse pas le montant restant du plan
+#         if plan and montant:
+#             if montant > plan.montant_restant:
+#                 raise ValidationError(
+#                     f"Le montant du paiement partiel ({montant} FCFA) ne peut pas "
+#                     f"dépasser le montant restant du plan ({plan.montant_restant} FCFA)."
+#                 )
+#         
+#         # Vérifier que l'échelon appartient au plan
+#         if plan and echelon:
+#             if echelon.plan != plan:
+#                 raise ValidationError(
+#                     "L'échelon sélectionné n'appartient pas au plan sélectionné."
+#                 )
+#         
+#         return cleaned_data

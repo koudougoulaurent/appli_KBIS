@@ -349,27 +349,11 @@
                 <!-- En-tête principal -->
                 <div class="header">
                     <div class="logo-section">
-                        <div class="logo">RENTILA</div>
-                        <div class="entreprise-info">
-                            <strong>Agence Immobilière Professionnelle</strong><br>
-                            123 Avenue de la République<br>
-                            Ouagadougou, Burkina Faso<br>
-                            Tél: +226 25 30 60 70<br>
-                            Email: contact@rentila.bf<br>
-                            Site: www.rentila.bf
-                        </div>
+                        <img src="{% load static %}{% static 'images/enteteEnImage.png' %}" 
+                             alt="KBIS IMMOBILIER" 
+                             style="width: 100%; max-width: 100%; height: auto; display: block; margin-bottom: 8px; max-height: 3cm;">
                     </div>
                     
-                    <div class="document-info">
-                        <div class="document-title">Reçu de Récapitulatif</div>
-                        <div class="document-subtitle">{{ recu.get_type_recu_display }}</div>
-                        <div class="document-number">N° {{ recu.numero_recu }}</div>
-                        <div style="margin-top: 0.5rem;">
-                            <span class="statut-badge statut-{{ recu.statut }}">
-                                {{ recu.get_statut_display }}
-                            </span>
-                        </div>
-                    </div>
                 </div>
                 
                 <!-- Section bailleur -->
@@ -449,8 +433,8 @@
                             {% for detail in totaux.details_proprietes %}
                             <tr>
                                 <td>
-                                    <strong>{{ detail.propriete.adresse }}</strong><br>
-                                    <small>{{ detail.propriete.ville }}</small>
+                                    <strong>{{ detail.propriete.nom|default:detail.propriete.adresse|default:"Propriété #"|add:detail.propriete.id|stringformat:"%s" }}</strong><br>
+                                    <small>{{ detail.propriete.ville|default:"" }}</small>
                                 </td>
                                 <td>{{ detail.locataire.get_nom_complet }}</td>
                                 <td>{{ detail.contrat.loyer_mensuel|floatformat:0 }} F CFA</td>
@@ -490,21 +474,9 @@
                         <div class="signature-label">Signature du Gestionnaire</div>
                     </div>
                     
-                    <div class="document-info-footer">
-                        <div><strong>Date d'émission:</strong> {{ recu.date_creation|date:"d/m/Y H:i" }}</div>
-                        {% if recu.date_impression %}
-                        <div><strong>Date d'impression:</strong> {{ recu.date_impression|date:"d/m/Y H:i" }}</div>
-                        {% endif %}
-                        {% if recu.imprime_par %}
-                        <div><strong>Imprimé par:</strong> {{ recu.imprime_par.get_full_name }}</div>
-                        {% endif %}
-                        <div><strong>Template:</strong> {{ recu.get_template_utilise_display }}</div>
-                        <div><strong>Format:</strong> {{ recu.get_format_impression_display }}</div>
-                        {% if recu.hash_securite %}
-                        <div class="hash-info">
-                            <strong>Hash de sécurité:</strong> {{ recu.hash_securite|slice:":16" }}...
-                        </div>
-                        {% endif %}
+                    <div class="signature-section">
+                        <div class="signature-line"></div>
+                        <div class="signature-label">Signature du Bailleur</div>
                     </div>
                 </div>
                 

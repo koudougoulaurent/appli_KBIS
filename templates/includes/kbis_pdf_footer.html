@@ -1,0 +1,46 @@
+{% load static %}
+{% load core_extras %}
+
+<!-- Pied de page KBIS pour documents PDF -->
+<div class="kbis-pdf-footer">
+    <!-- Ligne de séparation -->
+    <div class="kbis-pdf-footer-separator"></div>
+    
+    <!-- Informations de contact complètes -->
+    <div class="kbis-pdf-footer-content">
+        <!-- Adresse principale -->
+        <div class="kbis-pdf-address">
+            {{ config_entreprise.get_adresse_complete }}
+        </div>
+        
+        <!-- Téléphones multiples -->
+        <div class="kbis-pdf-phones">
+            Tél: {{ config_entreprise.telephone }}
+            {% if config_entreprise.telephone_secondaire %} / {{ config_entreprise.telephone_secondaire }}{% endif %}
+            {% if config_entreprise.telephone_mobile %} / {{ config_entreprise.telephone_mobile }}{% endif %}
+        </div>
+        
+        <!-- Téléphones supplémentaires sur nouvelle ligne -->
+        {% if config_entreprise.telephone_tertiaire %}
+        <div class="kbis-pdf-phones-secondary">
+            {{ config_entreprise.telephone_tertiaire }}
+            {% if config_entreprise.telephone_quaternaire %} / {{ config_entreprise.telephone_quaternaire }}{% endif %}
+        </div>
+        {% endif %}
+        
+        <!-- Adresse secondaire si disponible -->
+        {% if config_entreprise.adresse_secondaire %}
+        <div class="kbis-pdf-address-secondary">
+            {{ config_entreprise.adresse_secondaire }}
+            {% if config_entreprise.telephone_secondaire %}
+            : {{ config_entreprise.telephone_secondaire }}
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <!-- Email -->
+        <div class="kbis-pdf-email">
+            Email: {{ config_entreprise.email }}
+        </div>
+    </div>
+</div>

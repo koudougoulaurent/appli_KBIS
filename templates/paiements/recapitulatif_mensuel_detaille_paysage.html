@@ -277,17 +277,11 @@
     </style>
 </head>
 <body>
-    <!-- En-tête -->
+    <!-- En-tête avec image personnalisée -->
     <div class="header">
-        {% if entreprise_config and entreprise_config.logo %}
-            <img src="{{ entreprise_config.logo.url }}" alt="Logo" class="entreprise-logo">
-        {% endif %}
-        
-        {% if entreprise_config and entreprise_config.nom_entreprise %}
-            <div class="entreprise-name">{{ entreprise_config.nom_entreprise|upper }}</div>
-        {% else %}
-            <div class="entreprise-name">GESTION IMMOBILIÈRE</div>
-        {% endif %}
+        <img src="{% load static %}{% static 'images/enteteEnImage.png' %}" 
+             alt="KBIS IMMOBILIER" 
+             style="width: 100%; max-width: 100%; height: auto; display: block; margin-bottom: 10px;">
         
         <div class="document-info">
             Récapitulatif {{ recap.get_type_recapitulatif_display|default:"Mensuel" }} Détaillé - 
@@ -387,7 +381,7 @@
                     {% for propriete in proprietes_details %}
                         <tr>
                             <td class="property-info">
-                                {{ propriete.nom|default:propriete.id }}<br>
+                                {{ propriete.nom|default:propriete.adresse|default:"Propriété #"|add:propriete.id|stringformat:"%s" }}<br>
                                 <small style="color: #7f8c8d;">ID: {{ propriete.id }}</small>
                             </td>
                             <td class="property-info">

@@ -230,11 +230,11 @@ def configuration_entreprise(request):
         if form.is_valid():
             try:
                 # Désactiver toutes les autres configurations
-                ConfigurationEntreprise.objects.filter(actif=True).exclude(id=config.id).update(actif=False)
+                ConfigurationEntreprise.objects.filter(active=True).exclude(id=config.id).update(active=False)
                 
                 # Sauvegarder la nouvelle configuration
                 config = form.save()
-                config.actif = True
+                config.active = True
                 config.save()
                 
                 # Vérifier que la configuration est bien active

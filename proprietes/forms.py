@@ -1,10 +1,9 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
-from django.db import models
-from .models import Propriete, Bailleur, Locataire, TypeBien, ChargesBailleur, Photo, Document, Piece, PieceContrat, UniteLocative, ReservationUnite
-from core.widgets import UniqueIdField, ReadOnlyUniqueIdWidget
+from .models import Propriete, Bailleur, Locataire, TypeBien, ChargesBailleur, Photo, Document, Piece, PieceContrat, UniteLocative
 from django.core.validators import RegexValidator
+# Imports supprimés - utilisation du système simple comme BailleurForm
 import re
 
 # Validation personnalisée pour les numéros de téléphone français
@@ -306,18 +305,52 @@ class ProprieteForm(forms.ModelForm):
         return charges
 
     def clean_numero_propriete(self):
-        """Validation du numéro de propriété pour garantir l'unicité absolue."""
-        from core.duplicate_prevention import DuplicatePreventionSystem
+        """Validation intelligente du numéro de propriété - Plus jamais de doublons."""
+        from core.robust_id_generator import RobustIDGenerator
         
         numero_propriete = self.cleaned_data.get('numero_propriete')
         
         if numero_propriete:
-            # Utiliser le système de prévention des doublons
-            if not DuplicatePreventionSystem.check_property_number_uniqueness(
-                numero_propriete, 
-                exclude_pk=self.instance.pk if self.instance else None
-            ):
-                raise ValidationError(_('Un objet Propriété avec ce champ Numéro propriété existe déjà.'))
+            # Vérifier si le numéro existe déjà
+            from proprietes.models import Propriete
+            queryset = Propriete.objects.filter(
+                numero_propriete=numero_propriete,
+                is_deleted=False
+            )
+            
+            if self.instance and self.instance.pk:
+                queryset = queryset.exclude(pk=self.instance.pk)
+            
+            if queryset.exists():
+                # Le numéro existe, générer un nouveau numéro vraiment unique
+                try:
+                    numero_propriete = RobustIDGenerator.generate_property_id()
+                    self._auto_generated = True
+                    self._original_number = self.cleaned_data.get('numero_propriete')
+                except Exception as e:
+                    # En cas d'erreur, utiliser un timestamp unique
+                    from datetime import datetime
+                    import uuid
+                    timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')[:-3]
+                    unique_id = str(uuid.uuid4())[:8]
+                    numero_propriete = f"PRO-{timestamp}-{unique_id}"
+                    self._auto_generated = True
+                    self._original_number = self.cleaned_data.get('numero_propriete')
+        else:
+            # Aucun numéro fourni, générer automatiquement
+            try:
+                numero_propriete = RobustIDGenerator.generate_property_id()
+                self._auto_generated = True
+                self._original_number = None
+            except Exception as e:
+                # En cas d'erreur, utiliser un timestamp unique
+                from datetime import datetime
+                import uuid
+                timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')[:-3]
+                unique_id = str(uuid.uuid4())[:8]
+                numero_propriete = f"PRO-{timestamp}-{unique_id}"
+                self._auto_generated = True
+                self._original_number = None
         
         return numero_propriete
     
@@ -728,6 +761,28 @@ class ChargesBailleurDeductionForm(forms.Form):
 class BailleurForm(forms.ModelForm):
     """Formulaire pour l'ajout et la modification de bailleurs avec gestion documentaire intégrée."""
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Utiliser des champs select classiques qui fonctionnent
+        self.fields['civilite'].widget = forms.Select(attrs={
+            'class': 'form-select'
+        })
+        self.fields['civilite'].choices = [
+            ('', '---------'),
+            ('M', 'Monsieur'),
+            ('Mme', 'Madame'),
+            ('Mlle', 'Mademoiselle'),
+        ]
+        # Rendre le champ optionnel avec valeur par défaut
+        self.fields['civilite'].required = False
+        if not self.instance.pk:  # Nouveau bailleur
+            self.fields['civilite'].initial = 'M'
+        
+        # Rendre le champ numero_bailleur en lecture seule
+        self.fields['numero_bailleur'].widget.attrs['readonly'] = True
+    
+    
     # Validation personnalisée pour le téléphone
     telephone = forms.CharField(
         max_length=20,
@@ -882,6 +937,27 @@ class BailleurForm(forms.ModelForm):
                 raise ValidationError(_('L\'IBAN doit être un IBAN français valide (27 caractères).'))
         return iban
     
+    def clean(self):
+        """Validation globale du formulaire avec prévention des doublons."""
+        cleaned_data = super().clean()
+        
+        # Vérifier les doublons d'informations de contact
+        from core.duplicate_prevention import validate_unique_contact_info
+        try:
+            validate_unique_contact_info(
+                self._meta.model, 
+                self.instance, 
+                ['email', 'telephone']
+            )
+        except ValidationError as e:
+            # Ajouter l'erreur aux champs concernés
+            if 'email' in str(e):
+                self.add_error('email', e)
+            if 'telephone' in str(e):
+                self.add_error('telephone', e)
+        
+        return cleaned_data
+    
     def save(self, commit=True, user=None):
         """Sauvegarde le bailleur et crée automatiquement les documents associés."""
         bailleur = super().save(commit=False)
@@ -1024,240 +1100,82 @@ class BailleurForm(forms.ModelForm):
 
 
 class LocataireForm(forms.ModelForm):
-    """Formulaire pour l'ajout et la modification de locataires avec gestion documentaire intégrée."""
+    """Formulaire pour l'ajout et la modification de locataires - Parfaitement lié au modèle."""
     
-    # Champ caché pour le code pays (utilisé par le widget de téléphone)
-    country_code = forms.CharField(
-        required=False,
-        widget=forms.HiddenInput()
-    )
-    
-    # Champs pour les documents optionnels
-    piece_identite = forms.FileField(
-        required=False,
-        label=_('Pièce d\'identité'),
-        help_text=_('CNI, passeport ou titre de séjour (PDF, JPG, PNG) - Optionnel'),
-        widget=forms.FileInput(attrs={
-            'class': 'form-control',
-            'accept': '.pdf,.jpg,.jpeg,.png'
-        })
-    )
-    
-    justificatif_domicile = forms.FileField(
-        required=False,
-        label=_('Justificatif de domicile'),
-        help_text=_('Facture EDF, téléphone, quittance de loyer (PDF, JPG, PNG) - Optionnel'),
-        widget=forms.FileInput(attrs={
-            'class': 'form-control',
-            'accept': '.pdf,.jpg,.jpeg,.png'
-        })
-    )
-    
-    justificatifs_revenus = forms.FileField(
-        required=False,
-        label=_('Justificatifs de revenus'),
-        help_text=_('3 derniers bulletins de salaire (PDF, JPG, PNG) - Optionnel'),
-        widget=forms.FileInput(attrs={
-            'class': 'form-control',
-            'accept': '.pdf,.jpg,.jpeg,.png'
-        })
-    )
-    
-    avis_imposition = forms.FileField(
-        required=False,
-        label=_('Avis d\'imposition'),
-        help_text=_('Dernier avis d\'imposition (PDF, JPG, PNG) - Optionnel'),
-        widget=forms.FileInput(attrs={
-            'class': 'form-control',
-            'accept': '.pdf,.jpg,.jpeg,.png'
-        })
-    )
-    
-    garant_caution = forms.FileField(
-        required=False,
-        label=_('Garant/Caution'),
-        help_text=_('Attestation de caution ou assurance loyer impayés (PDF, JPG, PNG)'),
-        widget=forms.FileInput(attrs={
-            'class': 'form-control',
-            'accept': '.pdf,.jpg,.jpeg,.png'
-        })
-    )
-    
-    # Champs pour les informations du garant
-    garant_civilite = forms.ChoiceField(
+    # Champs de téléphone simples comme dans BailleurForm
+    telephone = forms.CharField(
+        max_length=20,
         required=True,
-        choices=[
-            ('', '---------'),
-            ('M', 'Monsieur'),
-            ('Mme', 'Madame'),
-            ('Mlle', 'Mademoiselle'),
-        ],
-        label=_('Civilité du garant'),
-        widget=forms.Select(attrs={
-            'class': 'form-select',
-            'required': 'required'
-        })
-    )
-    
-    garant_nom = forms.CharField(
-        required=True,
-        max_length=100,
-        label=_('Nom du garant'),
+        label=_('Téléphone principal'),
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Nom du garant',
-            'required': 'required'
+            'placeholder': '01 23 45 67 89'
         })
     )
     
-    garant_prenom = forms.CharField(
-        required=True,
-        max_length=100,
-        label=_('Prénom du garant'),
+    telephone_mobile = forms.CharField(
+        max_length=20,
+        required=False,
+        label=_('Téléphone mobile'),
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Prénom du garant',
-            'required': 'required'
+            'placeholder': '06 12 34 56 78'
         })
     )
     
     garant_telephone = forms.CharField(
-        required=True,
         max_length=20,
+        required=False,
         label=_('Téléphone du garant'),
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Téléphone du garant',
-            'required': 'required'
+            'placeholder': '01 23 45 67 89'
         })
     )
     
-    garant_email = forms.EmailField(
+    # Champs civilité en saisie libre
+    civilite = forms.CharField(
+        max_length=50,
         required=False,
-        label=_('Email du garant'),
-        widget=forms.EmailInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Email du garant (optionnel)'
-        })
-    )
-    
-    garant_profession = forms.CharField(
-        required=False,
-        max_length=100,
-        label=_('Profession du garant'),
+        label=_('Civilité'),
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Profession du garant (optionnel)'
+            'placeholder': 'Monsieur, Madame, Mademoiselle, Docteur, etc.'
         })
     )
     
-    garant_employeur = forms.CharField(
+    garant_civilite = forms.CharField(
+        max_length=50,
         required=False,
-        max_length=100,
-        label=_('Employeur du garant'),
+        label=_('Civilité du garant'),
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Employeur du garant (optionnel)'
-        })
-    )
-    
-    garant_revenus_mensuels = forms.DecimalField(
-        required=False,
-        max_digits=10,
-        decimal_places=2,
-        label=_('Revenus mensuels du garant (F CFA)'),
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Revenus mensuels du garant (optionnel)',
-            'step': '0.01',
-            'min': '0'
-        })
-    )
-    
-    garant_adresse = forms.CharField(
-        required=False,
-        label=_('Adresse du garant'),
-        widget=forms.Textarea(attrs={
-            'class': 'form-control',
-            'rows': 3,
-            'placeholder': 'Adresse complète du garant (optionnel)'
-        })
-    )
-    
-    garant_code_postal = forms.CharField(
-        required=False,
-        max_length=10,
-        label=_('Code postal du garant'),
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Code postal du garant (optionnel)'
-        })
-    )
-    
-    garant_ville = forms.CharField(
-        required=True,
-        max_length=100,
-        label=_('Ville du garant'),
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Ville du garant',
-            'required': 'required'
-        })
-    )
-    
-    garant_pays = forms.CharField(
-        required=True,
-        max_length=100,
-        label=_('Pays du garant'),
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Pays du garant',
-            'required': 'required'
-        })
-    )
-    
-    # Pièce d'identité du garant
-    garant_piece_identite = forms.FileField(
-        required=False,
-        label=_('Pièce d\'identité du garant'),
-        help_text=_('CNI, passeport ou titre de séjour du garant (PDF, JPG, PNG)'),
-        widget=forms.FileInput(attrs={
-            'class': 'form-control',
-            'accept': '.pdf,.jpg,.jpeg,.png'
+            'placeholder': 'Monsieur, Madame, Mademoiselle, Docteur, etc.'
         })
     )
     
     class Meta:
         model = Locataire
         fields = [
-            'numero_locataire', 'civilite', 'nom', 'prenom', 'date_naissance',
-            'email', 'telephone', 'telephone_mobile', 'adresse', 'code_postal',
-            'ville', 'pays', 'profession', 'employeur', 'revenus_mensuels', 'statut',
-            # Champs du garant (seront ajoutés au modèle)
-            'garant_civilite', 'garant_nom', 'garant_prenom', 'garant_telephone',
-            'garant_email', 'garant_profession', 'garant_employeur', 'garant_revenus_mensuels',
-            'garant_adresse', 'garant_code_postal', 'garant_ville', 'garant_pays',
-            'garant_piece_identite'
+            'civilite', 'nom', 'prenom', 'date_naissance',
+            'email', 'adresse', 'code_postal', 'ville', 'pays', 'profession', 
+            'employeur', 'revenus_mensuels', 'garant_civilite', 'garant_nom', 
+            'garant_prenom', 'garant_email', 'garant_profession', 'garant_employeur', 
+            'garant_revenus_mensuels', 'garant_adresse', 'garant_code_postal',
+            'garant_ville', 'garant_pays', 'garant_piece_identite', 'statut'
         ]
         widgets = {
-            'numero_locataire': forms.TextInput(attrs={
+            'civilite': forms.TextInput(attrs={
                 'class': 'form-control',
-                'readonly': 'readonly',
-                'placeholder': 'Généré automatiquement'
-            }),
-            'civilite': forms.Select(attrs={
-                'class': 'form-control',
-                'required': 'required'
+                'placeholder': 'Monsieur, Madame, Mademoiselle, Docteur, etc.'
             }),
             'nom': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Martin',
-                'required': 'required'
+                'placeholder': 'Nom de famille'
             }),
             'prenom': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Sophie',
-                'required': 'required'
+                'placeholder': 'Prénom'
             }),
             'date_naissance': forms.DateInput(attrs={
                 'class': 'form-control',
@@ -1265,364 +1183,160 @@ class LocataireForm(forms.ModelForm):
             }),
             'email': forms.EmailInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'sophie.martin@email.com'
+                'placeholder': 'email@exemple.com'
             }),
             'telephone': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': '01 23 45 67 89',
-                'required': 'required'
+                'placeholder': 'Téléphone principal'
             }),
             'telephone_mobile': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': '06 12 34 56 78'
+                'placeholder': 'Téléphone mobile (optionnel)'
             }),
             'adresse': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 3,
-                'placeholder': 'Adresse du locataire'
+                'placeholder': 'Adresse complète'
             }),
             'code_postal': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': '75001'
+                'placeholder': 'Code postal'
             }),
             'ville': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Paris'
+                'placeholder': 'Ville'
             }),
             'pays': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'France'
+                'placeholder': 'Pays',
+                'value': 'France'
             }),
             'profession': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Ingénieur'
+                'placeholder': 'Profession (optionnel)'
             }),
             'employeur': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Nom de l\'employeur'
+                'placeholder': 'Employeur (optionnel)'
             }),
             'revenus_mensuels': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'placeholder': '3500',
+                'placeholder': 'Revenus mensuels en F CFA (optionnel)',
                 'step': '0.01',
                 'min': '0'
             }),
-            'statut': forms.Select(attrs={
+            'garant_civilite': forms.TextInput(attrs={
                 'class': 'form-control',
-                'required': 'required'
-            }),
-            # Widgets pour les champs du garant
-            'garant_civilite': forms.Select(attrs={
-                'class': 'form-select',
-                'required': 'required'
+                'placeholder': 'Monsieur, Madame, Mademoiselle, Docteur, etc.'
             }),
             'garant_nom': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Nom du garant',
-                'required': 'required'
+                'placeholder': 'Nom du garant (optionnel)'
             }),
             'garant_prenom': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Prénom du garant',
-                'required': 'required'
+                'placeholder': 'Prénom du garant (optionnel)'
             }),
             'garant_telephone': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Téléphone du garant',
-                'required': 'required'
+                'placeholder': 'Téléphone du garant (optionnel)'
             }),
             'garant_email': forms.EmailInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Email du garant'
+                'placeholder': 'Email du garant (optionnel)'
             }),
             'garant_profession': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Profession du garant',
-                'required': 'required'
+                'placeholder': 'Profession du garant (optionnel)'
             }),
             'garant_employeur': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Employeur du garant',
-                'required': 'required'
+                'placeholder': 'Employeur du garant (optionnel)'
             }),
             'garant_revenus_mensuels': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Revenus mensuels du garant',
+                'placeholder': 'Revenus mensuels du garant en F CFA (optionnel)',
                 'step': '0.01',
-                'min': '0',
-                'required': 'required'
+                'min': '0'
             }),
             'garant_adresse': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 3,
-                'placeholder': 'Adresse complète du garant',
-                'required': 'required'
+                'placeholder': 'Adresse du garant (optionnel)'
             }),
             'garant_code_postal': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Code postal du garant',
-                'required': 'required'
+                'placeholder': 'Code postal du garant (optionnel)'
             }),
             'garant_ville': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Ville du garant',
-                'required': 'required'
+                'placeholder': 'Ville du garant (optionnel)'
             }),
             'garant_pays': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Pays du garant',
-                'required': 'required'
+                'placeholder': 'Pays du garant (optionnel)',
+                'value': 'France'
             }),
+            'garant_piece_identite': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': '.pdf,.jpg,.jpeg,.png'
+            }),
+            'statut': forms.Select(attrs={
+                'class': 'form-select'
+            })
         }
-        labels = {
-            'numero_locataire': _('N° Locataire'),
-            'civilite': _('Civilité'),
-            'nom': _('Nom'),
-            'prenom': _('Prénom'),
-            'date_naissance': _('Date de naissance'),
-            'email': _('Email'),
-            'telephone': _('Téléphone'),
-            'telephone_mobile': _('Mobile'),
-            'adresse': _('Adresse'),
-            'code_postal': _('Code postal'),
-            'ville': _('Ville'),
-            'pays': _('Pays'),
-            'profession': _('Profession'),
-            'employeur': _('Employeur'),
-            'revenus_mensuels': _('Revenus mensuels (F CFA)'),
-            'statut': _('Statut'),
-            # Labels pour les champs du garant
-            'garant_civilite': _('Civilité du garant'),
-            'garant_nom': _('Nom du garant'),
-            'garant_prenom': _('Prénom du garant'),
-            'garant_telephone': _('Téléphone du garant'),
-            'garant_email': _('Email du garant'),
-            'garant_profession': _('Profession du garant'),
-            'garant_employeur': _('Employeur du garant'),
-            'garant_revenus_mensuels': _('Revenus mensuels du garant (F CFA)'),
-            'garant_adresse': _('Adresse du garant'),
-            'garant_code_postal': _('Code postal du garant'),
-            'garant_ville': _('Ville du garant'),
-            'garant_pays': _('Pays du garant'),
-        }
-        help_texts = {
-            'revenus_mensuels': _('Revenus mensuels nets pour évaluer la capacité de paiement'),
-            'statut': _('Statut actuel du locataire'),
-            'garant_revenus_mensuels': _('Revenus mensuels nets du garant pour évaluer sa capacité de cautionnement'),
-        }
-
-    def clean(self):
-        """Validation globale du formulaire."""
-        cleaned_data = super().clean()
-        telephone = cleaned_data.get('telephone')
-        country_code = cleaned_data.get('country_code')
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         
-        # Validation du téléphone - Accepter les formats français et internationaux
-        if telephone:
-            # Nettoyer le numéro (supprimer espaces, tirets, points)
-            clean_phone = ''.join(filter(str.isdigit, telephone))
-            
-            # Si c'est un format français (commence par 0 ou +33)
-            if clean_phone.startswith('0') and len(clean_phone) >= 10:
-                # Convertir en format international français
-                if len(clean_phone) == 10:
-                    formatted_phone = f"+33 {clean_phone[1:3]} {clean_phone[3:5]} {clean_phone[5:7]} {clean_phone[7:9]}"
-                    cleaned_data['telephone'] = formatted_phone
-                else:
-                    # Format français avec plus de chiffres
-                    formatted_phone = f"+33 {clean_phone[1:]}"
-                    cleaned_data['telephone'] = formatted_phone
-            elif clean_phone.startswith('33') and len(clean_phone) >= 11:
-                # Déjà en format international français
-                if len(clean_phone) == 11:
-                    formatted_phone = f"+{clean_phone[:2]} {clean_phone[2:4]} {clean_phone[4:6]} {clean_phone[6:8]} {clean_phone[8:10]}"
-                    cleaned_data['telephone'] = formatted_phone
-                else:
-                    cleaned_data['telephone'] = f"+{clean_phone}"
-            elif clean_phone.startswith('+') and len(clean_phone) >= 10:
-                # Déjà en format international
-                cleaned_data['telephone'] = telephone
-            elif len(clean_phone) >= 8:
-                # Format local valide, accepter tel quel
-                cleaned_data['telephone'] = telephone
-            else:
-                raise ValidationError("Le numéro de téléphone doit contenir au moins 8 chiffres.")
+        # Configurer le champ statut avec un select classique
+        self.fields['statut'].widget = forms.Select(attrs={
+            'class': 'form-select'
+        })
+        self.fields['statut'].choices = [
+            ('actif', 'Actif'),
+            ('inactif', 'Inactif'),
+            ('suspendu', 'Suspendu'),
+        ]
+        
+        # Valeurs par défaut pour les nouveaux locataires
+        if not self.instance.pk:
+            self.fields['civilite'].initial = 'M'
+            self.fields['statut'].initial = 'actif'
+            self.fields['pays'].initial = 'France'
+            self.fields['garant_pays'].initial = 'France'
+    
+    def clean(self):
+        cleaned_data = super().clean()
         
         # Validation des revenus du garant
-        garant_revenus = cleaned_data.get('garant_revenus_mensuels')
-        if garant_revenus and garant_revenus <= 0:
-            raise ValidationError("Les revenus mensuels du garant doivent être supérieurs à 0.")
-        
-        # Validation que le garant a des revenus suffisants (au moins 3x le loyer moyen)
         revenus_locataire = cleaned_data.get('revenus_mensuels')
-        if revenus_locataire and garant_revenus:
-            if garant_revenus < revenus_locataire * 3:
+        revenus_garant = cleaned_data.get('garant_revenus_mensuels')
+        
+        if revenus_locataire and revenus_garant:
+            if revenus_garant < revenus_locataire * 3:
                 raise ValidationError(
-                    "Les revenus du garant doivent être au moins 3 fois supérieurs à ceux du locataire "
-                    "pour assurer une garantie solide."
+                    "Les revenus du garant doivent être d'au moins 3 fois ceux du locataire pour une garantie solide."
                 )
         
-        # Validation du téléphone du garant - Même logique que pour le locataire
-        garant_telephone = cleaned_data.get('garant_telephone')
-        if garant_telephone:
-            # Nettoyer le numéro (supprimer espaces, tirets, points)
-            clean_garant_phone = ''.join(filter(str.isdigit, garant_telephone))
-            
-            # Si c'est un format français (commence par 0 ou +33)
-            if clean_garant_phone.startswith('0') and len(clean_garant_phone) >= 10:
-                # Convertir en format international français
-                if len(clean_garant_phone) == 10:
-                    formatted_garant_phone = f"+33 {clean_garant_phone[1:3]} {clean_garant_phone[3:5]} {clean_garant_phone[5:7]} {clean_garant_phone[7:9]}"
-                    cleaned_data['garant_telephone'] = formatted_garant_phone
-                else:
-                    # Format français avec plus de chiffres
-                    formatted_garant_phone = f"+33 {clean_garant_phone[1:]}"
-                    cleaned_data['garant_telephone'] = formatted_garant_phone
-            elif clean_garant_phone.startswith('33') and len(clean_garant_phone) >= 11:
-                # Déjà en format international français
-                if len(clean_garant_phone) == 11:
-                    formatted_garant_phone = f"+{clean_garant_phone[:2]} {clean_garant_phone[2:4]} {clean_garant_phone[4:6]} {clean_garant_phone[6:8]} {clean_garant_phone[8:10]}"
-                    cleaned_data['garant_telephone'] = formatted_garant_phone
-                else:
-                    cleaned_data['garant_telephone'] = f"+{clean_garant_phone}"
-            elif clean_garant_phone.startswith('+') and len(clean_garant_phone) >= 10:
-                # Déjà en format international
-                cleaned_data['garant_telephone'] = garant_telephone
-            elif len(clean_garant_phone) >= 8:
-                # Format local valide, accepter tel quel
-                cleaned_data['garant_telephone'] = garant_telephone
-            else:
-                raise ValidationError("Le numéro de téléphone du garant doit contenir au moins 8 chiffres.")
+        # Vérifier les doublons d'informations de contact
+        from core.duplicate_prevention import validate_unique_contact_info
+        try:
+            validate_unique_contact_info(
+                self._meta.model, 
+                self.instance, 
+                ['email', 'telephone', 'telephone_mobile']
+            )
+        except ValidationError as e:
+            # Ajouter l'erreur aux champs concernés
+            if 'email' in str(e):
+                self.add_error('email', e)
+            if 'telephone' in str(e):
+                self.add_error('telephone', e)
+            if 'telephone_mobile' in str(e):
+                self.add_error('telephone_mobile', e)
         
         return cleaned_data
-
-    def _format_phone_with_country_code(self, phone, country_code):
-        """Formate le numéro de téléphone selon le code pays."""
-        import re
-        
-        # Nettoyer le numéro (supprimer espaces, tirets, points)
-        clean_number = re.sub(r'[\s\-\.]', '', phone)
-        
-        # Vérifier que c'est bien des chiffres
-        if not clean_number.isdigit():
-            return None
-        
-        # Formater selon le pays
-        if country_code == '229':  # Bénin
-            if len(clean_number) == 8:
-                return f"+229 {clean_number[:2]} {clean_number[2:4]} {clean_number[4:6]} {clean_number[6:8]}"
-        elif country_code == '226':  # Burkina Faso
-            if len(clean_number) == 8:
-                return f"+226 {clean_number[:2]} {clean_number[2:4]} {clean_number[4:6]} {clean_number[6:8]}"
-        elif country_code == '225':  # Côte d'Ivoire
-            if len(clean_number) == 8:
-                return f"+225 {clean_number[:2]} {clean_number[2:4]} {clean_number[4:6]} {clean_number[6:8]}"
-        elif country_code == '221':  # Sénégal
-            if len(clean_number) == 9:
-                return f"+221 {clean_number[:2]} {clean_number[2:5]} {clean_number[5:9]}"
-        elif country_code == '234':  # Nigeria
-            if len(clean_number) == 10:
-                return f"+234 {clean_number[:3]} {clean_number[3:6]} {clean_number[6:10]}"
-        
-        # Format par défaut pour les autres pays
-        if 8 <= len(clean_number) <= 15:
-            return f"+{country_code} {clean_number}"
-        
-        return None
-
-    def _is_valid_phone_format(self, phone):
-        """Valide le format international du téléphone."""
-        import re
-        
-        # Nettoyer le numéro
-        clean_number = re.sub(r'[\s\-\.]', '', phone)
-        
-        # Vérifier le format international
-        if re.match(r'^\+?1?\d{9,15}$', clean_number):
-            return True
-        
-        return False
-
-    def clean_telephone(self):
-        """Validation du téléphone (méthode legacy maintenue pour compatibilité)."""
-        telephone = self.cleaned_data.get('telephone')
-        if telephone:
-            # Suppression des espaces et caractères spéciaux
-            tel_clean = ''.join(filter(str.isdigit, telephone))
-            if len(tel_clean) < 8:
-                raise ValidationError(_('Le numéro de téléphone doit contenir au moins 8 chiffres.'))
-        return telephone
-
-    def clean_revenus_mensuels(self):
-        """Validation des revenus mensuels."""
-        revenus = self.cleaned_data.get('revenus_mensuels')
-        if revenus and revenus <= 0:
-            raise ValidationError(_('Les revenus mensuels doivent être supérieurs à 0.'))
-        return revenus
-    
-    def save(self, commit=True, user=None):
-        """Sauvegarde le locataire et crée automatiquement les documents associés."""
-        locataire = super().save(commit=False)
-        
-        if commit:
-            locataire.save()
-            
-            # Créer automatiquement les documents dans le système documentaire
-            if user:
-                self._create_documents_for_locataire(locataire, user)
-        
-        return locataire
-    
-    def _create_documents_for_locataire(self, locataire, user):
-        """Crée automatiquement les documents pour un locataire."""
-        from .models import Document
-        from django.core.files.base import ContentFile
-        
-        # Mapping des champs de fichiers vers les types de documents
-        document_mapping = {
-            'piece_identite': ('justificatif', 'Pièce d\'identité du locataire'),
-            'justificatif_domicile': ('justificatif', 'Justificatif de domicile du locataire'),
-            'justificatifs_revenus': ('justificatif', 'Justificatifs de revenus du locataire'),
-            'avis_imposition': ('justificatif', 'Avis d\'imposition du locataire'),
-            'garant_caution': ('justificatif', 'Garant/Caution du locataire'),
-        }
-        
-        for field_name, (doc_type, description) in document_mapping.items():
-            file_field = self.cleaned_data.get(field_name)
-            if file_field:
-                try:
-                    # Vérifier que c'est un objet File valide
-                    if hasattr(file_field, 'read') and hasattr(file_field, 'name'):
-                        fichier = file_field
-                    else:
-                        # Créer un ContentFile pour les bytes
-                        if isinstance(file_field, bytes):
-                            fichier = ContentFile(file_field, name=f"{field_name}_{locataire.id}.pdf")
-                        else:
-                            fichier = ContentFile(file_field, name=f"{field_name}_{locataire.id}.pdf")
-                    
-                    Document.objects.create(
-                        nom=f"{description} - {locataire.nom} {locataire.prenom}",
-                        type_document=doc_type,
-                        description=description,
-                        fichier=fichier,
-                        locataire=locataire,
-                        statut='valide',
-                        cree_par=user,
-                        confidentiel=True  # Les documents personnels sont confidentiels
-                    )
-                except Exception as e:
-                    print(f"Erreur lors de la création du document {field_name}: {e}")
-                    # Créer un document d'erreur
-                    Document.objects.create(
-                        nom=f"{description} - {locataire.nom} {locataire.prenom} (Erreur)",
-                        type_document=doc_type,
-                        description=f"{description} - Erreur: {str(e)}",
-                        locataire=locataire,
-                        statut='brouillon',
-                        cree_par=user,
-                        confidentiel=True
-                    )
 
 
 class TypeBienForm(forms.ModelForm):
@@ -2459,4 +2173,4 @@ class ContratPiecesForm(forms.Form):
 
 
 # Import des formulaires pour les unités locatives
-from .forms_unites import UniteLocativeForm, ReservationUniteForm, FiltreUniteForm, RapportOccupationForm
+from .forms_unites import UniteLocativeForm, ReservationUniteForm, UniteLocativeSearchForm

@@ -2,7 +2,7 @@
 {% load static %}
 {% load humanize %}
 
-{% block title %}Détails du Retrait - Rentila{% endblock %}
+{% block title %}Détails du Retrait - KBIS IMMOBILIER{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
@@ -208,7 +208,7 @@
                                 {% for paiement in retrait.paiements_concernes.all %}
                                 <tr>
                                     <td>
-                                        <a href="{% url 'contrats:contrat_detail' paiement.contrat.id %}" 
+                                        <a href="{% url 'contrats:detail' paiement.contrat.id %}" 
                                            class="text-decoration-none">
                                             {{ paiement.contrat.numero_contrat }}
                                         </a>

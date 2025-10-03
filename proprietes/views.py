@@ -242,17 +242,27 @@ def ajouter_propriete(request):
             propriete = form.save(commit=False)
             propriete.cree_par = request.user
             
+            # Vérifier si un numéro a été généré automatiquement
+            if hasattr(form, '_auto_generated') and form._auto_generated:
+                original_number = getattr(form, '_original_number', '')
+                messages.info(
+                    request,
+                    f'Le numéro "{original_number}" existait déjà. '
+                    f'Un numéro unique a été généré automatiquement: {propriete.numero_propriete}'
+                )
+            
             # Générer automatiquement le numéro unique de propriété avec garantie d'unicité absolue
             if not propriete.numero_propriete:
-                generator = IDGenerator()
+                from core.robust_id_generator import RobustIDGenerator
                 try:
-                    propriete.numero_propriete = generator.generate_id('propriete')
+                    propriete.numero_propriete = RobustIDGenerator.generate_property_id()
                 except Exception as e:
                     # En cas d'erreur, générer un ID de secours avec timestamp
                     from datetime import datetime
                     import uuid
-                    timestamp = datetime.now().strftime('%H%M%S%f')[:-3]
-                    propriete.numero_propriete = f"PRO-{datetime.now().year}-{timestamp}"
+                    timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')[:-3]
+                    unique_id = str(uuid.uuid4())[:8]
+                    propriete.numero_propriete = f"PRO-{timestamp}-{unique_id}"
             
             propriete.save()
             
@@ -320,6 +330,15 @@ def modifier_propriete(request, pk):
     if request.method == 'POST':
         form = ProprieteForm(request.POST, request.FILES, instance=propriete)
         if form.is_valid():
+            # Vérifier si un numéro a été généré automatiquement
+            if hasattr(form, '_auto_generated') and form._auto_generated:
+                original_number = getattr(form, '_original_number', '')
+                messages.info(
+                    request,
+                    f'Le numéro "{original_number}" existait déjà. '
+                    f'Un numéro unique a été généré automatiquement: {form.cleaned_data["numero_propriete"]}'
+                )
+            
             form.save(user=request.user)
             messages.success(request, f'Propriété "{propriete.titre}" modifiée avec succès!')
             return redirect('proprietes:detail', pk=pk)
@@ -670,7 +689,12 @@ def ajouter_bailleur(request):
         return redirect('proprietes:liste_bailleurs')
     
     if request.method == 'POST':
-        form = BailleurForm(request.POST, request.FILES)
+        # Gérer les valeurs par défaut avant la validation
+        post_data = request.POST.copy()
+        if not post_data.get('civilite'):
+            post_data['civilite'] = 'M'
+        
+        form = BailleurForm(post_data, request.FILES)
         if form.is_valid():
             bailleur = form.save(commit=False)
             bailleur.cree_par = request.user
@@ -705,13 +729,41 @@ def ajouter_bailleur(request):
             
             messages.success(
                 request, 
-                f'Bailleur "{bailleur.get_nom_complet()}" ajouté avec succès! '
-                f'Numéro: {bailleur.numero_bailleur}. '
-                f'Documents confidentiels créés automatiquement.'
+                f'✅ <strong>Bailleur ajouté avec succès !</strong><br>'
+                f'👤 <strong>Nom complet :</strong> {bailleur.get_nom_complet()}<br>'
+                f'🔢 <strong>Numéro unique :</strong> {bailleur.numero_bailleur}<br>'
+                f'📧 <strong>Email :</strong> {bailleur.email or "Non renseigné"}<br>'
+                f'📞 <strong>Téléphone :</strong> {bailleur.telephone}<br>'
+                f'📁 <strong>Documents :</strong> Dossier confidentiel créé automatiquement'
             )
             return redirect('proprietes:detail_bailleur', pk=bailleur.pk)
         else:
-            messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
+            # Afficher les erreurs détaillées pour le bailleur
+            error_messages = []
+            for field, errors in form.errors.items():
+                if field != '__all__':
+                    field_name = form.fields[field].label if field in form.fields else field
+                    error_messages.append(f"<strong>{field_name}:</strong> {', '.join(errors)}")
+                else:
+                    for error in errors:
+                        error_messages.append(f"<strong>Erreur générale:</strong> {error}")
+            
+            if error_messages:
+                # Messages d'erreur plus clairs pour les champs civilité
+                clear_errors = []
+                for msg in error_messages:
+                    if 'civilite' in msg.lower():
+                        clear_errors.append('👤 <strong>Civilité :</strong> Veuillez sélectionner Monsieur, Madame ou Mademoiselle')
+                    else:
+                        clear_errors.append(f"<strong>{msg.split(':')[0]}:</strong> {':'.join(msg.split(':')[1:])}")
+                
+                messages.error(
+                    request, 
+                    f'❌ <strong>Erreurs de validation détectées :</strong><br>' + 
+                    '<br>'.join(clear_errors)
+                )
+            else:
+                messages.error(request, '❌ <strong>Veuillez corriger les erreurs dans le formulaire.</strong>')
     else:
         form = BailleurForm()
         # Pré-générer le numéro unique pour l'affichage
@@ -752,10 +804,35 @@ def modifier_bailleur(request, pk):
         form = BailleurForm(request.POST, request.FILES, instance=bailleur)
         if form.is_valid():
             form.save(user=request.user)
-            messages.success(request, f'Bailleur "{bailleur.get_nom_complet()}" modifié avec succès!')
+            messages.success(
+                request, 
+                f'✅ <strong>Bailleur modifié avec succès !</strong><br>'
+                f'👤 <strong>Nom complet :</strong> {bailleur.get_nom_complet()}<br>'
+                f'🔢 <strong>Numéro unique :</strong> {bailleur.numero_bailleur}<br>'
+                f'📧 <strong>Email :</strong> {bailleur.email or "Non renseigné"}<br>'
+                f'📞 <strong>Téléphone :</strong> {bailleur.telephone}<br>'
+                f'📁 <strong>Documents :</strong> Dossier mis à jour automatiquement'
+            )
             return redirect('proprietes:detail_bailleur', pk=pk)
         else:
-            messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
+            # Afficher les erreurs détaillées pour la modification du bailleur
+            error_messages = []
+            for field, errors in form.errors.items():
+                if field != '__all__':
+                    field_name = form.fields[field].label if field in form.fields else field
+                    error_messages.append(f"<strong>{field_name}:</strong> {', '.join(errors)}")
+                else:
+                    for error in errors:
+                        error_messages.append(f"<strong>Erreur générale:</strong> {error}")
+            
+            if error_messages:
+                messages.error(
+                    request, 
+                    f'❌ <strong>Erreurs de validation détectées :</strong><br>' + 
+                    '<br>'.join(error_messages)
+                )
+            else:
+                messages.error(request, '❌ <strong>Veuillez corriger les erreurs dans le formulaire.</strong>')
     else:
         form = BailleurForm(instance=bailleur)
     
@@ -1085,26 +1162,38 @@ def ajouter_locataire(request):
         return redirect('proprietes:locataires_liste')
     
     if request.method == 'POST':
-        form = LocataireForm(request.POST, request.FILES)
+        # Gérer les valeurs par défaut avant la validation
+        post_data = request.POST.copy()
+        if not post_data.get('civilite'):
+            post_data['civilite'] = 'M'
+        if not post_data.get('statut'):
+            post_data['statut'] = 'actif'
+        
+        form = LocataireForm(post_data, request.FILES)
         if form.is_valid():
             locataire = form.save(commit=False)
             locataire.cree_par = request.user
             
-            # Générer automatiquement le numéro unique de locataire
-            if not locataire.numero_locataire:
-                generator = IDGenerator()
-                locataire.numero_locataire = generator.generate_id('locataire')
+            # Générer automatiquement un numéro unique de locataire
+            from datetime import datetime
+            import uuid
+            
+            # Utiliser un timestamp + UUID court pour garantir l'unicité
+            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+            unique_id = str(uuid.uuid4())[:8].upper()
+            locataire.numero_locataire = f"LOC-{timestamp}-{unique_id}"
             
             locataire.save()
             
-            # Utiliser la méthode save du formulaire pour gérer les documents
-            form.save(user=request.user)
-            
             messages.success(
                 request, 
-                f'Locataire "{locataire.get_nom_complet()}" ajouté avec succès! '
-                f'Numéro: {locataire.numero_locataire}. '
-                f'Documents confidentiels créés automatiquement.'
+                f'✅ <strong>Locataire ajouté avec succès !</strong><br>'
+                f'👤 <strong>Nom complet :</strong> {locataire.get_nom_complet()}<br>'
+                f'🔢 <strong>Numéro unique :</strong> {locataire.numero_locataire}<br>'
+                f'📧 <strong>Email :</strong> {locataire.email or "Non renseigné"}<br>'
+                f'📞 <strong>Téléphone :</strong> {locataire.telephone}<br>'
+                f'🏠 <strong>Statut :</strong> {locataire.get_statut_display()}<br>'
+                f'📁 <strong>Documents :</strong> Dossier confidentiel créé automatiquement'
             )
             return redirect('proprietes:detail_locataire', pk=locataire.pk)
         else:
@@ -1119,18 +1208,25 @@ def ajouter_locataire(request):
                         error_messages.append(f"Erreur générale: {error}")
             
             if error_messages:
-                messages.error(request, f'Erreurs de validation: {" | ".join(error_messages)}')
+                # Messages d'erreur plus clairs pour les champs civilité et statut
+                clear_errors = []
+                for msg in error_messages:
+                    if 'civilite' in msg.lower():
+                        clear_errors.append('👤 <strong>Civilité :</strong> Veuillez sélectionner Monsieur, Madame ou Mademoiselle')
+                    elif 'statut' in msg.lower():
+                        clear_errors.append('🏠 <strong>Statut :</strong> Veuillez sélectionner Actif, Inactif ou Suspendu')
+                    else:
+                        clear_errors.append(f"<strong>{msg.split(':')[0]}:</strong> {':'.join(msg.split(':')[1:])}")
+                
+                messages.error(
+                    request, 
+                    f'❌ <strong>Erreurs de validation détectées :</strong><br>' + 
+                    '<br>'.join(clear_errors)
+                )
             else:
-                messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
+                messages.error(request, '❌ <strong>Veuillez corriger les erreurs dans le formulaire.</strong>')
     else:
         form = LocataireForm()
-        # Pré-générer le numéro unique pour l'affichage
-        try:
-            generator = IDGenerator()
-            initial_numero = generator.generate_id('locataire')
-            form.fields['numero_locataire'].initial = initial_numero
-        except Exception as e:
-            print(f"Erreur lors de la génération du numéro: {e}")
     
     context = {
         'form': form,
@@ -1156,11 +1252,39 @@ def modifier_locataire(request, pk):
     if request.method == 'POST':
         form = LocataireForm(request.POST, request.FILES, instance=locataire)
         if form.is_valid():
-            form.save(user=request.user)
-            messages.success(request, f'Locataire "{locataire.get_nom_complet()}" modifié avec succès!')
+            locataire = form.save(commit=False)
+            locataire.modifie_par = request.user
+            locataire.save()
+            messages.success(
+                request, 
+                f'✅ <strong>Locataire modifié avec succès !</strong><br>'
+                f'👤 <strong>Nom complet :</strong> {locataire.get_nom_complet()}<br>'
+                f'🔢 <strong>Numéro unique :</strong> {locataire.numero_locataire}<br>'
+                f'📧 <strong>Email :</strong> {locataire.email or "Non renseigné"}<br>'
+                f'📞 <strong>Téléphone :</strong> {locataire.telephone}<br>'
+                f'🏠 <strong>Statut :</strong> {locataire.get_statut_display()}<br>'
+                f'📁 <strong>Documents :</strong> Dossier mis à jour automatiquement'
+            )
             return redirect('proprietes:detail_locataire', pk=pk)
         else:
-            messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
+            # Afficher les erreurs détaillées pour la modification du locataire
+            error_messages = []
+            for field, errors in form.errors.items():
+                if field != '__all__':
+                    field_name = form.fields[field].label if field in form.fields else field
+                    error_messages.append(f"<strong>{field_name}:</strong> {', '.join(errors)}")
+                else:
+                    for error in errors:
+                        error_messages.append(f"<strong>Erreur générale:</strong> {error}")
+            
+            if error_messages:
+                messages.error(
+                    request, 
+                    f'❌ <strong>Erreurs de validation détectées :</strong><br>' + 
+                    '<br>'.join(error_messages)
+                )
+            else:
+                messages.error(request, '❌ <strong>Veuillez corriger les erreurs dans le formulaire.</strong>')
     else:
         form = LocataireForm(instance=locataire)
     

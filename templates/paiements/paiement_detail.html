@@ -515,9 +515,17 @@
                         
                         {% if paiement.statut == 'valide' %}
                         <div class="text-center">
-                            <a href="{% url 'paiements:generer_quittance_manuelle' paiement.pk %}" class="btn-generer-quittance">
-                                <i class="bi bi-plus-circle me-2"></i>Générer une quittance
-                            </a>
+                            <div class="d-flex gap-2 justify-content-center flex-wrap">
+                                <a href="{% url 'paiements:generer_quittance_kbis_dynamique' paiement.pk %}" class="btn btn-success">
+                                    <i class="bi bi-file-earmark-text me-2"></i>Générer quittance KBIS dynamique
+                                </a>
+                                <a href="{% url 'paiements:generer_recu_kbis_dynamique' paiement.pk %}" class="btn btn-info">
+                                    <i class="bi bi-receipt me-2"></i>Générer récépissé KBIS
+                                </a>
+                                <a href="{% url 'paiements:generer_quittance_manuelle' paiement.pk %}" class="btn-generer-quittance">
+                                    <i class="bi bi-plus-circle me-2"></i>Générer quittance classique
+                                </a>
+                            </div>
                         </div>
                         {% else %}
                         <div class="text-center">
@@ -593,6 +601,15 @@
         {% if paiement.quittance %}
         <a href="{% url 'paiements:quittance_detail' paiement.quittance.pk %}" class="btn-action btn-warning">
             <i class="bi bi-receipt me-2"></i>Voir la quittance
+        </a>
+        {% endif %}
+        
+        {% if paiement.statut == 'valide' %}
+        <a href="{% url 'paiements:generer_quittance_kbis_dynamique' paiement.pk %}" class="btn-action btn-primary">
+            <i class="bi bi-file-earmark-text me-2"></i>Générer Quittance
+        </a>
+        <a href="{% url 'paiements:generer_recu_kbis_dynamique' paiement.pk %}" class="btn-action btn-info">
+            <i class="bi bi-receipt me-2"></i>Générer Récépissé
         </a>
         {% endif %}
     </div>

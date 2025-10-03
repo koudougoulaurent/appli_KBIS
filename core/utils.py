@@ -108,47 +108,46 @@ def ajouter_en_tete_entreprise(canvas, config, y_position=800):
         y_position: Position Y de départ (défaut: 800)
     """
     
-    # Vérifier d'abord si un en-tête personnalisé existe
-    if config.a_un_entete_personnalise():
-        try:
-            from reportlab.lib.utils import ImageReader
-            import os
+    try:
+        from reportlab.lib.utils import ImageReader
+        import os
+        
+        # Toujours essayer d'utiliser l'image d'en-tête
+        entete_path = config.get_entete_prioritaire()
+        if entete_path and os.path.exists(entete_path):
+            # Utiliser l'en-tête personnalisé
+            img = ImageReader(entete_path)
+            img_width, img_height = img.getSize()
             
-            entete_path = config.get_entete_prioritaire()
-            if entete_path and os.path.exists(entete_path):
-                # Utiliser l'en-tête personnalisé
-                img = ImageReader(entete_path)
-                img_width, img_height = img.getSize()
-                
-                # Calculer les dimensions optimales pour l'en-tête
-                max_width = 500  # Largeur maximale de la page
-                max_height = 150  # Hauteur maximale pour l'en-tête
-                
-                # Redimensionner proportionnellement
-                aspect_ratio = img_width / img_height
-                if aspect_ratio > 3.33:  # Très large
-                    entete_width = max_width
-                    entete_height = max_width / aspect_ratio
-                elif aspect_ratio < 2:  # Très haut
-                    entete_height = max_height
-                    entete_width = max_height * aspect_ratio
-                else:
-                    # Ratio normal
-                    entete_width = max_width
-                    entete_height = max_height
-                
-                # Centrer l'en-tête
-                entete_x = (600 - entete_width) / 2  # Centrer sur la page
-                entete_y = y_position - entete_height + 20
-                
-                canvas.drawImage(entete_path, entete_x, entete_y, entete_width, entete_height)
-                
-                # Retourner la position Y après l'en-tête
-                return y_position - entete_height - 20
-                
-        except Exception as e:
-            print(f"Erreur lors de l'ajout de l'en-tête personnalisé: {e}")
-            # Fallback vers le logo + texte
+            # Calculer les dimensions optimales pour l'en-tête
+            max_width = 500  # Largeur maximale de la page
+            max_height = 150  # Hauteur maximale pour l'en-tête
+            
+            # Redimensionner proportionnellement
+            aspect_ratio = img_width / img_height
+            if aspect_ratio > 3.33:  # Très large
+                entete_width = max_width
+                entete_height = max_width / aspect_ratio
+            elif aspect_ratio < 2:  # Très haut
+                entete_height = max_height
+                entete_width = max_height * aspect_ratio
+            else:
+                # Ratio normal
+                entete_width = max_width
+                entete_height = max_height
+            
+            # Centrer l'en-tête
+            entete_x = (600 - entete_width) / 2  # Centrer sur la page
+            entete_y = y_position - entete_height + 20
+            
+            canvas.drawImage(entete_path, entete_x, entete_y, entete_width, entete_height)
+            
+            # Retourner la position Y après l'en-tête
+            return y_position - entete_height - 20
+            
+    except Exception as e:
+        print(f"Erreur lors de l'ajout de l'en-tête personnalisé: {e}")
+        # Fallback vers le logo + texte
     
     # Si pas d'en-tête personnalisé, utiliser le logo + texte classique
     # Dimensions du logo (à ajuster selon vos besoins)
@@ -263,12 +262,12 @@ def ajouter_pied_entreprise(canvas, config, y_position=100):
     if contact_info:
         canvas.drawString(50, y_position - 15, " | ".join(contact_info))
     
-    # Informations optionnelles (SIRET et Licence)
+    # Informations optionnelles (RCCM et IFU)
     info_legales = []
-    if config.siret and config.siret.strip():
-        info_legales.append(f"SIRET: {config.siret}")
-    if config.numero_licence and config.numero_licence.strip():
-        info_legales.append(f"Licence: {config.numero_licence}")
+    if hasattr(config, 'rccm') and config.rccm and config.rccm.strip():
+        info_legales.append(f"RCCM: {config.rccm}")
+    if hasattr(config, 'ifu') and config.ifu and config.ifu.strip():
+        info_legales.append(f"IFU: {config.ifu}")
     
     if info_legales:
         canvas.drawString(50, y_position - 30, " | ".join(info_legales))
@@ -640,10 +639,10 @@ def ajouter_pied_entreprise_reportlab(story, config):
     
     # Informations légales optionnelles
     info_legales = []
-    if config.siret and config.siret.strip():
-        info_legales.append(f"SIRET: {config.siret}")
-    if config.numero_licence and config.numero_licence.strip():
-        info_legales.append(f"Licence: {config.numero_licence}")
+    if hasattr(config, 'rccm') and config.rccm and config.rccm.strip():
+        info_legales.append(f"RCCM: {config.rccm}")
+    if hasattr(config, 'ifu') and config.ifu and config.ifu.strip():
+        info_legales.append(f"IFU: {config.ifu}")
     
     if info_legales:
         story.append(Paragraph(" | ".join(info_legales), footer_style))
@@ -1006,3 +1005,142 @@ def check_active_contracts_before_force_delete(model_instance):
         'object_id': model_instance.id,
         'object_name': str(model_instance)
     }
+
+
+class KBISDocumentTemplate:
+    """Classe pour gérer l'en-tête et le pied de page KBIS dans tous les documents."""
+    
+    # Informations de l'entreprise KBIS
+    ENTREPRISE_INFO = {
+        'nom': 'KBIS IMMOBILIER',
+        'slogan': 'Votre Partenaire Immobilier de Confiance',
+        'adresse_ligne1': 'Avenue de la République',
+        'adresse_ligne2': 'Quartier Centre-Ville',
+        'ville': 'Abidjan, Côte d\'Ivoire',
+        'telephone': '+225 XX XX XX XX XX',
+        'email': 'contact@kbis-immobilier.ci',
+        'site_web': 'www.kbis-immobilier.ci',
+        'rccm': 'CI-ABJ-XXXX-X-XXXXX',
+        'ifu': 'XXXXXXXXXX',
+    }
+    
+    @staticmethod
+    def get_logo_path():
+        """Retourne le chemin du logo KBIS."""
+        try:
+            from django.templatetags.static import static
+            # Utiliser le système static de Django
+            return static('images/logo_kbis.png')
+        except:
+            return None
+    
+    @staticmethod
+    def get_entete_html():
+        """Génère l'HTML de l'en-tête KBIS."""
+        logo_url = KBISDocumentTemplate.get_logo_path()
+        info = KBISDocumentTemplate.ENTREPRISE_INFO
+        
+        logo_html = f'<img src="{logo_url}" alt="{info["nom"]}" style="max-height: 60px; margin-right: 20px;">' if logo_url else ''
+        
+        return f"""
+        <div class="document-header" style="
+            border-bottom: 3px solid #2c5aa0;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        ">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center;">
+                    {logo_html}
+                    <div>
+                        <h1 style="margin: 0; font-size: 24px; color: #2c5aa0; font-weight: bold;">
+                            {info['nom']}
+                        </h1>
+                        <p style="margin: 5px 0 0 0; color: #666; font-style: italic;">
+                            {info['slogan']}
+                        </p>
+                    </div>
+                </div>
+                <div style="text-align: right; font-size: 12px; color: #666;">
+                    <p style="margin: 0;"><strong>{info['adresse_ligne1']}</strong></p>
+                    <p style="margin: 0;">{info['adresse_ligne2']}</p>
+                    <p style="margin: 0;">{info['ville']}</p>
+                    <p style="margin: 5px 0 0 0; color: #2c5aa0;"><strong>{info['telephone']}</strong></p>
+                </div>
+            </div>
+        </div>
+        """
+    
+    @staticmethod
+    def get_document_complet(titre, contenu, type_document="Document"):
+        """Génère un document HTML complet avec en-tête et pied de page KBIS."""
+        entete = KBISDocumentTemplate.get_entete_html()
+        pied_page = KBISDocumentTemplate.get_pied_page_html()
+        css = KBISDocumentTemplate.get_css_styles()
+        
+        return f"""
+        <!DOCTYPE html>
+        <html lang="fr">
+        <head>
+            <meta charset="UTF-8">
+            <title>{titre} - KBIS IMMOBILIER</title>
+            <style>{css}</style>
+        </head>
+        <body>
+            <div class="container">
+                {entete}
+                <div class="document-content">
+                    {contenu}
+                </div>
+                {pied_page}
+            </div>
+        </body>
+        </html>
+        """
+    
+    @staticmethod
+    def get_pied_page_html():
+        """Génère l'HTML du pied de page KBIS."""
+        info = KBISDocumentTemplate.ENTREPRISE_INFO
+        
+        return f"""
+        <div class="document-footer" style="
+            border-top: 2px solid #2c5aa0;
+            margin-top: 40px;
+            padding-top: 20px;
+            background: #f8f9fa;
+            font-size: 11px;
+            color: #666;
+            text-align: center;
+        ">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="text-align: left;">
+                    <p style="margin: 0;"><strong>{info['nom']}</strong></p>
+                    <p style="margin: 0;">{info['adresse_ligne1']}, {info['ville']}</p>
+                </div>
+                <div style="text-align: center;">
+                    <p style="margin: 0;">Email: {info['email']}</p>
+                    <p style="margin: 0;">Web: {info['site_web']}</p>
+                </div>
+                <div style="text-align: right;">
+                    <p style="margin: 0;">RCCM: {info['rccm']}</p>
+                    <p style="margin: 0;">IFU: {info['ifu']}</p>
+                </div>
+            </div>
+        </div>
+        """
+    
+    @staticmethod
+    def get_css_styles():
+        """Retourne les styles CSS pour les documents KBIS."""
+        return """
+        body { font-family: Arial, sans-serif; margin: 0; padding: 30px; background: #fff; color: #333; line-height: 1.6; }
+        .container { max-width: 800px; margin: 0 auto; background: white; }
+        .header-kbis { background: linear-gradient(135deg, #2c5aa0 0%, #3d6db0 100%); color: white; padding: 30px; text-align: center; }
+        .footer-kbis { background: #f8f9fa; color: #666; text-align: center; padding: 20px; font-size: 12px; border-top: 3px solid #2c5aa0; }
+        .document-content { padding: 40px; }
+        .montant { font-weight: bold; color: #2c5aa0; text-align: right; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f8f9fa; font-weight: bold; color: #2c5aa0; }
+        """

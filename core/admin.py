@@ -4,6 +4,12 @@ from django.core.exceptions import ValidationError
 from django.utils.html import format_html
 from .models import AuditLog, ConfigurationEntreprise
 from .utils import valider_logo_entreprise
+from .admin_actions import (
+    regenerate_all_pdfs, 
+    clear_pdf_cache, 
+    show_cache_stats, 
+    force_regenerate_now
+)
 
 # Register your models here.
 
@@ -95,19 +101,20 @@ class ConfigurationEntrepriseAdmin(admin.ModelAdmin):
     """
     form = ConfigurationEntrepriseAdminForm
     
-    list_display = ['nom_entreprise', 'ville', 'actif', 'afficher_logo']
+    list_display = ['nom_entreprise', 'ville', 'afficher_logo']
+    actions = [regenerate_all_pdfs, clear_pdf_cache, show_cache_stats, force_regenerate_now]
     
     # Forcer la mise à jour des champs
     def get_form(self, request, obj=None, **kwargs):
         """Force la mise à jour du formulaire"""
         form = super().get_form(request, obj, **kwargs)
         return form
-    list_filter = ['actif', 'forme_juridique', 'ville']
+    list_filter = ['ville', 'pays']
     search_fields = ['nom_entreprise', 'adresse', 'ville', 'email']
     
     fieldsets = (
         ('Informations de base', {
-            'fields': ('nom_entreprise', 'slogan', 'actif')
+            'fields': ('nom_entreprise', 'slogan')
         }),
         ('Adresse', {
             'fields': ('adresse', 'code_postal', 'ville', 'pays')
@@ -120,7 +127,7 @@ class ConfigurationEntrepriseAdmin(admin.ModelAdmin):
             'description': 'Configurez l\'identité visuelle de votre entreprise. L\'en-tête uploadé a la priorité absolue, puis le logo uploadé, puis l\'URL externe.'
         }),
         ('Informations légales', {
-            'fields': ('siret', 'numero_licence', 'capital_social', 'forme_juridique'),
+            'fields': ('siret', 'numero_licence', 'capital_social'),
             'description': 'Ces informations apparaîtront sur vos documents'
         }),
         ('Informations bancaires', {

@@ -17,7 +17,7 @@
                 <p>Modifier les informations du bailleur</p>
             </div>
             <div class="d-flex gap-2">
-                <a href="{% url 'proprietes:bailleur_detail' bailleur.pk %}" class="btn btn-secondary">
+                <a href="{% url 'proprietes:detail_bailleur' bailleur.pk %}" class="btn btn-secondary">
                     <i class="bi bi-arrow-left"></i> Retour au détail
                 </a>
                 <a href="{% url 'proprietes:bailleurs_liste' %}" class="btn btn-primary">
@@ -204,7 +204,7 @@
             <div class="form-actions">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <a href="{% url 'proprietes:bailleur_detail' bailleur.pk %}" class="btn btn-secondary">
+                        <a href="{% url 'proprietes:detail_bailleur' bailleur.pk %}" class="btn btn-secondary">
                             <i class="bi bi-x-circle"></i> Annuler
                         </a>
                     </div>

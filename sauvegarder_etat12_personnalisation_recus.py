@@ -138,9 +138,9 @@ def sauvegarder_etat12():
         
         # Configuration entreprise
         'configuration_entreprise': {
-            'existe': ConfigurationEntreprise.objects.filter(actif=True).exists(),
-            'nom': ConfigurationEntreprise.get_configuration_active().nom_entreprise if ConfigurationEntreprise.objects.filter(actif=True).exists() else None,
-            'logo': ConfigurationEntreprise.get_configuration_active().logo.name if ConfigurationEntreprise.objects.filter(actif=True).exists() and ConfigurationEntreprise.get_configuration_active().logo else None,
+            'existe': ConfigurationEntreprise.objects.filter(active=True).exists(),
+            'nom': ConfigurationEntreprise.get_configuration_active().nom_entreprise if ConfigurationEntreprise.objects.filter(active=True).exists() else None,
+            'logo': ConfigurationEntreprise.get_configuration_active().logo.name if ConfigurationEntreprise.objects.filter(active=True).exists() and ConfigurationEntreprise.get_configuration_active().logo else None,
         },
         
         # Templates de reçus

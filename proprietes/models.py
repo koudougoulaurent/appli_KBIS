@@ -1,9 +1,11 @@
 from django.db import models
 from django.conf import settings
+from django.core.exceptions import ValidationError
 
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 from .managers import NonDeletedManager
+from core.duplicate_prevention import DuplicatePreventionMixin, validate_unique_contact_info
 
 
 class TypeBien(models.Model):
@@ -12,6 +14,7 @@ class TypeBien(models.Model):
     description = models.TextField(blank=True, verbose_name=_("Description"))
     
     class Meta:
+        app_label = 'proprietes'
         verbose_name = _("Type de bien")
         verbose_name_plural = _("Types de biens")
         ordering = ['nom']
@@ -44,8 +47,11 @@ class TypeBien(models.Model):
         return None
 
 
-class Bailleur(models.Model):
+class Bailleur(DuplicatePreventionMixin, models.Model):
     """Modèle pour les bailleurs."""
+    
+    # Champs à vérifier pour les doublons
+    duplicate_check_fields = ['email', 'telephone']
     CIVILITE_CHOICES = [
         ('M', 'Monsieur'),
         ('Mme', 'Madame'),
@@ -100,6 +106,7 @@ class Bailleur(models.Model):
     is_deleted = models.BooleanField(default=False, verbose_name=_("Supprimé logiquement"))
     
     class Meta:
+        app_label = 'proprietes'
         verbose_name = _("Bailleur")
         verbose_name_plural = _("Bailleurs")
         ordering = ['nom', 'prenom']
@@ -165,8 +172,11 @@ class Bailleur(models.Model):
         return stats
 
 
-class Locataire(models.Model):
+class Locataire(DuplicatePreventionMixin, models.Model):
     """Modèle pour les locataires."""
+    
+    # Champs à vérifier pour les doublons
+    duplicate_check_fields = ['email', 'telephone', 'telephone_mobile']
     CIVILITE_CHOICES = [
         ('M', 'Monsieur'),
         ('Mme', 'Madame'),
@@ -188,9 +198,9 @@ class Locataire(models.Model):
         help_text=_("Identifiant unique du locataire")
     )
     civilite = models.CharField(
-        max_length=5,
-        choices=CIVILITE_CHOICES,
-        default='M',
+        max_length=50,
+        blank=True,
+        null=True,
         verbose_name=_("Civilité")
     )
     nom = models.CharField(max_length=100, verbose_name=_("Nom"))
@@ -221,8 +231,7 @@ class Locataire(models.Model):
     
     # Informations du garant
     garant_civilite = models.CharField(
-        max_length=5,
-        choices=CIVILITE_CHOICES,
+        max_length=50,
         blank=True,
         null=True,
         verbose_name=_("Civilité du garant")
@@ -655,7 +664,7 @@ class Propriete(models.Model):
         if self.surface and self.surface > 200:  # Plus de 200m²
             return True
         
-        if self.nombre_pieces > 8:  # Plus de 8 pièces
+        if self.nombre_pieces and self.nombre_pieces > 8:  # Plus de 8 pièces
             return True
         
         return False
@@ -674,7 +683,7 @@ class Propriete(models.Model):
             if self.surface and self.surface > 200:
                 suggestions.append(f"Avec {self.surface}m², cette propriété pourrait être divisée en plusieurs unités.")
             
-            if self.nombre_pieces > 8:
+            if self.nombre_pieces and self.nombre_pieces > 8:
                 suggestions.append(f"Avec {self.nombre_pieces} pièces, vous pourriez créer plusieurs unités locatives.")
             
             return " ".join(suggestions)

@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, views_ajax, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_retraits_bailleur, views_quick_actions
+from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_retraits_bailleur, views_quick_actions, views_kbis_recus
 # from . import views_locataire_paiements
 
 app_name = 'paiements'
@@ -14,27 +14,18 @@ urlpatterns = [
     # API REST
     path('', include(router.urls)),
     
-    # URLs pour les accords de paiement
-    path('accords/dashboard/', views.dashboard_paiements_partiels, name='dashboard_partiels'),
-    path('accords/liste/', views.liste_plans_paiement, name='liste_plans_partiels'),
-    path('accords/creer/', views.creer_plan_paiement, name='creer_plan_partiel'),
-    path('accords/<uuid:plan_id>/', views.detail_plan_paiement, name='detail_plan_partiel'),
-    
-    # URLs AJAX pour les fonctionnalités avancées
-    path('api/plans/<uuid:plan_id>/', views_ajax.get_plan_details, name='api_plan_details'),
-    path('api/plans/quick-payment/', views_ajax.create_quick_payment, name='api_quick_payment'),
-    path('api/plans/bulk-update/', views_ajax.bulk_update_plans, name='api_bulk_update'),
-    path('api/plans/data/', views_ajax.get_plans_data, name='api_plans_data'),
-    path('api/plans/calculate-schedule/', views_ajax.calculate_plan_schedule, name='api_calculate_schedule'),
-    path('api/plans/search/', views_ajax.search_plans, name='api_search_plans'),
-    
     # URLs pour les paiements (avec aliases pour compatibilité)
-    path('dashboard/', views.paiements_dashboard, name='paiements_dashboard'),
+    path('dashboard/', views.paiements_dashboard, name='dashboard'),
+    path('dashboard-recaps/', views.dashboard_recaps_simple, name='dashboard_recaps_simple'),
     path('liste/', views.paiement_list, name='liste'),  # Alias principal pour compatibilité
     path('detail/<int:pk>/', views.paiement_detail, name='detail'),  # Alias principal pour compatibilité
     path('ajouter/', views.ajouter_paiement, name='ajouter'),  # Alias principal pour compatibilité
-    path('ajouter-partiel/', views.ajouter_paiement_partiel, name='ajouter_partiel'),  # Vue spécialisée pour paiements partiels
-    path('liste-partiels/', views.liste_paiements_partiels, name='liste_partiels'),  # Liste spécifique des paiements partiels
+    
+    # URLs pour les quittances de paiement bailleur
+    path('quittances-bailleur/', views.liste_quittances_bailleur, name='liste_quittances_bailleur'),
+    path('quittance-bailleur/<int:pk>/', views.quittance_bailleur_detail, name='quittance_bailleur_detail'),
+    path('quittance-bailleur/<int:pk>/telecharger/', views.telecharger_quittance_bailleur, name='telecharger_quittance_bailleur'),
+    path('generer-quittance-bailleur/<int:retrait_id>/', views.generer_quittance_bailleur, name='generer_quittance_bailleur'),
     
     # URLs pour les paiements des locataires
     path('locataire/<int:locataire_id>/', views_quick_actions.liste_paiements, name='paiements_locataire'),
@@ -129,7 +120,11 @@ urlpatterns = [
     path('recu/<int:recu_id>/', views_retraits.recu_retrait_view, name='recu_view'),
     path('recu/<int:recu_id>/print/', views_retraits.recu_retrait_print, name='recu_print'),
     
-    # URLs principales conservées (doublons supprimés)
+    # Alias pour compatibilité
+    path('retraits_liste/', views_retraits.retrait_list, name='retraits_liste'),
+    path('retrait_ajouter/', views_retraits.retrait_create, name='retrait_ajouter'),
+    path('retrait_detail/<int:pk>/', views_retraits.retrait_detail, name='retrait_detail'),
+    path('retrait_modifier/<int:pk>/', views_retraits.retrait_edit, name='retrait_modifier'),
     
     # URLs pour les paiements de caution et avance
     path('caution-avance/ajouter/', views.paiement_caution_avance_create, name='paiement_caution_avance_create'),
@@ -151,6 +146,16 @@ urlpatterns = [
     path('quittance/<int:pk>/envoyee/', views.marquer_quittance_envoyee, name='marquer_quittance_envoyee'),
     path('quittance/<int:pk>/archivee/', views.marquer_quittance_archivee, name='marquer_quittance_archivee'),
     path('paiement/<int:paiement_pk>/generer-quittance/', views.generer_quittance_manuelle, name='generer_quittance_manuelle'),
+    
+    # URLs pour le nouveau système KBIS IMMOBILIER dynamique
+    path('paiement/<int:paiement_pk>/quittance-kbis-dynamique/', views.generer_quittance_kbis_dynamique, name='generer_quittance_kbis_dynamique'),
+    path('quittances-kbis-dynamiques/', views.generer_quittance_kbis_tous_paiements, name='generer_quittances_kbis_tous_paiements'),
+    
+    # URLs pour les paiements partiels et plans de paiement
+    path('dashboard-partiels/', views.dashboard_paiements_partiels, name='dashboard_partiels'),
+    path('plans-paiement/', views.liste_plans_paiement, name='liste_plans_partiels'),
+    path('plans-paiement/creer/', views.creer_plan_paiement, name='creer_plan_partiel'),
+    path('plans-paiement/<int:plan_id>/', views.detail_plan_paiement, name='detail_plan_paiement'),
     
     # URLs pour les retraits aux bailleurs (nouveau système)
     path('retraits-bailleurs/', include('paiements.urls_retraits')),
@@ -221,4 +226,13 @@ urlpatterns = [
     path('unites-locatives/retrait/detail/<int:retrait_id>/', views_unites_locatives.detail_retrait_avec_unites, name='detail_retrait_avec_unites'),
     path('unites-locatives/api/donnees/<int:bailleur_id>/', views_unites_locatives.api_donnees_unites_locatives, name='api_donnees_unites_locatives'),
     path('unites-locatives/export/excel/<int:bailleur_id>/', views_unites_locatives.export_rapport_unites_excel, name='export_rapport_unites_excel'),
+    
+    # 📄 RÉCÉPISSÉS KBIS DYNAMIQUES
+    path('paiement/<int:paiement_pk>/recu-kbis/', views_kbis_recus.generer_recu_kbis_dynamique, name='generer_recu_kbis_dynamique'),
+    
+    # 📄 QUITTANCES DE RETRAIT KBIS DYNAMIQUES
+    path('retrait/<int:retrait_pk>/quittance-kbis/', views_kbis_recus.generer_quittance_retrait_kbis, name='generer_quittance_retrait_kbis'),
+    
+    # 🔧 VUE DE TEST POUR RÉCAPITULATIFS
+    path('recaps-mensuels/creer-test/', views_recapitulatifs.creer_recapitulatif_test, name='creer_recapitulatif_test'),
 ]

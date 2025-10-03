@@ -1,0 +1,134 @@
+/* Fix pour l'affichage des champs select - Priorité aux options visibles */
+
+/* S'assurer que les champs select sont visibles */
+.form-select,
+select.form-select,
+select.form-control {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    overflow: visible !important;
+    z-index: 999 !important;
+    background-color: white !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 0.375rem !important;
+    padding: 0.375rem 2.25rem 0.375rem 0.75rem !important;
+    font-size: 1rem !important;
+    font-weight: 400 !important;
+    line-height: 1.5 !important;
+    color: #212529 !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m1 6 7 7 7-7'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.75rem center !important;
+    background-size: 16px 12px !important;
+    appearance: none !important;
+}
+
+/* S'assurer que les options sont visibles */
+.form-select option,
+select.form-select option,
+select.form-control option {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    background-color: white !important;
+    color: #212529 !important;
+    padding: 0.25rem 0.5rem !important;
+    font-size: 1rem !important;
+    line-height: 1.5 !important;
+}
+
+/* Focus state */
+.form-select:focus,
+select.form-select:focus,
+select.form-control:focus {
+    border-color: #86b7fe !important;
+    outline: 0 !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+}
+
+/* Désactiver Select2 sur les champs select simples */
+.form-select.select2-hidden-accessible,
+select.form-select.select2-hidden-accessible {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* S'assurer que les champs select ne sont pas masqués par d'autres éléments */
+.form-select,
+select.form-select,
+select.form-control {
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+/* Correction pour les champs select dans les formulaires */
+.form-group select,
+.mb-3 select,
+.form-floating select {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Correction spécifique pour les champs de sélection de statut et civilité */
+#id_civilite,
+#id_statut,
+#id_type_paiement,
+#id_mode_paiement,
+#id_type_retrait,
+#id_statut_retrait,
+#id_mode_retrait {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    background-color: white !important;
+    color: #212529 !important;
+}
+
+/* S'assurer que les options sont cliquables */
+.form-select option:hover,
+select.form-select option:hover,
+select.form-control option:hover {
+    background-color: #f8f9fa !important;
+    color: #212529 !important;
+}
+
+/* Correction pour les champs select dans les modales */
+.modal .form-select,
+.modal select.form-select,
+.modal select.form-control {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 1055 !important;
+}
+
+/* Correction pour les champs select dans les cartes */
+.card .form-select,
+.card select.form-select,
+.card select.form-control {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Désactiver les styles qui pourraient masquer les options */
+.form-select[style*="display: none"],
+select.form-select[style*="display: none"],
+select.form-control[style*="display: none"] {
+    display: block !important;
+}
+
+.form-select[style*="visibility: hidden"],
+select.form-select[style*="visibility: hidden"],
+select.form-control[style*="visibility: hidden"] {
+    visibility: visible !important;
+}
+
+.form-select[style*="opacity: 0"],
+select.form-select[style*="opacity: 0"],
+select.form-control[style*="opacity: 0"] {
+    opacity: 1 !important;
+}

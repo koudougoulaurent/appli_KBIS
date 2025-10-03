@@ -20,8 +20,8 @@ from decimal import Decimal
 import json
 import os
 
-from .models import Paiement, ChargeDeductible, QuittancePaiement, PlanPaiementPartiel, EchelonPaiement, AlertePaiementPartiel
-from .forms import PaiementForm, ChargeDeductibleForm, RetraitBailleurForm, GenererPDFLotForm, PlanPaiementPartielForm
+from .models import Paiement, ChargeDeductible, QuittancePaiement
+from .forms import PaiementForm, ChargeDeductibleForm, RetraitBailleurForm, GenererPDFLotForm
 from contrats.models import Contrat
 from proprietes.models import Propriete, Locataire, Bailleur
 from core.models import AuditLog, ConfigurationEntreprise
@@ -94,8 +94,8 @@ from decimal import Decimal
 import json
 import os
 
-from .models import Paiement, ChargeDeductible, QuittancePaiement, PlanPaiementPartiel, EchelonPaiement, AlertePaiementPartiel
-from .forms import PaiementForm, ChargeDeductibleForm, RetraitBailleurForm, GenererPDFLotForm, PlanPaiementPartielForm
+from .models import Paiement, ChargeDeductible, QuittancePaiement
+from .forms import PaiementForm, ChargeDeductibleForm, RetraitBailleurForm, GenererPDFLotForm
 from contrats.models import Contrat
 from proprietes.models import Propriete, Locataire, Bailleur
 from core.models import AuditLog, ConfigurationEntreprise
@@ -182,8 +182,13 @@ def paiements_dashboard(request):
     recaps_payes = RecapMensuel.objects.filter(is_deleted=False, statut='paye').count()
     retraits_en_attente = RetraitBailleur.objects.filter(is_deleted=False, statut='en_attente').count()
     
-    # Suppression du calcul des montants globaux pour la confidentialité
-    retraits_valides = RetraitBailleur.objects.filter(is_deleted=False, statut='valide').count()
+    # Calcul du montant total à payer (seulement pour les récapitulatifs validés)
+    montant_total_a_payer = RecapMensuel.objects.filter(
+        is_deleted=False, 
+        statut='valide'
+    ).aggregate(
+        total=models.Sum('total_net_a_payer')
+    )['total'] or 0
     
     # Récapitulatifs récents (5 derniers)
     recaps_recents = RecapMensuel.objects.filter(
@@ -204,7 +209,7 @@ def paiements_dashboard(request):
         'recaps_valides': recaps_valides,
         'recaps_payes': recaps_payes,
         'retraits_en_attente': retraits_en_attente,
-        'retraits_valides': retraits_valides,
+        'montant_total_a_payer': montant_total_a_payer,
         'recaps_recents': recaps_recents,
     }
     
@@ -280,34 +285,24 @@ def ajouter_paiement(request):
                 paiement = form.save(commit=False)
                 paiement.cree_par = request.user
                 paiement.save()
-                messages.success(request, f'Paiement {paiement.reference_paiement} créé avec succès! Statut: {paiement.statut}')
-                # Rediriger vers l'historique des paiements partiels pour ce contrat/mois
-                return redirect('paiements:historique_partiel', contrat_id=paiement.contrat.id, mois=paiement.mois_paye.month, annee=paiement.mois_paye.year)
+                
+                messages.success(request, f'Paiement {paiement.reference_paiement} créé avec succès!')
+                return redirect('paiements:liste')
+                
             except Exception as e:
                 messages.error(request, f'Erreur lors de la création: {str(e)}')
     else:
         form = PaiementForm()
-
+    
+    # Récupérer tous les contrats pour la sélection
     contrats = Contrat.objects.filter(is_deleted=False).select_related('locataire', 'propriete')
+    
+    # Récupérer la devise de base
     try:
         devise_base = Devise.objects.filter(is_devise_base=True).first()
     except:
         devise_base = None
-
-    # Historique des paiements partiels si contrat et mois sélectionnés
-    historique = None
-    contrat_id = request.GET.get('contrat_id')
-    mois = request.GET.get('mois')
-    annee = request.GET.get('annee')
-    if contrat_id and mois and annee:
-        paiements = Paiement.objects.filter(
-            contrat_id=contrat_id,
-            mois_paye__year=annee,
-            mois_paye__month=mois,
-            is_deleted=False
-        ).order_by('date_paiement')
-        historique = paiements
-
+    
     context = {
         'form': form,
         'contrats': contrats,
@@ -317,192 +312,16 @@ def ajouter_paiement(request):
         'charges_bailleur': [],
         'devise_base': devise_base,
         'title': 'Ajouter un Paiement - Contexte Intelligent',
-        'historique': historique,
     }
+    
     return render(request, 'paiements/ajouter.html', context)
-
-
-@login_required
-def ajouter_paiement_partiel(request):
-    """Vue spécialisée pour ajouter un paiement partiel avec contexte intelligent et dynamique."""
-    contrat_obj = None
-    total_charges_bailleur = 0
-    net_a_payer = 0
-    charges_bailleur = []
-    historique = []
-    montant_restant = 0
-    paiements_partiels_existants = 0
-    
-    # Récupération des contrats actifs
-    contrats = Contrat.objects.filter(is_deleted=False).select_related('locataire', 'propriete')
-    
-    # Récupération de la devise de base
-    try:
-        devise_base = Devise.objects.filter(is_devise_base=True).first()
-    except:
-        devise_base = None
-
-    if request.method == 'POST':
-        form = PaiementForm(request.POST)
-        if form.is_valid():
-            try:
-                paiement = form.save(commit=False)
-                paiement.cree_par = request.user
-                # Forcer le statut à partiel pour cette vue
-                paiement.est_paiement_partiel = True
-                paiement.save()
-                
-                # Logique de redirection intelligente
-                if paiement.mois_paye:
-                    messages.success(request, f'Paiement partiel {paiement.reference_paiement} créé avec succès!')
-                    return redirect('paiements:historique_partiel', 
-                                 contrat_id=paiement.contrat.id, 
-                                 mois=paiement.mois_paye.month, 
-                                 annee=paiement.mois_paye.year)
-                else:
-                    messages.success(request, f'Paiement partiel {paiement.reference_paiement} créé avec succès!')
-                    return redirect('paiements:ajouter_partiel')
-            except Exception as e:
-                messages.error(request, f'Erreur lors de la création du paiement partiel: {str(e)}')
-    else:
-        form = PaiementForm()
-
-    # Logique dynamique pour le contexte
-    contrat_id = request.GET.get('contrat_id')
-    mois_selectionne = request.GET.get('mois')
-    annee_selectionnee = request.GET.get('annee')
-    
-    if contrat_id:
-        try:
-            contrat_obj = Contrat.objects.get(id=contrat_id, is_deleted=False)
-            
-            # Calcul des charges et montants
-            if contrat_obj.propriete:
-                charges_bailleur = ChargeDeductible.objects.filter(
-                    propriete=contrat_obj.propriete,
-                    is_deleted=False
-                )
-                total_charges_bailleur = sum(charge.montant for charge in charges_bailleur)
-            
-            # Calcul du net à payer
-            loyer_mensuel = contrat_obj.montant_loyer_mensuel or 0
-            net_a_payer = loyer_mensuel - total_charges_bailleur
-            
-            # Récupération de l'historique des paiements partiels
-            if mois_selectionne and annee_selectionnee:
-                try:
-                    mois_date = datetime(int(annee_selectionnee), int(mois_selectionne), 1).date()
-                    historique = Paiement.objects.filter(
-                        contrat=contrat_obj,
-                        mois_paye=mois_date,
-                        is_deleted=False
-                    ).order_by('-date_paiement')
-                    
-                    # Calcul du montant restant
-                    montant_paye = sum(p.montant for p in historique)
-                    montant_restant = max(0, net_a_payer - montant_paye)
-                    paiements_partiels_existants = historique.count()
-                    
-                except (ValueError, TypeError):
-                    pass
-            
-        except Contrat.DoesNotExist:
-            messages.error(request, "Contrat non trouvé.")
-    
-    # Contexte enrichi pour les paiements partiels
-    context = {
-        'form': form,
-        'contrats': contrats,
-        'contrat_obj': contrat_obj,
-        'total_charges_bailleur': total_charges_bailleur,
-        'net_a_payer': net_a_payer,
-        'charges_bailleur': charges_bailleur,
-        'devise_base': devise_base,
-        'title': 'Paiement Partiel - Gestion Intelligente',
-        'is_paiement_partiel': True,
-        'historique': historique,
-        'montant_restant': montant_restant,
-        'paiements_partiels_existants': paiements_partiels_existants,
-        'mois_selectionne': mois_selectionne,
-        'annee_selectionnee': annee_selectionnee,
-        'contrat_id': contrat_id,
-    }
-    return render(request, 'paiements/paiement_partiel_dedie.html', context)
-
-
-@login_required
-def liste_paiements_partiels(request):
-    """Liste spécifique des paiements partiels."""
-    try:
-        # Récupérer tous les paiements partiels
-        paiements = Paiement.objects.filter(
-            is_deleted=False,
-            est_paiement_partiel=True
-        ).select_related(
-            'contrat__locataire', 'contrat__propriete', 'cree_par'
-        ).order_by('-date_creation')
-        
-        # Recherche
-        query = request.GET.get('q', '')
-        if query:
-            paiements = paiements.filter(
-                Q(reference_paiement__icontains=query) |
-                Q(contrat__numero_contrat__icontains=query) |
-                Q(contrat__locataire__nom__icontains=query) |
-                Q(contrat__locataire__prenom__icontains=query) |
-                Q(contrat__propriete__adresse__icontains=query)
-            )
-        
-        # Filtres
-        statut_filter = request.GET.get('statut', '')
-        if statut_filter:
-            paiements = paiements.filter(statut=statut_filter)
-        
-        type_filter = request.GET.get('type_paiement', '')
-        if type_filter:
-            paiements = paiements.filter(type_paiement=type_filter)
-        
-        # Pagination
-        paginator = Paginator(paiements, 20)
-        page_number = request.GET.get('page')
-        page_obj = paginator.get_page(page_number)
-        
-        # Statistiques
-        total_paiements = paiements.count()
-        total_montant = paiements.aggregate(total=Sum('montant'))['total'] or 0
-        
-        context = {
-            'page_obj': page_obj,
-            'paiements': page_obj,
-            'query': query,
-            'statut_filter': statut_filter,
-            'type_filter': type_filter,
-            'total_paiements': total_paiements,
-            'total_montant': total_montant,
-            'title': 'Paiements Partiels',
-            'is_paiements_partiels': True,
-        }
-        
-        return render(request, 'paiements/liste_partiels.html', context)
-        
-    except Exception as e:
-        messages.error(request, f'Erreur lors du chargement des paiements partiels: {str(e)}')
-        return render(request, 'paiements/liste_partiels.html', {
-            'paiements': [],
-            'title': 'Paiements Partiels',
-            'is_paiements_partiels': True,
-        })
-
 
 @login_required
 def liste_paiements(request):
     """Liste des paiements avec recherche et filtres."""
     try:
-        # Récupérer tous les paiements non supprimés et définitifs (exclure les paiements partiels)
-        paiements = Paiement.objects.filter(
-            is_deleted=False,
-            est_paiement_partiel=False  # Exclure les paiements partiels de la liste principale
-        ).select_related(
+        # Récupérer tous les paiements non supprimés
+        paiements = Paiement.objects.filter(is_deleted=False).select_related(
             'contrat__locataire', 'contrat__propriete', 'cree_par'
         ).order_by('-date_creation')
         
@@ -1887,14 +1706,6 @@ def generer_quittance_manuelle(request, paiement_pk):
     try:
         paiement = get_object_or_404(Paiement, pk=paiement_pk)
         
-        # Vérifier si le paiement peut générer une quittance
-        if not paiement.peut_generer_quittance():
-            if paiement.est_paiement_partiel:
-                messages.error(request, 'Les paiements partiels ne génèrent pas de quittance. Attendez la complétion du paiement.')
-            else:
-                messages.error(request, 'Ce paiement ne peut pas générer de quittance.')
-            return redirect('paiements:detail', pk=paiement_pk)
-        
         # Vérifier si une quittance existe déjà
         if hasattr(paiement, 'quittance'):
             messages.warning(request, 'Une quittance existe déjà pour ce paiement')
@@ -2900,108 +2711,31 @@ def generer_pdf_recap_detaille_paysage(request, recap_id):
         from core.models import ConfigurationEntreprise
         entreprise_config = ConfigurationEntreprise.get_configuration_active()
         
-        # Générer le PDF avec reportlab
-        from reportlab.lib.pagesizes import A4, landscape
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib import colors
-        from reportlab.lib.units import inch
+        # Générer le PDF avec xhtml2pdf
+        from django.template.loader import render_to_string
+        from xhtml2pdf import pisa
         from io import BytesIO
         from django.http import HttpResponse
         
+        html_content = render_to_string(
+            'paiements/recapitulatif_mensuel_detaille_paysage.html',
+            {
+                'recap': recap,
+                'proprietes_details': proprietes_details,
+                'stats_globales': stats_globales,
+                'historique_paiements': historique_paiements,
+                'entreprise_config': entreprise_config,
+                'date_generation': timezone.now(),
+            }
+        )
+        
         # Créer le PDF
         pdf_buffer = BytesIO()
-        doc = SimpleDocTemplate(pdf_buffer, pagesize=landscape(A4))
-        styles = getSampleStyleSheet()
-        story = []
+        pisa_status = pisa.CreatePDF(html_content, dest=pdf_buffer)
         
-        # Titre
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
-            fontSize=16,
-            spaceAfter=30,
-            alignment=1  # Centré
-        )
-        story.append(Paragraph(f"Récapitulatif Détaillé - {recap.bailleur.get_nom_complet()}", title_style))
-        story.append(Spacer(1, 12))
-        
-        # Informations de base
-        info_data = [
-            ['Mois:', recap.mois_recap.strftime('%B %Y')],
-            ['Bailleur:', recap.bailleur.get_nom_complet()],
-            ['Date de génération:', timezone.now().strftime('%d/%m/%Y %H:%M')],
-        ]
-        
-        info_table = Table(info_data, colWidths=[2*inch, 4*inch])
-        info_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-            ('BACKGROUND', (1, 0), (1, -1), colors.beige),
-        ]))
-        
-        story.append(info_table)
-        story.append(Spacer(1, 20))
-        
-        # Statistiques globales
-        stats_data = [
-            ['Statistiques Globales', ''],
-            ['Total des loyers:', f"{stats_globales['total_loyers']:,.0f} FCFA"],
-            ['Total des charges:', f"{stats_globales['total_charges']:,.0f} FCFA"],
-            ['Total net:', f"{stats_globales['total_net']:,.0f} FCFA"],
-        ]
-        
-        stats_table = Table(stats_data, colWidths=[3*inch, 3*inch])
-        stats_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 12),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
-        ]))
-        
-        story.append(stats_table)
-        story.append(Spacer(1, 20))
-        
-        # Détails par propriété
-        if proprietes_details:
-            story.append(Paragraph("Détails par Propriété", styles['Heading2']))
-            story.append(Spacer(1, 12))
-            
-            # En-têtes du tableau
-            headers = ['Propriété', 'Loyer', 'Charges', 'Net']
-            table_data = [headers]
-            
-            for prop_detail in proprietes_details:
-                table_data.append([
-                    prop_detail['propriete'].adresse,
-                    f"{prop_detail['loyer']:,.0f} FCFA",
-                    f"{prop_detail['charges']:,.0f} FCFA",
-                    f"{prop_detail['net']:,.0f} FCFA"
-                ])
-            
-            prop_table = Table(table_data, colWidths=[3*inch, 2*inch, 2*inch, 2*inch])
-            prop_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 0), (-1, -1), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-            ]))
-            
-            story.append(prop_table)
-        
-        # Construire le PDF
-        doc.build(story)
+        if pisa_status.err:
+            messages.error(request, f"Erreur lors de la génération du PDF: {pisa_status.err}")
+            return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap.id)
         
         # Préparer la réponse
         pdf_content = pdf_buffer.getvalue()
@@ -3088,177 +2822,3 @@ def creer_retrait_depuis_recap(request, recap_id):
     except Exception as e:
         messages.error(request, f"Erreur lors de la création du retrait: {str(e)}")
         return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
-
-
-# ===== VUES POUR LES PAIEMENTS PARTIELS =====
-
-@login_required
-def dashboard_paiements_partiels(request):
-    """Dashboard principal des paiements partiels - Optimisé pour les performances"""
-    
-    # Optimisation : Une seule requête pour toutes les statistiques
-    from django.db.models import Count, Q
-    
-    # Statistiques générales avec requêtes optimisées
-    plans_queryset = PlanPaiementPartiel.objects.filter(is_deleted=False)
-    
-    stats = {
-        'total_plans': plans_queryset.count(),
-        'plans_actifs': plans_queryset.filter(statut='actif').count(),
-        'plans_termines': plans_queryset.filter(statut='termine').count(),
-        # Suppression des montants globaux pour la confidentialité
-        'echelons_en_retard': EchelonPaiement.objects.filter(statut='en_retard').count(),
-        'alertes_actives': AlertePaiementPartiel.objects.filter(statut='active').count(),
-    }
-    
-    # Plans récents avec prefetch_related pour optimiser les requêtes
-    plans_recents = plans_queryset.select_related(
-        'contrat', 'contrat__locataire', 'contrat__propriete'
-    ).prefetch_related(
-        'echelons'
-    ).order_by('-date_creation')[:5]
-    
-    # Échelons en retard avec optimisations
-    echelons_retard = EchelonPaiement.objects.filter(
-        statut='en_retard'
-    ).select_related(
-        'plan', 'plan__contrat', 'plan__contrat__locataire'
-    ).order_by('date_echeance')[:10]
-    
-    # Alertes actives avec optimisations
-    alertes_actives = AlertePaiementPartiel.objects.filter(
-        statut='active'
-    ).select_related(
-        'plan', 'plan__contrat', 'plan__contrat__locataire'
-    ).order_by('-date_creation')[:10]
-    
-    context = {
-        'stats': stats,
-        'plans_recents': plans_recents,
-        'echelons_retard': echelons_retard,
-        'alertes_actives': alertes_actives,
-    }
-    
-    return render(request, 'paiements/partial_payment/dashboard_enhanced.html', context)
-
-
-@login_required
-def liste_plans_paiement(request):
-    """Liste des plans de paiement partiel avec filtres - Optimisé pour les performances"""
-    
-    # Base queryset avec optimisations
-    queryset = PlanPaiementPartiel.objects.filter(is_deleted=False).select_related(
-        'contrat', 'contrat__locataire', 'contrat__propriete', 'cree_par'
-    ).prefetch_related(
-        'echelons', 'paiements_partiels'
-    ).order_by('-date_creation')
-    
-    # Filtres optimisés
-    search_query = request.GET.get('search', '')
-    status_filter = request.GET.get('status', '')
-    date_filter = request.GET.get('date', '')
-    amount_min = request.GET.get('amount_min', '')
-    amount_max = request.GET.get('amount_max', '')
-    
-    if search_query:
-        queryset = queryset.filter(
-            Q(nom_plan__icontains=search_query) |
-            Q(contrat__locataire__nom__icontains=search_query) |
-            Q(contrat__locataire__prenom__icontains=search_query) |
-            Q(numero_plan__icontains=search_query)
-        )
-    
-    if status_filter:
-        queryset = queryset.filter(statut=status_filter)
-    
-    if amount_min:
-        queryset = queryset.filter(montant_total__gte=Decimal(amount_min))
-    if amount_max:
-        queryset = queryset.filter(montant_total__lte=Decimal(amount_max))
-    
-    if date_filter:
-        from datetime import datetime, timedelta
-        today = timezone.now().date()
-        
-        if date_filter == 'today':
-            queryset = queryset.filter(date_creation=today)
-        elif date_filter == 'week':
-            week_ago = today - timedelta(days=7)
-            queryset = queryset.filter(date_creation__gte=week_ago)
-        elif date_filter == 'month':
-            month_ago = today - timedelta(days=30)
-            queryset = queryset.filter(date_creation__gte=month_ago)
-        elif date_filter == 'year':
-            year_ago = today - timedelta(days=365)
-            queryset = queryset.filter(date_creation__gte=year_ago)
-    
-    # Pagination optimisée
-    paginator = Paginator(queryset, 20)
-    page_number = request.GET.get('page')
-    plans = paginator.get_page(page_number)
-    
-    context = {
-        'plans': plans,
-    }
-    
-    return render(request, 'paiements/partial_payment/liste_plans_enhanced.html', context)
-
-
-@login_required
-def detail_plan_paiement(request, plan_id):
-    """Détail d'un plan de paiement partiel"""
-    
-    plan = get_object_or_404(PlanPaiementPartiel, id=plan_id, is_deleted=False)
-    
-    # Échelons du plan
-    echelons = plan.echelons.all().order_by('numero_echelon')
-    
-    # Paiements partiels du plan
-    paiements = plan.paiements_partiels.filter(is_deleted=False).order_by('-date_paiement')
-    
-    # Statistiques du plan
-    stats = {
-        'total_echelons': echelons.count(),
-        'echelons_payes': echelons.filter(statut='paye').count(),
-        'echelons_en_attente': echelons.filter(statut='en_attente').count(),
-        'echelons_en_retard': echelons.filter(statut='en_retard').count(),
-        'progression_pourcentage': plan.calculer_progression(),
-        'montant_restant': plan.montant_restant,
-    }
-    
-    # Alertes du plan
-    alertes = plan.alertes.filter(statut='active').order_by('-date_creation')
-    
-    context = {
-        'plan': plan,
-        'echelons': echelons,
-        'paiements': paiements,
-        'stats': stats,
-        'alertes': alertes,
-    }
-    
-    return render(request, 'paiements/partial_payment/detail_plan.html', context)
-
-
-@login_required
-def creer_plan_paiement(request):
-    """Créer un nouveau plan de paiement partiel"""
-    
-    if request.method == 'POST':
-        form = PlanPaiementPartielForm(request.POST, user=request.user)
-        if form.is_valid():
-            plan = form.save(commit=False)
-            plan.cree_par = request.user
-            plan.save()
-            
-            messages.success(request, f'Plan de paiement partiel "{plan.nom_plan}" créé avec succès!')
-            return redirect('paiements:detail_plan_partiel', plan_id=plan.id)
-    else:
-        form = PlanPaiementPartielForm(user=request.user)
-    
-    context = {
-        'form': form,
-        'title': 'Créer un plan de paiement partiel',
-    }
-    
-    return render(request, 'paiements/partial_payment/creer_plan_enhanced.html', context)

@@ -14,7 +14,7 @@
                 {% for contrat in contrats %}
                 <tr>
                     <td>
-                        <a href="{% url 'proprietes:locataire_detail' contrat.locataire.pk %}">
+                        <a href="{% url 'proprietes:detail_locataire' contrat.locataire.pk %}">
                             {{ contrat.locataire.get_nom_complet }}
                         </a>
                     </td>

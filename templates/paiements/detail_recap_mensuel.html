@@ -31,116 +31,147 @@
     </div>
 </div>
 
-<!-- En-tête du récapitulatif -->
+<!-- En-tête du récapitulatif - VERSION SIMPLIFIÉE -->
 <div class="card mb-4">
     <div class="card-header bg-primary text-white">
         <h5 class="card-title mb-0">
             <i class="bi bi-info-circle"></i>
-            Informations Générales
+            Récapitulatif Mensuel - {{ recap.bailleur.get_nom_complet }}
         </h5>
     </div>
     <div class="card-body">
         <div class="row">
-            <div class="col-md-6">
-                <table class="table table-borderless">
-                    <tr>
-                        <td><strong>Bailleur :</strong></td>
-                        <td>{{ recap.bailleur.get_nom_complet }}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Période :</strong></td>
-                        <td>
-                            {% if recap.type_recapitulatif %}
-                                {{ recap.get_libelle_periode }}
-                            {% else %}
-                                {{ recap.mois_recap|date:"F Y" }}
-                            {% endif %}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><strong>Statut :</strong></td>
-                        <td>
-                            <span class="badge bg-{% if recap.statut == 'brouillon' %}secondary{% elif recap.statut == 'valide' %}success{% elif recap.statut == 'envoye' %}info{% else %}primary{% endif %}">
-                                {{ recap.get_statut_display }}
+            <div class="col-md-8">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-calendar3 text-primary me-2"></i>
+                            <strong>Période :</strong>
+                            <span class="ms-2">
+                                {% if recap.type_recapitulatif %}
+                                    {{ recap.get_libelle_periode }}
+                                {% else %}
+                                    {{ recap.mois_recap|date:"F Y" }}
+                                {% endif %}
                             </span>
-                        </td>
-                    </tr>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-building text-info me-2"></i>
+                            <strong>Propriétés :</strong>
+                            <span class="ms-2">{{ stats.total_proprietes }} propriété{{ stats.total_proprietes|pluralize }}</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-file-earmark-text text-success me-2"></i>
+                            <strong>Contrats actifs :</strong>
+                            <span class="ms-2">{{ stats.total_contrats }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-cash-coin text-warning me-2"></i>
+                            <strong>Paiements reçus :</strong>
+                            <span class="ms-2">{{ stats.total_paiements }}</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-person text-secondary me-2"></i>
+                            <strong>Créé par :</strong>
+                            <span class="ms-2">{% if recap.cree_par %}{{ recap.cree_par.get_full_name|default:recap.cree_par.username }}{% else %}Système{% endif %}</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-clock text-muted me-2"></i>
+                            <strong>Créé le :</strong>
+                            <span class="ms-2">{{ recap.date_creation|date:"d/m/Y H:i" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="mb-3">
+                    <span class="badge bg-{% if recap.statut == 'brouillon' %}secondary{% elif recap.statut == 'valide' %}success{% elif recap.statut == 'envoye' %}info{% else %}primary{% endif %} fs-6 px-3 py-2">
+                        <i class="bi bi-{% if recap.statut == 'brouillon' %}pencil{% elif recap.statut == 'valide' %}check-circle{% elif recap.statut == 'envoye' %}send{% else %}cash-coin{% endif %} me-1"></i>
+                        {{ recap.get_statut_display }}
+                    </span>
+                </div>
                     {% if recap.retraits_lies.exists %}
-                    <tr>
-                        <td><strong>Retrait lié :</strong></td>
-                        <td>
-                            {% for retrait in recap.retraits_lies.all %}
+                    <div class="mb-2">
+                        <small class="text-muted">Retrait lié :</small><br>
+                        {% for retrait in recap.retraits_lies.all %}
+                            <div class="d-flex gap-1 mb-1">
                                 <a href="{% url 'paiements:retrait_detail' retrait.id %}" 
-                                   class="btn btn-outline-success btn-sm me-1">
+                                   class="btn btn-outline-success btn-sm">
                                     <i class="bi bi-cash-coin me-1"></i>
                                     Voir le Retrait
                                 </a>
-                            {% endfor %}
-                        </td>
-                    </tr>
+                                <a href="{% url 'paiements:generer_quittance_bailleur' retrait.id %}" 
+                                   class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-file-earmark-text me-1"></i>
+                                    Quittance
+                                </a>
+                            </div>
+                        {% endfor %}
+                    </div>
                     {% endif %}
-                    <tr>
-                        <td><strong>Créé le :</strong></td>
-                        <td>{{ recap.date_creation|date:"d/m/Y H:i" }}</td>
-                    </tr>
-                </table>
-            </div>
-            <div class="col-md-6">
-                <table class="table table-borderless">
-                    <tr>
-                        <td><strong>Propriétés :</strong></td>
-                        <td>{{ stats.total_proprietes }}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Contrats actifs :</strong></td>
-                        <td>{{ stats.total_contrats }}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Paiements reçus :</strong></td>
-                        <td>{{ stats.total_paiements }}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Créé par :</strong></td>
-                        <td>{% if recap.cree_par %}{{ recap.cree_par.get_full_name|default:recap.cree_par.username }}{% else %}Système{% endif %}</td>
-                    </tr>
-                </table>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Résumé financier -->
+<!-- Résumé financier - VERSION SIMPLIFIÉE -->
 <div class="card mb-4">
-    <div class="card-header bg-success text-white">
+    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0">
             <i class="bi bi-calculator"></i>
             Résumé Financier
         </h5>
+        {% if recap.statut == 'valide' and recap.total_net_a_payer > 0 %}
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#modalPaiement">
+                <i class="bi bi-cash-coin me-1"></i>
+                Payer le Bailleur
+            </button>
+            <a href="{% url 'paiements:creer_retrait_depuis_recap' recap_id=recap.id %}" 
+               class="btn btn-warning btn-sm">
+                <i class="bi bi-plus-circle me-1"></i>
+                Créer Retrait
+            </a>
+        </div>
+        {% endif %}
     </div>
     <div class="card-body">
         <div class="row text-center">
             <div class="col-md-4">
-                <div class="border rounded p-3 bg-light">
-                    <h4 class="text-success mb-1">{{ total_global_loyers|floatformat:0|intcomma }} F CFA</h4>
+                <div class="border rounded p-4 bg-light h-100 d-flex flex-column justify-content-center">
+                    <i class="bi bi-cash-coin text-success display-6 mb-2"></i>
+                    <h3 class="text-success mb-1">{{ total_global_loyers|floatformat:0|intcomma }} F CFA</h3>
                     <small class="text-muted">
-                        Total des loyers bruts
+                        <strong>Loyers Bruts</strong>
                         {% if recap.type_recapitulatif == 'trimestriel' %} (3 mois){% elif recap.type_recapitulatif == 'annuel' %} (12 mois){% endif %}
                     </small>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="border rounded p-3 bg-light">
-                    <h4 class="text-warning mb-1">{{ total_global_charges|floatformat:0|intcomma }} F CFA</h4>
+                <div class="border rounded p-4 bg-light h-100 d-flex flex-column justify-content-center">
+                    <i class="bi bi-tools text-warning display-6 mb-2"></i>
+                    <h3 class="text-warning mb-1">{{ total_global_charges|floatformat:0|intcomma }} F CFA</h3>
                     <small class="text-muted">
-                        Total des charges déductibles
+                        <strong>Charges Déductibles</strong>
                         {% if recap.type_recapitulatif == 'trimestriel' %} (3 mois){% elif recap.type_recapitulatif == 'annuel' %} (12 mois){% endif %}
                     </small>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="border rounded p-3 bg-primary text-white">
-                    <h4 class="mb-1">{{ total_global_net|floatformat:0|intcomma }} F CFA</h4>
-                    <small>Montant net à payer</small>
+                <div class="border rounded p-4 bg-primary text-white h-100 d-flex flex-column justify-content-center">
+                    <i class="bi bi-arrow-up-circle display-6 mb-2"></i>
+                    <h2 class="mb-1">{{ total_global_net|floatformat:0|intcomma }} F CFA</h2>
+                    <small><strong>Montant Net à Payer</strong></small>
+                    {% if recap.statut == 'valide' and recap.total_net_a_payer > 0 %}
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#modalPaiement">
+                            <i class="bi bi-cash-coin me-2"></i>
+                            PAYER MAINTENANT
+                        </button>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -295,69 +326,78 @@
     </div>
 </div>
 
-<!-- Actions rapides -->
+<!-- Actions rapides - VERSION SIMPLIFIÉE -->
 <div class="card shadow mb-4">
-    <div class="card-header py-3">
+    <div class="card-header bg-light">
         <h6 class="m-0 font-weight-bold text-primary">
             <i class="bi bi-lightning"></i>
             Actions Rapides
         </h6>
     </div>
     <div class="card-body">
-        <div class="row">
-            <div class="col-md-6">
-                <h6 class="text-success mb-3">
-                    <i class="bi bi-eye"></i>
-                    Aperçu et Génération PDF
-                </h6>
-                
-                <div class="d-grid gap-2">
-                    <a href="{% url 'paiements:apercu_pdf_recap_mensuel' recap.id %}" 
-                       class="btn btn-info btn-sm" target="_blank">
-                        <i class="bi bi-eye"></i>
-                        Aperçu PDF
-                    </a>
-                    
-                    <a href="{% url 'paiements:generer_pdf_recap_mensuel' recap.id %}" 
-                       class="btn btn-success btn-sm">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="text-center">
+                    <h6 class="text-success mb-3">
                         <i class="bi bi-file-pdf"></i>
-                        PDF ReportLab (Rapide)
-                    </a>
-                    
-                    <div class="alert alert-info mt-2 mb-0 p-2">
-                        <small>
-                            <i class="bi bi-info-circle"></i>
-                            <strong>Note :</strong> ReportLab est recommandé sur Windows pour une génération rapide et fiable.
-                        </small>
+                        Documents
+                    </h6>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'paiements:generer_pdf_recap_mensuel' recap.id %}" 
+                           class="btn btn-outline-primary">
+                            <i class="bi bi-file-pdf me-1"></i>
+                            Générer PDF
+                        </a>
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+                            <i class="bi bi-printer me-1"></i>
+                            Imprimer
+                        </button>
                     </div>
                 </div>
             </div>
             
-            <div class="col-md-6">
-                <h6 class="text-warning mb-3">
-                    <i class="bi bi-gear"></i>
-                    Gestion du Statut
-                </h6>
-                
-                <div class="d-grid gap-2">
-                    {% if recap.statut == 'brouillon' %}
-                        <button class="btn btn-success btn-sm" onclick="validerRecap({{ recap.id }})">
-                            <i class="bi bi-check-circle"></i>
-                            Valider
-                        </button>
-                    {% endif %}
-                    
-                    {% if recap.statut in 'brouillon,valide' %}
-                        <button class="btn btn-warning btn-sm" onclick="modifierRecap({{ recap.id }})">
-                            <i class="bi bi-pencil"></i>
-                            Modifier
-                        </button>
-                    {% endif %}
-                    
-                    <button class="btn btn-danger btn-sm" onclick="supprimerRecap({{ recap.id }})">
-                        <i class="bi bi-trash"></i>
-                        Supprimer
-                    </button>
+            <div class="col-md-4">
+                <div class="text-center">
+                    <h6 class="text-warning mb-3">
+                        <i class="bi bi-cash-coin"></i>
+                        Paiement
+                    </h6>
+                    <div class="d-grid gap-2">
+                        {% if recap.statut == 'valide' and recap.total_net_a_payer > 0 %}
+                            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalPaiement">
+                                <i class="bi bi-cash-coin me-1"></i>
+                                Payer le Bailleur
+                            </button>
+                            <a href="{% url 'paiements:creer_retrait_depuis_recap' recap_id=recap.id %}" 
+                               class="btn btn-outline-success">
+                                <i class="bi bi-plus-circle me-1"></i>
+                                Créer Retrait
+                            </a>
+                        {% else %}
+                            <span class="text-muted">Aucun paiement disponible</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="text-center">
+                    <h6 class="text-info mb-3">
+                        <i class="bi bi-gear"></i>
+                        Gestion
+                    </h6>
+                    <div class="d-grid gap-2">
+                        {% if recap.statut == 'brouillon' %}
+                            <button class="btn btn-outline-success" onclick="validerRecap({{ recap.id }})">
+                                <i class="bi bi-check-circle me-1"></i>
+                                Valider
+                            </button>
+                        {% endif %}
+                        <a href="{% url 'paiements:liste_recaps_mensuels' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>
+                            Retour Liste
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -391,7 +431,7 @@ function supprimerRecap(recapId) {
 </script>
 {% endblock %}
 
-<!-- Modal de Paiement -->
+<!-- Modal de Paiement - VERSION SIMPLIFIÉE -->
 {% if recap.statut == 'valide' and recap.total_net_a_payer > 0 %}
 <div class="modal fade" id="modalPaiement" tabindex="-1" aria-labelledby="modalPaiementLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -399,99 +439,93 @@ function supprimerRecap(recapId) {
             <div class="modal-header bg-success text-white">
                 <h5 class="modal-title" id="modalPaiementLabel">
                     <i class="bi bi-cash-coin me-2"></i>
-                    Payer le Bailleur
+                    Paiement du Bailleur
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <!-- Informations du récapitulatif -->
-                <div class="alert alert-info">
-                    <h6 class="alert-heading">
-                        <i class="bi bi-info-circle me-2"></i>
-                        Informations du Récapitulatif
-                    </h6>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <strong>Bailleur :</strong> {{ recap.bailleur.get_nom_complet }}<br>
-                            <strong>Mois :</strong> {{ recap.mois_recap|date:"F Y" }}
-                        </div>
-                        <div class="col-md-6">
-                            <strong>Loyers Bruts :</strong> {{ recap.total_loyers_bruts|floatformat:0|intcomma }} F CFA<br>
-                            <strong>Charges :</strong> {{ recap.total_charges_deductibles|floatformat:0|intcomma }} F CFA<br>
-                            <strong class="text-success">Net à Payer :</strong> <span class="h5 text-success">{{ recap.total_net_a_payer|floatformat:0|intcomma }} F CFA</span>
+                <!-- Résumé du paiement -->
+                <div class="card border-success mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Récapitulatif du Paiement
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-4">
+                                <div class="mb-2">
+                                    <i class="bi bi-person-circle text-primary display-6"></i>
+                                </div>
+                                <strong>Bailleur</strong><br>
+                                <span class="text-muted">{{ recap.bailleur.get_nom_complet }}</span>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-2">
+                                    <i class="bi bi-calendar3 text-info display-6"></i>
+                                </div>
+                                <strong>Période</strong><br>
+                                <span class="text-muted">{{ recap.mois_recap|date:"F Y" }}</span>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-2">
+                                    <i class="bi bi-arrow-up-circle text-success display-6"></i>
+                                </div>
+                                <strong>Montant</strong><br>
+                                <span class="h4 text-success">{{ recap.total_net_a_payer|floatformat:0|intcomma }} F CFA</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Formulaire de paiement -->
+                <!-- Formulaire de paiement simplifié -->
                 <form id="formPaiement" method="post" action="{% url 'paiements:creer_retrait_depuis_recap' recap_id=recap.id %}">
                     {% csrf_token %}
                     
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="mode_retrait" class="form-label">
+                                <label for="mode_retrait" class="form-label fw-bold">
                                     <i class="bi bi-credit-card me-1"></i>
                                     Mode de Paiement
                                 </label>
-                                <select name="mode_retrait" id="mode_retrait" class="form-select" required>
-                                    <option value="">-- Sélectionner un mode --</option>
-                                    <option value="virement" selected>Virement bancaire</option>
-                                    <option value="cheque">Chèque</option>
-                                    <option value="especes">Espèces</option>
+                                <select name="mode_retrait" id="mode_retrait" class="form-select form-select-lg" required>
+                                    <option value="">-- Choisir un mode --</option>
+                                    <option value="virement" selected>💳 Virement bancaire</option>
+                                    <option value="cheque">📄 Chèque</option>
+                                    <option value="especes">💵 Espèces</option>
                                 </select>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="reference_retrait" class="form-label">
+                            <div class="mb-3" id="referenceGroup">
+                                <label for="reference_retrait" class="form-label fw-bold">
                                     <i class="bi bi-hash me-1"></i>
                                     Référence
                                 </label>
                                 <input type="text" name="reference_retrait" id="reference_retrait" 
-                                       class="form-control" placeholder="Référence du paiement (optionnel)">
+                                       class="form-control form-control-lg" placeholder="Référence du paiement">
                             </div>
                         </div>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="observations" class="form-label">
+                        <label for="observations" class="form-label fw-bold">
                             <i class="bi bi-chat-text me-1"></i>
                             Observations
                         </label>
-                        <textarea name="observations" id="observations" class="form-control" rows="3" 
+                        <textarea name="observations" id="observations" class="form-control" rows="2" 
                                   placeholder="Observations sur ce paiement...">{{ recap.mois_recap|date:"F Y" }} - Paiement basé sur le récapitulatif mensuel</textarea>
-                    </div>
-                    
-                    <!-- Résumé du paiement -->
-                    <div class="alert alert-success">
-                        <h6 class="alert-heading">
-                            <i class="bi bi-check-circle me-2"></i>
-                            Résumé du Paiement
-                        </h6>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <strong>Bailleur :</strong><br>
-                                {{ recap.bailleur.get_nom_complet }}
-                            </div>
-                            <div class="col-md-4">
-                                <strong>Mois :</strong><br>
-                                {{ recap.mois_recap|date:"F Y" }}
-                            </div>
-                            <div class="col-md-4">
-                                <strong>Montant :</strong><br>
-                                <span class="h5 text-success">{{ recap.total_net_a_payer|floatformat:0|intcomma }} F CFA</span>
-                            </div>
-                        </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <button type="button" class="btn btn-secondary btn-lg" data-bs-dismiss="modal">
                     <i class="bi bi-x-circle me-2"></i>
                     Annuler
                 </button>
-                <button type="button" class="btn btn-success" onclick="confirmerPaiement()">
+                <button type="button" class="btn btn-success btn-lg" onclick="confirmerPaiement()">
                     <i class="bi bi-cash-coin me-2"></i>
                     Confirmer le Paiement
                 </button>
@@ -501,22 +535,45 @@ function supprimerRecap(recapId) {
 </div>
 
 <script>
+// JavaScript simplifié pour le modal de paiement
 document.addEventListener('DOMContentLoaded', function() {
-    // Auto-générer une référence si virement sélectionné
     const modeSelect = document.getElementById('mode_retrait');
     const referenceInput = document.getElementById('reference_retrait');
     const observationsInput = document.getElementById('observations');
     
-    if (modeSelect && referenceInput) {
-        // Fonction pour générer une référence unique
+    if (modeSelect && referenceInput && observationsInput) {
+        // Générer une référence automatique
         function generateReference() {
             const now = new Date();
-            const timestamp = now.getTime().toString(36);
             const random = Math.random().toString(36).substr(2, 4).toUpperCase();
             return `VIR-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${random}`;
         }
         
-        // Fonction pour mettre à jour les observations selon le mode
+        // Mettre à jour l'interface selon le mode de paiement
+        function updateInterface() {
+            const mode = modeSelect.value;
+            const referenceGroup = document.getElementById('referenceGroup');
+            
+            if (mode === 'virement') {
+                referenceGroup.style.display = 'block';
+                referenceInput.placeholder = 'Référence du virement (auto-générée)';
+                referenceInput.required = true;
+                if (!referenceInput.value) {
+                    referenceInput.value = generateReference();
+                }
+            } else if (mode === 'cheque') {
+                referenceGroup.style.display = 'block';
+                referenceInput.placeholder = 'Numéro du chèque';
+                referenceInput.required = true;
+                referenceInput.value = '';
+            } else if (mode === 'especes') {
+                referenceGroup.style.display = 'none';
+                referenceInput.required = false;
+                referenceInput.value = '';
+            }
+        }
+        
+        // Mettre à jour les observations
         function updateObservations() {
             const mode = modeSelect.value;
             const mois = '{{ recap.mois_recap|date:"F Y" }}';
@@ -531,85 +588,36 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
+        // Écouter les changements de mode
         modeSelect.addEventListener('change', function() {
-            const mode = this.value;
-            
-            // Auto-générer la référence pour les virements
-            if (mode === 'virement' && !referenceInput.value) {
-                referenceInput.value = generateReference();
-            } else if (mode !== 'virement') {
-                referenceInput.value = '';
-            }
-            
-            // Mettre à jour les observations
-            updateObservations();
-            
-            // Mettre à jour l'interface
             updateInterface();
+            updateObservations();
         });
-        
-        // Fonction pour mettre à jour l'interface selon le mode
-        function updateInterface() {
-            const mode = modeSelect.value;
-            const referenceGroup = referenceInput.closest('.mb-3');
-            
-            if (mode === 'virement') {
-                referenceGroup.style.display = 'block';
-                referenceInput.placeholder = 'Référence du virement (auto-générée)';
-                referenceInput.required = true;
-            } else if (mode === 'cheque') {
-                referenceGroup.style.display = 'block';
-                referenceInput.placeholder = 'Numéro du chèque';
-                referenceInput.required = true;
-            } else if (mode === 'especes') {
-                referenceGroup.style.display = 'none';
-                referenceInput.required = false;
-            }
-        }
         
         // Initialisation
-        if (modeSelect.value === 'virement' && !referenceInput.value) {
-            referenceInput.value = generateReference();
-        }
-        updateObservations();
         updateInterface();
-    }
-    
-    // Animation du modal
-    const modal = document.getElementById('modalPaiement');
-    if (modal) {
-        modal.addEventListener('show.bs.modal', function() {
-            // Animation d'entrée
-            this.querySelector('.modal-content').style.transform = 'scale(0.8)';
-            this.querySelector('.modal-content').style.opacity = '0';
-            
-            setTimeout(() => {
-                this.querySelector('.modal-content').style.transform = 'scale(1)';
-                this.querySelector('.modal-content').style.opacity = '1';
-                this.querySelector('.modal-content').style.transition = 'all 0.3s ease';
-            }, 10);
-        });
+        updateObservations();
     }
 });
 
+// Fonction de confirmation de paiement simplifiée
 function confirmerPaiement() {
     const mode = document.getElementById('mode_retrait').value;
     const reference = document.getElementById('reference_retrait').value;
     
+    // Validation simple
     if (!mode) {
-        showAlert('Veuillez sélectionner un mode de paiement.', 'warning');
-        document.getElementById('mode_retrait').focus();
+        alert('Veuillez sélectionner un mode de paiement.');
         return false;
     }
     
     if ((mode === 'virement' || mode === 'cheque') && !reference.trim()) {
-        showAlert('Veuillez saisir une référence pour ce mode de paiement.', 'warning');
-        document.getElementById('reference_retrait').focus();
+        alert('Veuillez saisir une référence pour ce mode de paiement.');
         return false;
     }
     
-    // Confirmation avec plus de détails
-    const montant = '{{ recap.total_net_a_payer|floatformat:2 }}';
+    // Confirmation
+    const montant = '{{ recap.total_net_a_payer|floatformat:0|intcomma }}';
     const bailleur = '{{ recap.bailleur.get_nom_complet }}';
     const mois = '{{ recap.mois_recap|date:"F Y" }}';
     const modeText = mode === 'virement' ? 'Virement bancaire' : 
@@ -623,7 +631,7 @@ function confirmerPaiement() {
                    (reference ? `\nRéférence: ${reference}` : '');
     
     if (confirm(message)) {
-        // Afficher un indicateur de chargement
+        // Indicateur de chargement
         const submitBtn = document.querySelector('button[onclick="confirmerPaiement()"]');
         const originalText = submitBtn.innerHTML;
         submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Création en cours...';
@@ -632,26 +640,6 @@ function confirmerPaiement() {
         // Soumettre le formulaire
         document.getElementById('formPaiement').submit();
     }
-}
-
-function showAlert(message, type = 'info') {
-    // Créer une alerte temporaire
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-    alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    
-    document.body.appendChild(alertDiv);
-    
-    // Supprimer automatiquement après 5 secondes
-    setTimeout(() => {
-        if (alertDiv.parentNode) {
-            alertDiv.remove();
-        }
-    }, 5000);
 }
 </script>
 {% endif %}

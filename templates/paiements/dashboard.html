@@ -345,8 +345,8 @@
                     </div>
                     <div class="col-md-3">
                         <div class="text-center p-3 border rounded">
-                            <div class="h4 text-info mb-1">{{ retraits_valides|default:"0" }}</div>
-                            <div class="text-muted">Retraits Validés</div>
+                            <div class="h4 text-info mb-1">{{ montant_total_a_payer|default:"0"|floatformat:0|intcomma }} F CFA</div>
+                            <div class="text-muted">Total à Payer</div>
                         </div>
                     </div>
                 </div>
@@ -483,15 +483,9 @@
                     <i class="bi bi-graph-up me-2"></i>Tableaux de Bord
                 </a>
 
-                <!-- Boutons paiements partiels -->
-                <a href="{% url 'paiements:dashboard_partiels' %}" class="quick-action-btn success">
-                    <i class="bi bi-pie-chart me-2"></i>Dashboard Paiements Partiels
-                </a>
-                <a href="{% url 'paiements:liste_plans_partiels' %}" class="quick-action-btn warning">
-                    <i class="bi bi-list-ul me-2"></i>Plans de Paiement
-                </a>
-                <a href="{% url 'paiements:creer_plan_partiel' %}" class="quick-action-btn info">
-                    <i class="bi bi-plus-circle me-2"></i>Créer un Plan
+                <!-- Bouton historique paiements partiels -->
+                <a href="{% url 'paiements:historique_partiel' contrat_id=1 mois=9 annee=2025 %}" class="quick-action-btn warning">
+                    <i class="bi bi-pie-chart me-2"></i>Historique Paiements Partiels
                 </a>
             </div>
         </div>

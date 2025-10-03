@@ -155,6 +155,15 @@
             <form method="post" class="needs-validation" novalidate>
                 {% csrf_token %}
                 
+                <!-- Section Unité (affichage seulement) -->
+                <div class="form-section">
+                    <h5><i class="fas fa-home"></i> Unité à Réserver</h5>
+                    <div class="alert alert-info">
+                        <strong>{{ unite.numero_unite }}</strong> - {{ unite.nom }}<br>
+                        <small class="text-muted">{{ unite.get_type_unite_display }} • {{ unite.surface }} m² • {{ unite.get_loyer_total|format_currency_fcfa }}/mois</small>
+                    </div>
+                </div>
+
                 <!-- Section Locataire -->
                 <div class="form-section">
                     <h5><i class="fas fa-user"></i> Informations du Locataire</h5>

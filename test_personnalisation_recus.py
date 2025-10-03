@@ -180,7 +180,7 @@ def test_differentes_configurations():
     
     for i, config_data in enumerate(configs):
         # Désactiver les autres configurations
-        ConfigurationEntreprise.objects.filter(actif=True).update(actif=False)
+        ConfigurationEntreprise.objects.filter(active=True).update(active=False)
         
         # Créer la nouvelle configuration
         config = ConfigurationEntreprise.objects.create(
@@ -195,7 +195,7 @@ def test_differentes_configurations():
     # Réactiver la première configuration
     first_config = ConfigurationEntreprise.objects.filter(nom_entreprise='IMMOBILIER PLUS').first()
     if first_config:
-        ConfigurationEntreprise.objects.filter(actif=True).update(actif=False)
+        ConfigurationEntreprise.objects.filter(active=True).update(active=False)
         first_config.actif = True
         first_config.save()
         print(f"✅ Configuration principale réactivée : {first_config.nom_entreprise}")

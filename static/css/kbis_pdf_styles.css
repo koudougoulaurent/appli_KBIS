@@ -1,0 +1,398 @@
+/* Styles pour les documents PDF KBIS - Design professionnel basé sur l'image fournie */
+
+/* ===== DOCUMENT PDF PRINCIPAL ===== */
+.kbis-pdf-document {
+    font-family: 'Arial', 'Helvetica', sans-serif;
+    color: #333333;
+    line-height: 1.4;
+}
+
+/* ===== EN-TÊTE PDF - DESIGN HORIZONTAL EXACT ===== */
+.kbis-pdf-header-horizontal {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 0;
+    background: white;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+/* Section gauche : Logo avec bâtiments et soleil */
+.kbis-pdf-logo-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 200px;
+}
+
+.kbis-pdf-logo-container {
+    position: relative;
+    width: 120px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Base courbe (fond des bâtiments) */
+.kbis-pdf-base {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 15px;
+    background: #B3D9FF; /* Bleu clair exact de l'image */
+    border-radius: 50px;
+}
+
+/* Bâtiments */
+.kbis-pdf-buildings {
+    position: relative;
+    width: 100px;
+    height: 50px;
+    z-index: 2;
+}
+
+/* Maison (à gauche) */
+.kbis-pdf-house {
+    position: absolute;
+    left: 10px;
+    bottom: 5px;
+    width: 18px;
+    height: 25px;
+    background: #B3D9FF; /* Bleu clair exact */
+    border-radius: 2px 2px 0 0;
+}
+
+.kbis-pdf-house::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: -2px;
+    width: 22px;
+    height: 12px;
+    background: #666666; /* Gris foncé pour le toit */
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+.kbis-pdf-house-window {
+    position: absolute;
+    top: 8px;
+    left: 6px;
+    width: 6px;
+    height: 6px;
+    background: #E6E6E6; /* Gris clair pour la fenêtre */
+    border-radius: 1px;
+}
+
+/* Bâtiment (à droite) */
+.kbis-pdf-building {
+    position: absolute;
+    right: 15px;
+    bottom: 8px;
+    width: 15px;
+    height: 20px;
+    background: #B3D9FF; /* Bleu clair exact */
+    border-radius: 2px;
+}
+
+.kbis-pdf-building-windows {
+    position: absolute;
+    top: 3px;
+    left: 2px;
+    width: 11px;
+    height: 14px;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent 0px,
+        transparent 3px,
+        #E6E6E6 3px,
+        #E6E6E6 5px
+    );
+    border-radius: 1px;
+}
+
+/* Soleil */
+.kbis-pdf-sun {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 20px;
+    height: 20px;
+    background: #FFD700; /* Jaune/orange vif exact */
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+}
+
+.kbis-pdf-sun::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px;
+    height: 12px;
+    background: #FFA500;
+    border-radius: 50%;
+}
+
+.kbis-pdf-sun::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    background: conic-gradient(from 0deg, transparent 0deg, #FFD700 30deg, transparent 60deg, #FFD700 90deg, transparent 120deg, #FFD700 150deg, transparent 180deg, #FFD700 210deg, transparent 240deg, #FFD700 270deg, transparent 300deg, #FFD700 330deg, transparent 360deg);
+    border-radius: 50%;
+    z-index: -1;
+}
+
+.kbis-pdf-logo-text {
+    font-size: 10px;
+    color: #666666; /* Gris foncé exact */
+    font-weight: 600;
+    text-align: center;
+    letter-spacing: 0.5px;
+}
+
+/* Section centrale : Nom de l'entreprise */
+.kbis-pdf-company-section {
+    flex: 0 0 150px;
+    text-align: center;
+}
+
+.kbis-pdf-company-name {
+    font-size: 32px;
+    font-weight: 800;
+    color: #B3D9FF; /* Bleu clair exact */
+    margin: 0;
+    letter-spacing: 2px;
+}
+
+/* Section droite : Tagline et services sur fond orange */
+.kbis-pdf-services-section {
+    flex: 1;
+    background: #FFE5B4; /* Orange/peach clair exact */
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin-left: 20px;
+}
+
+.kbis-pdf-tagline {
+    font-size: 14px;
+    color: #666666; /* Gris foncé exact */
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    text-align: center;
+}
+
+.kbis-pdf-separator-line {
+    height: 1px;
+    background: #666666; /* Gris foncé exact */
+    margin: 8px 0;
+}
+
+.kbis-pdf-services {
+    font-size: 10px;
+    color: #B3D9FF; /* Bleu clair exact */
+    font-weight: 500;
+    text-align: center;
+    margin: 0;
+}
+
+/* ===== LIGNE DE SÉPARATION ===== */
+.kbis-pdf-separator {
+    height: 1px;
+    background: #cbd5e1;
+    margin: 15px 0;
+}
+
+/* ===== PIED DE PAGE PDF ===== */
+.kbis-pdf-footer {
+    margin-top: 40px;
+    padding-top: 20px;
+}
+
+.kbis-pdf-footer-separator {
+    height: 1px;
+    background: #cbd5e1;
+    margin-bottom: 15px;
+}
+
+.kbis-pdf-footer-content {
+    text-align: center;
+    font-size: 10px;
+    color: #6b7280;
+    line-height: 1.6;
+}
+
+.kbis-pdf-address {
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 5px;
+}
+
+.kbis-pdf-phones {
+    font-weight: 500;
+    color: #059669;
+    margin-bottom: 3px;
+}
+
+.kbis-pdf-phones-secondary {
+    font-weight: 500;
+    color: #059669;
+    margin-bottom: 5px;
+}
+
+.kbis-pdf-address-secondary {
+    font-style: italic;
+    color: #6b7280;
+    margin-bottom: 5px;
+}
+
+.kbis-pdf-email {
+    color: #dc2626;
+    font-weight: 500;
+}
+
+/* ===== TITRE DE DOCUMENT ===== */
+.kbis-pdf-document-title {
+    text-align: center;
+    font-size: 24px;
+    font-weight: 800;
+    color: #1e3a8a;
+    margin: 30px 0 20px 0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* ===== INFORMATIONS DE CONTRAT ===== */
+.kbis-pdf-contract-info {
+    background: #f8f9fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.kbis-pdf-contract-info h3 {
+    color: #1e3a8a;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.kbis-pdf-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.kbis-pdf-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.kbis-pdf-info-label {
+    font-weight: 600;
+    color: #374151;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.kbis-pdf-info-value {
+    color: #1f2937;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* ===== RESPONSIVE POUR PDF ===== */
+@media print {
+    .kbis-pdf-document {
+        font-size: 12px;
+    }
+    
+    .kbis-pdf-company-name {
+        font-size: 32px;
+    }
+    
+    .kbis-pdf-company-tagline {
+        font-size: 13px;
+    }
+    
+    .kbis-pdf-services {
+        font-size: 10px;
+    }
+    
+    .kbis-pdf-footer-content {
+        font-size: 9px;
+    }
+}
+
+/* ===== STYLES POUR CONTRAT DE BAIL ===== */
+.kbis-pdf-contrat-title {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 800;
+    color: #1e3a8a;
+    margin: 40px 0 30px 0;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.kbis-pdf-contrat-title::before,
+.kbis-pdf-contrat-title::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 50px;
+    height: 2px;
+    background: #1e3a8a;
+}
+
+.kbis-pdf-contrat-title::before {
+    left: 0;
+}
+
+.kbis-pdf-contrat-title::after {
+    right: 0;
+}
+
+/* ===== ANIMATIONS POUR PRÉVISUALISATION ===== */
+@media screen {
+    .kbis-pdf-logo {
+        animation: logoGlow 3s ease-in-out infinite alternate;
+    }
+    
+    .kbis-pdf-sun {
+        animation: sunRotate 10s linear infinite;
+    }
+    
+    @keyframes logoGlow {
+        from {
+            filter: drop-shadow(0 0 5px rgba(30, 58, 138, 0.3));
+        }
+        to {
+            filter: drop-shadow(0 0 15px rgba(30, 58, 138, 0.6));
+        }
+    }
+    
+    @keyframes sunRotate {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
+    }
+}

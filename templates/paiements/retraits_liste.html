@@ -234,7 +234,12 @@
                                            class="btn btn-outline-secondary" title="Modifier">
                                             <i class="bi bi-pencil"></i>
                                         </a>
-                                        {% if retrait.statut == 'en_attente' %}
+                                        {% if retrait.statut == 'valide' %}
+                                        <a href="{% url 'paiements:generer_quittance_retrait_kbis' retrait.pk %}" 
+                                           class="btn btn-outline-success" title="Quittance KBIS">
+                                            <i class="bi bi-file-earmark-text"></i>
+                                        </a>
+                                        {% elif retrait.statut == 'en_attente' %}
                                         <button type="button" class="btn btn-outline-success" 
                                                 title="Valider" onclick="validerRetrait({{ retrait.id }})">
                                             <i class="bi bi-check-circle"></i>

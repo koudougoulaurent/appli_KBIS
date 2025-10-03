@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quittance de Paiement - {{ quittance.numero_quittance }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1cm;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .quittance-container {
+            max-width: 21cm;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+        }
+        
+        /* En-tête avec logo */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+        }
+        
+        .logo {
+            font-size: 36px;
+            font-weight: bold;
+            color: #2c5aa0;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .logo .house-icon {
+            font-size: 40px;
+            margin-right: 10px;
+            color: #2c5aa0;
+        }
+        
+        .company-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .services {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .services ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .services li {
+            margin: 0 10px;
+            position: relative;
+        }
+        
+        .services li:before {
+            content: "•";
+            margin-right: 5px;
+            color: #2c5aa0;
+        }
+        
+        /* Référence Orange Money */
+        .orange-money-ref {
+            background: #ff6600;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        
+        /* Section principale de la quittance */
+        .quittance-main {
+            margin: 30px 0;
+        }
+        
+        .quittance-title {
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: #2c5aa0;
+            text-decoration: underline;
+        }
+        
+        .quittance-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        
+        .quittance-left, .quittance-right {
+            width: 48%;
+        }
+        
+        .detail-row {
+            display: flex;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        
+        .detail-label {
+            font-weight: bold;
+            min-width: 120px;
+            margin-right: 10px;
+        }
+        
+        .detail-value {
+            flex: 1;
+            font-size: 14px;
+        }
+        
+        .amount-box {
+            border: 3px solid #2c5aa0;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+            background: #f8f9fa;
+        }
+        
+        .amount-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c5aa0;
+            margin-bottom: 10px;
+        }
+        
+        .amount-words {
+            font-size: 14px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        /* Section paiement */
+        .payment-section {
+            margin: 30px 0;
+        }
+        
+        .payment-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .payment-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            vertical-align: top;
+        }
+        
+        .payment-table .label {
+            font-weight: bold;
+            background: #f8f9fa;
+            width: 30%;
+        }
+        
+        .payment-table .value {
+            background: white;
+            width: 70%;
+        }
+        
+        /* Cachet et signature */
+        .signature-section {
+            margin: 30px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        
+        .signature-left {
+            width: 30%;
+        }
+        
+        .signature-right {
+            width: 60%;
+            text-align: center;
+        }
+        
+        .stamp-area {
+            border: 2px dashed #ccc;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px 0;
+            background: #f9f9f9;
+        }
+        
+        .stamp {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #2c5aa0;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            text-align: center;
+            line-height: 1.2;
+        }
+        
+        /* Pied de page */
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 2px solid #333;
+            font-size: 10px;
+            color: #666;
+            text-align: center;
+        }
+        
+        .footer-section {
+            margin-bottom: 15px;
+        }
+        
+        .footer-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .contact-info {
+            line-height: 1.6;
+        }
+        
+        .phone-numbers {
+            margin: 10px 0;
+        }
+        
+        .orange-money-footer {
+            background: #ff6600;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+        
+        /* Responsive */
+        @media print {
+            body {
+                font-size: 11px;
+            }
+            
+            .quittance-container {
+                margin: 0;
+                padding: 10px;
+            }
+            
+            .no-print {
+                display: none;
+            }
+        }
+        
+        @media screen {
+            .print-button {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #2c5aa0;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 14px;
+                z-index: 1000;
+            }
+            
+            .print-button:hover {
+                background: #1e3d6f;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="quittance-container">
+        <!-- En-tête -->
+        <div class="header">
+            <div class="logo">
+                <span class="house-icon">🏠</span>
+                KBIS
+            </div>
+            <div class="company-name">KBIS INTERNATIONAL IMMOBILIER</div>
+            <div class="services">
+                <ul>
+                    <li>Achat</li>
+                    <li>Vente</li>
+                    <li>Location</li>
+                    <li>Gestion</li>
+                    <li>Nettoyage</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Référence Orange Money -->
+        <div class="orange-money-ref">
+            DEPOT ORANGE 144 * 10 * 5933721 * Montant #
+        </div>
+        
+        <!-- Section principale de la quittance -->
+        <div class="quittance-main">
+            <div class="quittance-title">QUITTANCE DE PAIEMENT</div>
+            
+            <div class="quittance-details">
+                <div class="quittance-left">
+                    <div class="detail-row">
+                        <span class="detail-label">QUITTANCE N°:</span>
+                        <span class="detail-value">{{ quittance.numero_quittance }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Date:</span>
+                        <span class="detail-value">{{ quittance.date_generation|date:"d-m-y" }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Code location:</span>
+                        <span class="detail-value">{{ quittance.retrait.recap_lie.id|default:"N/A" }}</span>
+                    </div>
+                </div>
+                
+                <div class="quittance-right">
+                    <div class="detail-row">
+                        <span class="detail-label">Reçu de M:</span>
+                        <span class="detail-value">{{ quittance.retrait.bailleur.get_nom_complet }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Pour le versement de la somme de :</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Montant en boîte -->
+            <div class="amount-box">
+                <div class="amount-value">{{ quittance.montant_paye|floatformat:0|intcomma }} F</div>
+                <div class="amount-words">( {{ quittance.montant_en_lettres }} )</div>
+            </div>
+            
+            <!-- Section paiement -->
+            <div class="payment-section">
+                <table class="payment-table">
+                    <tr>
+                        <td class="label">Mois Règlé</td>
+                        <td class="value">{{ quittance.mois_paye }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Restant dû</td>
+                        <td class="value">{{ quittance.montant_restant_due|floatformat:0|intcomma }} F</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Mode de paiement</td>
+                        <td class="value">{{ quittance.get_mode_paiement_display }}</td>
+                    </tr>
+                    {% if quittance.reference_paiement %}
+                    <tr>
+                        <td class="label">Référence</td>
+                        <td class="value">{{ quittance.reference_paiement }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+                
+                <div style="margin-top: 15px; font-size: 11px; color: #666;">
+                    loyer au pro rata à régler : 0 F
+                </div>
+            </div>
+            
+            <!-- Cachet et signature -->
+            <div class="signature-section">
+                <div class="signature-left">
+                    <div style="font-weight: bold; margin-bottom: 10px;">Cachet et signature de l'Agence :</div>
+                    <div class="stamp-area">
+                        <div class="stamp">
+                            KBIS<br>
+                            immobilier &<br>
+                            construction<br>
+                            Ouagadougou<br>
+                            Tel: 79 18 39 39<br>
+                            79 26 82 82
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="signature-right">
+                    <div style="font-weight: bold; margin-bottom: 20px;">Signature du Gestionnaire</div>
+                    <div style="border-bottom: 1px solid #333; width: 200px; margin: 0 auto; height: 40px;"></div>
+                    <div style="margin-top: 5px; font-size: 10px;">{{ quittance.cree_par.get_full_name|default:quittance.cree_par.username|default:"Gestionnaire" }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pied de page -->
+        <div class="footer">
+            <div class="footer-section">
+                <div class="footer-title">KBIS INTERNATIONAL IMMOBILIER</div>
+                <div class="contact-info">
+                    <div><strong>Adresse :</strong> BP 440 Ouaga pissy 10050 ouagadougou burkina faso</div>
+                    <div class="phone-numbers">
+                        <strong>Tél :</strong> +226 79 18 32 32 / 70 20 64 91 / 79 18 39 39 / 79 26 82 82
+                    </div>
+                    <div><strong>Localisation :</strong> sis, secteur 26 pissy sur la voie du CMA de pissy, Annexe Ouaga 2000</div>
+                    <div class="phone-numbers">
+                        <strong>Mobile :</strong> +226 79 26 88 88 / 78 20 64 91
+                    </div>
+                    <div><strong>Email :</strong> kbissarl2022@gmail.com</div>
+                </div>
+            </div>
+            
+            <div class="orange-money-footer">
+                ORANGE MONEY : *144*10*5933721*MONTANT#
+            </div>
+            
+            <div style="margin-top: 20px; font-size: 9px; color: #999;">
+                Quittance générée le {{ quittance.date_generation|date:"d/m/Y à H:i" }} - 
+                Numéro de référence : {{ quittance.numero_quittance }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bouton d'impression (masqué à l'impression) -->
+    <button class="print-button no-print" onclick="window.print()">
+        🖨️ Imprimer la Quittance
+    </button>
+    
+    <script>
+        // Auto-print si demandé
+        if (window.location.search.includes('print=1')) {
+            window.onload = function() {
+                setTimeout(function() {
+                    window.print();
+                }, 1000);
+            };
+        }
+    </script>
+</body>
+</html>

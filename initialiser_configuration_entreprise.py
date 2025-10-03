@@ -20,7 +20,7 @@ def initialiser_configuration():
     print("=" * 60)
     
     # Vérifier si une configuration existe déjà
-    config_existante = ConfigurationEntreprise.objects.filter(actif=True).first()
+    config_existante = ConfigurationEntreprise.objects.filter(active=True).first()
     
     if config_existante:
         print(f"✅ Configuration existante trouvée : {config_existante.nom_entreprise}")

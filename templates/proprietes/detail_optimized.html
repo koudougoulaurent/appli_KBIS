@@ -74,7 +74,7 @@
                                 {% endif %}
                             </p>
                             <p><strong>Bailleur :</strong> 
-                                <a href="{% url 'proprietes:bailleur_detail' propriete.bailleur.pk %}">
+                                <a href="{% url 'proprietes:detail_bailleur' propriete.bailleur.pk %}">
                                     {{ propriete.bailleur.get_nom_complet }}
                                 </a>
                             </p>
@@ -109,7 +109,7 @@
                             </a>
                         </div>
                         <div class="col-md-4">
-                            <a href="{% url 'proprietes:bailleur_detail' propriete.bailleur.pk %}" class="btn btn-secondary w-100">
+                            <a href="{% url 'proprietes:detail_bailleur' propriete.bailleur.pk %}" class="btn btn-secondary w-100">
                                 <i class="bi bi-person"></i> Voir Bailleur
                             </a>
                         </div>

@@ -15,7 +15,7 @@
                 <tr>
                     <td>{{ paiement.date_paiement|date:"d/m/Y" }}</td>
                     <td>
-                        <a href="{% url 'proprietes:locataire_detail' paiement.contrat.locataire.pk %}">
+                        <a href="{% url 'proprietes:detail_locataire' paiement.contrat.locataire.pk %}">
                             {{ paiement.contrat.locataire.get_nom_complet }}
                         </a>
                     </td>
