@@ -297,9 +297,14 @@ class DocumentKBISUnifie:
             'quittance_retrait_exceptionnel': 'QUITTANCE DE RETRAIT EXCEPTIONNEL N°',
             'facture': 'FACTURE N°',
             'recu': 'RÉCÉPISSÉ N°',
+            'recu_loyer': 'RÉCÉPISSÉ DE LOYER N°',
+            'recu_charges': 'RÉCÉPISSÉ DE CHARGES N°',
             'recu_caution': 'RÉCÉPISSÉ DE CAUTION N°',
-            'recu_avance': 'RÉCÉPISSÉ D\'AVANCE N°',
+            'recu_avance': 'RÉCÉPISSÉ D\'AVANCE DE LOYER N°',
             'recu_caution_avance': 'RÉCÉPISSÉ DE CAUTION ET AVANCE N°',
+            'recu_regularisation': 'RÉCÉPISSÉ DE RÉGULARISATION N°',
+            'recu_partiel': 'RÉCÉPISSÉ DE PAIEMENT PARTIEL N°',
+            'recu_autre': 'RÉCÉPISSÉ DE PAIEMENT N°',
             'recu_retrait': 'RÉCÉPISSÉ DE RETRAIT N°',
             'recu_recapitulatif': 'RÉCÉPISSÉ DE RÉCAPITULATIF N°',
             'attestation': 'ATTESTATION N°'
@@ -645,7 +650,169 @@ class DocumentKBISUnifie:
     def _generer_details_recu(cls, donnees, type_document):
         """Génère les détails spécialisés pour les récépissés"""
         
-        if type_document == 'recu_caution_avance':
+        if type_document == 'recu_loyer':
+            return f"""
+            <table>
+                <tr>
+                    <td>Loyer de base</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('loyer_mensuel', donnees.get('loyer_base', 0)):,} F CFA
+                    </td>
+                </tr>
+                <tr>
+                    <td>Charges mensuelles</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('charges_mensuelles', 0):,} F CFA
+                    </td>
+                </tr>
+                <tr style="background-color: #e3f2fd; font-weight: bold;">
+                    <td>TOTAL LOYER</td>
+                    <td style="font-weight: bold; color: #1976d2;">
+                        {donnees.get('total_mensuel', donnees.get('montant', 0)):,} F CFA
+                    </td>
+                </tr>
+            </table>
+            """
+            
+        elif type_document == 'recu_charges':
+            return f"""
+            <table>
+                <tr>
+                    <td>Type de charges</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('type_charges', 'Charges mensuelles')}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Montant des charges</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('charges_mensuelles', donnees.get('montant', 0)):,} F CFA
+                    </td>
+                </tr>
+            </table>
+            """
+            
+        elif type_document == 'recu_avance':
+            return f"""
+            <table>
+                <tr>
+                    <td>Type d'avance</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('type_avance', 'Avance de loyer')}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Loyer mensuel</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('loyer_mensuel', 0):,} F CFA
+                    </td>
+                </tr>
+                <tr>
+                    <td>Montant de l'avance</td>
+                    <td style="font-weight: bold; color: #1976d2;">
+                        {donnees.get('montant', 0):,} F CFA
+                    </td>
+                </tr>
+            </table>
+            """
+            
+        elif type_document == 'recu_caution':
+            return f"""
+            <table>
+                <tr>
+                    <td>Type de paiement</td>
+                    <td style="font-weight: bold;">
+                        Caution - {donnees.get('montant', 0):,} F CFA
+                    </td>
+                </tr>
+                <tr>
+                    <td>Mode de paiement</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('mode_paiement', 'Espèces')}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Note</td>
+                    <td style="font-weight: bold; color: #1976d2;">
+                        Dépôt de garantie - Remboursable en fin de bail
+                    </td>
+                </tr>
+            </table>
+            """
+            
+        elif type_document == 'recu_partiel':
+            return f"""
+            <table>
+                <tr>
+                    <td>Type de paiement</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('type_paiement', 'Paiement partiel')}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Montant payé</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('montant', 0):,} F CFA
+                    </td>
+                </tr>
+                <tr>
+                    <td>Note spéciale</td>
+                    <td style="font-weight: bold; color: #ff9800;">
+                        {donnees.get('note_speciale', 'Ce paiement ne couvre qu\'une partie du montant dû')}
+                    </td>
+                </tr>
+            </table>
+            """
+            
+        elif type_document == 'recu_regularisation':
+            return f"""
+            <table>
+                <tr>
+                    <td>Type de paiement</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('type_paiement', 'Régularisation')}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Montant de régularisation</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('montant', 0):,} F CFA
+                    </td>
+                </tr>
+                <tr>
+                    <td>Note spéciale</td>
+                    <td style="font-weight: bold; color: #1976d2;">
+                        {donnees.get('note_speciale', 'Paiement de régularisation')}
+                    </td>
+                </tr>
+            </table>
+            """
+            
+        elif type_document == 'recu_autre':
+            return f"""
+            <table>
+                <tr>
+                    <td>Type de paiement</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('type_paiement', 'Paiement')}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Montant</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('montant', 0):,} F CFA
+                    </td>
+                </tr>
+                <tr>
+                    <td>Mode de paiement</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('mode_paiement', 'Espèces')}
+                    </td>
+                </tr>
+            </table>
+            """
+            
+        elif type_document == 'recu_caution_avance':
             return f"""
             <table>
                 <tr>

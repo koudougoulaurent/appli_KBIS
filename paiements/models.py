@@ -732,20 +732,26 @@ class Paiement(models.Model):
     
     def _determiner_type_recu(self):
         """Détermine le type de récépissé selon le type de paiement"""
-        if self.type_paiement == 'caution':
-            return 'recu_caution'
-        elif self.type_paiement == 'avance':
-            return 'recu_avance'
-        elif self.type_paiement == 'caution_avance':
-            return 'recu_caution_avance'
-        else:
-            return 'recu'
+        # Mapping précis des types de paiement vers les types de récépissés
+        type_mapping = {
+            'loyer': 'recu_loyer',
+            'charges': 'recu_charges', 
+            'caution': 'recu_caution',
+            'avance_loyer': 'recu_avance',
+            'depot_garantie': 'recu_caution',
+            'regularisation': 'recu_regularisation',
+            'paiement_partiel': 'recu_partiel',
+            'autre': 'recu_autre'
+        }
+        
+        return type_mapping.get(self.type_paiement, 'recu')
     
     def _ajouter_donnees_specialisees_recu(self, type_recu):
         """Ajoute des données spécialisées selon le type de récépissé"""
         donnees_specialisees = {}
         
-        if type_recu == 'recu_caution_avance' and self.contrat:
+        # Données spécialisées selon le type de récépissé
+        if type_recu in ['recu_caution', 'recu_caution_avance'] and self.contrat:
             # Calculer les montants pour caution et avance
             loyer_mensuel = float(self.contrat.loyer_mensuel) if self.contrat.loyer_mensuel else 0
             charges_mensuelles = float(self.contrat.charges_mensuelles) if self.contrat.charges_mensuelles else 0
@@ -756,6 +762,49 @@ class Paiement(models.Model):
                 'depot_garantie': int(loyer_mensuel * 2),  # 2 mois de loyer
                 'avance_loyer': int(loyer_mensuel),  # 1 mois de loyer
                 'montant_total': int(loyer_mensuel * 3)  # 3 mois au total
+            })
+            
+        elif type_recu == 'recu_loyer' and self.contrat:
+            # Données spécifiques au loyer
+            loyer_mensuel = float(self.contrat.loyer_mensuel) if self.contrat.loyer_mensuel else 0
+            charges_mensuelles = float(self.contrat.charges_mensuelles) if self.contrat.charges_mensuelles else 0
+            
+            donnees_specialisees.update({
+                'loyer_mensuel': int(loyer_mensuel),
+                'charges_mensuelles': int(charges_mensuelles),
+                'total_mensuel': int(loyer_mensuel + charges_mensuelles)
+            })
+            
+        elif type_recu == 'recu_charges' and self.contrat:
+            # Données spécifiques aux charges
+            charges_mensuelles = float(self.contrat.charges_mensuelles) if self.contrat.charges_mensuelles else 0
+            
+            donnees_specialisees.update({
+                'charges_mensuelles': int(charges_mensuelles),
+                'type_charges': 'Charges mensuelles'
+            })
+            
+        elif type_recu == 'recu_avance' and self.contrat:
+            # Données spécifiques à l'avance de loyer
+            loyer_mensuel = float(self.contrat.loyer_mensuel) if self.contrat.loyer_mensuel else 0
+            
+            donnees_specialisees.update({
+                'loyer_mensuel': int(loyer_mensuel),
+                'type_avance': 'Avance de loyer'
+            })
+            
+        elif type_recu == 'recu_partiel':
+            # Données spécifiques au paiement partiel
+            donnees_specialisees.update({
+                'type_paiement': 'Paiement partiel',
+                'note_speciale': 'Ce paiement ne couvre qu\'une partie du montant dû'
+            })
+            
+        elif type_recu == 'recu_regularisation':
+            # Données spécifiques à la régularisation
+            donnees_specialisees.update({
+                'type_paiement': 'Régularisation',
+                'note_speciale': 'Paiement de régularisation'
             })
         
         return donnees_specialisees
