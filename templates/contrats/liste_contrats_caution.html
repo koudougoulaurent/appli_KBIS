@@ -104,7 +104,7 @@
                                     {{ contrat.get_depot_garantie_formatted }}
                                 </span>
                                 <br>
-                                {% if contrat.caution_payee %}
+                                {% if contrat.get_caution_payee_dynamique %}
                                     <small class="badge bg-success">Payée</small>
                                 {% else %}
                                     <small class="badge bg-danger">Non payée</small>
@@ -115,7 +115,7 @@
                                     {{ contrat.get_avance_loyer_formatted }}
                                 </span>
                                 <br>
-                                {% if contrat.avance_loyer_payee %}
+                                {% if contrat.get_avance_payee_dynamique %}
                                     <small class="badge bg-success">Payée</small>
                                 {% else %}
                                     <small class="badge bg-danger">Non payée</small>
@@ -127,7 +127,7 @@
                                 </span>
                             </td>
                             <td>
-                                {% if contrat.peut_commencer_location %}
+                                {% if contrat.peut_commencer_location_dynamique %}
                                     <span class="badge bg-success">Complet</span>
                                 {% else %}
                                     <span class="badge bg-warning">En attente</span>
@@ -139,19 +139,19 @@
                                        class="btn btn-outline-primary" title="Voir les détails">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    {% if not contrat.caution_payee %}
+                                    {% if not contrat.get_caution_payee_dynamique %}
                                         <a href="{% url 'contrats:marquer_caution_payee' contrat.id %}" 
                                            class="btn btn-outline-success" title="Marquer caution payée">
                                             <i class="bi bi-shield-check"></i>
                                         </a>
                                     {% endif %}
-                                    {% if not contrat.avance_loyer_payee %}
+                                    {% if not contrat.get_avance_payee_dynamique %}
                                         <a href="{% url 'contrats:marquer_avance_payee' contrat.id %}" 
                                            class="btn btn-outline-info" title="Marquer avance payée">
                                             <i class="bi bi-cash-coin"></i>
                                         </a>
                                     {% endif %}
-                                    {% if contrat.caution_payee or contrat.avance_loyer_payee %}
+                                    {% if contrat.get_caution_payee_dynamique or contrat.get_avance_payee_dynamique %}
                                         <a href="{% url 'contrats:imprimer_recu_caution' contrat.id %}" 
                                            class="btn btn-outline-secondary" title="Imprimer reçu" target="_blank">
                                             <i class="bi bi-printer"></i>

@@ -486,6 +486,68 @@ class Contrat(models.Model):
             return "Avance payée, caution en attente"
         else:
             return "En attente de paiement"
+    
+    def get_caution_payee_dynamique(self):
+        """Calcule si la caution est payée basé sur les vrais paiements."""
+        from decimal import Decimal
+        from paiements.models import Paiement
+        
+        try:
+            montant_caution_requis = Decimal(self.depot_garantie) if self.depot_garantie else Decimal('0')
+            if montant_caution_requis <= 0:
+                return True  # Pas de caution requise
+            
+            # Récupérer les paiements de caution validés
+            paiements_caution = Paiement.objects.filter(
+                contrat=self,
+                type_paiement='caution',
+                statut='valide'
+            ).aggregate(total=models.Sum('montant'))['total'] or 0
+            
+            montant_paye = Decimal(str(paiements_caution))
+            return montant_paye >= montant_caution_requis
+        except (ValueError, TypeError):
+            return False
+    
+    def get_avance_payee_dynamique(self):
+        """Calcule si l'avance est payée basé sur les vrais paiements."""
+        from decimal import Decimal
+        from paiements.models import Paiement
+        
+        try:
+            montant_avance_requis = Decimal(self.avance_loyer) if self.avance_loyer else Decimal('0')
+            if montant_avance_requis <= 0:
+                return True  # Pas d'avance requise
+            
+            # Récupérer les paiements d'avance validés
+            paiements_avance = Paiement.objects.filter(
+                contrat=self,
+                type_paiement='avance_loyer',
+                statut='valide'
+            ).aggregate(total=models.Sum('montant'))['total'] or 0
+            
+            montant_paye = Decimal(str(paiements_avance))
+            return montant_paye >= montant_avance_requis
+        except (ValueError, TypeError):
+            return False
+    
+    def get_statut_paiements_dynamique(self):
+        """Retourne le statut des paiements basé sur les vrais paiements."""
+        caution_payee = self.get_caution_payee_dynamique()
+        avance_payee = self.get_avance_payee_dynamique()
+        
+        if caution_payee and avance_payee:
+            return "Complet"
+        elif caution_payee:
+            return "Caution payée, avance en attente"
+        elif avance_payee:
+            return "Avance payée, caution en attente"
+        else:
+            return "En attente de paiement"
+    
+    def peut_commencer_location_dynamique(self):
+        """Vérifie si le locataire peut commencer la location basé sur les vrais paiements."""
+        return self.get_caution_payee_dynamique() and self.get_avance_payee_dynamique()
 
 
 class Quittance(models.Model):

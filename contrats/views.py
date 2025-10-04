@@ -1151,34 +1151,58 @@ def liste_contrats_caution(request):
     statut_avance = request.GET.get('statut_avance')
     bailleur_id = request.GET.get('bailleur')
     
-    # Appliquer les filtres de statut
-    if statut_caution:
-        if statut_caution == 'complet':
-            contrats = contrats.filter(caution_payee=True, avance_loyer_payee=True)
-        elif statut_caution == 'caution_seule':
-            contrats = contrats.filter(caution_payee=True, avance_loyer_payee=False)
-        elif statut_caution == 'avance_seule':
-            contrats = contrats.filter(caution_payee=False, avance_loyer_payee=True)
-        elif statut_caution == 'en_attente':
-            contrats = contrats.filter(caution_payee=False, avance_loyer_payee=False)
+    # Appliquer les filtres de statut basés sur les vrais paiements
+    contrats_filtres = []
+    for contrat in contrats:
+        caution_payee = contrat.get_caution_payee_dynamique()
+        avance_payee = contrat.get_avance_payee_dynamique()
+        
+        # Filtre statut caution
+        if statut_caution:
+            if statut_caution == 'complet' and not (caution_payee and avance_payee):
+                continue
+            elif statut_caution == 'caution_seule' and not (caution_payee and not avance_payee):
+                continue
+            elif statut_caution == 'avance_seule' and not (not caution_payee and avance_payee):
+                continue
+            elif statut_caution == 'en_attente' and not (not caution_payee and not avance_payee):
+                continue
+        
+        # Filtre statut avance
+        if statut_avance:
+            if statut_avance == 'payee' and not avance_payee:
+                continue
+            elif statut_avance == 'non_payee' and avance_payee:
+                continue
+        
+        contrats_filtres.append(contrat)
     
-    if statut_avance:
-        if statut_avance == 'payee':
-            contrats = contrats.filter(avance_loyer_payee=True)
-        elif statut_avance == 'non_payee':
-            contrats = contrats.filter(avance_loyer_payee=False)
+    contrats = contrats_filtres
     
+    # Filtre par bailleur
     if bailleur_id:
-        contrats = contrats.filter(propriete__bailleur_id=bailleur_id)
+        contrats = [c for c in contrats if c.propriete.bailleur_id == int(bailleur_id)]
     
-    # Calculer les statistiques
-    total_contrats = contrats.count()
-    contrats_complets = contrats.filter(caution_payee=True, avance_loyer_payee=True).count()
-    contrats_en_attente = contrats.filter(caution_payee=False, avance_loyer_payee=False).count()
-    cautions_payees = contrats.filter(caution_payee=True).count()
-    avances_payees = contrats.filter(avance_loyer_payee=True).count()
+    # Calculer les statistiques basées sur les vrais paiements
+    total_contrats = len(contrats)
+    contrats_complets = 0
+    contrats_en_attente = 0
+    cautions_payees = 0
+    avances_payees = 0
+    
+    for contrat in contrats:
+        if contrat.get_caution_payee_dynamique() and contrat.get_avance_payee_dynamique():
+            contrats_complets += 1
+        elif not contrat.get_caution_payee_dynamique() and not contrat.get_avance_payee_dynamique():
+            contrats_en_attente += 1
+        
+        if contrat.get_caution_payee_dynamique():
+            cautions_payees += 1
+        if contrat.get_avance_payee_dynamique():
+            avances_payees += 1
     
     # Pagination
+    from django.core.paginator import Paginator
     paginator = Paginator(contrats, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
