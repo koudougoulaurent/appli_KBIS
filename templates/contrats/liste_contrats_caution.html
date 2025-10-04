@@ -16,23 +16,25 @@
     <div class="card-body">
         <form method="get" class="row g-3">
             <div class="col-md-3">
-                <label for="statut_caution" class="form-label">Statut Caution</label>
+                <label for="statut_caution" class="form-label">STATUT CAUTION</label>
                 <select name="statut_caution" id="statut_caution" class="form-select">
                     <option value="">Tous</option>
-                    <option value="non_payee" {% if request.GET.statut_caution == 'non_payee' %}selected{% endif %}>Non payée</option>
-                    <option value="payee" {% if request.GET.statut_caution == 'payee' %}selected{% endif %}>Payée</option>
+                    {% for value, label in statuts_caution %}
+                        <option value="{{ value }}" {% if request.GET.statut_caution == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
                 </select>
             </div>
             <div class="col-md-3">
-                <label for="statut_avance" class="form-label">Statut Avance</label>
+                <label for="statut_avance" class="form-label">STATUT AVANCE</label>
                 <select name="statut_avance" id="statut_avance" class="form-select">
                     <option value="">Tous</option>
-                    <option value="non_payee" {% if request.GET.statut_avance == 'non_payee' %}selected{% endif %}>Non payée</option>
-                    <option value="payee" {% if request.GET.statut_avance == 'payee' %}selected{% endif %}>Payée</option>
+                    {% for value, label in statuts_avance %}
+                        <option value="{{ value }}" {% if request.GET.statut_avance == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
                 </select>
             </div>
             <div class="col-md-3">
-                <label for="bailleur" class="form-label">Bailleur</label>
+                <label for="bailleur" class="form-label">BAILLEUR</label>
                 <select name="bailleur" id="bailleur" class="form-select">
                     <option value="">Tous les bailleurs</option>
                     {% for bailleur in bailleurs %}
@@ -60,7 +62,7 @@
 <!-- Liste des contrats -->
 <div class="card">
     <div class="card-body">
-        {% if contrats %}
+        {% if page_obj %}
             <div class="table-responsive">
                 <table class="table table-hover">
                     <thead>
@@ -77,7 +79,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for contrat in contrats %}
+                        {% for contrat in page_obj %}
                         <tr>
                             <td>
                                 <strong>{{ contrat.numero_contrat }}</strong>
@@ -164,7 +166,7 @@
             </div>
 
             <!-- Pagination -->
-            {% if is_paginated %}
+            {% if page_obj.has_other_pages %}
             <nav aria-label="Navigation des pages">
                 <ul class="pagination justify-content-center mt-4">
                     {% if page_obj.has_previous %}
@@ -215,27 +217,35 @@
 <!-- Résumé statistique -->
 <div class="row mt-4">
     <div class="col-md-3">
-        <div class="stat-card success">
-            <div class="stat-number">{{ stats.total_complets }}</div>
-            <div class="stat-label">Contrats Complets</div>
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <h3 class="text-success">{{ statistiques.contrats_complets }}</h3>
+                <p class="card-text">Contrats Complets</p>
+            </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="stat-card warning">
-            <div class="stat-number">{{ stats.total_en_attente }}</div>
-            <div class="stat-label">En Attente</div>
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <h3 class="text-warning">{{ statistiques.contrats_en_attente }}</h3>
+                <p class="card-text">En Attente</p>
+            </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="stat-card info">
-            <div class="stat-number">{{ stats.total_cautions_payees }}</div>
-            <div class="stat-label">Cautions Payées</div>
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <h3 class="text-info">{{ statistiques.cautions_payees }}</h3>
+                <p class="card-text">Cautions Payées</p>
+            </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="stat-card">
-            <div class="stat-number">{{ stats.total_avances_payees }}</div>
-            <div class="stat-label">Avances Payées</div>
+        <div class="card border-primary">
+            <div class="card-body text-center">
+                <h3 class="text-primary">{{ statistiques.avances_payees }}</h3>
+                <p class="card-text">Avances Payées</p>
+            </div>
         </div>
     </div>
 </div>

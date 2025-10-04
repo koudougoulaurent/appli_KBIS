@@ -1140,12 +1140,18 @@ def liste_contrats_caution(request):
         messages.error(request, permissions['message'])
         return redirect('core:dashboard')
     
-    contrats = Contrat.objects.all().order_by('-date_creation')
+    # Récupérer tous les contrats actifs avec leurs relations
+    contrats = Contrat.objects.filter(
+        est_actif=True,
+        est_resilie=False
+    ).select_related('propriete', 'locataire', 'propriete__bailleur').order_by('-date_creation')
     
     # Filtres
     statut_caution = request.GET.get('statut_caution')
+    statut_avance = request.GET.get('statut_avance')
     bailleur_id = request.GET.get('bailleur')
     
+    # Appliquer les filtres de statut
     if statut_caution:
         if statut_caution == 'complet':
             contrats = contrats.filter(caution_payee=True, avance_loyer_payee=True)
@@ -1156,8 +1162,21 @@ def liste_contrats_caution(request):
         elif statut_caution == 'en_attente':
             contrats = contrats.filter(caution_payee=False, avance_loyer_payee=False)
     
+    if statut_avance:
+        if statut_avance == 'payee':
+            contrats = contrats.filter(avance_loyer_payee=True)
+        elif statut_avance == 'non_payee':
+            contrats = contrats.filter(avance_loyer_payee=False)
+    
     if bailleur_id:
         contrats = contrats.filter(propriete__bailleur_id=bailleur_id)
+    
+    # Calculer les statistiques
+    total_contrats = contrats.count()
+    contrats_complets = contrats.filter(caution_payee=True, avance_loyer_payee=True).count()
+    contrats_en_attente = contrats.filter(caution_payee=False, avance_loyer_payee=False).count()
+    cautions_payees = contrats.filter(caution_payee=True).count()
+    avances_payees = contrats.filter(avance_loyer_payee=True).count()
     
     # Pagination
     paginator = Paginator(contrats, 20)
@@ -1165,6 +1184,7 @@ def liste_contrats_caution(request):
     page_obj = paginator.get_page(page_number)
     
     # Filtres pour le formulaire
+    from proprietes.models import Bailleur
     bailleurs = Bailleur.objects.all()
     
     context = {
@@ -1176,6 +1196,17 @@ def liste_contrats_caution(request):
             ('avance_seule', 'Avance payée'),
             ('en_attente', 'En attente'),
         ],
+        'statuts_avance': [
+            ('payee', 'Payée'),
+            ('non_payee', 'Non payée'),
+        ],
+        'statistiques': {
+            'total_contrats': total_contrats,
+            'contrats_complets': contrats_complets,
+            'contrats_en_attente': contrats_en_attente,
+            'cautions_payees': cautions_payees,
+            'avances_payees': avances_payees,
+        }
     }
     
     return render(request, 'contrats/liste_contrats_caution.html', context)
