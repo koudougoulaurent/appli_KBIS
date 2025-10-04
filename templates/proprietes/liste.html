@@ -170,7 +170,7 @@
                             </td>
                             <td>
                                 <div class="text-end">
-                                    <strong>{% include 'includes/montant.html' with montant=propriete.loyer_actuel devise_source=devise_base %}</strong>
+                                    <strong>{% include 'includes/montant.html' with montant=propriete.get_loyer_actuel_calcule devise_source=devise_base %}</strong>
                                 </div>
                             </td>
                             <td>

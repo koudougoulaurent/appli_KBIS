@@ -163,17 +163,9 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm" role="group">
-                                    <a href="{% url 'paiements:quittance_bailleur_detail' quittance.pk %}" 
-                                       class="btn btn-outline-primary" title="Voir la quittance">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
                                     <a href="{% url 'paiements:telecharger_quittance_bailleur' quittance.pk %}" 
                                        class="btn btn-outline-success" title="Télécharger PDF">
                                         <i class="bi bi-download"></i>
-                                    </a>
-                                    <a href="{% url 'paiements:quittance_bailleur_detail' quittance.pk %}?print=1" 
-                                       class="btn btn-outline-secondary" title="Imprimer" target="_blank">
-                                        <i class="bi bi-printer"></i>
                                     </a>
                                 </div>
                             </td>

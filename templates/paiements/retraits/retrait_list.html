@@ -23,7 +23,7 @@
                     <a href="{% url 'paiements:retrait_auto_create' %}" class="btn btn-warning">
                         <i class="bi bi-magic me-2"></i> Création Automatique
                     </a>
-                    <a href="{% url 'paiements:retrait_create' %}" class="btn btn-success">
+                    <a href="{% url 'paiements:retrait_ajouter' %}" class="btn btn-success">
                         <i class="bi bi-plus-circle me-2"></i> Nouveau Retrait
                     </a>
                 </div>
@@ -130,7 +130,7 @@
                     <button type="submit" class="btn btn-primary me-2">
                         <i class="bi bi-search me-2"></i> Filtrer
                     </button>
-                    <a href="{% url 'paiements:retrait_list' %}" class="btn btn-outline-secondary">
+                    <a href="{% url 'paiements:liste_retraits_bailleur' %}" class="btn btn-outline-secondary">
                         Réinitialiser
                     </a>
                 </div>
@@ -225,7 +225,7 @@
                                     </a>
                                     
                                     {% if retrait.statut == 'en_attente' %}
-                                    <form method="post" action="{% url 'paiements:retrait_validate' retrait.id %}" 
+                                    <form method="post" action="{% url 'paiements:valider_retrait' retrait.id %}" 
                                           class="d-inline">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-sm btn-outline-success" 
@@ -236,7 +236,7 @@
                                     {% endif %}
                                     
                                     {% if retrait.statut == 'valide' %}
-                                    <form method="post" action="{% url 'paiements:retrait_mark_paid' retrait.id %}" 
+                                    <form method="post" action="{% url 'paiements:marquer_retrait_paye' retrait.id %}" 
                                           class="d-inline">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-sm btn-outline-info" 
@@ -247,7 +247,7 @@
                                     {% endif %}
                                     
                                     {% if user.is_privilege_user %}
-                                    <a href="{% url 'paiements:retrait_supprimer' retrait.id %}" 
+                                    <a href="{% url 'paiements:supprimer_retrait' retrait.id %}" 
                                        class="btn btn-sm btn-outline-danger" 
                                        title="Supprimer"
                                        onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce retrait ?')">
@@ -290,7 +290,7 @@
                 <i class="bi bi-inbox fa-3x text-muted mb-3"></i>
                 <h5 class="text-muted">Aucun retrait trouvé</h5>
                 <p class="text-muted">Commencez par créer un nouveau retrait ou utilisez la création automatique.</p>
-                <a href="{% url 'paiements:retrait_create' %}" class="btn btn-primary">
+                <a href="{% url 'paiements:retrait_ajouter' %}" class="btn btn-primary">
                     <i class="bi bi-plus-circle me-2"></i> Créer un retrait
                 </a>
             </div>

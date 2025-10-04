@@ -1,0 +1,309 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Retraits aux Bailleurs{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    .retrait-card {
+        border-left: 4px solid #007bff;
+        transition: all 0.3s ease;
+    }
+    .retrait-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .status-badge {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+    }
+    .btn-retirer {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    .btn-retirer:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1 text-dark">
+                        <i class="fas fa-money-bill-wave text-primary me-2"></i>
+                        Retraits aux Bailleurs
+                    </h1>
+                    <p class="text-muted mb-0">Gestion des retraits mensuels aux bailleurs</p>
+                </div>
+                <div>
+                    <a href="{% url 'paiements:retrait_auto_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Création Automatique
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.total }}</div>
+                <div class="stat-label">Total Retraits</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <div class="stat-value">{{ stats.en_attente }}</div>
+                <div class="stat-label">En Attente</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <div class="stat-value">{{ stats.valides }}</div>
+                <div class="stat-label">Validés</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                <div class="stat-value">{{ stats.payes }}</div>
+                <div class="stat-label">Payés</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Statut</label>
+                            <select name="statut" class="form-select">
+                                <option value="">Tous les statuts</option>
+                                <option value="en_attente" {% if filters.statut == 'en_attente' %}selected{% endif %}>En attente</option>
+                                <option value="valide" {% if filters.statut == 'valide' %}selected{% endif %}>Validé</option>
+                                <option value="paye" {% if filters.statut == 'paye' %}selected{% endif %}>Payé</option>
+                                <option value="annule" {% if filters.statut == 'annule' %}selected{% endif %}>Annulé</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Mois</label>
+                            <input type="month" name="mois" class="form-control" value="{{ filters.mois }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Bailleur</label>
+                            <select name="bailleur" class="form-select">
+                                <option value="">Tous les bailleurs</option>
+                                {% for bailleur in bailleurs %}
+                                <option value="{{ bailleur.id }}" {% if filters.bailleur == bailleur.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ bailleur.get_nom_complet }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-outline-primary">
+                                    <i class="fas fa-search me-2"></i>Filtrer
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des retraits -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        Liste des Retraits
+                        <span class="badge bg-primary ms-2">{{ page_obj.paginator.count }}</span>
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if page_obj %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Bailleur</th>
+                                    <th>Mois</th>
+                                    <th>Montant Net</th>
+                                    <th>Statut</th>
+                                    <th>Date Demande</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for retrait in page_obj %}
+                                <tr class="retrait-card">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                                <i class="fas fa-user"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold">{{ retrait.bailleur.get_nom_complet }}</div>
+                                                <small class="text-muted">{{ retrait.bailleur.email }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            {{ retrait.mois_retrait|date:"F Y" }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold text-success">
+                                            {{ retrait.montant_net_a_payer|floatformat:0|intcomma }} F CFA
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if retrait.statut == 'en_attente' %}
+                                        <span class="status-badge bg-warning text-dark">En attente</span>
+                                        {% elif retrait.statut == 'valide' %}
+                                        <span class="status-badge bg-info text-white">Validé</span>
+                                        {% elif retrait.statut == 'paye' %}
+                                        <span class="status-badge bg-success text-white">Payé</span>
+                                        {% elif retrait.statut == 'annule' %}
+                                        <span class="status-badge bg-danger text-white">Annulé</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ retrait.date_demande|date:"d/m/Y" }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'paiements:retrait_detail' retrait.pk %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if retrait.statut == 'en_attente' %}
+                                            <a href="{% url 'paiements:valider_retrait' retrait.pk %}" class="btn btn-sm btn-outline-success">
+                                                <i class="fas fa-check"></i>
+                                            </a>
+                                            {% elif retrait.statut == 'valide' %}
+                                            <a href="{% url 'paiements:marquer_retrait_paye' retrait.pk %}" class="btn btn-sm btn-success">
+                                                <i class="fas fa-money-bill-wave"></i>
+                                            </a>
+                                            {% endif %}
+                                            <a href="{% url 'paiements:generer_quittance_retrait' retrait.pk %}" class="btn btn-sm btn-retirer">
+                                                <i class="fas fa-receipt me-1"></i>Retirer
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox display-1 text-muted"></i>
+                        <h5 class="text-muted mt-3">Aucun retrait trouvé</h5>
+                        <p class="text-muted">Aucun retrait ne correspond aux critères de recherche.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <nav aria-label="Pagination des retraits">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if filters.statut %}&statut={{ filters.statut }}{% endif %}{% if filters.mois %}&mois={{ filters.mois }}{% endif %}{% if filters.bailleur %}&bailleur={{ filters.bailleur }}{% endif %}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if filters.statut %}&statut={{ filters.statut }}{% endif %}{% if filters.mois %}&mois={{ filters.mois }}{% endif %}{% if filters.bailleur %}&bailleur={{ filters.bailleur }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if filters.statut %}&statut={{ filters.statut }}{% endif %}{% if filters.mois %}&mois={{ filters.mois }}{% endif %}{% if filters.bailleur %}&bailleur={{ filters.bailleur }}{% endif %}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Animation des cartes
+    $('.retrait-card').hover(
+        function() {
+            $(this).addClass('shadow-lg');
+        },
+        function() {
+            $(this).removeClass('shadow-lg');
+        }
+    );
+    
+    // Confirmation pour les actions
+    $('.btn-outline-success, .btn-success').click(function(e) {
+        if (!confirm('Êtes-vous sûr de vouloir effectuer cette action ?')) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

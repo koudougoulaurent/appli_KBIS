@@ -40,6 +40,7 @@ def document_test_page(request):
 from core.intelligent_views import IntelligentListView
 from .models import TypeBien
 from utilisateurs.mixins import PrivilegeButtonsMixin
+from utilisateurs.mixins_suppression import SuppressionGeneriqueView
 
 
 class ProprieteListView(PrivilegeButtonsMixin, IntelligentListView):
@@ -80,6 +81,7 @@ class ProprieteListView(PrivilegeButtonsMixin, IntelligentListView):
     actions = [
         {'url_name': 'proprietes:detail', 'icon': 'eye', 'style': 'outline-primary', 'title': 'Voir'},
         {'url_name': 'proprietes:modifier', 'icon': 'pencil', 'style': 'outline-warning', 'title': 'Modifier'},
+        {'url_name': 'proprietes:supprimer_propriete', 'icon': 'trash', 'style': 'outline-danger', 'title': 'Supprimer', 'condition': 'user.is_privilege_user'},
     ]
     sort_options = [
         {'value': 'ville', 'label': 'Ville'},
@@ -961,6 +963,7 @@ class LocataireListView(PrivilegeButtonsMixin, IntelligentListView):
     actions = [
         {'url_name': 'proprietes:detail_locataire', 'icon': 'eye', 'style': 'outline-primary', 'title': 'Voir'},
         {'url_name': 'proprietes:modifier_locataire', 'icon': 'pencil', 'style': 'outline-warning', 'title': 'Modifier'},
+        {'url_name': 'proprietes:supprimer_locataire', 'icon': 'trash', 'style': 'outline-danger', 'title': 'Supprimer', 'condition': 'user.is_privilege_user'},
     ]
     sort_options = [
         {'value': 'nom', 'label': 'Nom'},
@@ -984,13 +987,54 @@ class LocataireListView(PrivilegeButtonsMixin, IntelligentListView):
 liste_locataires = LocataireListView.as_view()
 
 
+# Vues de suppression génériques
+class SupprimerProprieteView(SuppressionGeneriqueView):
+    model = Propriete
+    
+    def get_redirect_url(self, obj):
+        return 'proprietes:liste'
+    
+    def get_success_message(self, obj):
+        return f"Propriété {obj.titre} supprimée avec succès."
+
+
+class SupprimerLocataireView(SuppressionGeneriqueView):
+    model = Locataire
+    
+    def get_redirect_url(self, obj):
+        return 'proprietes:liste_locataires'
+    
+    def get_success_message(self, obj):
+        return f"Locataire {obj.get_nom_complet()} supprimé avec succès."
+
+
+class SupprimerBailleurView(SuppressionGeneriqueView):
+    model = Bailleur
+    
+    def get_redirect_url(self, obj):
+        return 'proprietes:liste_bailleurs'
+    
+    def get_success_message(self, obj):
+        return f"Bailleur {obj.get_nom_complet()} supprimé avec succès."
+
+
+class SupprimerTypeBienView(SuppressionGeneriqueView):
+    model = TypeBien
+    
+    def get_redirect_url(self, obj):
+        return 'proprietes:liste_types_bien'
+    
+    def get_success_message(self, obj):
+        return f"Type de bien {obj.nom} supprimé avec succès."
+
+
 class TypeBienListView(PrivilegeButtonsMixin, IntelligentListView):
     model = TypeBien
     template_name = 'base_liste_intelligente.html'
     paginate_by = 20
     page_title = 'Types de biens'
     page_icon = 'building'
-    add_url = 'proprietes:ajouter_type_bien'
+    add_url = None  # Pas de fonction d'ajout disponible
     add_text = 'Ajouter un type de bien'
     search_fields = ['nom', 'description']
     filter_fields = []
@@ -1001,6 +1045,7 @@ class TypeBienListView(PrivilegeButtonsMixin, IntelligentListView):
     ]
     actions = [
         {'url_name': 'proprietes:modifier_type_bien', 'icon': 'pencil', 'style': 'outline-warning', 'title': 'Modifier'},
+        {'url_name': 'proprietes:supprimer_type_bien', 'icon': 'trash', 'style': 'outline-danger', 'title': 'Supprimer', 'condition': 'user.is_privilege_user'},
     ]
     sort_options = [
         {'value': 'nom', 'label': 'Nom'},

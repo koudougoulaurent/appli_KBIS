@@ -7,7 +7,7 @@ from django.views import View
 from django.db import transaction
 import json
 
-from .services_intelligents_retraits import ServiceContexteIntelligentRetraits
+# from .services_intelligents_retraits import ServiceContexteIntelligentRetraits
 from .models import RetraitBailleur
 from proprietes.models import Bailleur
 

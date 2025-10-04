@@ -6,7 +6,8 @@ from django.utils import timezone
 from proprietes.models import Propriete, Locataire
 from proprietes.managers import NonDeletedManager
 
-Utilisateur = get_user_model()
+def get_utilisateur_model():
+    return get_user_model()
 
 
 class Contrat(models.Model):
@@ -139,7 +140,7 @@ class Contrat(models.Model):
         help_text=_("Unité locative louée (pour les grandes propriétés)")
     )
     cree_par = models.ForeignKey(
-        Utilisateur,
+        'utilisateurs.Utilisateur',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -149,12 +150,13 @@ class Contrat(models.Model):
     
     is_deleted = models.BooleanField(default=False, verbose_name='Supprimé logiquement')
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='Date de suppression')
-    deleted_by = models.ForeignKey(Utilisateur, null=True, blank=True, on_delete=models.SET_NULL, related_name='contrat_deleted', verbose_name='Supprimé par')
+    deleted_by = models.ForeignKey('utilisateurs.Utilisateur', null=True, blank=True, on_delete=models.SET_NULL, related_name='contrat_deleted', verbose_name='Supprimé par')
     
     objects = NonDeletedManager()
     all_objects = models.Manager()
     
     class Meta:
+        app_label = 'contrats'
         verbose_name = _("Contrat")
         verbose_name_plural = _("Contrats")
         ordering = ['-date_debut']
@@ -622,6 +624,7 @@ class Quittance(models.Model):
     )
     
     class Meta:
+        app_label = 'contrats'
         verbose_name = _("Quittance")
         verbose_name_plural = _("Quittances")
         ordering = ['-mois']
@@ -724,7 +727,7 @@ class EtatLieux(models.Model):
     
     # Relations
     cree_par = models.ForeignKey(
-        Utilisateur,
+        'utilisateurs.Utilisateur',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -733,6 +736,7 @@ class EtatLieux(models.Model):
     )
     
     class Meta:
+        app_label = 'contrats'
         verbose_name = _("État des lieux")
         verbose_name_plural = _("États des lieux")
         ordering = ['-date_etat']
@@ -778,7 +782,7 @@ class RecuCaution(models.Model):
         verbose_name=_("Date d'impression")
     )
     imprime_par = models.ForeignKey(
-        Utilisateur,
+        'utilisateurs.Utilisateur',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -801,6 +805,7 @@ class RecuCaution(models.Model):
     notes_internes = models.TextField(blank=True, verbose_name=_("Notes internes"))
     
     class Meta:
+        app_label = 'contrats'
         verbose_name = _("Reçu de caution")
         verbose_name_plural = _("Reçus de caution")
         ordering = ['-date_emission']
@@ -932,6 +937,7 @@ class DocumentContrat(models.Model):
     notes_internes = models.TextField(blank=True, verbose_name=_("Notes internes"))
     
     class Meta:
+        app_label = 'contrats'
         verbose_name = _("Document de contrat")
         verbose_name_plural = _("Documents de contrat")
         ordering = ['-date_creation']
@@ -1083,6 +1089,7 @@ class ResiliationContrat(models.Model):
     )
     
     class Meta:
+        app_label = 'contrats'
         verbose_name = _("Résiliation de contrat")
         verbose_name_plural = _("Résiliations de contrat")
         ordering = ['-date_resiliation']

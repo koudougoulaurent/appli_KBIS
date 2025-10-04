@@ -3,9 +3,8 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
 from django.utils import timezone
 from .models import (
-    Paiement, ChargeDeductible, QuittancePaiement,
-    RetraitBailleur, RetraitChargeDeductible, RecuRetrait,
-    TableauBordFinancier, RecapMensuel
+    Paiement, ChargeDeductible, ChargeBailleur,
+    RetraitBailleur, RetraitQuittance, QuittancePaiement
 )
 
 
@@ -55,7 +54,7 @@ class PaiementAdmin(admin.ModelAdmin):
         }),
     )
     
-    readonly_fields = ('date_creation', 'date_modification')
+    readonly_fields = ('created_at', 'updated_at')
     
     actions = ['valider_paiements', 'refuser_paiements', 'annuler_paiements']
     
@@ -101,21 +100,21 @@ class ChargeDeductibleAdmin(admin.ModelAdmin):
     """Interface d'administration pour les charges déductibles."""
     
     list_display = (
-        'id', 'contrat', 'libelle', 'montant', 'type_charge', 
-        'statut_colore', 'date_charge', 'cree_par'
+        'id', 'contrat', 'description', 'montant', 
+        'date_charge', 'est_deductible_loyer'
     )
     list_filter = (
-        'statut', 'type_charge', 'date_charge', 'contrat__est_actif'
+        'date_charge', 'contrat__est_actif', 'est_deductible_loyer'
     )
     search_fields = (
-        'libelle', 'contrat__numero_contrat', 'contrat__propriete__titre',
+        'description', 'contrat__numero_contrat', 'contrat__propriete__titre',
         'contrat__locataire__nom', 'contrat__locataire__prenom'
     )
     ordering = ('-date_charge',)
     
     fieldsets = (
         (_('Informations de base'), {
-            'fields': ('contrat', 'libelle', 'description', 'type_charge')
+            'fields': ('contrat', 'description')
         }),
         (_('Montant'), {
             'fields': ('montant',)
@@ -132,12 +131,12 @@ class ChargeDeductibleAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         (_('Métadonnées'), {
-            'fields': ('cree_par', 'date_creation', 'date_modification'),
+            'fields': ('cree_par', 'created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
     
-    readonly_fields = ('date_creation', 'date_modification')
+    readonly_fields = ('created_at', 'updated_at')
     
     actions = ['valider_charges', 'refuser_charges', 'marquer_deduites']
     
@@ -206,7 +205,7 @@ class QuittancePaiementAdmin(admin.ModelAdmin):
             'fields': ('statut', 'date_emission', 'date_impression')
         }),
         (_('Métadonnées'), {
-            'fields': ('cree_par', 'date_creation', 'date_modification'),
+            'fields': ('cree_par', 'created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
@@ -274,7 +273,7 @@ class RetraitBailleurAdmin(admin.ModelAdmin):
     
     list_filter = [
         'statut', 'type_retrait', 'mode_retrait', 'mois_retrait',
-        'date_demande', 'date_versement'
+        'date_demande'
     ]
     
     search_fields = [
@@ -283,7 +282,7 @@ class RetraitBailleurAdmin(admin.ModelAdmin):
     ]
     
     readonly_fields = [
-        'montant_net_a_payer', 'date_creation', 'date_modification'
+        'montant_net_a_payer', 'created_at', 'updated_at'
     ]
     
     fieldsets = (
@@ -294,26 +293,18 @@ class RetraitBailleurAdmin(admin.ModelAdmin):
             'fields': ('montant_loyers_bruts', 'montant_charges_deductibles', 'montant_net_a_payer')
         }),
         ('Dates', {
-            'fields': ('date_demande', 'date_versement')
+            'fields': ('date_demande', 'date_validation', 'date_paiement')
         }),
         ('Statut et validation', {
             'fields': ('statut', 'cree_par', 'valide_par')
         }),
-        ('Informations bancaires', {
-            'fields': ('numero_cheque', 'reference_virement'),
-            'classes': ('collapse',)
-        }),
-        ('Relations', {
-            'fields': ('paiements_concernes',),
-            'classes': ('collapse',)
-        }),
         ('Métadonnées', {
-            'fields': ('notes', 'date_creation', 'date_modification'),
+            'fields': ('notes', 'created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
     
-    filter_horizontal = ['paiements_concernes']
+    # filter_horizontal = ['paiements_concernes']  # Champ n'existe pas
     
     actions = ['valider_retraits', 'marquer_payes', 'annuler_retraits']
     
@@ -363,7 +354,7 @@ class RetraitBailleurAdmin(admin.ModelAdmin):
         )
 
 
-@admin.register(RetraitChargeDeductible)
+# @admin.register(RetraitChargeDeductible)  # Modèle supprimé
 class RetraitChargeDeductibleAdmin(admin.ModelAdmin):
     """Admin pour la liaison entre retraits et charges déductibles."""
     
@@ -371,7 +362,7 @@ class RetraitChargeDeductibleAdmin(admin.ModelAdmin):
     list_filter = ['date_ajout']
     search_fields = [
         'retrait_bailleur__bailleur__nom',
-        'charge_deductible__libelle'
+        'charge_deductible__description'
     ]
     readonly_fields = ['date_ajout']
     
@@ -382,7 +373,7 @@ class RetraitChargeDeductibleAdmin(admin.ModelAdmin):
         )
 
 
-@admin.register(RecuRetrait)
+# @admin.register(RecuRetrait)  # Modèle supprimé
 class RecuRetraitAdmin(admin.ModelAdmin):
     """Admin pour les reçus de retrait."""
     
@@ -439,7 +430,7 @@ class RecuRetraitAdmin(admin.ModelAdmin):
         )
 
 
-@admin.register(TableauBordFinancier)
+# @admin.register(TableauBordFinancier)  # Modèle supprimé
 class TableauBordFinancierAdmin(admin.ModelAdmin):
     """Interface d'administration professionnelle pour les tableaux de bord financiers."""
     
@@ -482,12 +473,12 @@ class TableauBordFinancierAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         (_('Métadonnées'), {
-            'fields': ('cree_par', 'date_creation', 'date_modification'),
+            'fields': ('cree_par', 'created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
     
-    readonly_fields = ('date_creation', 'date_modification')
+    readonly_fields = ('created_at', 'updated_at')
     filter_horizontal = ('proprietes', 'bailleurs')
     
     actions = [
@@ -615,7 +606,7 @@ class TableauBordFinancierAdmin(admin.ModelAdmin):
         js = ('admin/js/tableau_bord_admin.js',)
 
 
-@admin.register(RecapMensuel)
+# @admin.register(RecapMensuel)  # Modèle supprimé
 class RecapMensuelAdmin(admin.ModelAdmin):
     """Interface d'administration pour les récapitulatifs mensuels."""
     
@@ -716,6 +707,67 @@ class RecapMensuelAdmin(admin.ModelAdmin):
             'bailleur', 'cree_par', 'valide_par'
         ).prefetch_related(
             'retraits_associes', 'paiements_concernes', 'charges_deductibles'
+        )
+    
+    def save_model(self, request, obj, form, change):
+        """Sauvegarde le modèle avec l'utilisateur créateur."""
+        if not change:  # Nouvelle création
+            obj.cree_par = request.user
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(ChargeBailleur)
+class ChargeBailleurAdmin(admin.ModelAdmin):
+    """Interface d'administration pour les charges bailleur."""
+    
+    list_display = (
+        'id', 'bailleur', 'description', 'montant', 'date_charge', 
+        'mois_charge', 'statut_colore', 'retrait_utilise', 'cree_par'
+    )
+    list_filter = (
+        'statut', 'date_charge', 'mois_charge', 'bailleur', 'cree_par'
+    )
+    search_fields = (
+        'bailleur__nom', 'bailleur__prenom', 'description', 'notes'
+    )
+    readonly_fields = ('created_at', 'updated_at')
+    date_hierarchy = 'date_charge'
+    ordering = ['-date_charge', '-created_at']
+    
+    fieldsets = (
+        (_('Informations de base'), {
+            'fields': ('bailleur', 'description', 'montant', 'date_charge', 'mois_charge')
+        }),
+        (_('Statut et utilisation'), {
+            'fields': ('statut', 'retrait_utilise')
+        }),
+        (_('Métadonnées'), {
+            'fields': ('cree_par', 'notes', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def statut_colore(self, obj):
+        """Affiche le statut avec une couleur."""
+        couleurs = {
+            'en_attente': 'orange',
+            'valide': 'green',
+            'utilise': 'blue',
+            'annule': 'red'
+        }
+        couleur = couleurs.get(obj.statut, 'black')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            couleur,
+            obj.get_statut_display()
+        )
+    statut_colore.short_description = _("Statut")
+    statut_colore.admin_order_field = 'statut'
+    
+    def get_queryset(self, request):
+        """Optimise les requêtes."""
+        return super().get_queryset(request).select_related(
+            'bailleur', 'cree_par', 'retrait_utilise'
         )
     
     def save_model(self, request, obj, form, change):

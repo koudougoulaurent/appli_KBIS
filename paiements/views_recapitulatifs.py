@@ -9,23 +9,17 @@ qui résument toutes les opérations financières pour chaque bailleur.
 
 import logging
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
-from django.db.models import Sum, Count
+from django.db.models import Count
 from django.core.paginator import Paginator
 from django.urls import reverse
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
 
-from .models import RecapitulatifMensuelBailleur
-from .forms import (
-    RecapitulatifMensuelBailleurForm,
-    RecapitulatifMensuelValidationForm,
-    RecapitulatifMensuelEnvoiForm
-)
-from proprietes.models import Bailleur, Propriete
+from .models import RecapMensuel
+from .forms import RecapMensuelForm
+from proprietes.models import Bailleur
 
 logger = logging.getLogger(__name__)
 
@@ -46,15 +40,14 @@ def liste_recapitulatifs(request):
     statut = request.GET.get('statut')
     type_recap = request.GET.get('type')
     
-    recapitulatifs = RecapitulatifMensuelBailleur.objects.all()
+    recapitulatifs = RecapMensuel.objects.all()
     
     # Appliquer les filtres
     if mois:
-        recapitulatifs = recapitulatifs.filter(mois_recapitulatif__icontains=mois)
+        recapitulatifs = recapitulatifs.filter(mois_recap__icontains=mois)
     if statut:
         recapitulatifs = recapitulatifs.filter(statut=statut)
-    if type_recap:
-        recapitulatifs = recapitulatifs.filter(type_recapitulatif=type_recap)
+    # Note: type_recap filter removed as RecapMensuel model doesn't have type_recapitulatif field
     
     # Pagination
     paginator = Paginator(recapitulatifs, 20)
@@ -97,21 +90,26 @@ def creer_recapitulatif(request):
         return redirect('paiements:liste_recapitulatifs')
     
     if request.method == 'POST':
-        form = RecapitulatifMensuelBailleurForm(request.POST)
+        form = RecapMensuelForm(request.POST)
         if form.is_valid():
-            recapitulatif = form.save(commit=False)
-            recapitulatif.gestionnaire = request.user
-            recapitulatif.save()
-            
-            messages.success(
-                request,
-                f"Récapitulatif {recapitulatif.get_type_recapitulatif_display()} "
-                f"créé avec succès pour {recapitulatif.mois_recapitulatif.strftime('%B %Y')}"
-            )
-            
-            return redirect('paiements:detail_recapitulatif', recapitulatif.pk)
+            try:
+                recapitulatif = form.save(commit=False)
+                recapitulatif.cree_par = request.user
+                # Set garanties_suffisantes to True by default to avoid database constraint error
+                recapitulatif.garanties_suffisantes = True
+                recapitulatif.save()
+                
+                messages.success(
+                    request,
+                    f"Récapitulatif créé avec succès pour {recapitulatif.mois_recap.strftime('%B %Y')}"
+                )
+                
+                return redirect('paiements:dashboard')
+            except Exception as e:
+                messages.error(request, f"Erreur lors de la création: {str(e)}")
+                return render(request, 'paiements/recapitulatifs/creer_recapitulatif.html', {'form': form})
     else:
-        form = RecapitulatifMensuelBailleurForm()
+        form = RecapMensuelForm()
     
     context = {
         'page_title': 'Créer un Récapitulatif Mensuel',
@@ -134,25 +132,293 @@ def detail_recapitulatif(request, recapitulatif_id):
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
     
-    recapitulatif = get_object_or_404(RecapitulatifMensuelBailleur, pk=recapitulatif_id)
+    recapitulatif = get_object_or_404(RecapMensuel, pk=recapitulatif_id)
+    
+    # Calculer les totaux (version simplifiée)
+    totaux = {
+        'total_loyers_bruts': recapitulatif.total_loyers_bruts,
+        'total_charges_deductibles': recapitulatif.total_charges_deductibles,
+        'total_charges_bailleur': recapitulatif.total_charges_bailleur,
+        'total_net_a_payer': recapitulatif.total_net_a_payer,
+        'nombre_proprietes': recapitulatif.nombre_proprietes,
+        'nombre_contrats_actifs': recapitulatif.nombre_contrats_actifs,
+        'nombre_paiements_recus': recapitulatif.nombre_paiements_recus,
+    }
+    
+    context = {
+        'page_title': f'Récapitulatif - {recapitulatif.mois_recap.strftime("%B %Y")}',
+        'page_icon': 'file-earmark-text',
+        'recapitulatif': recapitulatif,
+        'totaux': totaux
+    }
+    
+    return render(request, 'paiements/recapitulatifs/detail_recapitulatif.html', context)
+
+
+@login_required
+def generer_recapitulatif_kbis(request, recapitulatif_id):
+    """Génère un récapitulatif A4 paysage avec en-tête KBIS et pied de page dynamique."""
+    
+    # Vérification des permissions
+    from core.utils import check_group_permissions_with_fallback
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:dashboard')
+    
+    recapitulatif = get_object_or_404(RecapMensuel, pk=recapitulatif_id)
     
     # Calculer les totaux
     totaux = recapitulatif.calculer_totaux_bailleur()
     
-    # Formulaires d'action
-    form_validation = RecapitulatifMensuelValidationForm()
-    form_envoi = RecapitulatifMensuelEnvoiForm()
+    # Récupérer les propriétés du bailleur avec leurs unités locatives
+    proprietes = recapitulatif.bailleur.proprietes.filter(
+        is_deleted=False
+    ).select_related('type_bien').prefetch_related(
+        'unites_locatives__contrats__locataire'
+    )
     
-    context = {
-        'page_title': f'Récapitulatif {recapitulatif.get_type_recapitulatif_display()} - {recapitulatif.mois_recapitulatif.strftime("%B %Y")}',
-        'page_icon': 'file-earmark-text',
-        'recapitulatif': recapitulatif,
-        'totaux': totaux,
-        'form_validation': form_validation,
-        'form_envoi': form_envoi
-    }
+    # Préparer les données pour le récapitulatif
+    proprietes_avec_details = []
+    for propriete in proprietes:
+        unites_locatives = propriete.unites_locatives.filter(is_deleted=False)
+        
+        # Calculer les totaux pour cette propriété
+        loyer_total = propriete.get_loyer_actuel_calcule()
+        
+        proprietes_avec_details.append({
+            'propriete': propriete,
+            'loyer_total': loyer_total,
+            'unites_locatives': unites_locatives
+        })
     
-    return render(request, 'paiements/recapitulatifs/detail_recapitulatif.html', context)
+    # Générer le récapitulatif KBIS
+    html_recapitulatif = _generer_recapitulatif_kbis_html(
+        recapitulatif, 
+        totaux, 
+        proprietes_avec_details
+    )
+    
+    return HttpResponse(html_recapitulatif, content_type='text/html')
+
+
+def _generer_recapitulatif_kbis_html(recapitulatif, totaux, proprietes_avec_details):
+    """Génère le HTML du récapitulatif KBIS A4 paysage."""
+    
+    # En-tête KBIS
+    entete_kbis = """
+    <div class="entete-principal">
+        <div class="logo-section">
+            <img src="/static/images/enteteEnImage.png" 
+                 alt="KBIS IMMOBILIER" 
+                 style="width: 100%; max-width: 100%; height: auto; display: block;">
+        </div>
+    </div>
+    """
+    
+    # Pied de page dynamique
+    try:
+        from core.models import ConfigurationEntreprise
+        config = ConfigurationEntreprise.get_configuration_active()
+        
+        pied_page = f"""
+        <div class="pied-page" style="margin-top: 30px; padding: 20px; border-top: 2px solid #333; text-align: center; font-size: 12px; color: #666;">
+            <div style="margin-bottom: 10px;">
+                <strong>{config.nom_entreprise}</strong><br>
+                {config.adresse}<br>
+                Tél: {config.telephone} | Email: {config.email}
+            </div>
+            <div style="font-style: italic;">
+                Document généré le {recapitulatif.date_creation.strftime('%d/%m/%Y à %H:%M')}
+            </div>
+        </div>
+        """
+    except:
+        pied_page = f"""
+        <div class="pied-page" style="margin-top: 30px; padding: 20px; border-top: 2px solid #333; text-align: center; font-size: 12px; color: #666;">
+            <div style="font-style: italic;">
+                Document généré le {recapitulatif.date_creation.strftime('%d/%m/%Y à %H:%M')}
+            </div>
+        </div>
+        """
+    
+    # Contenu principal
+    contenu = f"""
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Récapitulatif Mensuel - {recapitulatif.bailleur.get_nom_complet()}</title>
+        <style>
+            @page {{
+                size: A4 landscape;
+                margin: 1cm;
+            }}
+            body {{
+                font-family: Arial, sans-serif;
+                font-size: 12px;
+                line-height: 1.4;
+                margin: 0;
+                padding: 0;
+            }}
+            .entete-principal {{
+                margin-bottom: 20px;
+            }}
+            .titre-principal {{
+                text-align: center;
+                font-size: 18px;
+                font-weight: bold;
+                margin: 20px 0;
+                color: #333;
+            }}
+            .info-bailleur {{
+                background-color: #f8f9fa;
+                padding: 15px;
+                border-radius: 5px;
+                margin-bottom: 20px;
+            }}
+            .tableau-proprietes {{
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 20px;
+            }}
+            .tableau-proprietes th,
+            .tableau-proprietes td {{
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }}
+            .tableau-proprietes th {{
+                background-color: #f8f9fa;
+                font-weight: bold;
+            }}
+            .tableau-proprietes .propriete-principale {{
+                background-color: #e3f2fd;
+                font-weight: bold;
+            }}
+            .tableau-proprietes .unite-locative {{
+                background-color: #f5f5f5;
+                padding-left: 20px;
+            }}
+            .totaux {{
+                background-color: #e8f5e8;
+                font-weight: bold;
+            }}
+            .montant {{
+                text-align: right;
+            }}
+        </style>
+    </head>
+    <body>
+        {entete_kbis}
+        
+        <div class="titre-principal">
+            RÉCAPITULATIF MENSUEL - {recapitulatif.mois_recap.strftime('%B %Y').upper()}
+        </div>
+        
+        <div class="info-bailleur">
+            <h3>Bailleur: {recapitulatif.bailleur.get_nom_complet()}</h3>
+            <p><strong>Période:</strong> {recapitulatif.mois_recap.strftime('%B %Y')}</p>
+            <p><strong>Date de génération:</strong> {recapitulatif.date_creation.strftime('%d/%m/%Y à %H:%M')}</p>
+        </div>
+        
+        <table class="tableau-proprietes">
+            <thead>
+                <tr>
+                    <th>Propriété</th>
+                    <th>Type</th>
+                    <th>Adresse</th>
+                    <th>Loyer Brut</th>
+                    <th>Charges Déductibles</th>
+                    <th>Charges Bailleur</th>
+                    <th>Net à Payer</th>
+                </tr>
+            </thead>
+            <tbody>
+    """
+    
+    # Ajouter les propriétés
+    for item in proprietes_avec_details:
+        propriete = item['propriete']
+        loyer_total = item['loyer_total']
+        unites_locatives = item['unites_locatives']
+        
+        # Ligne principale de la propriété
+        contenu += f"""
+                <tr class="propriete-principale">
+                    <td><strong>{propriete.titre}</strong></td>
+                    <td>{propriete.type_bien.nom if propriete.type_bien else 'N/A'}</td>
+                    <td>{propriete.adresse}</td>
+                    <td class="montant">{loyer_total:,.0f} F CFA</td>
+                    <td class="montant">0 F CFA</td>
+                    <td class="montant">0 F CFA</td>
+                    <td class="montant">{loyer_total:,.0f} F CFA</td>
+                </tr>
+        """
+        
+        # Ajouter les unités locatives si elles existent
+        for unite in unites_locatives:
+            contrats_actifs = unite.contrats_actifs
+            if contrats_actifs.exists():
+                for contrat in contrats_actifs:
+                    loyer_unite = contrat.loyer_mensuel or 0
+                    charges_unite = contrat.charges_mensuelles or 0
+                    total_unite = loyer_unite + charges_unite
+                    
+                    contenu += f"""
+                    <tr class="unite-locative">
+                        <td>└─ {unite.numero_unite} - {unite.nom}</td>
+                        <td>{unite.type_unite}</td>
+                        <td>{unite.etage} - {unite.surface}m²</td>
+                        <td class="montant">{loyer_unite:,.0f} F CFA</td>
+                        <td class="montant">{charges_unite:,.0f} F CFA</td>
+                        <td class="montant">0 F CFA</td>
+                        <td class="montant">{total_unite:,.0f} F CFA</td>
+                    </tr>
+                    """
+            else:
+                loyer_unite = unite.loyer_mensuel or 0
+                charges_unite = unite.charges_mensuelles or 0
+                total_unite = loyer_unite + charges_unite
+                
+                contenu += f"""
+                <tr class="unite-locative">
+                    <td>└─ {unite.numero_unite} - {unite.nom}</td>
+                    <td>{unite.type_unite}</td>
+                    <td>{unite.etage} - {unite.surface}m²</td>
+                    <td class="montant">{loyer_unite:,.0f} F CFA</td>
+                    <td class="montant">{charges_unite:,.0f} F CFA</td>
+                    <td class="montant">0 F CFA</td>
+                    <td class="montant">{total_unite:,.0f} F CFA</td>
+                </tr>
+                """
+    
+    # Ajouter les totaux
+    contenu += f"""
+                <tr class="totaux">
+                    <td colspan="3"><strong>TOTAL GÉNÉRAL</strong></td>
+                    <td class="montant"><strong>{totaux['total_loyers_bruts']:,.0f} F CFA</strong></td>
+                    <td class="montant"><strong>{totaux['total_charges_deductibles']:,.0f} F CFA</strong></td>
+                    <td class="montant"><strong>{totaux['total_charges_bailleur']:,.0f} F CFA</strong></td>
+                    <td class="montant"><strong>{totaux['total_net_a_payer']:,.0f} F CFA</strong></td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div style="margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+            <h4>Résumé du Récapitulatif</h4>
+            <p><strong>Nombre de propriétés:</strong> {totaux['nombre_proprietes']}</p>
+            <p><strong>Nombre de contrats actifs:</strong> {totaux['nombre_contrats_actifs']}</p>
+            <p><strong>Nombre de paiements reçus:</strong> {totaux['nombre_paiements_recus']}</p>
+        </div>
+        
+        {pied_page}
+    </body>
+    </html>
+    """
+    
+    return contenu
 
 
 @login_required
@@ -169,7 +435,7 @@ def valider_recapitulatif(request, recapitulatif_id):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
     
-    recapitulatif = get_object_or_404(RecapitulatifMensuelBailleur, pk=recapitulatif_id)
+    recapitulatif = get_object_or_404(RecapMensuel, pk=recapitulatif_id)
     
     if not recapitulatif.peut_etre_valide():
         return JsonResponse({
@@ -214,7 +480,7 @@ def envoyer_recapitulatif(request, recapitulatif_id):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
     
-    recapitulatif = get_object_or_404(RecapitulatifMensuelBailleur, pk=recapitulatif_id)
+    recapitulatif = get_object_or_404(RecapMensuel, pk=recapitulatif_id)
     
     if not recapitulatif.peut_etre_envoye():
         return JsonResponse({
@@ -259,7 +525,7 @@ def marquer_paye_recapitulatif(request, recapitulatif_id):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
     
-    recapitulatif = get_object_or_404(RecapitulatifMensuelBailleur, pk=recapitulatif_id)
+    recapitulatif = get_object_or_404(RecapMensuel, pk=recapitulatif_id)
     
     if not recapitulatif.peut_etre_paye():
         return JsonResponse({
@@ -301,7 +567,7 @@ def telecharger_pdf_recapitulatif(request, recapitulatif_id):
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
     
-    recapitulatif = get_object_or_404(RecapitulatifMensuelBailleur, pk=recapitulatif_id)
+    recapitulatif = get_object_or_404(RecapMensuel, pk=recapitulatif_id)
     
     try:
         # Générer le PDF
@@ -336,7 +602,7 @@ def apercu_recapitulatif(request, recapitulatif_id):
         return redirect('paiements:dashboard')
     
     try:
-        recapitulatif = RecapitulatifMensuelBailleur.objects.get(pk=recapitulatif_id)
+        recapitulatif = RecapMensuel.objects.get(pk=recapitulatif_id)
         totaux = recapitulatif.calculer_totaux_bailleur()
         
         context = {
@@ -348,7 +614,7 @@ def apercu_recapitulatif(request, recapitulatif_id):
         
         return render(request, 'paiements/recapitulatifs/apercu_recapitulatif.html', context)
         
-    except RecapitulatifMensuelBailleur.DoesNotExist:
+    except RecapMensuel.DoesNotExist:
         messages.error(request, f"Récapitulatif avec l'ID {recapitulatif_id} introuvable.")
         return redirect('paiements:liste_recaps_mensuels')
     except Exception as e:
@@ -368,14 +634,14 @@ def statistiques_recapitulatifs(request):
         return redirect('paiements:dashboard')
     
     # Statistiques par mois
-    stats_mensuelles = RecapitulatifMensuelBailleur.objects.values('mois_recapitulatif').annotate(
+    stats_mensuelles = RecapMensuel.objects.values('mois_recap').annotate(
         nombre=Count('id')
-    ).order_by('-mois_recapitulatif')[:12]
+    ).order_by('-mois_recap')[:12]
     
     # Calculer les totaux pour chaque mois
     for stat in stats_mensuelles:
-        mois = stat['mois_recapitulatif']
-        recapitulatifs_mois = RecapitulatifMensuelBailleur.objects.filter(mois_recapitulatif=mois)
+        mois = stat['mois_recap']
+        recapitulatifs_mois = RecapMensuel.objects.filter(mois_recap=mois)
         
         from decimal import Decimal
         total_loyers = Decimal('0')
@@ -393,14 +659,12 @@ def statistiques_recapitulatifs(request):
         stat['total_net'] = total_net
     
     # Statistiques par statut
-    stats_statut = RecapitulatifMensuelBailleur.objects.values('statut').annotate(
+    stats_statut = RecapMensuel.objects.values('statut').annotate(
         nombre=Count('id')
     ).order_by('statut')
     
-    # Statistiques par type
-    stats_type = RecapitulatifMensuelBailleur.objects.values('type_recapitulatif').annotate(
-        nombre=Count('id')
-    ).order_by('type_recapitulatif')
+    # Statistiques par type - removed as RecapMensuel model doesn't have type_recapitulatif field
+    stats_type = []
     
     context = {
         'page_title': 'Statistiques des Récapitulatifs',
@@ -425,7 +689,6 @@ def creer_recapitulatif_test(request):
         return redirect('paiements:dashboard')
     
     try:
-        from proprietes.models import Bailleur
         from datetime import date
         
         # Vérifier s'il y a des bailleurs
@@ -437,12 +700,12 @@ def creer_recapitulatif_test(request):
         bailleur = Bailleur.objects.first()
         
         # Créer un récapitulatif de test
-        recapitulatif = RecapitulatifMensuelBailleur.objects.create(
+        recapitulatif = RecapMensuel.objects.create(
             bailleur=bailleur,
-            mois_recapitulatif=date.today().replace(day=1),
-            type_recapitulatif='mensuel',
-            statut='en_preparation',
-            gestionnaire=request.user
+            mois_recap=date.today().replace(day=1),
+            statut='brouillon',
+            cree_par=request.user,
+            garanties_suffisantes=True
         )
         
         messages.success(request, f"Récapitulatif de test créé avec l'ID {recapitulatif.id}")
@@ -471,9 +734,8 @@ def generer_recapitulatif_automatique(request):
         # Vérifier s'il existe déjà un récapitulatif pour ce mois
         mois_actuel = timezone.now().replace(day=1)
         
-        if RecapitulatifMensuelBailleur.objects.filter(
-            mois_recapitulatif=mois_actuel,
-            type_recapitulatif='mensuel'
+        if RecapMensuel.objects.filter(
+            mois_recap=mois_actuel
         ).exists():
             return JsonResponse({
                 'success': False,
@@ -481,11 +743,10 @@ def generer_recapitulatif_automatique(request):
             })
         
         # Créer le récapitulatif automatiquement
-        recapitulatif = RecapitulatifMensuelBailleur.objects.create(
-            mois_recapitulatif=mois_actuel,
-            type_recapitulatif='mensuel',
-            gestionnaire=request.user,
-            notes='Généré automatiquement'
+        recapitulatif = RecapMensuel.objects.create(
+            mois_recap=mois_actuel,
+            cree_par=request.user,
+            garanties_suffisantes=True
         )
         
         # Log de l'action

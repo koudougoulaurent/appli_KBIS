@@ -23,8 +23,8 @@ class ChargeDeductibleForm(forms.ModelForm):
     class Meta:
         model = ChargeDeductible
         fields = [
-            'contrat', 'montant', 'libelle', 'description', 'type_charge',
-            'date_charge', 'facture_numero', 'fournisseur', 'justificatif_url'
+            'contrat', 'montant', 'description',
+            'date_charge'
         ]
         widgets = {
             'contrat': forms.Select(attrs={
@@ -126,14 +126,14 @@ class RechercheChargesForm(forms.Form):
     )
     
     type_charge = forms.ChoiceField(
-        choices=[('', 'Tous les types')] + ChargeDeductible._meta.get_field('type_charge').choices,
+        choices=[('', 'Tous les types')],  # type_charge supprimé
         required=False,
         widget=forms.Select(attrs={'class': 'form-control'}),
         label=_('Type de charge')
     )
     
     statut = forms.ChoiceField(
-        choices=[('', 'Tous les statuts')] + ChargeDeductible._meta.get_field('statut').choices,
+        choices=[('', 'Tous les statuts')],  # statut supprimé
         required=False,
         widget=forms.Select(attrs={'class': 'form-control'}),
         label=_('Statut')
@@ -244,7 +244,7 @@ class ImportChargesForm(forms.Form):
     )
     
     type_charge_defaut = forms.ChoiceField(
-        choices=ChargeDeductible._meta.get_field('type_charge').choices,
+        choices=[('', 'Sélectionner un type')],  # type_charge supprimé
         widget=forms.Select(attrs={'class': 'form-control'}),
         label=_('Type de charge par défaut'),
         help_text=_('Type appliqué si non spécifié dans le fichier')

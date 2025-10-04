@@ -10,7 +10,7 @@ from datetime import date, datetime
 from typing import Dict, List, Optional, Tuple
 from proprietes.models import ChargesBailleur, Bailleur, Propriete
 from contrats.models import Contrat
-from paiements.models import Paiement, RetraitBailleur, RecapMensuel
+from paiements.models import Paiement, RetraitBailleur
 from core.models import AuditLog
 
 
@@ -126,12 +126,12 @@ class ServiceChargesBailleurIntelligent:
             charges_details = charges_data['charges_details']
             
             # Mettre à jour le montant du retrait
-            montant_initial = retrait.montant_retrait
-            montant_net = montant_initial - total_charges
+            montant_initial = retrait.montant_loyers_bruts
+            montant_net = montant_initial - retrait.montant_charges_deductibles - total_charges
             
             # Mettre à jour le retrait
-            retrait.montant_retrait = montant_net
-            retrait.charges_deductibles = total_charges
+            retrait.montant_charges_bailleur = total_charges
+            retrait.montant_net_a_payer = montant_net
             retrait.save()
             
             # Marquer les charges comme déduites
@@ -170,7 +170,7 @@ class ServiceChargesBailleurIntelligent:
             }
     
     @staticmethod
-    def integrer_charges_dans_recap(recap: RecapMensuel, mois: date = None) -> Dict:
+    def integrer_charges_dans_recap(recap, mois: date = None) -> Dict:  # RecapMensuel supprimé
         """
         Intègre automatiquement les charges bailleur dans un récapitulatif mensuel.
         
@@ -520,25 +520,10 @@ class ServiceChargesBailleurIntelligent:
             pass  # Ne pas faire échouer l'intégration pour un problème de log
     
     @staticmethod
-    def _log_integration_recap(recap: RecapMensuel, charges_details: List, total_charges: Decimal):
+    def _log_integration_recap(recap, charges_details: List, total_charges: Decimal):  # RecapMensuel supprimé
         """Crée un log d'intégration des charges dans un récapitulatif."""
-        try:
-            from django.contrib.contenttypes.models import ContentType
-            content_type = ContentType.objects.get_for_model(RecapMensuel)
-            AuditLog.objects.create(
-                content_type=content_type,
-                object_id=recap.id,
-                action='update',
-                user=recap.cree_par,
-                details={
-                    'description': f'Intégration automatique de {len(charges_details)} charges pour {total_charges} F CFA',
-                    'nombre_charges': len(charges_details),
-                    'total_charges': str(total_charges),
-                    'montant_net': str(recap.total_net_a_payer)
-                }
-            )
-        except Exception:
-            pass  # Ne pas faire échouer l'intégration pour un problème de log
+        # Méthode commentée car RecapMensuel n'existe plus
+        pass
     
     @staticmethod
     def _log_erreur(methode: str, message: str):

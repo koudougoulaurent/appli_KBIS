@@ -28,6 +28,13 @@
                         <i class="bi bi-pencil me-2"></i> Modifier
                     </a>
                     {% endif %}
+                    {% if peut_etre_modifie and total_charges_disponibles > 0 %}
+                    <a href="{% url 'paiements:integrer_charges_retrait' retrait.id %}" 
+                       class="btn btn-warning"
+                       onclick="return confirm('Intégrer toutes les charges disponibles ({{ total_charges_disponibles|floatformat:0|intcomma }} F CFA) dans ce retrait ?')">
+                        <i class="bi bi-tools me-2"></i> Intégrer les charges
+                    </a>
+                    {% endif %}
                     {% if retrait.recu_retrait %}
                     <a href="{% url 'paiements:recu_print' retrait.recu_retrait.id %}" 
                        class="btn btn-outline-info" target="_blank">
@@ -35,7 +42,7 @@
                     </a>
                     {% endif %}
                     {% if user.is_privilege_user %}
-                    <a href="{% url 'paiements:retrait_supprimer' retrait.id %}" 
+                    <a href="{% url 'paiements:supprimer_retrait' retrait.id %}" 
                        class="btn btn-outline-danger"
                        onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce retrait ?')">
                         <i class="bi bi-trash me-2"></i> Supprimer
@@ -199,21 +206,98 @@
                 </div>
             </div>
 
-            <!-- Détail des propriétés louées -->
+            <!-- Section Intégration des Charges -->
+            {% if peut_etre_modifie and charges_disponibles %}
             <div class="card mb-4">
                 <div class="card-header">
                     <h6 class="mb-0">
-                        <i class="bi bi-house-door me-2"></i> Détail des Propriétés Louées
-                        <span class="badge bg-primary ms-2">{{ proprietes_louees|length }} propriété{{ proprietes_louees|length|pluralize }}</span>
+                        <i class="bi bi-tools me-2"></i> Intégration des Charges Bailleur
+                        <span class="badge bg-warning ms-2">{{ charges_disponibles|length }} charge{{ charges_disponibles|length|pluralize }} disponible{{ charges_disponibles|length|pluralize }}</span>
                     </h6>
                 </div>
                 <div class="card-body">
-                    {% if proprietes_louees %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Charges disponibles :</strong> {{ total_charges_disponibles|floatformat:0|intcomma }} F CFA
+                        <br>
+                        <small>Ces charges peuvent être intégrées dans ce retrait pour être déduites du montant final.</small>
+                    </div>
+                    
+                    <div class="d-flex gap-2 mb-3">
+                        <a href="{% url 'paiements:integrer_charges_retrait' retrait.id %}" 
+                           class="btn btn-warning"
+                           onclick="return confirm('Êtes-vous sûr de vouloir intégrer toutes les charges disponibles ?')">
+                            <i class="bi bi-tools me-2"></i> Intégrer toutes les charges
+                        </a>
+                        <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#chargesModal">
+                            <i class="bi bi-list-ul me-2"></i> Voir les détails
+                        </button>
+                    </div>
+
+                    <!-- Liste des charges disponibles -->
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Titre</th>
+                                    <th>Type</th>
+                                    <th>Propriété</th>
+                                    <th>Date</th>
+                                    <th class="text-end">Montant</th>
+                                    <th class="text-end">Déductible</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for charge_detail in charges_disponibles %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold">{{ charge_detail.charge.titre }}</div>
+                                        <small class="text-muted">{{ charge_detail.charge.description|truncatechars:50 }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ charge_detail.charge.get_type_charge_display|lower }}">
+                                            {{ charge_detail.type_charge }}
+                                        </span>
+                                    </td>
+                                    <td>{{ charge_detail.propriete.nom }}</td>
+                                    <td>{{ charge_detail.date_charge|date:"d/m/Y" }}</td>
+                                    <td class="text-end">{{ charge_detail.charge.montant|floatformat:0|intcomma }} F CFA</td>
+                                    <td class="text-end">
+                                        <span class="fw-bold text-warning">{{ charge_detail.montant_deductible|floatformat:0|intcomma }} F CFA</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="{% url 'paiements:integrer_charge_specifique' retrait.id charge_detail.charge.id %}" 
+                                           class="btn btn-sm btn-outline-warning"
+                                           onclick="return confirm('Intégrer cette charge dans le retrait ?')">
+                                            <i class="bi bi-plus-circle me-1"></i> Intégrer
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Détail des propriétés et unités locatives -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-house-door me-2"></i> Détail des Propriétés et Unités Locatives
+                        <span class="badge bg-primary ms-2">{{ nombre_proprietes }} propriété{{ nombre_proprietes|pluralize }}</span>
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if proprietes_data %}
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Propriété</th>
+                                    <th>Propriété / Unité</th>
+                                    <th>Type</th>
                                     <th>Locataire</th>
                                     <th>Statut</th>
                                     <th class="text-end">Loyer Mensuel</th>
@@ -225,110 +309,250 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for detail in proprietes_louees %}
-                                <tr>
+                                {% for propriete in proprietes_data %}
+                                <!-- Propriété principale -->
+                                <tr class="propriete-principale-row">
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <i class="bi bi-house-door text-primary me-2"></i>
+                                            <i class="bi bi-building text-primary me-2"></i>
                                             <div>
-                                                <div class="fw-bold">{{ detail.propriete.titre }}</div>
-                                                <small class="text-muted">{{ detail.propriete.numero_propriete }}</small>
+                                                <div class="fw-bold">{{ propriete.titre }}</div>
+                                                <small class="text-muted">{{ propriete.adresse }}</small>
                                             </div>
                                         </div>
                                     </td>
                                     <td>
-                                        {% if detail.a_contrat_actif %}
-                                        <div class="d-flex align-items-center">
-                                            <i class="bi bi-person-circle text-success me-2"></i>
-                                            <div>
-                                                <div class="fw-bold">{{ detail.locataire.get_nom_complet }}</div>
-                                                <small class="text-muted">{{ detail.contrat.numero_contrat }}</small>
-                                            </div>
-                                        </div>
-                                        {% else %}
-                                        <div class="d-flex align-items-center">
-                                            <i class="bi bi-exclamation-triangle text-warning me-2"></i>
-                                            <div>
-                                                <div class="fw-bold text-muted">Aucun locataire</div>
-                                                <small class="text-muted">{{ detail.statut_contrat }}</small>
-                                            </div>
-                                        </div>
-                                        {% endif %}
+                                        <span class="badge bg-primary">Propriété</span>
                                     </td>
                                     <td>
-                                        {% if detail.a_contrat_actif %}
-                                        <span class="badge bg-success">
-                                            <i class="bi bi-check-circle me-1"></i>Actif
+                                        <span class="text-muted">Contrat actif</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if propriete.statut == 'loue' %}success{% else %}secondary{% endif %}">
+                                            {{ propriete.statut|title }}
                                         </span>
-                                        {% else %}
-                                        <span class="badge bg-warning">
-                                            <i class="bi bi-exclamation-triangle me-1"></i>Sans contrat
-                                        </span>
-                                        {% endif %}
                                     </td>
                                     <td class="text-end">
                                         {% if display_amounts %}
-                                            {% if detail.a_contrat_actif %}
-                                                <span class="fw-bold text-success">{{ detail.loyer_mensuel|floatformat:0|intcomma }} F CFA</span>
-                                            {% else %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
+                                            {{ propriete.loyer_mensuel|floatformat:0|intcomma }} F CFA
                                         {% else %}
                                             <span class="text-muted">***</span>
                                         {% endif %}
                                     </td>
                                     <td class="text-end">
                                         {% if display_amounts %}
-                                            {% if detail.a_contrat_actif %}
-                                                <span class="text-info">{{ detail.charges_mensuelles|floatformat:0|intcomma }} F CFA</span>
-                                            {% else %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
+                                            {{ propriete.charges_mensuelles|floatformat:0|intcomma }} F CFA
                                         {% else %}
                                             <span class="text-muted">***</span>
                                         {% endif %}
                                     </td>
                                     <td class="text-end">
                                         {% if display_amounts %}
-                                            {% if detail.a_contrat_actif %}
-                                                <span class="fw-bold text-primary">{{ detail.loyer_brut|floatformat:0|intcomma }} F CFA</span>
-                                            {% else %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
+                                            {{ propriete.loyer_brut|floatformat:0|intcomma }} F CFA
                                         {% else %}
                                             <span class="text-muted">***</span>
                                         {% endif %}
                                     </td>
                                     <td class="text-end">
                                         {% if display_amounts %}
-                                            {% if detail.a_contrat_actif %}
-                                                <span class="text-danger">-{{ detail.charges_deductibles|floatformat:0|intcomma }} F CFA</span>
-                                            {% else %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
+                                            <span class="text-danger">-{{ propriete.charges_deductibles|floatformat:0|intcomma }} F CFA</span>
                                         {% else %}
                                             <span class="text-muted">***</span>
                                         {% endif %}
                                     </td>
                                     <td class="text-end">
                                         {% if display_amounts %}
-                                            <span class="text-warning">-{{ detail.charges_bailleur|floatformat:0|intcomma }} F CFA</span>
+                                            <span class="text-warning">-{{ propriete.charges_bailleur|floatformat:0|intcomma }} F CFA</span>
                                         {% else %}
                                             <span class="text-muted">***</span>
                                         {% endif %}
                                     </td>
                                     <td class="text-end">
                                         {% if display_amounts %}
-                                            {% if detail.a_contrat_actif %}
-                                                <span class="fw-bold text-success">{{ detail.montant_net|floatformat:0|intcomma }} F CFA</span>
-                                            {% else %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
+                                            <span class="fw-bold text-success">{{ propriete.montant_net|floatformat:0|intcomma }} F CFA</span>
                                         {% else %}
                                             <span class="text-muted">***</span>
                                         {% endif %}
                                     </td>
                                 </tr>
+                                
+                                <!-- Unités locatives de cette propriété -->
+                                {% if propriete.unites_locatives %}
+                                    {% for unite in propriete.unites_locatives %}
+                                    <tr class="unite-locative-row">
+                                        <td>
+                                            <div class="d-flex align-items-center ms-4">
+                                                <i class="bi bi-door-open text-info me-2"></i>
+                                                <div>
+                                                    <div class="fw-bold text-info unite-info">{{ unite.numero_unite }} - {{ unite.nom }}</div>
+                                                    <small class="unite-details">
+                                                        <i class="bi bi-house me-1"></i>{{ unite.type_unite|title }} 
+                                                        <span class="mx-2">•</span>
+                                                        <i class="bi bi-rulers me-1"></i>{{ unite.surface }} m²
+                                                        {% if unite.etage is not None %}
+                                                        <span class="mx-2">•</span>
+                                                        <i class="bi bi-layers me-1"></i>Étage {{ unite.etage }}
+                                                        {% endif %}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info badge-unite">
+                                                <i class="bi bi-building me-1"></i>{{ unite.get_type_unite_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if unite.contrats_actifs %}
+                                                {% for contrat in unite.contrats_actifs %}
+                                                    <div class="small">
+                                                        <i class="bi bi-person-circle me-1"></i>{{ contrat.locataire.get_nom_complet }}
+                                                    </div>
+                                                {% endfor %}
+                                            {% else %}
+                                                <span class="text-muted">
+                                                    <i class="bi bi-dash-circle me-1"></i>Libre
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{% if unite.statut == 'occupee' %}success{% elif unite.statut == 'disponible' %}primary{% elif unite.statut == 'reservee' %}warning{% else %}secondary{% endif %}">
+                                                {% if unite.statut == 'occupee' %}
+                                                    <i class="bi bi-check-circle me-1"></i>Occupée
+                                                {% elif unite.statut == 'disponible' %}
+                                                    <i class="bi bi-circle me-1"></i>Disponible
+                                                {% elif unite.statut == 'reservee' %}
+                                                    <i class="bi bi-clock me-1"></i>Réservée
+                                                {% else %}
+                                                    <i class="bi bi-question-circle me-1"></i>{{ unite.get_statut_display }}
+                                                {% endif %}
+                                            </span>
+                                        </td>
+                                        <td class="text-end">
+                                            {% if display_amounts %}
+                                                {% if unite.contrats_actifs %}
+                                                    {% for contrat in unite.contrats_actifs %}
+                                                        <span class="fw-bold">{{ contrat.loyer_mensuel|floatformat:0|intcomma }} F CFA</span>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <span class="fw-bold">{{ unite.loyer_mensuel|floatformat:0|intcomma }} F CFA</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">***</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if display_amounts %}
+                                                {% if unite.contrats_actifs %}
+                                                    {% for contrat in unite.contrats_actifs %}
+                                                        <span class="text-muted">{{ contrat.charges_mensuelles|floatformat:0|intcomma }} F CFA</span>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <span class="text-muted">{{ unite.charges_mensuelles|floatformat:0|intcomma }} F CFA</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">***</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if display_amounts %}
+                                                {% if unite.contrats_actifs %}
+                                                    {% for contrat in unite.contrats_actifs %}
+                                                        <span class="fw-bold text-primary">{{ contrat.get_loyer_total|floatformat:0|intcomma }} F CFA</span>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <span class="fw-bold text-primary">{{ unite.get_loyer_total|floatformat:0|intcomma }} F CFA</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">***</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if display_amounts %}
+                                                <span class="text-danger">-0 F CFA</span>
+                                            {% else %}
+                                                <span class="text-muted">***</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if display_amounts %}
+                                                <span class="text-warning">-0 F CFA</span>
+                                            {% else %}
+                                                <span class="text-muted">***</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if display_amounts %}
+                                                {% if unite.contrats_actifs %}
+                                                    {% for contrat in unite.contrats_actifs %}
+                                                        <span class="fw-bold text-success">{{ contrat.get_loyer_total|floatformat:0|intcomma }} F CFA</span>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <span class="fw-bold text-success">{{ unite.get_loyer_total|floatformat:0|intcomma }} F CFA</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">***</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                    
+                                    <!-- Sous-total pour les unités de cette propriété -->
+                                    <tr class="sous-total-unites">
+                                        <td colspan="3" class="text-end fw-bold">
+                                            <i class="bi bi-calculator me-2"></i>Sous-total unités de {{ propriete.titre }}:
+                                        </td>
+                                        <td class="text-end fw-bold">
+                                            {% if display_amounts %}
+                                                {{ propriete.nombre_unites }} unité{{ propriete.nombre_unites|pluralize }}
+                                            {% else %}
+                                                <span class="text-muted">***</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end fw-bold">
+                                            {% if display_amounts %}
+                                                {{ propriete.total_loyer_unites|floatformat:0|intcomma }} F CFA
+                                            {% else %}
+                                                <span class="text-muted">***</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end fw-bold">
+                                            {% if display_amounts %}
+                                                {{ propriete.total_charges_unites|floatformat:0|intcomma }} F CFA
+                                            {% else %}
+                                                <span class="text-muted">***</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end fw-bold text-primary">
+                                            {% if display_amounts %}
+                                                {{ propriete.total_brut_unites|floatformat:0|intcomma }} F CFA
+                                            {% else %}
+                                                <span class="text-muted">***</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end fw-bold text-danger">
+                                            {% if display_amounts %}
+                                                -{{ propriete.charges_deductibles|floatformat:0|intcomma }} F CFA
+                                            {% else %}
+                                                <span class="text-muted">***</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end fw-bold text-warning">
+                                            {% if display_amounts %}
+                                                -{{ propriete.charges_bailleur|floatformat:0|intcomma }} F CFA
+                                            {% else %}
+                                                <span class="text-muted">***</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end fw-bold text-success">
+                                            {% if display_amounts %}
+                                                {{ propriete.montant_net|floatformat:0|intcomma }} F CFA
+                                            {% else %}
+                                                <span class="text-muted">***</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endif %}
                                 {% endfor %}
                             </tbody>
                             <tfoot class="table-light">
@@ -551,7 +775,7 @@
                 <div class="card-body">
                     <div class="d-grid gap-2">
                         {% if retrait.peut_etre_valide %}
-                        <form method="post" action="{% url 'paiements:retrait_validate' retrait.id %}">
+                        <form method="post" action="{% url 'paiements:valider_retrait' retrait.id %}">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-success w-100">
                                 <i class="bi bi-check-circle me-2"></i> Valider le Retrait
@@ -560,7 +784,7 @@
                         {% endif %}
                         
                         {% if retrait.peut_etre_paye %}
-                        <form method="post" action="{% url 'paiements:retrait_mark_paid' retrait.id %}">
+                        <form method="post" action="{% url 'paiements:marquer_retrait_paye' retrait.id %}">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-info w-100">
                                 <i class="bi bi-cash-coin me-2"></i> Marquer comme Payé
@@ -618,7 +842,7 @@
                     
                     <div class="mb-2">
                         <strong>Propriétés louées:</strong> 
-                        <span class="badge bg-success">{{ proprietes_louees|length }}</span>
+                        <span class="badge bg-success">{{ nombre_proprietes }}</span>
                     </div>
                 </div>
             </div>
@@ -695,6 +919,61 @@
         </div>
     </div>
 </div>
+
+<!-- Actions rapides -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-lightning me-2"></i> Actions Rapides
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    {% if retrait.statut == 'en_attente' %}
+                        <a href="{% url 'paiements:valider_retrait' retrait.pk %}" 
+                           class="btn btn-success">
+                            <i class="bi bi-check-circle me-1"></i> Valider le Retrait
+                        </a>
+                    {% elif retrait.statut == 'valide' %}
+                        <a href="{% url 'paiements:marquer_retrait_paye' retrait.pk %}" 
+                           class="btn btn-primary">
+                            <i class="bi bi-cash-coin me-1"></i> Effectuer le Retrait
+                        </a>
+                    {% elif retrait.statut == 'paye' %}
+                        <span class="btn btn-success disabled">
+                            <i class="bi bi-check-circle-fill me-1"></i> Retrait Effectué
+                        </span>
+                    {% endif %}
+                    
+                    {% if retrait.statut == 'paye' %}
+                        <a href="{% url 'paiements:generer_quittance_retrait' retrait.pk %}" 
+                           class="btn btn-info">
+                            <i class="bi bi-file-earmark-text me-1"></i> Générer Quittance
+                        </a>
+                        <a href="{% url 'paiements:telecharger_quittance_retrait' retrait.pk %}" 
+                           class="btn btn-warning">
+                            <i class="bi bi-download me-1"></i> Télécharger Quittance
+                        </a>
+                    {% endif %}
+                    
+                    {% if retrait.statut != 'annule' and retrait.statut != 'paye' %}
+                        <button type="button" class="btn btn-danger" 
+                                onclick="annulerRetrait({{ retrait.pk }})">
+                            <i class="bi bi-x-circle me-1"></i> Annuler le Retrait
+                        </button>
+                    {% endif %}
+                    
+                    <a href="{% url 'paiements:retraits_liste' %}" 
+                       class="btn btn-secondary">
+                        <i class="bi bi-arrow-left me-1"></i> Retour à la Liste
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_css %}
@@ -738,6 +1017,77 @@
 .timeline-desc {
     font-size: 0.875rem;
     color: #6c757d;
+}
+
+/* Styles pour les unités locatives */
+.unite-locative-row {
+    background-color: #f8f9fa !important;
+    border-left: 4px solid #17a2b8 !important;
+}
+
+.unite-locative-row:hover {
+    background-color: #e9ecef !important;
+}
+
+.propriete-principale-row {
+    background-color: #e3f2fd !important;
+    border-left: 4px solid #2196f3 !important;
+}
+
+.propriete-principale-row:hover {
+    background-color: #bbdefb !important;
+}
+
+.sous-total-unites {
+    background-color: #fff3cd !important;
+    border-top: 2px solid #ffc107 !important;
+    font-weight: bold;
+}
+
+.unite-info {
+    font-size: 0.9rem;
+}
+
+.unite-details {
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+.unite-details i {
+    width: 12px;
+    text-align: center;
+}
+
+.badge-unite {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Amélioration de la lisibilité */
+.table th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+/* Indentation pour les unités */
+.unite-indent {
+    margin-left: 2rem;
+    position: relative;
+}
+
+.unite-indent::before {
+    content: '';
+    position: absolute;
+    left: -1.5rem;
+    top: 50%;
+    width: 1rem;
+    height: 1px;
+    background-color: #dee2e6;
 }
 </style>
 {% endblock %}

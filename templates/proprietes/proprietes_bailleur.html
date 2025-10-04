@@ -127,7 +127,7 @@
                                         </td>
                                         <td>{{ propriete.surface }} m²</td>
                                         <td>
-                                            <strong class="text-success">{{ propriete.loyer_actuel|floatformat:0 }} F CFA</strong>
+                                            <strong class="text-success">{{ propriete.get_loyer_actuel_calcule|floatformat:0 }} F CFA</strong>
                                         </td>
                                         <td>
                                             {% if propriete.disponible %}

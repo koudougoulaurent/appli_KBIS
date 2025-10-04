@@ -25,7 +25,7 @@ urlpatterns = [
     path('ajouter/', views.ajouter_contrat, name='ajouter'),
     path('modifier/<int:pk>/', views.modifier_contrat, name='modifier'),
     path('resilier/<int:pk>/', views.resilier_contrat, name='resilier'),
-    path('supprimer/<int:pk>/', views.supprimer_contrat, name='supprimer'),
+    path('supprimer/<int:pk>/', views.SupprimerContratView.as_view(), name='supprimer_contrat'),
     
     # URLs pour les quittances
     path('quittances/', quittance_list, name='quittances_liste'),

@@ -698,6 +698,50 @@ class Propriete(models.Model):
         charges = self.charges_locataire or 0
         return loyer + charges
     
+    def get_loyer_actuel_calcule(self):
+        """Calcule le loyer actuel basé sur les unités locatives ou le loyer direct."""
+        from decimal import Decimal
+        
+        # Si la propriété a des unités locatives, calculer à partir des contrats des unités
+        unites_locatives = self.unites_locatives.filter(is_deleted=False)
+        
+        if unites_locatives.exists():
+            loyer_total = Decimal('0')
+            
+            for unite in unites_locatives:
+                # Récupérer les contrats actifs de cette unité
+                contrats_unite = unite.contrats.filter(
+                    est_actif=True,
+                    est_resilie=False
+                )
+                
+                if contrats_unite.exists():
+                    for contrat in contrats_unite:
+                        contrat_loyer = Decimal(str(contrat.loyer_mensuel or '0'))
+                        contrat_charges = Decimal(str(contrat.charges_mensuelles or '0'))
+                        loyer_total += contrat_loyer + contrat_charges
+                else:
+                    # Si pas de contrat, utiliser les montants de l'unité
+                    unite_loyer = Decimal(str(unite.loyer_mensuel or '0'))
+                    unite_charges = Decimal(str(unite.charges_mensuelles or '0'))
+                    loyer_total += unite_loyer + unite_charges
+            
+            return loyer_total
+        else:
+            # Si pas d'unités, chercher un contrat direct sur la propriété
+            contrat_actif = self.contrats.filter(
+                est_actif=True,
+                est_resilie=False
+            ).first()
+            
+            if contrat_actif:
+                contrat_loyer = Decimal(str(contrat_actif.loyer_mensuel or '0'))
+                contrat_charges = Decimal(str(contrat_actif.charges_mensuelles or '0'))
+                return contrat_loyer + contrat_charges
+            else:
+                # Retourner le loyer_actuel de la propriété
+                return Decimal(str(self.loyer_actuel or '0'))
+    
     def get_charges_bailleur_en_cours(self):
         """Retourne le montant total des charges bailleur en cours pour cette propriété."""
         from django.db.models import Sum
@@ -1681,6 +1725,20 @@ class UniteLocative(models.Model):
         """Retourne le locataire actuel de cette unité."""
         contrat = self.get_contrat_actuel()
         return contrat.locataire if contrat else None
+    
+    @property
+    def contrats_actifs(self):
+        """Retourne tous les contrats actifs de cette unité."""
+        from contrats.models import Contrat
+        from django.utils import timezone
+        
+        return Contrat.objects.filter(
+            unite_locative=self,
+            est_actif=True,
+            est_resilie=False,
+            date_debut__lte=timezone.now().date(),
+            date_fin__gte=timezone.now().date()
+        )
     
     def get_bailleur_effectif(self):
         """Retourne le bailleur effectif (celui de l'unité ou celui de la propriété)."""

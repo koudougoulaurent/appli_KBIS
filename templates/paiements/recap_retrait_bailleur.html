@@ -244,11 +244,14 @@
                     {% for propriete in proprietes %}
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <div>
-                            <strong>{{ propriete.titre }}</strong>
-                            <br><small class="text-muted">{{ propriete.type_bien.nom }}</small>
+                            <strong>{{ propriete.propriete.titre }}</strong>
+                            <br><small class="text-muted">{{ propriete.propriete.type_bien.nom }}</small>
+                            {% if propriete.unites_locatives %}
+                                <br><small class="text-info">{{ propriete.unites_locatives.count }} unité{{ propriete.unites_locatives.count|pluralize }}</small>
+                            {% endif %}
                         </div>
                         <div class="text-end">
-                            <div class="text-success">{{ propriete.loyer_actuel|floatformat:0|intcomma }} F CFA</div>
+                            <div class="text-success">{{ propriete.loyer_total|floatformat:0|intcomma }} F CFA</div>
                             <small class="text-muted">/mois</small>
                         </div>
                     </div>

@@ -97,20 +97,7 @@
             </div>
             <div class="col-md-6">
                 <div class="mb-3">
-                    {{ form.mois_recapitulatif|as_crispy_field }}
-                </div>
-            </div>
-        </div>
-        
-        <div class="row">
-            <div class="col-md-6">
-                <div class="mb-3">
-                    {{ form.type_recapitulatif|as_crispy_field }}
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="mb-3">
-                    {{ form.notes|as_crispy_field }}
+                    {{ form.mois_recap|as_crispy_field }}
                 </div>
             </div>
         </div>
@@ -139,20 +126,20 @@
     <h6><i class="bi bi-info-circle"></i> Aide</h6>
     <div class="row">
         <div class="col-md-6">
-            <h6 class="text-primary">Types de récapitulatifs</h6>
+            <h6 class="text-primary">Récapitulatif mensuel</h6>
             <ul class="list-unstyled">
-                <li><strong>📅 Mensuel :</strong> Calcul sur 1 mois</li>
-                <li><strong>📊 Trimestriel :</strong> Calcul sur 3 mois</li>
-                <li><strong>📈 Annuel :</strong> Calcul sur 12 mois</li>
-                <li><strong>⚡ Exceptionnel :</strong> Période personnalisée</li>
+                <li><strong>📅 Période :</strong> 1 mois complet</li>
+                <li><strong>📊 Calculs :</strong> Automatiques</li>
+                <li><strong>📈 Contenu :</strong> Loyers et charges</li>
+                <li><strong>⚡ Usage :</strong> Suivi mensuel standard</li>
             </ul>
         </div>
         <div class="col-md-6">
             <h6 class="text-success">Calculs automatiques</h6>
             <ul class="list-unstyled">
-                <li>• Loyers bruts × période</li>
-                <li>• Charges déductibles × période</li>
-                <li>• Charges bailleur pour la période</li>
+                <li>• Loyers bruts du mois</li>
+                <li>• Charges déductibles du mois</li>
+                <li>• Charges bailleur du mois</li>
                 <li>• Montant net à payer</li>
             </ul>
         </div>
@@ -163,109 +150,31 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const typeSelect = document.getElementById('id_type_recapitulatif');
     const periodInfo = document.getElementById('periodInfo');
     const periodDescription = document.getElementById('periodDescription');
     const typeExplanation = document.getElementById('typeExplanation');
     const typeTitle = document.getElementById('typeTitle');
     const typeDetails = document.getElementById('typeDetails');
     
-    const typeExplanations = {
-        'mensuel': {
-            title: 'Récapitulatif Mensuel',
-            description: 'Calcul des loyers et charges pour 1 mois',
-            details: [
-                'Loyers bruts = loyer mensuel × 1',
-                'Charges déductibles = charges mensuelles × 1',
-                'Période : 1 mois complet',
-                'Idéal pour : Suivi mensuel standard'
-            ]
-        },
-        'trimestriel': {
-            title: 'Récapitulatif Trimestriel',
-            description: 'Calcul des loyers et charges pour 3 mois',
-            details: [
-                'Loyers bruts = loyer mensuel × 3',
-                'Charges déductibles = charges mensuelles × 3',
-                'Période : 3 mois (trimestre)',
-                'Idéal pour : Bilans trimestriels'
-            ]
-        },
-        'annuel': {
-            title: 'Récapitulatif Annuel',
-            description: 'Calcul des loyers et charges pour 12 mois',
-            details: [
-                'Loyers bruts = loyer mensuel × 12',
-                'Charges déductibles = charges mensuelles × 12',
-                'Période : 12 mois (année complète)',
-                'Idéal pour : Bilans annuels'
-            ]
-        },
-        'exceptionnel': {
-            title: 'Récapitulatif Exceptionnel',
-            description: 'Calcul pour une période personnalisée',
-            details: [
-                'Loyers bruts = loyer mensuel × 1',
-                'Charges déductibles = charges mensuelles × 1',
-                'Période : 1 mois (référence)',
-                'Idéal pour : Situations particulières'
-            ]
-        }
-    };
-    
-    function updatePeriodLabel() {
-        const selectedType = typeSelect.value;
-        
-        if (selectedType && typeExplanations[selectedType]) {
-            const explanation = typeExplanations[selectedType];
-            
-            // Mettre à jour la description
-            periodDescription.textContent = explanation.description;
-            
-            // Afficher l'explication détaillée
-            typeTitle.textContent = explanation.title;
-            typeDetails.innerHTML = explanation.details.map(detail => `<li>${detail}</li>`).join('');
-            typeExplanation.style.display = 'block';
-            
-            // Mettre à jour le style de la période
-            periodInfo.className = 'period-info';
-            if (selectedType === 'trimestriel') {
-                periodInfo.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
-            } else if (selectedType === 'annuel') {
-                periodInfo.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
-            } else if (selectedType === 'exceptionnel') {
-                periodInfo.style.background = 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)';
-            }
-        } else {
-            typeExplanation.style.display = 'none';
-        }
-    }
-    
-    // Écouter les changements
-    typeSelect.addEventListener('change', updatePeriodLabel);
-    
-    // Initialiser au chargement
-    updatePeriodLabel();
+    // Mettre à jour la description
+    periodDescription.textContent = 'Sélectionnez un bailleur et le mois de référence pour créer le récapitulatif mensuel.';
     
     // Validation du formulaire
     document.getElementById('recapitulatifForm').addEventListener('submit', function(e) {
         const bailleur = document.getElementById('id_bailleur').value;
-        const mois = document.getElementById('id_mois_recapitulatif').value;
-        const type = document.getElementById('id_type_recapitulatif').value;
+        const mois = document.getElementById('id_mois_recap').value;
         
-        if (!bailleur || !mois || !type) {
+        if (!bailleur || !mois) {
             e.preventDefault();
             alert('Veuillez remplir tous les champs obligatoires.');
             return false;
         }
         
         // Confirmation avec détails
-        const typeText = typeSelect.options[typeSelect.selectedIndex].text;
         const confirmation = confirm(
-            `Confirmer la création du récapitulatif ?\n\n` +
-            `Type : ${typeText}\n` +
+            `Confirmer la création du récapitulatif mensuel ?\n\n` +
             `Mois de référence : ${mois}\n\n` +
-            `Les calculs seront effectués automatiquement selon la période sélectionnée.`
+            `Le récapitulatif sera créé pour le mois sélectionné.`
         );
         
         if (!confirmation) {

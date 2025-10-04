@@ -27,10 +27,10 @@ from proprietes.models import Propriete, Locataire, Bailleur
 from core.models import AuditLog, ConfigurationEntreprise
 from core.utils import check_group_permissions, check_group_permissions_with_fallback, get_context_with_entreprise_config
 from django.views.generic import ListView
-from .models import TableauBordFinancier
-from .forms import TableauBordFinancierForm
+# from .models import TableauBordFinancier  # Modèle supprimé
+# from .forms import TableauBordFinancierForm  # Formulaire supprimé
 from .models import RetraitBailleur
-from .models import RecapMensuel
+# RecapMensuel is now imported above
 # from .services import generate_recap_pdf, generate_recap_pdf_batch  # Fonctions non disponibles
 try:
     from devises.models import Devise
@@ -101,10 +101,10 @@ from proprietes.models import Propriete, Locataire, Bailleur
 from core.models import AuditLog, ConfigurationEntreprise
 from core.utils import check_group_permissions, check_group_permissions_with_fallback, get_context_with_entreprise_config
 from django.views.generic import ListView
-from .models import TableauBordFinancier
-from .forms import TableauBordFinancierForm
+# from .models import TableauBordFinancier  # Modèle supprimé
+# from .forms import TableauBordFinancierForm  # Formulaire supprimé
 from .models import RetraitBailleur
-from .models import RecapMensuel
+# RecapMensuel is now imported above
 # from .services import generate_recap_pdf, generate_recap_pdf_batch  # Fonctions non disponibles
 try:
     from devises.models import Devise
@@ -137,7 +137,7 @@ def paiements_dashboard(request):
         nombre_paiements=Count('id')  # Nombre de paiements, PAS les montants
     ).order_by('-nombre_paiements')[:5]
     
-    # Paiements récents (SANS montants)
+    # Paiements récents (SANS montants) - utiliser date_paiement au lieu de created_at
     paiements_recents = Paiement.objects.filter(
         is_deleted=False
     ).select_related('contrat__propriete', 'contrat__locataire').order_by('-date_paiement')[:5]
@@ -173,27 +173,26 @@ def paiements_dashboard(request):
     
     mois_stats.reverse()
     
-    # Données des récapitulatifs et paiements bailleurs
-    from .models import RecapMensuel, RetraitBailleur
+    # Données des retraits bailleurs
     from django.db import models
     
-    # Statistiques des récapitulatifs
-    recaps_valides = RecapMensuel.objects.filter(is_deleted=False, statut='valide').count()
-    recaps_payes = RecapMensuel.objects.filter(is_deleted=False, statut='paye').count()
+    # Statistiques des retraits (simplifié)
+    retraits_valides = RetraitBailleur.objects.filter(is_deleted=False, statut='valide').count()
+    retraits_payes = RetraitBailleur.objects.filter(is_deleted=False, statut='paye').count()
     retraits_en_attente = RetraitBailleur.objects.filter(is_deleted=False, statut='en_attente').count()
     
-    # Calcul du montant total à payer (seulement pour les récapitulatifs validés)
-    montant_total_a_payer = RecapMensuel.objects.filter(
+    # Calcul du montant total des retraits validés
+    montant_total_retraits = RetraitBailleur.objects.filter(
         is_deleted=False, 
         statut='valide'
     ).aggregate(
-        total=models.Sum('total_net_a_payer')
+        total=models.Sum('montant_net_a_payer')
     )['total'] or 0
     
-    # Récapitulatifs récents (5 derniers) - réactivé maintenant que la colonne existe
-    recaps_recents = RecapMensuel.objects.filter(
+    # Retraits récents (5 derniers)
+    retraits_recents = RetraitBailleur.objects.filter(
         is_deleted=False
-    ).select_related('bailleur').order_by('-date_creation')[:5]
+    ).select_related('bailleur').order_by('-date_demande')[:5]
     
     context = {
         'total_paiements': total_paiements,
@@ -205,12 +204,12 @@ def paiements_dashboard(request):
         'paiements_recents': paiements_recents,
         'paiements_attention': paiements_attention,
         'mois_stats': mois_stats,
-        # Nouvelles données pour les récapitulatifs
-        'recaps_valides': recaps_valides,
-        'recaps_payes': recaps_payes,
+        # Nouvelles données pour les retraits
+        'retraits_valides': retraits_valides,
+        'retraits_payes': retraits_payes,
         'retraits_en_attente': retraits_en_attente,
-        'montant_total_a_payer': montant_total_a_payer,
-        'recaps_recents': recaps_recents,
+        'montant_total_retraits': montant_total_retraits,
+        'retraits_recents': retraits_recents,
     }
     
     return render(request, 'paiements/dashboard.html', context)
@@ -228,7 +227,7 @@ class PaiementListView(LoginRequiredMixin, ListView):
             'contrat__locataire',
             'contrat__propriete',
             'contrat__propriete__bailleur'
-        ).order_by('-date_creation')
+        ).order_by('-created_at')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -391,7 +390,7 @@ def liste_paiements(request):
                 default='Adresse non renseignée',
                 output_field=models.CharField(max_length=300)
             )
-        ).order_by('-date_creation')
+        ).order_by('-created_at')
         
         # Récupérer le paiement de test pour l'afficher en premier
         paiement_test = Paiement.objects.filter(
@@ -969,11 +968,22 @@ def recap_retrait_bailleur(request, bailleur_id):
     
     charges_calcul = retrait_temp.calculer_charges_automatiquement()
     
-    # Récupérer les propriétés du bailleur
+    # Récupérer les propriétés du bailleur avec leurs unités locatives
     proprietes = Propriete.objects.filter(
         bailleur=bailleur,
         is_deleted=False
-    ).select_related('type_bien')
+    ).select_related('type_bien').prefetch_related('unites_locatives__contrats__locataire')
+    
+    # Utiliser la méthode du modèle pour calculer les loyers
+    proprietes_avec_loyers = []
+    for propriete in proprietes:
+        unites_locatives = propriete.unites_locatives.filter(is_deleted=False)
+        
+        proprietes_avec_loyers.append({
+            'propriete': propriete,
+            'loyer_total': propriete.get_loyer_actuel_calcule(),
+            'unites_locatives': unites_locatives
+        })
     
     context = get_context_with_entreprise_config({
         'bailleur': bailleur,
@@ -982,7 +992,7 @@ def recap_retrait_bailleur(request, bailleur_id):
         'mois_retrait': mois_retrait,
         'calcul_retrait': calcul_retrait,
         'charges_calcul': charges_calcul,
-        'proprietes': proprietes,
+        'proprietes': proprietes_avec_loyers,
         'title': f'Récapitulatif Retrait - {bailleur.nom} {bailleur.prenom}'
     })
     
@@ -1002,11 +1012,7 @@ def detail_retrait(request, pk):
         RetraitBailleur.objects.select_related(
             'bailleur',
             'cree_par',
-            'valide_par',
-            'paye_par'
-        ).prefetch_related(
-            'paiements_concernes__contrat__locataire',
-            'charges_deductibles'
+            'valide_par'
         ),
         pk=pk,
         is_deleted=False
@@ -1036,18 +1042,18 @@ def detail_retrait(request, pk):
     from paiements.models import ChargeDeductible
     from decimal import Decimal
     
-    # Récupérer toutes les propriétés du bailleur avec des contrats actifs
+    # Récupérer toutes les propriétés du bailleur avec des contrats actifs et unités locatives
     proprietes = Propriete.objects.filter(
         bailleur=retrait.bailleur,
         is_deleted=False
-    ).prefetch_related('contrats__locataire')
+    ).prefetch_related(
+        'contrats__locataire',
+        'unites_locatives__contrats__locataire'
+    )
     
     for propriete in proprietes:
-        # Contrat actif pour cette propriété
-        contrat_actif = propriete.contrats.filter(
-            est_actif=True,
-            est_resilie=False
-        ).first()
+        # Récupérer les unités locatives de cette propriété
+        unites_locatives = propriete.unites_locatives.filter(is_deleted=False)
         
         # Calculer les montants pour le mois du retrait
         mois_retrait = retrait.mois_retrait
@@ -1060,56 +1066,139 @@ def detail_retrait(request, pk):
         charges_bailleur = Decimal('0')
         montant_net = Decimal('0')
         
-        if contrat_actif:
-            # Loyers bruts (loyer + charges mensuelles)
-            loyer_mensuel = Decimal(str(contrat_actif.loyer_mensuel or '0'))
-            charges_mensuelles = Decimal(str(contrat_actif.charges_mensuelles or '0'))
-            loyer_brut = loyer_mensuel + charges_mensuelles
+        # Calculer les totaux des unités locatives
+        total_loyer_unites = Decimal('0')
+        total_charges_unites = Decimal('0')
+        total_brut_unites = Decimal('0')
+        total_charges_deductibles_unites = Decimal('0')
+        total_charges_bailleur_unites = Decimal('0')
+        
+        # Si la propriété a des unités locatives, calculer à partir des unités
+        if unites_locatives.exists():
+            for unite in unites_locatives:
+                # Récupérer les contrats actifs de cette unité
+                contrats_unite = unite.contrats.filter(
+                    est_actif=True,
+                    est_resilie=False
+                )
+                
+                # Si l'unité a des contrats actifs, utiliser les montants des contrats
+                if contrats_unite.exists():
+                    for contrat in contrats_unite:
+                        # Utiliser les montants du contrat, pas de l'unité
+                        contrat_loyer = Decimal(str(contrat.loyer_mensuel or '0'))
+                        contrat_charges = Decimal(str(contrat.charges_mensuelles or '0'))
+                        contrat_brut = contrat_loyer + contrat_charges
+                        
+                        total_loyer_unites += contrat_loyer
+                        total_charges_unites += contrat_charges
+                        total_brut_unites += contrat_brut
+                        
+                        # Calculer les charges déductibles pour ce contrat
+                        charges_deductibles_contrat = ChargeDeductible.objects.filter(
+                            contrat=contrat,
+                            date_charge__year=mois_retrait.year,
+                            date_charge__month=mois_retrait.month,
+                            statut='validee'
+                        ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
+                        total_charges_deductibles_unites += charges_deductibles_contrat
+                else:
+                    # Si pas de contrat actif, utiliser les montants de l'unité (pour les unités libres)
+                    unite_loyer = Decimal(str(unite.loyer_mensuel or '0'))
+                    unite_charges = Decimal(str(unite.charges_mensuelles or '0'))
+                    unite_brut = unite_loyer + unite_charges
+                    
+                    total_loyer_unites += unite_loyer
+                    total_charges_unites += unite_charges
+                    total_brut_unites += unite_brut
+                
+                # Calculer les charges bailleur pour cette unité (une seule fois par unité)
+                charges_bailleur_unite = ChargesBailleur.objects.filter(
+                    propriete=propriete,
+                    date_charge__year=mois_retrait.year,
+                    date_charge__month=mois_retrait.month,
+                    statut__in=['en_attente', 'deduite_retrait']
+                ).aggregate(total=Sum('montant_restant'))['total'] or Decimal('0')
+                total_charges_bailleur_unites += charges_bailleur_unite
             
-            # Charges déductibles pour le mois
-            charges_deductibles = ChargeDeductible.objects.filter(
-                contrat=contrat_actif,
+            # Utiliser les totaux des unités pour la propriété
+            loyer_mensuel = total_loyer_unites
+            charges_mensuelles = total_charges_unites
+            loyer_brut = total_brut_unites
+            charges_deductibles = total_charges_deductibles_unites
+            charges_bailleur = total_charges_bailleur_unites
+            montant_net = loyer_brut - charges_deductibles - charges_bailleur
+            
+        else:
+            # Si pas d'unités, chercher un contrat direct sur la propriété
+            contrat_actif = propriete.contrats.filter(
+                est_actif=True,
+                est_resilie=False
+            ).first()
+            
+            if contrat_actif:
+                # Loyers bruts (loyer + charges mensuelles)
+                loyer_mensuel = Decimal(str(contrat_actif.loyer_mensuel or '0'))
+                charges_mensuelles = Decimal(str(contrat_actif.charges_mensuelles or '0'))
+                loyer_brut = loyer_mensuel + charges_mensuelles
+                
+                # Charges déductibles pour le mois
+                charges_deductibles = ChargeDeductible.objects.filter(
+                    contrat=contrat_actif,
+                    date_charge__year=mois_retrait.year,
+                    date_charge__month=mois_retrait.month,
+                    statut='validee'
+                ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
+                
+                # Montant net pour cette propriété
+                montant_net = loyer_brut - charges_deductibles - charges_bailleur
+            
+            # Charges bailleur pour le mois (même sans contrat actif)
+            charges_bailleur = ChargesBailleur.objects.filter(
+                propriete=propriete,
                 date_charge__year=mois_retrait.year,
                 date_charge__month=mois_retrait.month,
-                statut='validee'
-            ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
-            
-            # Montant net pour cette propriété
-            montant_net = loyer_brut - charges_deductibles - charges_bailleur
+                statut__in=['en_attente', 'deduite_retrait']
+            ).aggregate(total=Sum('montant_restant'))['total'] or Decimal('0')
         
-        # Charges bailleur pour le mois (même sans contrat actif)
-        charges_bailleur = ChargesBailleur.objects.filter(
-            propriete=propriete,
-            date_charge__year=mois_retrait.year,
-            date_charge__month=mois_retrait.month,
-            statut__in=['en_attente', 'deduite_retrait']
-        ).aggregate(total=Sum('montant_restant'))['total'] or Decimal('0')
-        
-        # Créer le détail de la propriété (avec ou sans contrat actif)
+        # Créer le détail de la propriété
         propriete_detail = {
             'propriete': propriete,
-            'contrat': contrat_actif,
-            'locataire': contrat_actif.locataire if contrat_actif else None,
+            'contrat': contrat_actif if not unites_locatives.exists() else None,
+            'locataire': contrat_actif.locataire if not unites_locatives.exists() and contrat_actif else None,
             'loyer_mensuel': loyer_mensuel,
             'charges_mensuelles': charges_mensuelles,
             'loyer_brut': loyer_brut,
             'charges_deductibles': charges_deductibles,
             'charges_bailleur': charges_bailleur,
             'montant_net': montant_net,
-            'statut_contrat': 'Actif' if contrat_actif else 'Aucun contrat actif',
-            'a_contrat_actif': bool(contrat_actif)
+            'statut_contrat': 'Avec unités' if unites_locatives.exists() else ('Actif' if contrat_actif else 'Aucun contrat actif'),
+            'a_contrat_actif': bool(contrat_actif) or unites_locatives.exists(),
+            'unites_locatives': unites_locatives,
+            'total_loyer_unites': total_loyer_unites,
+            'total_charges_unites': total_charges_unites,
+            'total_brut_unites': total_brut_unites,
+            'nombre_unites': unites_locatives.count()
         }
         
         proprietes_louees.append(propriete_detail)
         
-        # Cumuler les totaux seulement pour les propriétés avec contrats actifs
-        if contrat_actif:
-            total_loyers_bruts += loyer_brut
-            total_charges_deductibles += charges_deductibles
-            total_charges_bailleur += charges_bailleur
+        # Cumuler les totaux
+        total_loyers_bruts += loyer_brut
+        total_charges_deductibles += charges_deductibles
+        total_charges_bailleur += charges_bailleur
     
     # Calculer le montant net total
     montant_net_total = total_loyers_bruts - total_charges_deductibles - total_charges_bailleur
+    
+    # Récupérer les charges disponibles pour ce retrait
+    from paiements.services_charges_bailleur import ServiceChargesBailleurIntelligent
+    charges_data = ServiceChargesBailleurIntelligent.calculer_charges_bailleur_pour_mois(
+        retrait.bailleur, retrait.mois_retrait
+    )
+    
+    # Vérifier si le retrait peut être modifié
+    peut_etre_modifie = retrait.statut in ['en_attente']
     
     context = get_context_with_entreprise_config({
         'retrait': retrait,
@@ -1121,6 +1210,9 @@ def detail_retrait(request, pk):
         'total_charges_deductibles': total_charges_deductibles,
         'total_charges_bailleur': total_charges_bailleur,
         'montant_net_total': montant_net_total,
+        'charges_disponibles': charges_data.get('charges_details', []),
+        'total_charges_disponibles': charges_data.get('total_charges', Decimal('0')),
+        'peut_etre_modifie': peut_etre_modifie,
         'title': f'Détails du Retrait #{retrait.id}'
     })
     
@@ -1759,8 +1851,8 @@ def imprimer_recap_mensuel(request, recap_id):
         # Informations de statut
         story.append(Paragraph("INFORMATIONS DE STATUT", subtitle_style))
         story.append(Paragraph(f"<b>Statut:</b> {recap.get_statut_display()}", normal_style))
-        if recap.date_creation:
-            story.append(Paragraph(f"<b>Date de création:</b> {recap.date_creation.strftime('%d/%m/%Y')}", normal_style))
+        if recap.created_at:
+            story.append(Paragraph(f"<b>Date de création:</b> {recap.created_at.strftime('%d/%m/%Y')}", normal_style))
         if recap.date_validation:
             story.append(Paragraph(f"<b>Date de validation:</b> {recap.date_validation.strftime('%d/%m/%Y')}", normal_style))
         if recap.date_envoi:
@@ -1803,10 +1895,10 @@ def liste_retraits_bailleur(request):
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
     
-    # Récupérer tous les retraits avec relations
-    retraits = RetraitBailleur.objects.all().select_related(
-        'bailleur', 'cree_par', 'valide_par', 'paye_par'
-    ).order_by('-date_creation')
+    # Récupérer tous les retraits avec relations (non supprimés)
+    retraits = RetraitBailleur.objects.filter(is_deleted=False).select_related(
+        'bailleur', 'cree_par', 'valide_par'
+    ).order_by('-created_at')
     
     # Filtres
     statut = request.GET.get('statut')
@@ -1891,7 +1983,7 @@ def tableau_bord_list(request):
     # Récupérer les tableaux de bord de l'utilisateur
     tableaux = TableauBordFinancier.objects.filter(
         cree_par=request.user
-    ).select_related('cree_par').prefetch_related('proprietes', 'bailleurs').order_by('-date_creation')
+    ).select_related('cree_par').prefetch_related('proprietes', 'bailleurs').order_by('-created_at')
     
     # Pagination
     paginator = Paginator(tableaux, 12)
@@ -2331,7 +2423,7 @@ def tableau_bord_dashboard(request):
     tableaux = TableauBordFinancier.objects.filter(
         cree_par=request.user,
         actif=True
-    ).select_related('cree_par').prefetch_related('proprietes', 'bailleurs').order_by('-date_creation')[:6]
+    ).select_related('cree_par').prefetch_related('proprietes', 'bailleurs').order_by('-created_at')[:6]
     
     # Statistiques globales
     total_tableaux = TableauBordFinancier.objects.filter(cree_par=request.user).count()
@@ -2672,7 +2764,7 @@ def tableau_bord_recaps_mensuels(request):
     # Récapitulatifs récents
     recaps_recents = RecapMensuel.objects.filter(
         is_deleted=False
-    ).select_related('bailleur').order_by('-date_creation')[:10]
+    ).select_related('bailleur').order_by('-created_at')[:10]
     
     # Statistiques financières
     total_loyers_annee = RecapMensuel.objects.filter(
@@ -3144,4 +3236,17 @@ def generer_pdf_recap_detaille_paysage(request, recap_id):
     except Exception as e:
         messages.error(request, f"Erreur lors de la génération du PDF détaillé: {str(e)}")
         return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
+
+
+# Vues de suppression génériques
+from utilisateurs.mixins_suppression import SuppressionGeneriqueView
+
+class SupprimerPaiementView(SuppressionGeneriqueView):
+    model = Paiement
+    
+    def get_redirect_url(self, obj):
+        return 'paiements:liste'
+    
+    def get_success_message(self, obj):
+        return f"Paiement #{obj.id} supprimé avec succès."
 

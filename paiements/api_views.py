@@ -311,7 +311,7 @@ class PaiementViewSet(viewsets.ModelViewSet):
         'contrat__locataire',
         'contrat__propriete',
         'contrat__propriete__bailleur'
-    ).order_by('-date_creation')
+        ).order_by('-date_paiement')
     
     serializer_class = PaiementSerializer
     permission_classes = [IsAuthenticated]
@@ -338,12 +338,12 @@ class PaiementViewSet(viewsets.ModelViewSet):
     
     ordering_fields = [
         'date_paiement',
-        'date_creation',
+        'created_at',
         'montant',
         'statut'
     ]
     
-    ordering = ['-date_creation']
+    ordering = ['-created_at']
     
     def get_serializer_class(self):
         """Utiliser un serializer détaillé pour les actions de détail."""
@@ -581,7 +581,7 @@ class PaiementCautionAvanceViewSet(viewsets.ModelViewSet):
         'contrat__locataire',
         'contrat__propriete',
         'contrat__propriete__bailleur'
-    ).order_by('-date_creation')
+        ).order_by('-date_paiement')
     
     serializer_class = PaiementDetailSerializer
     permission_classes = [IsAuthenticated]
@@ -609,12 +609,12 @@ class PaiementCautionAvanceViewSet(viewsets.ModelViewSet):
     
     ordering_fields = [
         'date_paiement',
-        'date_creation',
+        'created_at',
         'montant',
         'statut'
     ]
     
-    ordering = ['-date_creation']
+    ordering = ['-created_at']
     
     def get_queryset(self):
         """Filtrer les paiements selon les permissions utilisateur."""
@@ -715,7 +715,7 @@ class PaiementCautionAvanceViewSet(viewsets.ModelViewSet):
             'locataire', 
             'propriete', 
             'propriete__bailleur'
-        ).order_by('date_creation')
+        ).order_by('created_at')
         
         data = []
         for contrat in contrats_caution_en_attente:
@@ -753,7 +753,7 @@ class PaiementCautionAvanceViewSet(viewsets.ModelViewSet):
             'locataire', 
             'propriete', 
             'propriete__bailleur'
-        ).order_by('date_creation')
+        ).order_by('created_at')
         
         data = []
         for contrat in contrats_avance_en_attente:

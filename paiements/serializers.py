@@ -19,10 +19,10 @@ class PaiementSerializer(serializers.ModelSerializer):
             'id', 'contrat', 'montant', 'type_paiement', 'statut', 'mode_paiement',
             'date_paiement', 'date_encaissement', 'numero_cheque', 'reference_virement',
             'reference_paiement', 'notes', 'cree_par', 'valide_par',
-            'date_creation', 'date_modification', 'statut_color'
+            'created_at', 'updated_at', 'statut_color'
         ]
         read_only_fields = [
-            'date_creation', 'date_modification', 'cree_par', 'valide_par',
+            'created_at', 'updated_at', 'cree_par', 'valide_par',
             'date_encaissement', 'statut_color'
         ]
     
@@ -81,7 +81,7 @@ class PaiementDetailSerializer(PaiementSerializer):
     def get_jours_depuis_creation(self, obj):
         """Calculer le nombre de jours depuis la création."""
         from django.utils import timezone
-        delta = timezone.now().date() - obj.date_creation.date()
+        delta = timezone.now().date() - obj.created_at.date()
         return delta.days
     
     def get_est_en_retard(self, obj):

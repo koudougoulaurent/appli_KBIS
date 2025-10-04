@@ -114,7 +114,7 @@
                         <div class="col-md-4">
                             <div class="text-center">
                                 <h6>Loyer</h6>
-                                <h4 class="text-primary">{% include 'includes/montant.html' with montant=propriete.loyer_actuel devise_source=devise_base %}</h4>
+                                <h4 class="text-primary">{% include 'includes/montant.html' with montant=propriete.get_loyer_actuel_calcule devise_source=devise_base %}</h4>
                             </div>
                         </div>
                         <div class="col-md-4">

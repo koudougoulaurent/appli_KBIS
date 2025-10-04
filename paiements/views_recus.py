@@ -16,7 +16,7 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 import logging
 
-from .models import RecuRecapitulatif, RecapitulatifMensuelBailleur
+# from .models import RecuRecapitulatif, RecapitulatifMensuelBailleur  # Modèles supprimés
 from core.utils import check_group_permissions
 
 logger = logging.getLogger(__name__)

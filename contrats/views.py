@@ -11,6 +11,7 @@ from django.contrib.contenttypes.models import ContentType
 from core.intelligent_views import IntelligentListView
 from core.utils import get_context_with_entreprise_config
 from utilisateurs.mixins import PrivilegeButtonsMixin
+from utilisateurs.mixins_suppression import SuppressionGeneriqueView
 from datetime import datetime, timedelta
 from django.core.paginator import Paginator
 from django.contrib.auth.decorators import user_passes_test
@@ -46,6 +47,7 @@ class ContratListView(PrivilegeButtonsMixin, IntelligentListView):
     actions = [
         {'url_name': 'contrats:detail', 'icon': 'eye', 'style': 'outline-primary', 'title': 'Voir'},
         {'url_name': 'contrats:modifier', 'icon': 'pencil', 'style': 'outline-warning', 'title': 'Modifier'},
+        {'url_name': 'contrats:supprimer_contrat', 'icon': 'trash', 'style': 'outline-danger', 'title': 'Supprimer', 'condition': 'user.is_privilege_user'},
     ]
     sort_options = [
         {'value': 'date_debut', 'label': 'Début'},
@@ -2377,3 +2379,14 @@ def gestion_cautions(request):
     }
     
     return render(request, 'contrats/gestion_cautions.html', context)
+
+
+# Vues de suppression génériques
+class SupprimerContratView(SuppressionGeneriqueView):
+    model = Contrat
+    
+    def get_redirect_url(self, obj):
+        return 'contrats:liste'
+    
+    def get_success_message(self, obj):
+        return f"Contrat {obj.numero_contrat} supprimé avec succès."

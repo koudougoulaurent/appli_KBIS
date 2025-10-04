@@ -479,17 +479,14 @@
                                 <li><a class="dropdown-item" href="{% url 'paiements:retraits_liste' %}">
                                     <i class="bi bi-list"></i> Liste des Retraits
                                 </a></li>
-                                <li><a class="dropdown-item" href="{% url 'paiements:retrait_create' %}">
+                                <li><a class="dropdown-item" href="{% url 'paiements:retrait_ajouter' %}">
                                     <i class="bi bi-plus-circle"></i> Créer un Retrait
                                 </a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'paiements:dashboard_intelligent' %}">
-                                    <i class="bi bi-graph-up"></i> Dashboard Intelligent
+                                <li><a class="dropdown-item" href="{% url 'paiements:retrait_auto_create' %}">
+                                    <i class="bi bi-magic"></i> Création Automatique
                                 </a></li>
-                                <li><a class="dropdown-item" href="{% url 'paiements:retrait_intelligent_create' %}">
-                                    <i class="bi bi-magic"></i> Création Intelligente
-                                </a></li>
-                                <li><a class="dropdown-item" href="{% url 'paiements:recherche_bailleurs_intelligente' %}">
+                                <li><a class="dropdown-item" href="{% url 'paiements:recherche_intelligente' %}">
                                     <i class="bi bi-search"></i> Recherche Intelligente
                                 </a></li>
                             </ul>

@@ -13,7 +13,8 @@ from decimal import Decimal
 
 from core.utils import check_group_permissions, get_context_with_entreprise_config
 from proprietes.models import Bailleur, UniteLocative
-from .models import RetraitBailleur, DetailRetraitUnite, Paiement
+from .models import RetraitBailleur, Paiement
+# from .models import DetailRetraitUnite  # Modèle supprimé
 from .services_unites_locatives import ServiceUnitesLocativesFinancier
 from .forms import RetraitBailleurForm
 

@@ -977,6 +977,12 @@ class DocumentKBISUnifie:
                     -{donnees.get('charges_deduites', 0):,} F CFA
                 </td>
             </tr>
+            <tr>
+                <td>Charges Bailleur</td>
+                <td style="font-weight: bold; color: #ff9800;">
+                    -{donnees.get('charges_bailleur', 0):,} F CFA
+                </td>
+            </tr>
             <tr style="background-color: #e3f2fd; font-weight: bold;">
                 <td>Montant net à payer</td>
                 <td style="font-weight: bold; color: #1976d2;">

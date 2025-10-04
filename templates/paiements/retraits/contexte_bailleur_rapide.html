@@ -129,7 +129,6 @@
     </div>
 
     <!-- Contexte des retraits -->
-    {% if contexte %}
     <div class="row mb-4">
         <div class="col-12">
             <div class="contexte-card">
@@ -140,32 +139,30 @@
                     </h5>
                 </div>
                 <div class="contexte-body">
-                    {% if contexte.retraits %}
-                    <div class="info-row">
-                        <span class="info-label">Total des retraits:</span>
-                        <span class="info-value">{{ contexte.retraits.total|floatformat:0 }} F CFA</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Retraits en attente:</span>
-                        <span class="info-value">{{ contexte.retraits.en_attente|floatformat:0 }} F CFA</span>
-                    </div>
-                    {% endif %}
-                    
-                    {% if contexte.proprietes %}
                     <div class="info-row">
                         <span class="info-label">Nombre de propriétés:</span>
-                        <span class="info-value">{{ contexte.proprietes.nombre }}</span>
+                        <span class="info-value">{{ nombre_proprietes }}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Loyers mensuels:</span>
-                        <span class="info-value">{{ contexte.proprietes.loyers_mensuels|floatformat:0 }} F CFA</span>
+                        <span class="info-value">{{ loyers_mensuels|floatformat:0 }} F CFA</span>
                     </div>
-                    {% endif %}
+                    <div class="info-row">
+                        <span class="info-label">Charges déductibles:</span>
+                        <span class="info-value">{{ charges_deductibles|floatformat:0 }} F CFA</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Montant net à payer:</span>
+                        <span class="info-value text-success fw-bold">{{ montant_net|floatformat:0 }} F CFA</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Contrats actifs:</span>
+                        <span class="info-value">{{ contrats_actifs_count }}</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    {% endif %}
 
     <!-- Actions rapides -->
     <div class="row">
@@ -185,7 +182,7 @@
                             </a>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <a href="{% url 'proprietes:bailleur_detail' bailleur.id %}" class="btn btn-outline-info w-100">
+                            <a href="{% url 'proprietes:detail_bailleur' bailleur.id %}" class="btn btn-outline-info w-100">
                                 <i class="fas fa-eye me-2"></i>Voir le Bailleur
                             </a>
                         </div>

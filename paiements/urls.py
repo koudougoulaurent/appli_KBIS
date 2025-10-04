@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_retraits_bailleur, views_quick_actions, views_kbis_recus
+from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges
 # from . import views_locataire_paiements
 
 app_name = 'paiements'
@@ -79,7 +79,7 @@ urlpatterns = [
     path('retraits-bailleur/recap/<int:bailleur_id>/', views.recap_retrait_bailleur, name='recap_retrait_bailleur'),
     path('retraits-bailleur/creer-depuis-recap/', views.creer_retrait_depuis_recap, name='creer_retrait_depuis_recap'),
     path('modifier/<int:pk>/', views.modifier_paiement, name='modifier_paiement'),
-    path('supprimer/<int:pk>/', views.supprimer_paiement, name='supprimer_paiement'),
+    path('supprimer/<int:pk>/', views.SupprimerPaiementView.as_view(), name='supprimer_paiement'),
     path('valider/<int:pk>/', views.valider_paiement, name='valider_paiement'),
     
     # URLs pour les charges déductibles
@@ -110,15 +110,9 @@ urlpatterns = [
     path('retrait/<int:pk>/', views.detail_retrait, name='retrait_detail'),
     path('retrait/<int:pk>/modifier/', views.modifier_retrait, name='retrait_modifier'),
     
-    # Actions sur les retraits
-    path('retrait/<int:pk>/validate/', views_retraits.retrait_validate, name='retrait_validate'),
-    path('retrait/<int:pk>/mark-paid/', views_retraits.retrait_mark_paid, name='retrait_mark_paid'),
-    path('retrait/<int:pk>/cancel/', views_retraits.retrait_cancel, name='retrait_cancel'),
-    path('retrait/<int:pk>/supprimer/', views_retraits.supprimer_retrait, name='retrait_supprimer'),
+    # Actions sur les retraits (déjà définies plus haut)
     
-    # Gestion des reçus de retrait
-    path('recu/<int:recu_id>/', views_retraits.recu_retrait_view, name='recu_view'),
-    path('recu/<int:recu_id>/print/', views_retraits.recu_retrait_print, name='recu_print'),
+    # Gestion des reçus de retrait (à implémenter)
     
     # Alias pour compatibilité
     path('retraits_liste/', views.liste_retraits_bailleur, name='retraits_liste'),
@@ -148,18 +142,20 @@ urlpatterns = [
     path('paiement/<int:paiement_pk>/generer-quittance/', views.generer_quittance_manuelle, name='generer_quittance_manuelle'),
     
     # URLs pour les retraits aux bailleurs (nouveau système)
-    path('retraits-bailleurs/', include('paiements.urls_retraits')),
+    path('retraits-bailleurs/', views_retraits.liste_retraits, name='retraits_liste'),
+    path('retraits-bailleurs/auto-create/', views_retraits.creer_retrait_automatique, name='retrait_auto_create'),
+    path('retraits-bailleurs/<int:pk>/', views_retraits.detail_retrait, name='retrait_detail'),
+    path('retraits-bailleurs/<int:pk>/valider/', views_retraits.valider_retrait, name='valider_retrait'),
+    path('retraits-bailleurs/<int:pk>/marquer-paye/', views_retraits.marquer_paye, name='marquer_retrait_paye'),
+    path('retraits-bailleurs/<int:pk>/generer-quittance/', views_retraits.generer_quittance, name='generer_quittance_retrait'),
+    path('retraits-bailleurs/<int:pk>/telecharger-quittance/', views_retraits.telecharger_quittance, name='telecharger_quittance_retrait'),
+    path('retraits-bailleurs/<int:pk>/supprimer/', views_retraits.supprimer_retrait, name='supprimer_retrait'),
     
-    # URLs spécifiques pour les retraits des bailleurs
-    path('retraits-bailleur/<int:pk>/', views_retraits_bailleur.retraits_bailleur, name='retraits_bailleur'),
-    path('retrait-bailleur/<int:pk>/', views_retraits_bailleur.detail_retrait_bailleur, name='detail_retrait_bailleur'),
-    path('retrait-bailleur/ajouter/<int:bailleur_id>/', views_retraits_bailleur.ajouter_retrait_bailleur, name='ajouter_retrait_bailleur'),
-    path('retrait-bailleur/modifier/<int:pk>/', views_retraits_bailleur.modifier_retrait_bailleur, name='modifier_retrait_bailleur'),
-    path('retrait-bailleur/valider/<int:pk>/', views_retraits_bailleur.valider_retrait, name='valider_retrait'),
-    path('retrait-bailleur/marquer-paye/<int:pk>/', views_retraits_bailleur.marquer_paye_retrait, name='marquer_paye_retrait'),
-    path('retrait-bailleur/generer-recu/<int:pk>/', views_retraits_bailleur.generer_recu_retrait, name='generer_recu_retrait'),
-    path('retrait-bailleur/export/<int:bailleur_id>/', views_retraits_bailleur.export_retraits_bailleur, name='export_retraits_bailleur'),
-    path('retrait-bailleur/rapport/<int:bailleur_id>/', views_retraits_bailleur.generer_rapport_retraits, name='generer_rapport_retraits'),
+    # URLs pour l'intégration des charges dans les retraits
+    path('retraits-bailleurs/<int:retrait_id>/integrer-charges/', views_retraits_charges.integrer_charges_retrait, name='integrer_charges_retrait'),
+    path('retraits-bailleurs/<int:retrait_id>/integrer-charge/<int:charge_id>/', views_retraits_charges.integrer_charge_specifique, name='integrer_charge_specifique'),
+    path('retraits-bailleurs/<int:retrait_id>/retirer-charge/<int:charge_id>/', views_retraits_charges.retirer_charge_retrait, name='retirer_charge_retrait'),
+    path('retraits-bailleurs/<int:retrait_id>/charges-disponibles/', views_retraits_charges.ajax_charges_disponibles, name='ajax_charges_disponibles'),
 
     # URLs pour les récapitulatifs mensuels
     path('recapitulatifs/', views_recapitulatifs.liste_recapitulatifs, name='liste_recapitulatifs'),
@@ -225,4 +221,7 @@ urlpatterns = [
     
     # 🔧 VUE DE TEST POUR RÉCAPITULATIFS
     path('recaps-mensuels/creer-test/', views_recapitulatifs.creer_recapitulatif_test, name='creer_recapitulatif_test'),
+    
+    # 📄 RÉCAPITULATIFS KBIS A4 PAYSAGE
+    path('recapitulatifs/<int:recapitulatif_id>/kbis/', views_recapitulatifs.generer_recapitulatif_kbis, name='generer_recapitulatif_kbis'),
 ]

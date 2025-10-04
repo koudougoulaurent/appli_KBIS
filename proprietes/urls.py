@@ -23,6 +23,7 @@ urlpatterns = [
     path('<int:pk>/', views.detail_propriete, name='detail'),
     path('<int:pk>/ajax/<str:section>/', views.detail_propriete_ajax, name='detail_ajax'),
     path('<int:pk>/modifier/', views.modifier_propriete, name='modifier'),
+    path('<int:pk>/supprimer/', views.SupprimerProprieteView.as_view(), name='supprimer_propriete'),
     
     # URLs pour les charges bailleur (anciennes vues)
     path('charges-bailleur/', views.liste_charges_bailleur, name='liste_charges_bailleur'),
@@ -47,8 +48,8 @@ urlpatterns = [
     path('bailleurs/ajouter/', views.ajouter_bailleur, name='ajouter_bailleur'),
     path('bailleurs/<int:pk>/', views.detail_bailleur, name='detail_bailleur'),
     path('bailleurs/<int:pk>/modifier/', views.modifier_bailleur, name='modifier_bailleur'),
+    path('bailleurs/<int:pk>/supprimer/', views.SupprimerBailleurView.as_view(), name='supprimer_bailleur'),
     path('bailleurs/<int:pk>/proprietes/', views.proprietes_bailleur, name='proprietes_bailleur'),
-    path('bailleurs/<int:pk>/supprimer/', views.supprimer_bailleur, name='supprimer_bailleur'),
     path('bailleurs/recherche-avancee/', views.recherche_avancee_bailleurs, name='recherche_avancee_bailleurs'),
     path('test-actions-rapides/', views.test_quick_actions, name='test_quick_actions'),
 
@@ -57,7 +58,7 @@ urlpatterns = [
     path('locataires/ajouter/', views.ajouter_locataire, name='ajouter_locataire'),
     path('locataires/<int:pk>/', views.detail_locataire, name='detail_locataire'),
     path('locataires/<int:pk>/modifier/', views.modifier_locataire, name='modifier_locataire'),
-    path('locataires/<int:pk>/supprimer/', views.supprimer_locataire, name='supprimer_locataire'),
+    path('locataires/<int:pk>/supprimer/', views.SupprimerLocataireView.as_view(), name='supprimer_locataire'),
     path('locataires/recherche-avancee/', views.recherche_avancee_locataires, name='recherche_avancee_locataires'),
     path('locataires/desactiver/<int:pk>/', views.desactiver_locataire, name='desactiver_locataire'),
     path('locataires/corbeille/', views.corbeille_locataires, name='corbeille_locataires'),
@@ -151,6 +152,10 @@ urlpatterns = [
     path('api/recherche-unites-live/', views_unites.api_recherche_unites_live, name='api_recherche_unites_live'),
     path('api/statistiques-recherche/', views_unites.api_statistiques_recherche, name='api_statistiques_recherche'),
     path('api/statistiques-propriete/<int:propriete_id>/', views_unites.api_statistiques_propriete, name='api_statistiques_propriete'),
+    
+    # URLs pour les types de biens
+    path('types-bien/', views.TypeBienListView.as_view(), name='liste_types_bien'),
+    path('types-bien/<int:pk>/supprimer/', views.SupprimerTypeBienView.as_view(), name='supprimer_type_bien'),
     
     # URLs API REST
     path('api/', include(router.urls)),

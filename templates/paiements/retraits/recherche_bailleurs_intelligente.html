@@ -65,11 +65,11 @@
                     <p class="text-muted mb-0">{{ subtitle }}</p>
                 </div>
                 <div>
-                    <a href="{% url 'paiements:retrait_intelligent_create' %}" class="btn btn-primary">
+                    <a href="{% url 'paiements:retrait_auto_create' %}" class="btn btn-primary">
                         <i class="bi bi-plus-lg me-2"></i>
                         Nouveau Retrait
                     </a>
-                    <a href="{% url 'paiements:dashboard_intelligent_retraits' %}" class="btn btn-outline-secondary ms-2">
+                    <a href="{% url 'paiements:retrait_auto_create' %}" class="btn btn-outline-secondary ms-2">
                         <i class="bi bi-speedometer2 me-2"></i>
                         Dashboard
                     </a>
@@ -226,7 +226,7 @@
                                             <i class="bi bi-eye me-1"></i>
                                             Contexte
                                         </a>
-                                        <a href="{% url 'paiements:retrait_intelligent_create' %}?bailleur={{ bailleur.id }}" 
+                                        <a href="{% url 'paiements:retrait_auto_create' %}?bailleur={{ bailleur.id }}" 
                                            class="btn btn-sm btn-primary">
                                             <i class="bi bi-plus-lg me-1"></i>
                                             Retrait
@@ -419,7 +419,7 @@
         
         // Mettre à jour le bouton de création de retrait
         document.getElementById('createRetraitBtn').href = 
-            `{% url 'paiements:retrait_intelligent_create' %}?bailleur=${bailleurId}`;
+            `{% url 'paiements:retrait_auto_create' %}?bailleur=${bailleurId}`;
         
         // Charger le contexte du bailleur
         loadBailleurContext(bailleurId);

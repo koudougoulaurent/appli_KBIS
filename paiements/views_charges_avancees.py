@@ -19,7 +19,8 @@ from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 
-from .models import ChargeDeductible, RecapitulatifMensuelBailleur
+from .models import ChargeDeductible
+# from .models import RecapitulatifMensuelBailleur  # Modèle supprimé
 from .forms_charges_avancees import (
     ChargeDeductibleForm,
     RechercheChargesForm,
@@ -297,7 +298,7 @@ def dashboard_charges_bailleur(request, bailleur_id):
     # Récapitulatifs concernés
     recapitulatifs = RecapitulatifMensuelBailleur.objects.filter(
         bailleur=bailleur
-    ).order_by('-mois_recapitulatif')[:5]
+    ).order_by('-mois_recap')[:5]
     
     context = {
         'page_title': f'Charges - {bailleur.nom} {bailleur.prenom}',

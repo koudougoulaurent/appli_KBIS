@@ -18,7 +18,7 @@
             <a href="{% url 'paiements:retraits_liste' %}" class="btn btn-outline-secondary me-2">
                 <i class="bi bi-arrow-left me-1"></i>Retour aux Retraits
             </a>
-            <a href="{% url 'paiements:retrait_intelligent_create' %}" class="btn btn-primary">
+            <a href="{% url 'paiements:retrait_auto_create' %}" class="btn btn-primary">
                 <i class="bi bi-plus-circle me-1"></i>Créer un Retrait Intelligent
             </a>
         </div>
@@ -165,15 +165,15 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        <a href="{% url 'paiements:retrait_intelligent_create' %}" class="btn btn-primary btn-lg">
+                        <a href="{% url 'paiements:retrait_auto_create' %}" class="btn btn-primary btn-lg">
                             <i class="bi bi-magic me-2"></i>
                             Créer un Retrait
                         </a>
-                        <a href="{% url 'paiements:dashboard_intelligent' %}" class="btn btn-outline-primary">
+                        <a href="{% url 'paiements:retrait_auto_create' %}" class="btn btn-outline-primary">
                             <i class="bi bi-graph-up me-2"></i>
                             Voir le Dashboard
                         </a>
-                        <a href="{% url 'paiements:recherche_bailleurs_intelligente' %}" class="btn btn-outline-success">
+                        <a href="{% url 'paiements:recherche_intelligente' %}" class="btn btn-outline-success">
                             <i class="bi bi-search me-2"></i>
                             Rechercher des Bailleurs
                         </a>

@@ -140,7 +140,7 @@ class ServiceGenerationRecus:
         """
         # Récupérer tous les récapitulatifs du mois
         recapitulatifs = RecapitulatifMensuelBailleur.objects.filter(
-            mois_recapitulatif=mois,
+            mois_recap=mois,
             statut__in=['valide', 'envoye']
         ).exclude(
             recu__isnull=False

@@ -2,12 +2,10 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from .models import Paiement, ChargeDeductible, RetraitBailleur, TableauBordFinancier, RecapitulatifMensuelBailleur
+from .models import Paiement, ChargeDeductible, RetraitBailleur, RecapMensuel
 from contrats.models import Contrat
 from proprietes.models import Bailleur
-from datetime import date, datetime
-from decimal import Decimal
-import json
+from datetime import date
 
 
 class PaiementForm(forms.ModelForm):
@@ -38,14 +36,14 @@ class PaiementForm(forms.ModelForm):
         model = Paiement
         fields = [
             'contrat', 'montant', 'type_paiement', 'mode_paiement',
-            'date_paiement', 'reference_paiement', 'numero_cheque', 'reference_virement', 'notes'
+            'date_paiement', 'numero_cheque', 'reference_virement', 'notes'
         ]
         widgets = {
             'date_paiement': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'montant': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'type_paiement': forms.Select(attrs={'class': 'form-select'}),
             'mode_paiement': forms.Select(attrs={'class': 'form-select'}),
-            'reference_paiement': forms.TextInput(attrs={'class': 'form-control'}),
+            # 'reference_paiement': forms.TextInput(attrs={'class': 'form-control'}),  # Champ supprimé
             'numero_cheque': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': _('Numéro de chèque (si applicable)')
@@ -64,7 +62,7 @@ class PaiementForm(forms.ModelForm):
             'type_paiement': _('Type de paiement'),
             'mode_paiement': _('Mode de paiement'),
             'date_paiement': _('Date de paiement'),
-            'reference_paiement': _('Référence de paiement'),
+            # 'reference_paiement': _('Référence de paiement'),  # Champ supprimé
             'numero_cheque': _('Numéro de chèque'),
             'reference_virement': _('Référence virement'),
             'notes': _('Notes'),
@@ -148,8 +146,6 @@ class PaiementForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         contrat = cleaned_data.get('contrat')
-        type_paiement = cleaned_data.get('type_paiement')
-        montant = cleaned_data.get('montant')
         mode_paiement = cleaned_data.get('mode_paiement')
         numero_cheque = cleaned_data.get('numero_cheque')
         reference_virement = cleaned_data.get('reference_virement')
@@ -178,7 +174,7 @@ class PaiementForm(forms.ModelForm):
                 existing = existing_payment.first()
                 self.add_error('mois_paye', 
                     f"Un paiement existe déjà pour ce contrat au mois de {mois_paye}. "
-                    f"Paiement existant: {existing.reference_paiement} du {existing.date_paiement.strftime('%d/%m/%Y')} "
+                    f"Paiement existant du {existing.date_paiement.strftime('%d/%m/%Y')} "
                     f"pour un montant de {existing.montant} F CFA."
                 )
         
@@ -192,21 +188,21 @@ class ChargeDeductibleForm(forms.ModelForm):
     class Meta:
         model = ChargeDeductible
         fields = [
-            'contrat', 'montant', 'libelle', 'description', 'type_charge'
+            'contrat', 'montant', 'description'
         ]
         widgets = {
             'contrat': forms.Select(attrs={'class': 'form-select'}),
             'montant': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'libelle': forms.TextInput(attrs={'class': 'form-control'}),
+            # 'libelle': forms.TextInput(attrs={'class': 'form-control'}),  # Champ supprimé
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'type_charge': forms.Select(attrs={'class': 'form-select'}),
+            # 'type_charge': forms.Select(attrs={'class': 'form-select'}),  # Champ supprimé
         }
         labels = {
             'contrat': _('Contrat'),
             'montant': _('Montant'),
-            'libelle': _('Libellé de la charge'),
+            # 'libelle': _('Libellé de la charge'),  # Champ supprimé
             'description': _('Description'),
-            'type_charge': _('Type de charge'),
+            # 'type_charge': _('Type de charge'),  # Champ supprimé
         }
     
     def clean_montant(self):
@@ -372,8 +368,8 @@ class RetraitBailleurForm(forms.ModelForm):
         model = RetraitBailleur
         fields = [
             'bailleur', 'mois_retrait', 'montant_loyers_bruts',
-            'montant_charges_deductibles', 'montant_net_a_payer', 'type_retrait', 'statut', 'mode_retrait',
-            'date_demande', 'date_versement', 'numero_cheque', 'reference_virement', 'notes'
+            'montant_charges_deductibles', 'montant_charges_bailleur', 'montant_net_a_payer', 
+            'type_retrait', 'statut', 'mode_retrait', 'notes'
         ]
         widgets = {
             'mois_retrait': forms.DateInput(attrs={
@@ -390,6 +386,17 @@ class RetraitBailleurForm(forms.ModelForm):
                 'step': '0.01',
                 'min': '0'
             }),
+            'montant_charges_bailleur': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'montant_net_a_payer': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0.01',
+                'readonly': 'readonly'
+            }),
             'type_retrait': forms.Select(attrs={
                 'class': 'form-select'
             }),
@@ -398,28 +405,6 @@ class RetraitBailleurForm(forms.ModelForm):
             }),
             'mode_retrait': forms.Select(attrs={
                 'class': 'form-select'
-            }),
-            'date_demande': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
-            }),
-            'montant_net_a_payer': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01',
-                'min': '0.01',
-                'readonly': 'readonly'
-            }),
-            'date_versement': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
-            }),
-            'numero_cheque': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Numéro de chèque'
-            }),
-            'reference_virement': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Référence du virement'
             }),
             'notes': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -442,11 +427,11 @@ class RetraitBailleurForm(forms.ModelForm):
         
         # Valeurs par défaut
         if not self.instance.pk:
-            self.fields['date_demande'].initial = timezone.now().date()
             self.fields['mois_retrait'].initial = timezone.now().date().replace(day=1)
             self.fields['statut'].initial = 'en_attente'
             self.fields['type_retrait'].initial = 'mensuel'
             self.fields['montant_charges_deductibles'].initial = 0
+            self.fields['montant_charges_bailleur'].initial = 0
             self.fields['montant_net_a_payer'].initial = 0
     
     def clean_mois_retrait(self):
@@ -472,15 +457,16 @@ class RetraitBailleurForm(forms.ModelForm):
             raise ValidationError(_('Le montant des charges déductibles ne peut pas être négatif.'))
         
         # Calculer automatiquement le montant net
+        montant_charges_bailleur = cleaned_data.get('montant_charges_bailleur', 0) or 0
         if montant_loyers_bruts is not None and montant_charges_deductibles is not None:
-            montant_net_calcule = montant_loyers_bruts - montant_charges_deductibles
+            montant_net_calcule = montant_loyers_bruts - montant_charges_deductibles - montant_charges_bailleur
             
             # Vérifier que le montant net est positif
             if montant_net_calcule <= 0:
-                raise ValidationError(_('Le montant net à payer doit être positif. Les charges déductibles ne peuvent pas dépasser les loyers bruts.'))
+                raise ValidationError(_('Le montant net à payer doit être positif. Les charges ne peuvent pas dépasser les loyers bruts.'))
             
             # Mettre à jour le champ montant net
-            cleaned_data['montant_net_a_payer'] = montant_net_calcule
+            cleaned_data['montant_net_a_payer'] = max(montant_net_calcule, 0)
         
         return cleaned_data
 
@@ -524,7 +510,7 @@ class GestionChargesBailleurForm(forms.Form):
         })
     )
     
-    def __init__(self, retrait_bailleur=None, *args, **kwargs):
+    def __init__(self, *args, retrait_bailleur=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.retrait_bailleur = retrait_bailleur
         
@@ -573,259 +559,96 @@ class GestionChargesBailleurForm(forms.Form):
         return cleaned_data
 
 
-class TableauBordFinancierForm(forms.ModelForm):
-    """Formulaire professionnel pour créer/modifier un tableau de bord financier."""
-    
-    class Meta:
-        model = TableauBordFinancier
-        fields = [
-            'nom', 'description', 'proprietes', 'bailleurs',
-            'afficher_revenus', 'afficher_charges', 'afficher_benefices', 'afficher_taux_occupation',
-            'periode', 'date_debut_personnalisee', 'date_fin_personnalisee',
-            'seuil_alerte', 'devise', 'couleur_theme', 'actif'
-        ]
-        widgets = {
-            'nom': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': _('Ex: Tableau de bord mensuel - Q1 2024')
-            }),
-            'description': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'placeholder': _('Description détaillée du tableau de bord...')
-            }),
-            'proprietes': forms.SelectMultiple(attrs={
-                'class': 'form-select select2',
-                'data-placeholder': _('Sélectionner les propriétés...')
-            }),
-            'bailleurs': forms.SelectMultiple(attrs={
-                'class': 'form-select select2',
-                'data-placeholder': _('Sélectionner les bailleurs...')
-            }),
-            'periode': forms.Select(attrs={
-                'class': 'form-select'
-            }),
-            'date_debut_personnalisee': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
-            }),
-            'date_fin_personnalisee': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
-            }),
-            'seuil_alerte': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01',
-                'placeholder': _('Montant seuil pour les alertes')
-            }),
-            'devise': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'F CFA'
-            }),
-            'couleur_theme': forms.TextInput(attrs={
-                'class': 'form-control',
-                'type': 'color',
-                'placeholder': '#007bff'
-            }),
-        }
-        labels = {
-            'nom': _('Nom du tableau de bord'),
-            'description': _('Description'),
-            'proprietes': _('Propriétés incluses'),
-            'bailleurs': _('Bailleurs inclus'),
-            'afficher_revenus': _('Afficher les revenus'),
-            'afficher_charges': _('Afficher les charges'),
-            'afficher_benefices': _('Afficher les bénéfices'),
-            'afficher_taux_occupation': _('Afficher le taux d\'occupation'),
-            'periode': _('Période d\'analyse'),
-            'date_debut_personnalisee': _('Date de début (période personnalisée)'),
-            'date_fin_personnalisee': _('Date de fin (période personnalisée)'),
-            'seuil_alerte': _('Seuil d\'alerte'),
-            'devise': _('Devise'),
-            'couleur_theme': _('Couleur du thème'),
-            'actif': _('Tableau actif'),
-        }
-        help_texts = {
-            'nom': _('Nom descriptif et unique pour identifier ce tableau de bord'),
-            'description': _('Description détaillée des objectifs et du contenu de ce tableau de bord'),
-            'proprietes': _('Sélectionner les propriétés à inclure dans l\'analyse financière'),
-            'bailleurs': _('Sélectionner les bailleurs à inclure dans l\'analyse (optionnel)'),
-            'periode': _('Période d\'analyse pour les calculs financiers'),
-            'seuil_alerte': _('Montant minimum des bénéfices avant déclenchement d\'une alerte'),
-            'devise': _('Devise utilisée pour l\'affichage des montants'),
-            'couleur_theme': _('Couleur principale pour la personnalisation visuelle'),
-        }
-    
-    def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
-        super().__init__(*args, **kwargs)
-        
-        # Importer les modèles nécessaires
-        from proprietes.models import Propriete, Bailleur
-        
-        # Filtrer les propriétés et bailleurs actifs
-        self.fields['proprietes'].queryset = Propriete.objects.filter(
-            actif=True,
-            is_deleted=False
-        ).select_related('bailleur').order_by('titre')
-        
-        self.fields['bailleurs'].queryset = Bailleur.objects.filter(
-            actif=True,
-            is_deleted=False
-        ).order_by('nom', 'prenom')
-        
-        # Personnaliser l'affichage des propriétés
-        self.fields['proprietes'].label_from_instance = lambda obj: (
-            f"{obj.titre} - {obj.adresse} ({obj.bailleur.nom if obj.bailleur else 'N/A'})"
-        )
-        
-        # Personnaliser l'affichage des bailleurs
-        self.fields['bailleurs'].label_from_instance = lambda obj: (
-            f"{obj.nom} {obj.prenom} - {obj.email or obj.telephone}"
-        )
-        
-        # Valeurs par défaut
-        if not self.instance.pk:
-            self.fields['actif'].initial = True
-            self.fields['devise'].initial = 'F CFA'
-            self.fields['couleur_theme'].initial = '#007bff'
-            self.fields['afficher_revenus'].initial = True
-            self.fields['afficher_charges'].initial = True
-            self.fields['afficher_benefices'].initial = True
-            self.fields['afficher_taux_occupation'].initial = True
-        
-        # Définir l'utilisateur créateur
-        if user and not self.instance.pk:
-            self.instance.cree_par = user
-    
-    def clean(self):
-        """Validation globale du formulaire."""
-        cleaned_data = super().clean()
-        periode = cleaned_data.get('periode')
-        date_debut = cleaned_data.get('date_debut_personnalisee')
-        date_fin = cleaned_data.get('date_fin_personnalisee')
-        
-        # Validation des dates personnalisées
-        if periode == 'personnalise':
-            if not date_debut:
-                raise ValidationError(_('La date de début est requise pour une période personnalisée.'))
-            if not date_fin:
-                raise ValidationError(_('La date de fin est requise pour une période personnalisée.'))
-            if date_debut and date_fin and date_debut >= date_fin:
-                raise ValidationError(_('La date de début doit être antérieure à la date de fin.'))
-        
-        # Validation du seuil d'alerte
-        seuil_alerte = cleaned_data.get('seuil_alerte')
-        if seuil_alerte is not None and seuil_alerte < 0:
-            raise ValidationError(_('Le seuil d\'alerte ne peut pas être négatif.'))
-        
-        # Validation des propriétés
-        proprietes = cleaned_data.get('proprietes')
-        if proprietes and proprietes.count() == 0:
-            raise ValidationError(_('Au moins une propriété doit être sélectionnée.'))
-        
-        return cleaned_data
-    
-    def clean_nom(self):
-        """Validation du nom du tableau de bord."""
-        nom = self.cleaned_data.get('nom')
-        if nom:
-            # Vérifier l'unicité du nom
-            from .models import TableauBordFinancier
-            queryset = TableauBordFinancier.objects.filter(nom=nom)
-            if self.instance.pk:
-                queryset = queryset.exclude(pk=self.instance.pk)
-            
-            if queryset.exists():
-                raise ValidationError(_('Un tableau de bord avec ce nom existe déjà.'))
-        
-        return nom
+# class TableauBordFinancierForm(forms.ModelForm):  # Modèle supprimé
+    # """Formulaire professionnel pour créer/modifier un tableau de bord financier."""
+    # Classe commentée car le modèle n'existe plus
+    # Contenu de la classe commenté car le modèle n'existe plus
 
 
-class RecapitulatifMensuelBailleurForm(forms.ModelForm):
-    """Formulaire pour créer/modifier un récapitulatif mensuel par bailleur."""
+# class RecapitulatifMensuelBailleurForm(forms.ModelForm):  # Modèle supprimé
+    # """Formulaire pour créer/modifier un récapitulatif mensuel par bailleur."""
     
-    class Meta:
-        model = RecapitulatifMensuelBailleur
-        fields = [
-            'bailleur', 'mois_recapitulatif', 'type_recapitulatif', 'notes'
-        ]
-        widgets = {
-            'bailleur': forms.Select(attrs={
-                'class': 'form-select',
-                'required': True
-            }),
-            'mois_recapitulatif': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date',
-                'required': True
-            }),
-            'type_recapitulatif': forms.Select(attrs={
-                'class': 'form-select',
-                'required': True,
-                'onchange': 'updatePeriodLabel()'
-            }),
-            'notes': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'placeholder': 'Notes et observations sur ce récapitulatif...'
-            })
-        }
-        labels = {
-            'bailleur': _('Bailleur'),
-            'mois_recapitulatif': _('Mois de référence'),
-            'type_recapitulatif': _('Type de récapitulatif'),
-            'notes': _('Notes et observations')
-        }
-        help_texts = {
-            'mois_recapitulatif': _('Mois de référence pour le calcul du récapitulatif'),
-            'type_recapitulatif': _('Période couverte par le récapitulatif'),
-            'notes': _('Informations complémentaires sur ce récapitulatif')
-        }
+    # class Meta:
+        # model = RecapitulatifMensuelBailleur
+        # fields = [
+        #     'bailleur', 'mois_recapitulatif', 'type_recapitulatif', 'notes'
+        # ]
+        # widgets = {
+            # 'bailleur': forms.Select(attrs={
+            #     'class': 'form-select',
+            #     'required': True
+            # }),
+            # 'mois_recapitulatif': forms.DateInput(attrs={
+            #     'class': 'form-control',
+            #     'type': 'date',
+            #     'required': True
+            # }),
+            # 'type_recapitulatif': forms.Select(attrs={
+            #     'class': 'form-select',
+            #     'required': True,
+            #     'onchange': 'updatePeriodLabel()'
+            # }),
+            # 'notes': forms.Textarea(attrs={
+            #     'class': 'form-control',
+            #     'rows': 3,
+            #     'placeholder': 'Notes et observations sur ce récapitulatif...'
+            # })
+        # }
+        # labels = {
+        #     'bailleur': _('Bailleur'),
+        #     'mois_recapitulatif': _('Mois de référence'),
+        #     'type_recapitulatif': _('Type de récapitulatif'),
+        #     'notes': _('Notes et observations')
+        # }
+        # help_texts = {
+        #     'mois_recapitulatif': _('Mois de référence pour le calcul du récapitulatif'),
+        #     'type_recapitulatif': _('Période couverte par le récapitulatif'),
+        #     'notes': _('Informations complémentaires sur ce récapitulatif')
+        # }
     
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
         
-        # Filtrer les bailleurs actifs
-        self.fields['bailleur'].queryset = Bailleur.objects.filter(
-            is_deleted=False
-        ).order_by('nom', 'prenom')
+        # # Filtrer les bailleurs actifs
+        # self.fields['bailleur'].queryset = Bailleur.objects.filter(
+        #     is_deleted=False
+        # ).order_by('nom', 'prenom')
         
-        # Personnaliser les choix du type de récapitulatif
-        self.fields['type_recapitulatif'].choices = [
-            ('mensuel', '📅 Mensuel - 1 mois'),
-            ('trimestriel', '📊 Trimestriel - 3 mois'),
-            ('annuel', '📈 Annuel - 12 mois'),
-            ('exceptionnel', '⚡ Exceptionnel - Période personnalisée'),
-        ]
+        # # Personnaliser les choix du type de récapitulatif
+        # self.fields['type_recapitulatif'].choices = [
+        #     ('mensuel', '📅 Mensuel - 1 mois'),
+        #     ('trimestriel', '📊 Trimestriel - 3 mois'),
+        #     ('annuel', '📈 Annuel - 12 mois'),
+        #     ('exceptionnel', '⚡ Exceptionnel - Période personnalisée'),
+        # ]
         
-        # Définir le mois actuel par défaut
-        if not self.instance.pk:
-            from django.utils import timezone
-            mois_actuel = timezone.now().replace(day=1)
-            self.fields['mois_recapitulatif'].initial = mois_actuel
+        # # Définir le mois actuel par défaut
+        # if not self.instance.pk:
+        #     from django.utils import timezone
+        #     mois_actuel = timezone.now().replace(day=1)
+        #     self.fields['mois_recapitulatif'].initial = mois_actuel
     
-    def clean(self):
-        cleaned_data = super().clean()
-        bailleur = cleaned_data.get('bailleur')
-        mois_recapitulatif = cleaned_data.get('mois_recapitulatif')
-        type_recapitulatif = cleaned_data.get('type_recapitulatif')
+    # def clean(self):
+    #     cleaned_data = super().clean()
+    #     bailleur = cleaned_data.get('bailleur')
+    #     mois_recapitulatif = cleaned_data.get('mois_recapitulatif')
+        # type_recapitulatif = cleaned_data.get('type_recapitulatif')
         
-        if bailleur and mois_recapitulatif and type_recapitulatif:
-            # Vérifier s'il existe déjà un récapitulatif pour cette combinaison
-            existing_recap = RecapitulatifMensuelBailleur.objects.filter(
-                bailleur=bailleur,
-                mois_recapitulatif=mois_recapitulatif,
-                type_recapitulatif=type_recapitulatif
-            ).exclude(pk=self.instance.pk if self.instance else None)
+        # if bailleur and mois_recapitulatif and type_recapitulatif:
+        #     # Vérifier s'il existe déjà un récapitulatif pour cette combinaison
+        #     existing_recap = RecapitulatifMensuelBailleur.objects.filter(
+        #         bailleur=bailleur,
+        #         mois_recapitulatif=mois_recapitulatif,
+        #         type_recapitulatif=type_recapitulatif
+        #     ).exclude(pk=self.instance.pk if self.instance else None)
             
-            if existing_recap.exists():
-                raise forms.ValidationError(
-                    f"Un récapitulatif {type_recapitulatif} existe déjà pour "
-                    f"{bailleur.get_nom_complet()} - {mois_recapitulatif.strftime('%B %Y')}"
-                )
+        #     if existing_recap.exists():
+        #         raise forms.ValidationError(
+        #             f"Un récapitulatif {type_recapitulatif} existe déjà pour "
+        #             f"{bailleur.get_nom_complet()} - {mois_recapitulatif.strftime('%B %Y')}"
+        #         )
         
-        return cleaned_data
+        # return cleaned_data
 
 
 class RecapitulatifMensuelValidationForm(forms.Form):
@@ -889,6 +712,70 @@ class RecapitulatifMensuelEnvoiForm(forms.Form):
     )
 
 
+class RecapMensuelForm(forms.ModelForm):
+    """Formulaire pour créer/modifier un récapitulatif mensuel."""
+    
+    class Meta:
+        model = RecapMensuel
+        fields = ['bailleur', 'mois_recap']
+        widgets = {
+            'bailleur': forms.Select(attrs={
+                'class': 'form-select',
+                'required': True
+            }),
+            'mois_recap': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date',
+                'required': True
+            })
+        }
+        labels = {
+            'bailleur': _('Bailleur'),
+            'mois_recap': _('Mois de référence')
+        }
+        help_texts = {
+            'mois_recap': _('Mois de référence pour le calcul du récapitulatif')
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Filtrer les bailleurs actifs
+        self.fields['bailleur'].queryset = Bailleur.objects.filter(
+            actif=True
+        ).order_by('nom', 'prenom')
+        
+        # Personnaliser l'affichage des bailleurs
+        self.fields['bailleur'].label_from_instance = lambda obj: (
+            f"{obj.nom} {obj.prenom}" if obj.prenom else obj.nom
+        )
+        
+        # Définir le mois actuel par défaut
+        if not self.instance.pk:
+            mois_actuel = timezone.now().replace(day=1)
+            self.fields['mois_recap'].initial = mois_actuel
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        bailleur = cleaned_data.get('bailleur')
+        mois_recap = cleaned_data.get('mois_recap')
+        
+        if bailleur and mois_recap:
+            # Vérifier s'il existe déjà un récapitulatif pour cette combinaison
+            existing_recap = RecapMensuel.objects.filter(
+                bailleur=bailleur,
+                mois_recap=mois_recap
+            ).exclude(pk=self.instance.pk if self.instance else None)
+            
+            if existing_recap.exists():
+                raise forms.ValidationError(
+                    f"Un récapitulatif existe déjà pour "
+                    f"{bailleur.get_nom_complet()} - {mois_recap.strftime('%B %Y')}"
+                )
+        
+        return cleaned_data
+
+
 class GenererPDFLotForm(forms.Form):
     """Formulaire pour la génération de PDF en lot."""
     
@@ -908,7 +795,6 @@ class GenererPDFLotForm(forms.Form):
         super().__init__(*args, **kwargs)
         # Définir la valeur par défaut au mois actuel
         if not self.initial:
-            from datetime import date
             self.initial['mois_recap'] = date.today().replace(day=1)
 
 

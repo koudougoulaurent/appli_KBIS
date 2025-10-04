@@ -1,0 +1,424 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Quittance de Retrait - {{ retrait.bailleur.get_nom_complet }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        .quittance-content, .quittance-content * {
+            visibility: visible;
+        }
+        .quittance-content {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+        }
+        .no-print {
+            display: none !important;
+        }
+    }
+    
+    .quittance-container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .quittance-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        text-align: center;
+    }
+    
+    .quittance-logo {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .quittance-subtitle {
+        font-size: 1.2rem;
+        opacity: 0.9;
+        margin-bottom: 1rem;
+    }
+    
+    .quittance-title {
+        font-size: 1.8rem;
+        font-weight: bold;
+        margin: 2rem 0;
+        text-align: center;
+        color: #2c3e50;
+    }
+    
+    .quittance-body {
+        padding: 2rem;
+    }
+    
+    .info-section {
+        margin-bottom: 2rem;
+    }
+    
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.8rem 0;
+        border-bottom: 1px solid #ecf0f1;
+    }
+    
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #7f8c8d;
+        flex: 1;
+    }
+    
+    .info-value {
+        color: #2c3e50;
+        flex: 2;
+        text-align: right;
+    }
+    
+    .montant-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 2rem;
+        border-radius: 10px;
+        margin: 2rem 0;
+        text-align: center;
+    }
+    
+    .montant-principal {
+        font-size: 3rem;
+        font-weight: bold;
+        color: #28a745;
+        margin-bottom: 0.5rem;
+    }
+    
+    .montant-label {
+        font-size: 1.2rem;
+        color: #6c757d;
+        margin-bottom: 1rem;
+    }
+    
+    .montant-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    
+    .montant-item {
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+        text-align: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .montant-item-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+    }
+    
+    .montant-item-value {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    
+    .signature-section {
+        margin-top: 3rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+    }
+    
+    .signature-box {
+        border: 2px dashed #bdc3c7;
+        padding: 2rem;
+        text-align: center;
+        min-width: 200px;
+    }
+    
+    .signature-label {
+        font-weight: 600;
+        color: #7f8c8d;
+        margin-top: 1rem;
+    }
+    
+    .quittance-footer {
+        background: #f8f9fa;
+        padding: 1.5rem 2rem;
+        text-align: center;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .contact-info {
+        display: flex;
+        justify-content: space-around;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .contact-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .btn-print {
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        border: none;
+        color: white;
+        padding: 0.8rem 2rem;
+        border-radius: 25px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+    }
+    
+    .btn-print:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0,123,255,0.4);
+        color: white;
+    }
+    
+    .btn-download {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        padding: 0.8rem 2rem;
+        border-radius: 25px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(40,167,69,0.3);
+    }
+    
+    .btn-download:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(40,167,69,0.4);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Actions -->
+    <div class="row mb-4 no-print">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1 text-dark">
+                        <i class="fas fa-receipt text-primary me-2"></i>
+                        Quittance de Retrait
+                    </h1>
+                    <p class="text-muted mb-0">{{ retrait.bailleur.get_nom_complet }} - {{ retrait.mois_retrait|date:"F Y" }}</p>
+                </div>
+                <div>
+                    <button onclick="window.print()" class="btn btn-print me-2">
+                        <i class="fas fa-print me-2"></i>Imprimer
+                    </button>
+                    <a href="{% url 'paiements:retrait_detail' retrait.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Retour
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quittance -->
+    <div class="quittance-content">
+        <div class="quittance-container">
+            <!-- Header -->
+            <div class="quittance-header">
+                <div class="quittance-logo">KBIS</div>
+                <div class="quittance-subtitle">Immobilier & Construction</div>
+                <div style="font-size: 0.9rem; opacity: 0.8;">
+                    Achat & Vente • Location • Gestion • Nettoyage
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div class="quittance-body">
+                <!-- Titre -->
+                <div class="quittance-title">
+                    QUITTANCE DE RETRAIT N° {{ quittance.numero_quittance }}
+                </div>
+
+                <!-- Informations du retrait -->
+                <div class="info-section">
+                    <div class="info-row">
+                        <span class="info-label">Date d'émission:</span>
+                        <span class="info-value">{{ quittance.date_emission|date:"d-m-Y" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Mois de retrait:</span>
+                        <span class="info-value">{{ retrait.mois_retrait|date:"F Y" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Bailleur:</span>
+                        <span class="info-value">{{ retrait.bailleur.get_nom_complet }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Type de retrait:</span>
+                        <span class="info-value">{{ retrait.get_type_retrait_display }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Mode de retrait:</span>
+                        <span class="info-value">{{ retrait.get_mode_retrait_display }}</span>
+                    </div>
+                </div>
+
+                <!-- Montant principal -->
+                <div class="montant-section">
+                    <div class="montant-principal">{{ retrait.montant_net_a_payer|floatformat:0|intcomma }}</div>
+                    <div class="montant-label">F CFA</div>
+                    <div style="font-size: 1rem; color: #6c757d; margin-top: 1rem;">
+                        Montant net à payer pour {{ retrait.mois_retrait|date:"F Y" }}
+                    </div>
+                </div>
+
+                <!-- Détail des montants -->
+                <div class="montant-details">
+                    <div class="montant-item">
+                        <div class="montant-item-label">Loyers Bruts</div>
+                        <div class="montant-item-value" style="color: #007bff;">
+                            +{{ retrait.montant_loyers_bruts|floatformat:0|intcomma }} F CFA
+                        </div>
+                    </div>
+                    <div class="montant-item">
+                        <div class="montant-item-label">Charges Déductibles</div>
+                        <div class="montant-item-value" style="color: #dc3545;">
+                            -{{ retrait.montant_charges_deductibles|floatformat:0|intcomma }} F CFA
+                        </div>
+                    </div>
+                    <div class="montant-item">
+                        <div class="montant-item-label">Charges Bailleur</div>
+                        <div class="montant-item-value" style="color: #ffc107;">
+                            -{{ retrait.montant_charges_bailleur|floatformat:0|intcomma }} F CFA
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Informations supplémentaires -->
+                <div class="info-section">
+                    <div class="info-row">
+                        <span class="info-label">Statut:</span>
+                        <span class="info-value">
+                            {% if retrait.statut == 'en_attente' %}
+                            <span style="color: #ffc107; font-weight: bold;">En attente</span>
+                            {% elif retrait.statut == 'valide' %}
+                            <span style="color: #17a2b8; font-weight: bold;">Validé</span>
+                            {% elif retrait.statut == 'paye' %}
+                            <span style="color: #28a745; font-weight: bold;">Payé</span>
+                            {% elif retrait.statut == 'annule' %}
+                            <span style="color: #dc3545; font-weight: bold;">Annulé</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% if retrait.date_validation %}
+                    <div class="info-row">
+                        <span class="info-label">Date de validation:</span>
+                        <span class="info-value">{{ retrait.date_validation|date:"d/m/Y" }}</span>
+                    </div>
+                    {% endif %}
+                    {% if retrait.date_paiement %}
+                    <div class="info-row">
+                        <span class="info-label">Date de paiement:</span>
+                        <span class="info-value">{{ retrait.date_paiement|date:"d/m/Y" }}</span>
+                    </div>
+                    {% endif %}
+                    {% if retrait.notes %}
+                    <div class="info-row">
+                        <span class="info-label">Notes:</span>
+                        <span class="info-value">{{ retrait.notes }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Signature -->
+                <div class="signature-section">
+                    <div class="signature-box">
+                        <div style="height: 60px;"></div>
+                        <div class="signature-label">Cachet et signature de l'Agence</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-weight: bold; margin-bottom: 0.5rem;">KBIS Immobilier</div>
+                        <div style="font-size: 0.9rem; color: #6c757d;">
+                            {{ quittance.date_emission|date:"d/m/Y" }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="quittance-footer">
+                <div style="font-weight: bold; margin-bottom: 1rem;">KBIS Immobilier & Construction</div>
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>Pissy 10050 Ouagadougou, Burkina Faso</span>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-phone"></i>
+                        <span>+226 70 20 54 91</span>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-envelope"></i>
+                        <span>kbissarl2022@gmail.com</span>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-globe"></i>
+                        <span>https://omnicom-bf.com/</span>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; font-size: 0.8rem; opacity: 0.7;">
+                    XXXXXXXXXX
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Animation d'apparition
+    $('.quittance-container').hide().fadeIn(1000);
+    
+    // Animation des montants
+    $('.montant-item').each(function(index) {
+        $(this).hide().delay(index * 200).fadeIn(500);
+    });
+});
+
+// Fonction d'impression
+function printQuittance() {
+    window.print();
+}
+
+// Fonction de téléchargement PDF (à implémenter)
+function downloadPDF() {
+    // Ici on pourrait implémenter la génération PDF
+    alert('Fonction de téléchargement PDF à implémenter');
+}
+</script>
+{% endblock %}

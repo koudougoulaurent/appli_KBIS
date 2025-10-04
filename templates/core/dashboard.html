@@ -242,7 +242,7 @@
                                     <small class="text-muted">{{ propriete.ville }}</small>
                                 </div>
                                 <span class="badge bg-primary">
-                                    {{ propriete.loyer_actuel }} F CFA
+                                    {{ propriete.get_loyer_actuel_calcule }} F CFA
                                 </span>
                             </div>
                             {% endfor %}

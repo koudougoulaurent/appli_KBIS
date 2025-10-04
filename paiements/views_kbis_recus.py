@@ -7,7 +7,8 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.contrib import messages
 from core.utils import check_group_permissions
-from .models import Paiement, RetraitBailleur, RecapitulatifMensuelBailleur
+from .models import Paiement, RetraitBailleur
+# from .models import RecapitulatifMensuelBailleur  # Modèle supprimé
 
 
 @login_required
