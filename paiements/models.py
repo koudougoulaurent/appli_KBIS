@@ -102,9 +102,11 @@ class RecapMensuel(models.Model):
     def calculer_totaux_bailleur(self):
         """Calcule les totaux pour le bailleur avec les charges dynamiques."""
         from decimal import Decimal
+        from django.db.models import Sum
+        from proprietes.models import ChargesBailleur
         
         try:
-            # Version simplifiée pour éviter les erreurs
+            # Initialiser les totaux
             total_loyers = Decimal('0')
             total_charges_deductibles = Decimal('0')
             total_charges_bailleur = Decimal('0')
@@ -115,6 +117,36 @@ class RecapMensuel(models.Model):
             # Récupérer les propriétés du bailleur
             proprietes = self.bailleur.proprietes.filter(is_deleted=False)
             nombre_proprietes = proprietes.count()
+            
+            # Calculer les loyers bruts pour le mois
+            for propriete in proprietes:
+                # Récupérer les contrats actifs pour cette propriété
+                contrats_actifs = propriete.contrats.filter(
+                    est_actif=True,
+                    date_debut__lte=self.mois_recap,
+                    date_fin__gte=self.mois_recap
+                )
+                
+                for contrat in contrats_actifs:
+                    nombre_contrats_actifs += 1
+                    # Loyer mensuel
+                    loyer_mensuel = contrat.loyer_mensuel or Decimal('0')
+                    total_loyers += loyer_mensuel
+                    
+                    # Charges déductibles du contrat
+                    charges_mensuelles = contrat.charges_mensuelles or Decimal('0')
+                    total_charges_deductibles += charges_mensuelles
+            
+            # Calculer les charges bailleur pour le mois
+            charges_bailleur_mois = ChargesBailleur.objects.filter(
+                propriete__bailleur=self.bailleur,
+                date_charge__year=self.mois_recap.year,
+                date_charge__month=self.mois_recap.month,
+                statut__in=['en_attente', 'deduite_retrait']
+            )
+            
+            for charge in charges_bailleur_mois:
+                total_charges_bailleur += charge.montant_restant or charge.montant
             
             # Calculer le total net
             total_net = total_loyers - total_charges_deductibles - total_charges_bailleur
@@ -127,6 +159,9 @@ class RecapMensuel(models.Model):
             self.nombre_proprietes = nombre_proprietes
             self.nombre_contrats_actifs = nombre_contrats_actifs
             self.nombre_paiements_recus = nombre_paiements_recus
+            
+            # Sauvegarder les modifications
+            self.save()
             
         except Exception as e:
             # En cas d'erreur, utiliser les valeurs par défaut

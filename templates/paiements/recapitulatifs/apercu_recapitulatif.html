@@ -245,7 +245,7 @@
                     <div class="totaux-label">Charges déductibles</div>
                 </div>
                 <div class="totaux-item">
-                    <div class="totaux-value">{{ totaux.get_total_charges_bailleur|floatformat:0 }} F CFA</div>
+                    <div class="totaux-value">{{ totaux.total_charges_bailleur|floatformat:0 }} F CFA</div>
                     <div class="totaux-label">Charges bailleur</div>
                 </div>
                 <div class="totaux-item">
@@ -286,7 +286,7 @@
                     </div>
                     <div class="col-md-3">
                         <small class="text-muted">Charges bailleur</small>
-                        <div class="fw-bold">{{ bailleur.get_total_charges_bailleur|floatformat:0 }} F CFA</div>
+                        <div class="fw-bold">{{ bailleur.total_charges_bailleur|floatformat:0 }} F CFA</div>
                     </div>
                     <div class="col-md-3">
                         <small class="text-muted">Montant net</small>
