@@ -1312,74 +1312,15 @@ def imprimer_recu_caution(request, contrat_id):
     # Marquer comme imprimé
     recu.marquer_imprime(request.user)
     
-    # Générer le PDF
+    # Utiliser le service PDF professionnel avec la bonne image d'en-tête
+    from contrats.services import RecuCautionPDFService
+    pdf_service = RecuCautionPDFService(recu)
+    pdf_buffer = pdf_service.generate_recu_pdf()
+    
+    # Créer la réponse HTTP
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="recu_caution_{recu.numero_recu}.pdf"'
-    
-    # Créer le PDF avec ReportLab
-    p = canvas.Canvas(response, pagesize=A4)
-    
-    # Récupérer la configuration de l'entreprise
-    from core.models import ConfigurationEntreprise
-    from core.utils import ajouter_en_tete_entreprise, ajouter_pied_entreprise
-    config = ConfigurationEntreprise.get_configuration_active()
-    
-    # En-tête de l'entreprise (en haut de page)
-    ajouter_en_tete_entreprise(p, config, y_position=750)
-    
-    # Ligne de séparation après l'en-tête
-    p.setStrokeColorRGB(0.7, 0.7, 0.7)
-    p.line(50, 720, 400, 720)
-    p.setStrokeColorRGB(0, 0, 0)
-    
-    # Titre du document (bien séparé de l'en-tête)
-    p.setFont("Helvetica-Bold", 16)
-    p.drawString(50, 680, f"RECU DE CAUTION ET AVANCE")
-    p.setFont("Helvetica", 12)
-    p.drawString(50, 650, f"Numéro: {recu.numero_recu}")
-    p.drawString(50, 630, f"Date: {recu.date_emission.strftime('%d/%m/%Y')}")
-    
-    # Informations du contrat
-    p.setFont("Helvetica-Bold", 14)
-    p.drawString(50, 600, "INFORMATIONS DU CONTRAT")
-    p.setFont("Helvetica", 10)
-    p.drawString(50, 580, f"Numéro: {contrat.numero_contrat}")
-    p.drawString(50, 560, f"Propriété: {contrat.propriete.titre}")
-    p.drawString(50, 540, f"Locataire: {contrat.locataire.nom} {contrat.locataire.prenom}")
-    
-    # Détails financiers
-    p.setFont("Helvetica-Bold", 14)
-    p.drawString(50, 500, "DETAILS FINANCIERS")
-    p.setFont("Helvetica", 10)
-    p.drawString(50, 480, f"Loyer mensuel: {contrat.get_loyer_mensuel_formatted()}")
-    p.drawString(50, 460, f"Charges mensuelles: {contrat.get_charges_mensuelles_formatted()}")
-    p.drawString(50, 440, f"Dépôt de garantie: {contrat.get_depot_garantie_formatted()}")
-    p.drawString(50, 420, f"Avance de loyer: {contrat.get_avance_loyer_formatted()}")
-    p.setFont("Helvetica-Bold", 12)
-    p.drawString(50, 400, f"TOTAL: {contrat.get_total_caution_avance_formatted()}")
-    
-    # Statut des paiements
-    p.setFont("Helvetica-Bold", 14)
-    p.drawString(50, 360, "STATUT DES PAIEMENTS")
-    p.setFont("Helvetica", 10)
-    p.drawString(50, 340, f"Caution: {'Payée' if contrat.caution_payee else 'En attente'}")
-    p.drawString(50, 320, f"Avance: {'Payée' if contrat.avance_loyer_payee else 'En attente'}")
-    
-    # Ligne de séparation avant la signature
-    p.setStrokeColorRGB(0.7, 0.7, 0.7)
-    p.line(50, 300, 400, 300)
-    p.setStrokeColorRGB(0, 0, 0)
-    
-    # Signature
-    p.setFont("Helvetica", 10)
-    p.drawString(50, 280, "Signature du locataire:")
-    p.line(50, 270, 200, 270)
-    
-    # Pied de page avec informations de l'entreprise (bien séparé)
-    ajouter_pied_entreprise(p, config, y_position=220)
-    
-    p.showPage()
-    p.save()
+    response.write(pdf_buffer.getvalue())
     
     return response
 

@@ -476,20 +476,22 @@ class DocumentKBISUnifie:
             config = ConfigurationEntreprise.get_configuration_active()
             
             # Utiliser l'image d'en-tête personnalisée KBIS
-            entete_image_path = config.get_entete_prioritaire()
-            if entete_image_path:
-                # Utiliser l'image d'en-tête personnalisée
-                return f"""
-                <div class="entete-principal">
-                    <div class="logo-section">
-                        <img src="/static/images/enteteEnImage.png" 
-                             alt="KBIS IMMOBILIER" 
-                             style="width: 100%; max-width: 100%; height: auto; display: block;">
-                    </div>
+            # Toujours utiliser l'image enteteEnImage.png en priorité
+            return f"""
+            <div class="entete-principal">
+                <div class="logo-section">
+                    <img src="/static/images/enteteEnImage.png" 
+                         alt="KBIS IMMOBILIER" 
+                         style="width: 100%; max-width: 100%; height: auto; display: block;">
                 </div>
-                """
-            else:
-                # Fallback vers l'ancien système si l'image n'existe pas
+            </div>
+            """
+        except:
+            # Fallback vers l'ancien système si l'image n'existe pas
+            try:
+                from core.models import ConfigurationEntreprise
+                config = ConfigurationEntreprise.get_configuration_active()
+                
                 logo_html = ""
                 if config.logo:
                     logo_html = f'<img src="{config.logo.url}" alt="Logo {config.nom_entreprise}" />'

@@ -2,70 +2,95 @@
 
 {% load static %}
 
-{% block title %}Récépissé de Caution - KBIS{% endblock %}
+{% block title %}Récépissé de Caution et Avance - KBIS{% endblock %}
 
 {% block content %}
 <div class="quittance-container">
     <!-- Titre de la quittance -->
     <div class="quittance-title">
-        <h1>RÉCÉPISSÉ DE CAUTION N° {{ quittance.numero_quittance|default:"REC-"|add:quittance.id|stringformat:"%010d" }}</h1>
+        <h1>RECU DE CAUTION ET AVANCE</h1>
     </div>
 
     <!-- Informations principales -->
     <div class="quittance-info">
         <div class="info-left">
             <div class="info-item">
+                <span class="label">Numéro :</span>
+                <span class="value">{{ quittance.numero_quittance|default:"CAU-"|add:quittance.id|stringformat:"%010d" }}</span>
+            </div>
+            <div class="info-item">
                 <span class="label">Date :</span>
-                <span class="value">{{ quittance.date_paiement|date:"d-M-y" }}</span>
-            </div>
-            <div class="info-item">
-                <span class="label">Code location :</span>
-                <span class="value">{{ quittance.contrat.numero_contrat|default:"N/A" }}</span>
-            </div>
-            <div class="info-item">
-                <span class="label">Reçu de :</span>
-                <span class="value">{{ quittance.contrat.locataire.nom_complet|default:"N/A" }}</span>
-            </div>
-        </div>
-        
-        <div class="info-right">
-            <div class="amount-box">
-                <div class="amount-main">{{ quittance.montant|floatformat:0 }} F CFA</div>
-                <div class="amount-text">{{ quittance.montant|floatformat:0 }} francs CFA</div>
-            </div>
-            <div class="info-item">
-                <span class="label">Mois réglé :</span>
-                <span class="value">{{ quittance.mois|date:"F Y" }}</span>
+                <span class="value">{{ quittance.date_paiement|date:"d/m/Y" }}</span>
             </div>
         </div>
     </div>
 
-    <!-- Détails du paiement -->
-    <div class="payment-details">
-        <table class="details-table">
-            <tr>
-                <td class="detail-label">Type de paiement :</td>
-                <td class="detail-value">Caution - {{ quittance.montant|floatformat:2 }} F CFA</td>
-            </tr>
-            <tr>
-                <td class="detail-label">Mode de paiement :</td>
-                <td class="detail-value">{{ quittance.get_mode_paiement_display|default:"Espèces" }}</td>
-            </tr>
-            <tr>
-                <td class="detail-label">Montant de la caution :</td>
-                <td class="detail-value">{{ quittance.montant|floatformat:0 }} F CFA</td>
-            </tr>
-            <tr>
-                <td class="detail-label">Note :</td>
-                <td class="detail-value">Dépôt de garantie - Remboursable en fin de bail</td>
-            </tr>
-        </table>
+    <!-- Informations du contrat -->
+    <div class="contract-info">
+        <h3>INFORMATIONS DU CONTRAT</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="label">Numéro :</span>
+                <span class="value">{{ quittance.contrat.numero_contrat|default:"N/A" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Propriété :</span>
+                <span class="value">{{ quittance.contrat.propriete.nom|default:"N/A" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Locataire :</span>
+                <span class="value">{{ quittance.contrat.locataire.nom_complet|default:"N/A" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Détails financiers -->
+    <div class="financial-details">
+        <h3>DETAILS FINANCIERS</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="label">Loyer mensuel :</span>
+                <span class="value">{{ quittance.contrat.montant_loyer|floatformat:0 }} F CFA</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Charges mensuelles :</span>
+                <span class="value">{{ quittance.contrat.charges_mensuelles|floatformat:0 }} F CFA</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Dépôt de garantie :</span>
+                <span class="value">{{ quittance.montant|floatformat:0 }} F CFA</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Avance de loyer :</span>
+                <span class="value">0 F CFA</span>
+            </div>
+            <div class="info-item total-item">
+                <span class="label">TOTAL :</span>
+                <span class="value">{{ quittance.montant|floatformat:0 }} F CFA</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statut des paiements -->
+    <div class="payment-status">
+        <h3>STATUT DES PAIEMENTS</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="label">Caution :</span>
+                <span class="value status-paid">Payée</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Avance :</span>
+                <span class="value status-paid">Payée</span>
+            </div>
+        </div>
     </div>
 
     <!-- Zone de signature -->
     <div class="signature-area">
         <div class="signature-box">
-            <p>Cachet et signature de l'Agence</p>
+            <p>Signature du locataire :</p>
+            <div class="signature-line"></div>
         </div>
     </div>
 </div>
@@ -91,19 +116,11 @@
 }
 
 .quittance-info {
-    display: flex;
-    justify-content: space-between;
     margin-bottom: 30px;
-    align-items: flex-start;
 }
 
 .info-left {
     flex: 1;
-}
-
-.info-right {
-    flex: 1;
-    text-align: right;
 }
 
 .info-item {
@@ -112,99 +129,79 @@
     align-items: center;
 }
 
-.info-left .info-item {
-    justify-content: flex-start;
-}
-
-.info-right .info-item {
-    justify-content: flex-end;
-}
-
 .label {
     font-weight: bold;
     margin-right: 10px;
     color: #333;
+    min-width: 120px;
 }
 
 .value {
     color: #666;
 }
 
-.amount-box {
+.contract-info, .financial-details, .payment-status {
+    margin-bottom: 25px;
+    padding: 15px;
     background: #f8fafc;
-    border: 3px solid #1e3c72;
     border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-    text-align: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid #1e3c72;
 }
 
-.amount-main {
-    font-size: 28px;
+.contract-info h3, .financial-details h3, .payment-status h3 {
+    color: #1e3c72;
+    font-size: 16px;
+    margin-bottom: 15px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.info-grid .info-item {
+    margin-bottom: 8px;
+}
+
+.total-item {
+    background: #e7f3ff;
+    padding: 10px;
+    border-radius: 4px;
     font-weight: bold;
     color: #1e3c72;
-    margin-bottom: 5px;
 }
 
-.amount-text {
-    font-size: 14px;
-    color: #666;
-}
-
-.payment-details {
-    margin-bottom: 40px;
-}
-
-.details-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #f8fafc;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.details-table tr {
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.details-table tr:last-child {
-    border-bottom: none;
-}
-
-.detail-label {
-    padding: 15px 20px;
+.status-paid {
+    color: #28a745;
     font-weight: bold;
-    background: #e2e8f0;
-    color: #333;
-    width: 40%;
-}
-
-.detail-value {
-    padding: 15px 20px;
-    color: #666;
-    width: 60%;
 }
 
 .signature-area {
     margin-top: 60px;
-    text-align: center;
+    text-align: left;
 }
 
 .signature-box {
-    border: 2px dashed #ccc;
-    padding: 40px 20px;
+    border: 1px solid #ccc;
+    padding: 20px;
     border-radius: 8px;
     background: #f8fafc;
-    max-width: 300px;
-    margin: 0 auto;
+    max-width: 400px;
 }
 
 .signature-box p {
-    margin: 0;
+    margin: 0 0 10px 0;
     color: #666;
     font-weight: bold;
+}
+
+.signature-line {
+    border-bottom: 1px solid #333;
+    height: 2px;
+    margin-top: 20px;
 }
 </style>
 {% endblock %}

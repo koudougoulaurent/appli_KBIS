@@ -575,15 +575,23 @@ class ConfigurationEntreprise(models.Model):
     
     def get_entete_prioritaire(self):
         """Retourne le chemin de l'en-tête prioritaire."""
+        import os
+        from django.conf import settings
+        
+        # Priorité 1: Image d'en-tête personnalisée enteteEnImage.png
+        entete_image_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'enteteEnImage.png')
+        if os.path.exists(entete_image_path):
+            return entete_image_path
+            
+        # Priorité 2: Logo de l'entreprise uploadé
         if self.logo:
             return self.logo.path
-        else:
-            # Fallback vers l'image statique
-            import os
-            from django.conf import settings
-            static_image_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'header_footer', 'entetepieddepage.png')
-            if os.path.exists(static_image_path):
-                return static_image_path
+            
+        # Priorité 3: Image par défaut
+        static_image_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'header_footer', 'entetepieddepage.png')
+        if os.path.exists(static_image_path):
+            return static_image_path
+            
         return None
     
     def get_logo_prioritaire(self):

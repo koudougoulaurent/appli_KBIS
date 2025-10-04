@@ -1,4 +1,5 @@
 {% load static %}
+{% load core_extras %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -340,23 +341,24 @@
         <div class="header-content">
             <div class="logo-section">
                 <div class="kbis-logo">
-                    <img src="{% static 'images/enteteEnImage.png' %}" alt="KBIS Immobilier & Construction" />
+                    <img src="{% static 'images/enteteEnImage.png' %}" alt="{{ config_entreprise.nom_entreprise|default:'KBIS Immobilier & Construction' }}" />
                 </div>
                 <div class="logo-text">Immobilier & Construction</div>
             </div>
             
             <div class="company-info">
-                <h1 class="company-name">KBIS</h1>
-                <div class="slogan-box">Immobilier & Construction</div>
+                <h1 class="company-name">{{ config_entreprise.nom_entreprise|default:'KBIS' }}</h1>
+                <div class="slogan-box">{{ config_entreprise.slogan|default:'Immobilier & Construction' }}</div>
                 <p class="services">Achat & Vente location - Gestion - Nettoyage</p>
             </div>
         </div>
         
         <div class="footer-info">
-            <p><strong>Adresse :</strong> BP 440 Ouaga pissy 10050 ouagadougou burkina faso</p>
-            <p><strong>Tél :</strong> +226 79 18 32 32 / 66 66 45 60 / 79 18 39 39 / 70 14 55 55</p>
-            <p><strong>sis, secteur 26 pissy sur la voie du CMA de pissy, Annexe Ouaga 2000 :</strong> +226 79 26 88 88 / 66 66 45 60</p>
-            <p><strong>Email :</strong> kbissarl2022@gmail.com</p>
+            <p><strong>Adresse :</strong> {{ config_entreprise.get_adresse_complete|default:'BP 440 Ouaga pissy 10050 ouagadougou burkina faso' }}</p>
+            <p><strong>{{ config_entreprise.get_contact_complet|default:'Tél: +226 79 18 32 32 / 66 66 45 60 / 79 18 39 39 / 70 14 55 55' }}</p>
+            {% if config_entreprise.get_informations_legales %}
+            <p><strong>{{ config_entreprise.get_informations_legales }}</p>
+            {% endif %}
         </div>
     </div>
     

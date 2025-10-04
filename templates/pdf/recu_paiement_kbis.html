@@ -2,13 +2,13 @@
 
 {% load static %}
 
-{% block title %}Récépissé de Paiement - KBIS{% endblock %}
+{% block title %}Récépissé de Loyer - KBIS{% endblock %}
 
 {% block content %}
 <div class="recu-container">
-    <!-- Titre du récépissé -->
-    <div class="recu-title">
-        <h1>RÉCÉPISSÉ DE PAIEMENT N° {{ recu.numero_recu|default:"REC-"|add:recu.id|stringformat:"%010d" }}</h1>
+    <!-- Titre du récépissé dans un cadre bleu -->
+    <div class="recu-title-box">
+        <h1>RÉCÉPISSÉ DE LOYER N° {{ recu.numero_recu|default:"REC-"|add:recu.id|stringformat:"%010d" }}</h1>
     </div>
 
     <!-- Informations principales -->
@@ -19,8 +19,8 @@
                 <span class="value">{{ recu.date_paiement|date:"d-M-y" }}</span>
             </div>
             <div class="info-item">
-                <span class="label">Référence :</span>
-                <span class="value">{{ recu.reference_paiement|default:"N/A" }}</span>
+                <span class="label">Code location :</span>
+                <span class="value">{{ recu.contrat.numero_contrat|default:"N/A" }}</span>
             </div>
             <div class="info-item">
                 <span class="label">Reçu de :</span>
@@ -34,30 +34,26 @@
                 <div class="amount-text">{{ recu.montant|floatformat:0 }} francs CFA</div>
             </div>
             <div class="info-item">
-                <span class="label">Période :</span>
+                <span class="label">Mois réglé :</span>
                 <span class="value">{{ recu.mois|date:"F Y" }}</span>
             </div>
         </div>
     </div>
 
-    <!-- Détails du paiement -->
+    <!-- Tableau des détails financiers -->
     <div class="payment-details">
         <table class="details-table">
             <tr>
-                <td class="detail-label">Type de paiement :</td>
-                <td class="detail-value">{{ recu.get_type_paiement_display|default:"Loyer" }} - {{ recu.montant|floatformat:2 }} F CFA</td>
+                <td class="detail-label">Loyer de base :</td>
+                <td class="detail-value">{{ recu.contrat.montant_loyer|floatformat:0 }} F CFA</td>
             </tr>
             <tr>
-                <td class="detail-label">Mode de paiement :</td>
-                <td class="detail-value">{{ recu.get_mode_paiement_display|default:"Espèces" }}</td>
+                <td class="detail-label">Charges mensuelles :</td>
+                <td class="detail-value">{{ recu.contrat.charges_mensuelles|floatformat:0 }} F CFA</td>
             </tr>
-            <tr>
-                <td class="detail-label">Montant payé :</td>
-                <td class="detail-value">{{ recu.montant|floatformat:0 }} F CFA</td>
-            </tr>
-            <tr>
-                <td class="detail-label">Note :</td>
-                <td class="detail-value">Paiement reçu et enregistré</td>
+            <tr class="total-row">
+                <td class="detail-label">TOTAL LOYER :</td>
+                <td class="detail-value">{{ recu.contrat.get_loyer_total|floatformat:0 }} F CFA</td>
             </tr>
         </table>
     </div>
@@ -78,14 +74,18 @@
     background: white;
 }
 
-.recu-title {
+.recu-title-box {
     text-align: center;
     margin-bottom: 30px;
+    background: #1e3c72;
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
 }
 
-.recu-title h1 {
-    color: #1e3c72;
-    font-size: 24px;
+.recu-title-box h1 {
+    color: white;
+    font-size: 20px;
     font-weight: bold;
     margin: 0;
 }
@@ -131,8 +131,8 @@
 }
 
 .amount-box {
-    background: #f8fafc;
-    border: 3px solid #1e3c72;
+    background: #1e3c72;
+    color: white;
     border-radius: 8px;
     padding: 20px;
     margin-bottom: 20px;
@@ -143,13 +143,13 @@
 .amount-main {
     font-size: 28px;
     font-weight: bold;
-    color: #1e3c72;
+    color: white;
     margin-bottom: 5px;
 }
 
 .amount-text {
     font-size: 14px;
-    color: #666;
+    color: #e2e8f0;
 }
 
 .payment-details {
@@ -159,7 +159,8 @@
 .details-table {
     width: 100%;
     border-collapse: collapse;
-    background: #f8fafc;
+    background: white;
+    border: 1px solid #1e3c72;
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -176,15 +177,29 @@
 .detail-label {
     padding: 15px 20px;
     font-weight: bold;
-    background: #e2e8f0;
+    background: white;
     color: #333;
-    width: 40%;
+    width: 50%;
+    border-right: 1px solid #e2e8f0;
 }
 
 .detail-value {
     padding: 15px 20px;
     color: #666;
-    width: 60%;
+    width: 50%;
+    text-align: right;
+}
+
+.total-row .detail-label {
+    background: #e7f3ff;
+    font-weight: bold;
+    color: #1e3c72;
+}
+
+.total-row .detail-value {
+    background: #e7f3ff;
+    font-weight: bold;
+    color: #1e3c72;
 }
 
 .signature-area {
