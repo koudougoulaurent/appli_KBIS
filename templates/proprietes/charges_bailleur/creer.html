@@ -1,0 +1,398 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Nouvelle Charge Bailleur{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 4px solid #007bff;
+    }
+    
+    .form-section h5 {
+        color: #007bff;
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 5px;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 6px;
+        border: 1px solid #ced4da;
+        padding: 10px 12px;
+        font-size: 14px;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    
+    .form-text {
+        font-size: 12px;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        border: none;
+        padding: 12px 30px;
+        font-weight: 600;
+        border-radius: 6px;
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        border: none;
+        padding: 12px 30px;
+        font-weight: 600;
+        border-radius: 6px;
+    }
+    
+    .alert {
+        border-radius: 6px;
+        border: none;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+    }
+    
+    .alert-danger {
+        background: #f8d7da;
+        color: #721c24;
+        border-left: 4px solid #dc3545;
+    }
+    
+    .required {
+        color: #dc3545;
+    }
+    
+    .form-row {
+        display: flex;
+        gap: 15px;
+    }
+    
+    .form-col {
+        flex: 1;
+    }
+    
+    .error-field {
+        border-color: #dc3545 !important;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+    }
+    
+    .error-message {
+        color: #dc3545;
+        font-size: 12px;
+        margin-top: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-0">
+                        <i class="fas fa-tools text-primary"></i>
+                        Nouvelle Charge Bailleur
+                    </h2>
+                    <p class="text-muted mb-0">Enregistrer une charge à la charge du bailleur mais avancée par le locataire</p>
+                </div>
+                <div>
+                    <a href="{% url 'proprietes:liste_charges_bailleur_intelligent' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Retour à la liste
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages d'erreur -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-triangle"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Formulaire -->
+    <form method="POST" novalidate>
+        {% csrf_token %}
+        
+        <!-- Section Propriété -->
+        <div class="form-section">
+            <h5><i class="fas fa-building"></i> PROPRIETE CONCERNEE</h5>
+            <div class="form-group">
+                <label for="propriete" class="form-label">
+                    PROPRIETE CONCERNEE <span class="required">*</span>
+                </label>
+                <select class="form-select" id="propriete" name="propriete" required>
+                    <option value="">Sélectionnez une propriété</option>
+                    {% for propriete in proprietes %}
+                        <option value="{{ propriete.id }}" 
+                                {% if form_data.propriete_id == propriete.id|stringformat:"s" %}selected{% endif %}>
+                            {{ propriete.numero_propriete }} - {{ propriete.titre|default:"Sans titre" }} ({{ propriete.ville|default:"Ville non renseignée" }})
+                        </option>
+                    {% endfor %}
+                </select>
+                <div class="form-text">Sélectionnez la propriété concernée par cette charge</div>
+            </div>
+        </div>
+
+        <!-- Section Informations de base -->
+        <div class="form-section">
+            <h5><i class="fas fa-info-circle"></i> INFORMATIONS DE BASE</h5>
+            <div class="form-group">
+                <label for="titre" class="form-label">
+                    TITRE DE LA CHARGE <span class="required">*</span>
+                </label>
+                <input type="text" class="form-control" id="titre" name="titre" 
+                       value="{{ form_data.titre|default:'' }}" 
+                       placeholder="Ex: Réparation chaudière" required>
+                <div class="form-text">Donnez un titre clair à cette charge</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="description" class="form-label">
+                    DESCRIPTION DETAILLEE <span class="required">*</span>
+                </label>
+                <textarea class="form-control" id="description" name="description" rows="4" 
+                          placeholder="Description détaillée de la charge..." required>{{ form_data.description|default:'' }}</textarea>
+                <div class="form-text">Décrivez en détail la nature de cette charge</div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-col">
+                    <div class="form-group">
+                        <label for="type_charge" class="form-label">
+                            TYPE DE CHARGE <span class="required">*</span>
+                        </label>
+                        <select class="form-select" id="type_charge" name="type_charge" required>
+                            <option value="">Sélectionnez un type</option>
+                            {% for value, label in type_charge_choices %}
+                                <option value="{{ value }}" 
+                                        {% if form_data.type_charge == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <div class="form-group">
+                        <label for="priorite" class="form-label">PRIORITÉ</label>
+                        <select class="form-select" id="priorite" name="priorite">
+                            {% for value, label in priorite_choices %}
+                                <option value="{{ value }}" 
+                                        {% if form_data.priorite == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Informations financières -->
+        <div class="form-section">
+            <h5><i class="fas fa-money-bill-wave"></i> INFORMATIONS FINANCIÈRES</h5>
+            <div class="form-row">
+                <div class="form-col">
+                    <div class="form-group">
+                        <label for="montant" class="form-label">
+                            MONTANT (F CFA) <span class="required">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="montant" name="montant" 
+                               value="{{ form_data.montant|default:'' }}" 
+                               placeholder="0.00" required>
+                        <div class="form-text">Montant de la charge en F CFA</div>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <div class="form-group">
+                        <label for="date_charge" class="form-label">
+                            DATE DE LA CHARGE <span class="required">*</span>
+                        </label>
+                        <input type="date" class="form-control" id="date_charge" name="date_charge" 
+                               value="{{ form_data.date_charge|default:'' }}" required>
+                        <div class="form-text">Date à laquelle cette charge a été effectuée</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="date_echeance" class="form-label">DATE D'ÉCHÉANCE</label>
+                <input type="date" class="form-control" id="date_echeance" name="date_echeance" 
+                       value="{{ form_data.date_echeance|default:'' }}">
+                <div class="form-text">Date limite pour le paiement de cette charge (optionnel)</div>
+            </div>
+        </div>
+
+        <!-- Section Documents -->
+        <div class="form-section">
+            <h5><i class="fas fa-file-alt"></i> DOCUMENTS</h5>
+            <div class="form-group">
+                <label class="form-label">PIÈCES JOINTES</label>
+                <div class="border rounded p-3 text-center" style="border-style: dashed !important;">
+                    <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">Glissez-déposez vos fichiers ici ou cliquez pour sélectionner</p>
+                    <small class="text-muted">Formats acceptés: PDF, JPG, PNG (max 10MB)</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Boutons d'action -->
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-end gap-3">
+                    <a href="{% url 'proprietes:liste_charges_bailleur_intelligent' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Annuler
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Créer la Charge
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Validation côté client
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        const requiredFields = form.querySelectorAll('[required]');
+        
+        // Fonction de validation
+        function validateField(field) {
+            const value = field.value.trim();
+            const isValid = value !== '';
+            
+            if (isValid) {
+                field.classList.remove('error-field');
+                const errorMsg = field.parentNode.querySelector('.error-message');
+                if (errorMsg) {
+                    errorMsg.remove();
+                }
+            } else {
+                field.classList.add('error-field');
+                if (!field.parentNode.querySelector('.error-message')) {
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'error-message';
+                    errorMsg.textContent = 'Ce champ est obligatoire';
+                    field.parentNode.appendChild(errorMsg);
+                }
+            }
+            
+            return isValid;
+        }
+        
+        // Validation en temps réel
+        requiredFields.forEach(field => {
+            field.addEventListener('blur', function() {
+                validateField(this);
+            });
+            
+            field.addEventListener('input', function() {
+                if (this.classList.contains('error-field')) {
+                    validateField(this);
+                }
+            });
+        });
+        
+        // Formatage automatique du montant
+        const montantField = document.getElementById('montant');
+        if (montantField) {
+            montantField.addEventListener('input', function() {
+                // Permettre seulement les chiffres, virgules et points
+                this.value = this.value.replace(/[^0-9,.]/g, '');
+                
+                // S'assurer qu'il n'y a qu'un seul point ou une seule virgule
+                const value = this.value;
+                const pointCount = (value.match(/\./g) || []).length;
+                const commaCount = (value.match(/,/g) || []).length;
+                
+                if (pointCount > 1 || commaCount > 1) {
+                    // Garder seulement le premier point ou la première virgule
+                    const parts = value.split(/[.,]/);
+                    if (parts.length > 2) {
+                        this.value = parts[0] + (value.includes(',') ? ',' : '.') + parts.slice(1).join('');
+                    }
+                }
+            });
+        }
+        
+        // Validation du formulaire
+        form.addEventListener('submit', function(e) {
+            let isValid = true;
+            
+            requiredFields.forEach(field => {
+                if (!validateField(field)) {
+                    isValid = false;
+                }
+            });
+            
+            // Validation spécifique du montant
+            const montantField = document.getElementById('montant');
+            if (montantField.value) {
+                // Remplacer les virgules par des points pour la validation
+                const montantValue = montantField.value.replace(',', '.');
+                const montant = parseFloat(montantValue);
+                
+                if (isNaN(montant) || montant <= 0) {
+                    montantField.classList.add('error-field');
+                    if (!montantField.parentNode.querySelector('.error-message')) {
+                        const errorMsg = document.createElement('div');
+                        errorMsg.className = 'error-message';
+                        errorMsg.textContent = 'Le montant doit être un nombre valide supérieur à 0';
+                        montantField.parentNode.appendChild(errorMsg);
+                    }
+                    isValid = false;
+                } else if (montant > 999999999.99) {
+                    montantField.classList.add('error-field');
+                    if (!montantField.parentNode.querySelector('.error-message')) {
+                        const errorMsg = document.createElement('div');
+                        errorMsg.className = 'error-message';
+                        errorMsg.textContent = 'Le montant est trop élevé (maximum 999,999,999.99 F CFA)';
+                        montantField.parentNode.appendChild(errorMsg);
+                    }
+                    isValid = false;
+                }
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+                // Faire défiler vers le premier champ en erreur
+                const firstError = form.querySelector('.error-field');
+                if (firstError) {
+                    firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    firstError.focus();
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

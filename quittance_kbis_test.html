@@ -1,0 +1,381 @@
+
+        <!DOCTYPE html>
+        <html lang="fr">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>QUITTANCE DE CAUTION N° QUI-20251001111523-I1DZ - KBIS IMMOBILIER</title>
+            
+        <style>
+            /* Format A5 - Unifié pour tous les documents */
+            @page {
+                size: A5;
+                margin: 8mm;
+            }
+            
+            @media print {
+                body { margin: 0; }
+                .no-print { display: none; }
+            }
+            
+            body { 
+                font-family: 'Arial', sans-serif; 
+                margin: 0; 
+                padding: 0;
+                background: white;
+                color: #333;
+                font-size: 11px;
+                line-height: 1.2;
+            }
+            
+            .document-container {
+                width: 148mm;
+                height: 210mm;
+                margin: 0 auto;
+                background: white;
+                border: 2px solid #000;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            
+            /* EN-TÊTE UNIFIÉ */
+            .entete-principal {
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                border-bottom: 2px solid #000;
+                padding: 6mm;
+                text-align: center;
+                flex-shrink: 0;
+                position: relative;
+            }
+            
+            .entete-principal::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-image: 
+                    radial-gradient(circle at 20% 20%, rgba(25, 118, 210, 0.05) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 80%, rgba(25, 118, 210, 0.03) 0%, transparent 50%);
+                pointer-events: none;
+            }
+            
+            .entete-principal > * {
+                position: relative;
+                z-index: 1;
+            }
+            
+            .logo-section {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-bottom: 5mm;
+            }
+            
+            .logo-kbis {
+                width: 15mm;
+                height: 15mm;
+                margin-right: 4mm;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+            
+            .logo-kbis img {
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain;
+            }
+            
+            .nom-entreprise {
+                font-size: 18px;
+                font-weight: bold;
+                color: #000;
+                letter-spacing: 1px;
+            }
+            
+            .services-ligne {
+                font-size: 10px;
+                color: #666;
+                margin-top: 3mm;
+                border-top: 1px solid #ccc;
+                border-bottom: 1px solid #ccc;
+                padding: 2mm 0;
+            }
+            
+            .orange-money-section {
+                background: #fff8e1;
+                padding: 2mm;
+                font-size: 9px;
+                color: #e65100;
+                font-weight: bold;
+                border-bottom: 1px solid #000;
+                text-align: center;
+            }
+            
+            /* CONTENU DOCUMENT */
+            .contenu-document {
+                padding: 4mm;
+                flex-grow: 1;
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .titre-document {
+                text-align: center;
+                font-size: 16px;
+                font-weight: bold;
+                color: #1976d2;
+                margin-bottom: 4mm;
+                padding: 2mm;
+                background: #e3f2fd;
+                border: 1px solid #1976d2;
+            }
+            
+            .section-principale {
+                display: flex;
+                margin-bottom: 6mm;
+                flex-grow: 1;
+            }
+            
+            .colonne-gauche {
+                width: 45%;
+                padding-right: 3mm;
+            }
+            
+            .colonne-droite {
+                width: 55%;
+                padding-left: 3mm;
+                border-left: 1px solid #ccc;
+            }
+            
+            .champ-document {
+                margin-bottom: 4mm;
+            }
+            
+            .label-champ {
+                font-size: 9px;
+                color: #666;
+                text-decoration: underline;
+                margin-bottom: 2mm;
+                display: block;
+            }
+            
+            .valeur-champ {
+                font-size: 13px;
+                font-weight: bold;
+                color: #000;
+                min-height: 6mm;
+                display: block;
+            }
+            
+            .montant-principal {
+                background: #e3f2fd;
+                border: 2px solid #1976d2;
+                padding: 3mm;
+                text-align: center;
+                font-size: 14px;
+                font-weight: bold;
+                color: #1976d2;
+                margin: 2mm 0;
+            }
+            
+            .montant-lettres {
+                text-align: center;
+                font-style: italic;
+                color: #666;
+                font-size: 10px;
+                margin: 2mm 0;
+            }
+            
+            .details-document {
+                background: #f8f9fa;
+                border: 1px solid #ddd;
+                margin: 3mm 0;
+                flex-shrink: 0;
+            }
+            
+            .details-document table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            
+            .details-document td {
+                padding: 1.5mm;
+                border: 1px solid #ddd;
+                font-size: 9px;
+            }
+            
+            /* CACHET ET SIGNATURE UNIFIÉ */
+            .cachet-signature {
+                text-align: center;
+                margin-top: auto;
+                padding: 2mm;
+                border: 1px dashed #666;
+                background: #f9f9f9;
+                flex-shrink: 0;
+            }
+            
+            .cachet-rond {
+                width: 20mm;
+                height: 20mm;
+                margin: 0 auto 2mm;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 7px;
+                text-align: center;
+                color: #666;
+                font-weight: bold;
+                line-height: 1.1;
+            }
+            
+            /* PIED DE PAGE UNIFIÉ */
+            .pied-page {
+                background: #000;
+                color: white;
+                padding: 2mm;
+                font-size: 7px;
+                text-align: center;
+                line-height: 1.2;
+                flex-shrink: 0;
+            }
+            
+            .pied-page strong {
+                color: #ffd700;
+            }
+        </style>
+        
+        </head>
+        <body>
+            <div class="document-container">
+                <!-- EN-TÊTE UNIFIÉ -->
+                
+            <div class="entete-principal">
+                <div class="logo-section">
+                    <div class="logo-kbis">
+                        <img src="/static/images/logo_kbis.jpg" alt="Logo KBIS" />
+                    </div>
+                    <div class="nom-entreprise">
+                        KBIS IMMOBILIER
+                    </div>
+                </div>
+                <div class="services-ligne">
+                    Achat • Vente • Location • Gestion • Nettoyage
+                </div>
+                <div class="orange-money-section">
+                    144*10*5933721*MONTANT#
+                </div>
+            </div>
+            
+                
+                <!-- CONTENU DOCUMENT -->
+                <div class="contenu-document">
+                    <div class="titre-document">
+                        QUITTANCE DE CAUTION N° QUI-20251001111523-I1DZ
+                    </div>
+                    
+                    <div class="section-principale">
+                        <div class="colonne-gauche">
+                            <div class="champ-document">
+                                <span class="label-champ">Date</span>
+                                <span class="valeur-champ">29-Sep-25</span>
+                            </div>
+                            
+                            <div class="champ-document">
+                                <span class="label-champ">Code location</span>
+                                <span class="valeur-champ">CTN0k6</span>
+                            </div>
+                            
+                            <div class="champ-document">
+                                <span class="label-champ">Reçu de</span>
+                                <span class="valeur-champ">M laurenzo kdg</span>
+                            </div>
+                        </div>
+                        
+                        <div class="colonne-droite">
+                            <div class="montant-principal">
+                                300,000 F CFA
+                            </div>
+                            <div class="montant-lettres">
+                                300000 francs CFA
+                            </div>
+                            
+                            <div class="champ-document">
+                                <span class="label-champ">Mois réglé</span>
+                                <span class="valeur-champ">October 2025</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Détails du document -->
+                    <div class="details-document">
+                        
+            <table>
+                <tr>
+                    <td>Type de paiement</td>
+                    <td style="font-weight: bold; color: #4caf50;">
+                        Caution - 300000.00 F CFA
+                    </td>
+                </tr>
+                <tr>
+                    <td>Mode de paiement</td>
+                    <td style="font-weight: bold;">
+                        Espèces
+                    </td>
+                </tr>
+                <tr>
+                    <td>Montant de la caution</td>
+                    <td style="font-weight: bold;">
+                        300,000 F CFA
+                    </td>
+                </tr>
+                <tr style="background-color: #e8f5e8;">
+                    <td><strong>Note</strong></td>
+                    <td style="font-weight: bold; color: #2e7d32;">
+                        Dépôt de garantie - Remboursable en fin de bail
+                    </td>
+                </tr>
+            </table>
+            
+                    </div>
+                    
+                    <!-- Cachet et signature -->
+                    <div class="cachet-signature">
+                        <div class="cachet-rond">
+                            <!-- Espace libre pour le cachet -->
+                        </div>
+                        <p style="margin: 0; font-size: 9px; color: #333;">
+                            Cachet et signature de l'Agence
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- PIED DE PAGE UNIFIÉ -->
+                
+            <div class="pied-page">
+                <strong>BP 440 Ouaga pissy 10050 ouagadougou burkina faso</strong><br>
+                <strong>Tél: 32 32 / 70 20 64 91 / 79 18 39 39 / 79 26 82 82</strong><br>
+                sis, secteur 26 pissy sur la voie du CMA de pissy, Annexe Ouaga 2000<br>
+                <strong>+226 79 26 88 88 / 78 20 64 91</strong><br>
+                <strong>Email: kbissari2022@gmail.com</strong><br>
+                <strong>ORANGE MONEY: 144*10*5933721*MONTANT#</strong>
+            </div>
+            
+            </div>
+            
+            <!-- Boutons d'action (masqués à l'impression) -->
+            <div class="no-print" style="text-align: center; margin: 10px; background: #f0f0f0; padding: 10px; border-radius: 5px;">
+                <button onclick="window.print()" style="padding: 10px 20px; background: #1976d2; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px;">
+                    🖨️ Imprimer (A5)
+                </button>
+                <button onclick="window.history.back()" style="padding: 10px 20px; background: #666; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px;">
+                    ← Retour
+                </button>
+            </div>
+        </body>
+        </html>
+        

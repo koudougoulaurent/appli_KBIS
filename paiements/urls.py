@@ -76,6 +76,8 @@ urlpatterns = [
     path('recaps-mensuels-automatiques/bailleurs/', views.liste_bailleurs_recaps, name='liste_bailleurs_recaps'),
     
     path('retraits-bailleur/', views.liste_retraits_bailleur, name='liste_retraits_bailleur'),
+    path('retraits-bailleur/recap/<int:bailleur_id>/', views.recap_retrait_bailleur, name='recap_retrait_bailleur'),
+    path('retraits-bailleur/creer-depuis-recap/', views.creer_retrait_depuis_recap, name='creer_retrait_depuis_recap'),
     path('modifier/<int:pk>/', views.modifier_paiement, name='modifier_paiement'),
     path('supprimer/<int:pk>/', views.supprimer_paiement, name='supprimer_paiement'),
     path('valider/<int:pk>/', views.valider_paiement, name='valider_paiement'),
@@ -103,25 +105,26 @@ urlpatterns = [
     path('recherche/', views.recherche_intelligente_paiements, name='recherche_intelligente'),
     
     # URLs pour les retraits (placeholder views)
-    path('retraits/', views_retraits.retrait_list, name='retraits_liste'),
-    path('retrait/ajouter/', views_retraits.retrait_create, name='retrait_ajouter'),
-    path('retrait/<int:pk>/', views_retraits.retrait_detail, name='retrait_detail'),
-    path('retrait/<int:pk>/modifier/', views_retraits.retrait_edit, name='retrait_modifier'),
+    path('retraits/', views.liste_retraits_bailleur, name='retraits_liste'),
+    path('retrait/ajouter/', views.ajouter_retrait, name='retrait_ajouter'),
+    path('retrait/<int:pk>/', views.detail_retrait, name='retrait_detail'),
+    path('retrait/<int:pk>/modifier/', views.modifier_retrait, name='retrait_modifier'),
     
     # Actions sur les retraits
     path('retrait/<int:pk>/validate/', views_retraits.retrait_validate, name='retrait_validate'),
     path('retrait/<int:pk>/mark-paid/', views_retraits.retrait_mark_paid, name='retrait_mark_paid'),
     path('retrait/<int:pk>/cancel/', views_retraits.retrait_cancel, name='retrait_cancel'),
+    path('retrait/<int:pk>/supprimer/', views_retraits.supprimer_retrait, name='retrait_supprimer'),
     
     # Gestion des reçus de retrait
     path('recu/<int:recu_id>/', views_retraits.recu_retrait_view, name='recu_view'),
     path('recu/<int:recu_id>/print/', views_retraits.recu_retrait_print, name='recu_print'),
     
     # Alias pour compatibilité
-    path('retraits_liste/', views_retraits.retrait_list, name='retraits_liste'),
-    path('retrait_ajouter/', views_retraits.retrait_create, name='retrait_ajouter'),
-    path('retrait_detail/<int:pk>/', views_retraits.retrait_detail, name='retrait_detail'),
-    path('retrait_modifier/<int:pk>/', views_retraits.retrait_edit, name='retrait_modifier'),
+    path('retraits_liste/', views.liste_retraits_bailleur, name='retraits_liste'),
+    path('retrait_ajouter/', views.ajouter_retrait, name='retrait_ajouter'),
+    path('retrait_detail/<int:pk>/', views.detail_retrait, name='retrait_detail'),
+    path('retrait_modifier/<int:pk>/', views.modifier_retrait, name='retrait_modifier'),
     
     # URLs pour les paiements de caution et avance
     path('caution-avance/ajouter/', views.paiement_caution_avance_create, name='paiement_caution_avance_create'),

@@ -59,17 +59,25 @@ def retrait_list(request):
     from core.utils import check_group_permissions
     can_see_amounts = check_group_permissions(request.user, ['PRIVILEGE'], 'view')['allowed']
     
-    # Statistiques (NON confidentielles)
+    # Statistiques dynamiques et exactes
+    from proprietes.models import Propriete
+    
+    # Compter seulement les retraits pour des bailleurs qui ont des propriétés louées
+    retraits_avec_proprietes = RetraitBailleur.objects.filter(
+        bailleur__proprietes__contrats__est_actif=True,
+        bailleur__proprietes__contrats__est_resilie=False
+    ).distinct()
+    
     stats = {
-        'total_retraits': RetraitBailleur.objects.count(),
-        'retraits_en_attente': RetraitBailleur.objects.filter(statut='en_attente').count(),
-        'retraits_payes': RetraitBailleur.objects.filter(statut='paye').count(),
-        'retraits_valides': RetraitBailleur.objects.filter(statut='valide').count(),
+        'total_retraits': retraits_avec_proprietes.count(),
+        'retraits_en_attente': retraits_avec_proprietes.filter(statut='en_attente').count(),
+        'retraits_payes': retraits_avec_proprietes.filter(statut='paye').count(),
+        'retraits_valides': retraits_avec_proprietes.filter(statut='valide').count(),
     }
     
     # Montant total (conditionnel selon les permissions)
     if can_see_amounts:
-        stats['total_montant'] = RetraitBailleur.objects.aggregate(
+        stats['total_montant'] = retraits_avec_proprietes.aggregate(
             total=Sum('montant_net_a_payer')
         )['total'] or 0
     else:
@@ -97,6 +105,66 @@ def retrait_list(request):
 
 
 @login_required
+def supprimer_retrait(request, pk):
+    """
+    Vue pour supprimer un retrait bailleur.
+    Seuls les superutilisateurs et les utilisateurs du groupe PRIVILEGE peuvent supprimer.
+    """
+    from core.utils import check_group_permissions
+    from django.contrib.contenttypes.models import ContentType
+    from core.models import AuditLog
+    
+    # Vérification des permissions : Seul PRIVILEGE peut supprimer
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'delete')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:retraits_liste')
+    
+    retrait = get_object_or_404(RetraitBailleur, pk=pk, is_deleted=False)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'logical_delete':
+            try:
+                # Suppression logique
+                old_data = {f.name: getattr(retrait, f.name) for f in retrait._meta.fields}
+                retrait.is_deleted = True
+                retrait.deleted_at = timezone.now()
+                retrait.deleted_by = request.user
+                retrait.save()
+                
+                # Log d'audit
+                AuditLog.objects.create(
+                    content_type=ContentType.objects.get_for_model(RetraitBailleur),
+                    object_id=retrait.pk,
+                    action='DELETE',
+                    old_data=old_data,
+                    new_data={'is_deleted': True, 'deleted_at': str(timezone.now())},
+                    user=request.user,
+                    ip_address=request.META.get('REMOTE_ADDR'),
+                    user_agent=request.META.get('HTTP_USER_AGENT', '')
+                )
+                
+                messages.success(request, f"Retrait #{retrait.id} pour {retrait.bailleur.get_nom_complet()} supprimé avec succès.")
+                return redirect('paiements:retraits_liste')
+                
+            except Exception as e:
+                messages.error(request, f"Erreur lors de la suppression du retrait : {str(e)}")
+                return redirect('paiements:retraits_liste')
+        
+        elif action == 'cancel':
+            return redirect('paiements:retrait_detail', pk=retrait.pk)
+    
+    context = {
+        'retrait': retrait,
+        'title': f'Supprimer le retrait #{retrait.id}'
+    }
+    
+    return render(request, 'paiements/retraits/confirm_supprimer_retrait.html', context)
+
+
+@login_required
 def retrait_create(request):
     """Vue pour créer un nouveau retrait."""
     if request.method == 'POST':
@@ -112,6 +180,19 @@ def retrait_create(request):
                 if mois_retrait.day != 1:
                     mois_retrait = mois_retrait.replace(day=1)
                 retrait.mois_retrait = mois_retrait
+            
+            # Vérifier que le bailleur a des propriétés louées
+            from proprietes.models import Propriete
+            proprietes_louees = Propriete.objects.filter(
+                bailleur=retrait.bailleur,
+                is_deleted=False,
+                contrats__est_actif=True,
+                contrats__est_resilie=False
+            ).distinct().count()
+            
+            if proprietes_louees == 0:
+                messages.error(request, f'Impossible de créer un retrait pour {retrait.bailleur.get_nom_complet()}. Ce bailleur n\'a aucune propriété louée.')
+                return redirect('paiements:retrait_create')
             
             retrait.save()
             
@@ -146,6 +227,14 @@ def retrait_create(request):
 @login_required
 def retrait_auto_create(request):
     """Vue pour la création automatique des retraits."""
+    from datetime import datetime, date
+    from decimal import Decimal
+    from django.utils import timezone
+    from django.db.models import Count
+    from paiements.models import RetraitBailleur
+    from proprietes.models import Bailleur
+    from paiements.services_retraits_bailleur import ServiceRetraitsBailleurIntelligent
+    
     if request.method == 'POST':
         mois_retrait = request.POST.get('mois_retrait')
         type_retrait = request.POST.get('type_retrait')
@@ -153,11 +242,83 @@ def retrait_auto_create(request):
         inclure_charges = request.POST.get('inclure_charges') == 'on'
         
         try:
-            # Logique de création automatique
-            # Ici vous implémenteriez la logique pour créer automatiquement
-            # les retraits pour tous les bailleurs concernés
             
-            messages.success(request, 'Retraits créés automatiquement avec succès')
+            # Parser la date
+            if mois_retrait:
+                mois_date = datetime.strptime(mois_retrait, '%Y-%m').date()
+                mois_date = mois_date.replace(day=1)
+            else:
+                mois_date = date.today().replace(day=1)
+            
+            # Récupérer tous les bailleurs actifs avec des propriétés louées
+            bailleurs = Bailleur.objects.filter(
+                actif=True,
+                proprietes__contrats__est_actif=True,
+                proprietes__contrats__est_resilie=False
+            ).distinct()
+            
+            retraits_crees = 0
+            retraits_existants = 0
+            bailleurs_sans_loyers = 0
+            
+            for bailleur in bailleurs:
+                # Vérifier s'il existe déjà un retrait pour ce bailleur et ce mois
+                retrait_existant = RetraitBailleur.objects.filter(
+                    bailleur=bailleur,
+                    mois_retrait=mois_date
+                ).first()
+                
+                if retrait_existant:
+                    # Un retrait existe déjà pour ce bailleur et ce mois
+                    retraits_existants += 1
+                    continue
+                
+                # Calculer le retrait pour ce bailleur
+                calcul_retrait = ServiceRetraitsBailleurIntelligent.calculer_retrait_mensuel_bailleur(
+                    bailleur, mois_date.month, mois_date.year
+                )
+                
+                # Vérifier s'il y a des loyers à payer (strictement supérieur à 0)
+                if calcul_retrait['total_loyers'] > 0:
+                    # Créer le retrait
+                    retrait = RetraitBailleur.objects.create(
+                        bailleur=bailleur,
+                        mois_retrait=mois_date,
+                        montant_loyers_bruts=calcul_retrait['total_loyers'],
+                        montant_charges_deductibles=calcul_retrait['total_charges_deductibles'],
+                        montant_net_a_payer=calcul_retrait['montant_net'],
+                        statut='en_attente',
+                        type_retrait=type_retrait or 'mensuel',
+                        mode_retrait=mode_retrait_default or 'virement',
+                        date_demande=timezone.now().date(),
+                        cree_par=request.user
+                    )
+                    
+                    # Appliquer les charges automatiquement si demandé
+                    if inclure_charges:
+                        resultat_charges = retrait.appliquer_charges_automatiquement()
+                    
+                    retraits_crees += 1
+                else:
+                    # Le bailleur n'a pas de loyers à payer
+                    bailleurs_sans_loyers += 1
+            
+            # Messages informatifs
+            if retraits_crees > 0:
+                message = f'{retraits_crees} retraits créés automatiquement avec succès'
+                if retraits_existants > 0:
+                    message += f' ({retraits_existants} retraits déjà existants ignorés)'
+                if bailleurs_sans_loyers > 0:
+                    message += f' ({bailleurs_sans_loyers} bailleurs sans loyers ignorés)'
+                messages.success(request, message)
+            else:
+                if retraits_existants > 0:
+                    messages.info(request, f'Aucun nouveau retrait créé - {retraits_existants} retraits existent déjà pour ce mois')
+                elif bailleurs_sans_loyers > 0:
+                    messages.warning(request, f'Aucun retrait créé - {bailleurs_sans_loyers} bailleurs n\'ont pas de loyers à payer pour ce mois')
+                else:
+                    messages.warning(request, 'Aucun retrait créé - aucun bailleur avec des propriétés louées trouvé')
+            
             return redirect('paiements:retraits_liste')
             
         except Exception as e:

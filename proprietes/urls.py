@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views, views_unites, document_views
+from . import views, api_views, views_unites, document_views, views_charges_bailleur
 from .views import ajouter_charge_bailleur_rapide
 
 # Router pour l'API
@@ -24,10 +24,19 @@ urlpatterns = [
     path('<int:pk>/ajax/<str:section>/', views.detail_propriete_ajax, name='detail_ajax'),
     path('<int:pk>/modifier/', views.modifier_propriete, name='modifier'),
     
-    # URLs pour les charges bailleur
+    # URLs pour les charges bailleur (anciennes vues)
     path('charges-bailleur/', views.liste_charges_bailleur, name='liste_charges_bailleur'),
     path('charges-bailleur/ajouter/', views.ajouter_charge_bailleur, name='ajouter_charge_bailleur'),
     path('ajouter_charge_bailleur_rapide/', views.ajouter_charge_bailleur_rapide, name='ajouter_charge_bailleur_rapide'),
+    
+    # URLs pour les charges bailleur (nouvelles vues intelligentes)
+    path('charges-bailleur-intelligent/', views_charges_bailleur.liste_charges_bailleur, name='liste_charges_bailleur_intelligent'),
+    path('charges-bailleur-intelligent/creer/', views_charges_bailleur.creer_charge_bailleur, name='creer_charge_bailleur'),
+    path('charges-bailleur-intelligent/<int:pk>/', views_charges_bailleur.detail_charge_bailleur, name='detail_charge_bailleur'),
+    path('charges-bailleur-intelligent/<int:pk>/modifier/', views_charges_bailleur.modifier_charge_bailleur, name='modifier_charge_bailleur'),
+    path('charges-bailleur-intelligent/<int:pk>/annuler/', views_charges_bailleur.annuler_charge_bailleur, name='annuler_charge_bailleur'),
+    path('charges-bailleur-intelligent/rapport/', views_charges_bailleur.rapport_charges_bailleur, name='rapport_charges_bailleur'),
+    path('api/charges-bailleur-mois/', views_charges_bailleur.api_charges_bailleur_mois, name='api_charges_bailleur_mois'),
     path('charges-bailleur/<int:pk>/', views.detail_charge_bailleur, name='detail_charge_bailleur'),
     path('charges-bailleur/<int:pk>/modifier/', views.modifier_charge_bailleur, name='modifier_charge_bailleur'),
     path('charges-bailleur/<int:pk>/deduction/', views.deduction_charge_bailleur, name='deduction_charge_bailleur'),

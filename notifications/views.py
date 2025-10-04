@@ -138,6 +138,22 @@ def mark_as_read(request, pk):
 
 
 @login_required
+def mark_as_unread(request, pk):
+    """
+    Vue AJAX pour marquer une notification comme non lue
+    """
+    if request.method == 'POST':
+        try:
+            notification = Notification.objects.get(pk=pk, recipient=request.user)
+            notification.mark_as_unread()
+            return JsonResponse({'status': 'success'})
+        except Notification.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Notification non trouvée'}, status=404)
+    
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)
+
+
+@login_required
 def mark_all_as_read(request):
     """
     Vue AJAX pour marquer toutes les notifications comme lues

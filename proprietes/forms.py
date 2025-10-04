@@ -1,6 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+from decimal import Decimal
 from .models import Propriete, Bailleur, Locataire, TypeBien, ChargesBailleur, Photo, Document, Piece, PieceContrat, UniteLocative
 from django.core.validators import RegexValidator
 # Imports supprimés - utilisation du système simple comme BailleurForm
@@ -564,11 +565,9 @@ class ChargesBailleurForm(forms.ModelForm):
             'type_charge': forms.Select(attrs={
                 'class': 'form-select'
             }),
-            'montant': forms.NumberInput(attrs={
+            'montant': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': '150.00',
-                'step': '0.01',
-                'min': '0'
             }),
             'date_charge': forms.DateInput(attrs={
                 'class': 'form-control',
@@ -615,8 +614,21 @@ class ChargesBailleurForm(forms.ModelForm):
     def clean_montant(self):
         """Validation du montant."""
         montant = self.cleaned_data.get('montant')
-        if montant and montant <= 0:
-            raise ValidationError(_('Le montant doit être supérieur à 0.'))
+        if montant:
+            # Remplacer les virgules par des points pour la validation
+            if isinstance(montant, str):
+                montant_clean = montant.replace(',', '.')
+                try:
+                    montant_decimal = Decimal(montant_clean)
+                    if montant_decimal <= 0:
+                        raise ValidationError(_('Le montant doit être supérieur à 0.'))
+                    if montant_decimal > Decimal('999999999.99'):
+                        raise ValidationError(_('Le montant est trop élevé (maximum 999,999,999.99 F CFA).'))
+                    return montant_decimal
+                except (ValueError, TypeError):
+                    raise ValidationError(_('Le montant doit être un nombre valide.'))
+            elif montant <= 0:
+                raise ValidationError(_('Le montant doit être supérieur à 0.'))
         return montant
 
     def clean_date_charge(self):
@@ -716,6 +728,17 @@ class ChargesBailleurDeductionForm(forms.Form):
         })
     )
     
+    motif = forms.CharField(
+        max_length=200,
+        required=True,
+        label=_('Motif de la déduction'),
+        help_text=_('Raison de cette déduction'),
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ex: Réparation plomberie, travaux urgents...'
+        })
+    )
+    
     notes = forms.CharField(
         max_length=500,
         required=False,
@@ -733,27 +756,72 @@ class ChargesBailleurDeductionForm(forms.Form):
         self.propriete = propriete
         
         if propriete:
-            # Calculer le montant maximum déductible
-            loyer_total = propriete.get_loyer_total()
+            # Calculer le montant maximum déductible basé sur le retrait mensuel du bailleur
+            from paiements.models import RetraitBailleur
+            from django.db.models import Sum
+            from datetime import date
+            
+            # Récupérer le retrait mensuel du bailleur pour le mois en cours
+            mois_actuel = date.today().replace(day=1)
+            retrait_mensuel = RetraitBailleur.objects.filter(
+                bailleur=propriete.bailleur,
+                mois_retrait__year=mois_actuel.year,
+                mois_retrait__month=mois_actuel.month,
+                statut__in=['en_attente', 'valide', 'paye']
+            ).aggregate(
+                total=Sum('montant_net_a_payer')
+            )['total'] or 0
+            
+            # Si pas de retrait mensuel, utiliser le total mensuel calculé
+            if retrait_mensuel == 0:
+                retrait_mensuel = propriete.get_total_mensuel_bailleur()
+            
             charges_en_cours = propriete.get_charges_bailleur_en_cours()
-            montant_max = min(loyer_total, charges_en_cours)
+            montant_max = min(retrait_mensuel, charges_en_cours)
             
             self.fields['montant_deduction'].widget.attrs['max'] = str(montant_max)
-            self.fields['montant_deduction'].help_text = f'Montant maximum déductible : {montant_max} F CFA'
+            self.fields['montant_deduction'].help_text = f'Montant maximum déductible : {montant_max} F CFA (basé sur le retrait mensuel du bailleur)'
 
     def clean_montant_deduction(self):
-        """Validation du montant de déduction."""
+        """Validation du montant de déduction basée sur le retrait mensuel du bailleur."""
         montant = self.cleaned_data.get('montant_deduction')
         
-        if self.propriete:
-            loyer_total = self.propriete.get_loyer_total()
+        if self.propriete and montant:
+            # Calculer le retrait mensuel du bailleur
+            from paiements.models import RetraitBailleur
+            from django.db.models import Sum
+            from datetime import date
+            
+            # Récupérer le retrait mensuel du bailleur pour le mois en cours
+            mois_actuel = date.today().replace(day=1)
+            retrait_mensuel = RetraitBailleur.objects.filter(
+                bailleur=self.propriete.bailleur,
+                mois_retrait__year=mois_actuel.year,
+                mois_retrait__month=mois_actuel.month,
+                statut__in=['en_attente', 'valide', 'paye']
+            ).aggregate(
+                total=Sum('montant_net_a_payer')
+            )['total'] or 0
+            
+            # Si pas de retrait mensuel, utiliser le total mensuel calculé
+            if retrait_mensuel == 0:
+                retrait_mensuel = self.propriete.get_total_mensuel_bailleur()
+            
+            # Récupérer les charges en cours
             charges_en_cours = self.propriete.get_charges_bailleur_en_cours()
             
-            if montant > loyer_total:
-                raise ValidationError(_('Le montant de déduction ne peut pas dépasser le loyer total.'))
+            # Validation basée sur le retrait mensuel du bailleur
+            if montant > retrait_mensuel:
+                raise ValidationError(
+                    _('Le montant de déduction ne peut pas dépasser le retrait mensuel du bailleur '
+                      f'({retrait_mensuel} F CFA).')
+                )
             
             if montant > charges_en_cours:
-                raise ValidationError(_('Le montant de déduction ne peut pas dépasser les charges en cours.'))
+                raise ValidationError(
+                    _('Le montant de déduction ne peut pas dépasser les charges en cours '
+                      f'({charges_en_cours} F CFA).')
+                )
         
         return montant
 

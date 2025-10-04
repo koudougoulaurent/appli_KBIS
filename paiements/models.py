@@ -619,9 +619,69 @@ class Paiement(models.Model):
         return self.quittance
     
     def generer_quittance_kbis_dynamique(self):
-        """Génère directement une quittance avec le système KBIS IMMOBILIER dynamique."""
-        # Utiliser la même méthode que les récépissés pour avoir la même apparence
-        return self._generer_recu_kbis_dynamique()
+        """Génère une quittance KBIS dynamique avec le format correct."""
+        import sys
+        import os
+        from datetime import datetime
+        
+        try:
+            # Utiliser le système unifié
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from document_kbis_unifie import DocumentKBISUnifie
+            
+            # Déterminer le type de quittance selon le type de paiement
+            type_quittance = self._determiner_type_quittance_paiement()
+            
+            # Récupérer les informations de base de manière sécurisée
+            try:
+                code_location = self.contrat.numero_contrat if self.contrat and self.contrat.numero_contrat else 'N/A'
+            except:
+                code_location = 'N/A'
+                
+            try:
+                recu_de = self.contrat.locataire.get_nom_complet() if self.contrat and self.contrat.locataire else 'LOCATAIRE'
+            except:
+                recu_de = 'LOCATAIRE'
+                
+            try:
+                quartier = self.contrat.propriete.adresse if self.contrat and self.contrat.propriete else 'Non spécifié'
+            except:
+                quartier = 'Non spécifié'
+            
+            # Générer un numéro de quittance unique au format KBIS
+            numero_quittance = f"QUI-{datetime.now().strftime('%Y%m%d%H%M%S')}-{self.id if self.id else 'X1DZ'}"
+            
+            # Données de la quittance
+            donnees_quittance = {
+                'numero': numero_quittance,
+                'date': self.date_paiement.strftime('%d-%b-%y') if self.date_paiement else datetime.now().strftime('%d-%b-%y'),
+                'code_location': code_location,
+                'recu_de': recu_de,
+                'montant': int(self.montant) if self.montant else 0,
+                'loyer_base': int(self.montant) if self.montant else 0,
+                'mois_regle': self.mois_paye if self.mois_paye else datetime.now().strftime('%B %Y'),
+                'restant_du': 0,
+                'loyer_au_prorata': 0,
+                'quartier': quartier,
+                'timestamp': datetime.now().isoformat(),
+                'type_document': type_quittance,
+                'type_paiement': self.get_type_paiement_display() if hasattr(self, 'get_type_paiement_display') else 'Paiement',
+                'mode_paiement': self.get_mode_paiement_display() if hasattr(self, 'get_mode_paiement_display') else 'Espèces'
+            }
+            
+            # Ajouter des données spécialisées selon le type
+            try:
+                donnees_quittance.update(self._ajouter_donnees_specialisees_quittance(type_quittance))
+            except:
+                pass  # Ignorer les erreurs de données spécialisées
+            
+            return DocumentKBISUnifie.generer_document_unifie(donnees_quittance, type_quittance)
+            
+        except Exception as e:
+            print(f"Erreur lors de la génération de la quittance KBIS: {e}")
+            import traceback
+            print(f"Détails: {traceback.format_exc()}")
+            return None
     
     def generer_recu_automatique(self, utilisateur):
         """Génère automatiquement un reçu de paiement avec template KBIS."""
@@ -807,6 +867,72 @@ class Paiement(models.Model):
                 'note_speciale': 'Paiement de régularisation'
             })
         
+        return donnees_specialisees
+    
+    def _ajouter_donnees_specialisees_quittance(self, type_quittance):
+        """Ajoute des données spécialisées selon le type de quittance"""
+        donnees_specialisees = {}
+        
+        # Données spécialisées selon le type de quittance
+        if type_quittance in ['quittance_caution', 'quittance_caution_avance'] and self.contrat:
+            # Calculer les montants pour caution et avance
+            loyer_mensuel = float(self.contrat.loyer_mensuel) if self.contrat.loyer_mensuel else 0
+            charges_mensuelles = float(self.contrat.charges_mensuelles) if self.contrat.charges_mensuelles else 0
+            
+            donnees_specialisees.update({
+                'loyer_mensuel': int(loyer_mensuel),
+                'charges_mensuelles': int(charges_mensuelles),
+                'depot_garantie': int(loyer_mensuel * 2),  # 2 mois de loyer
+                'avance_loyer': int(loyer_mensuel),  # 1 mois de loyer
+                'montant_total': int(loyer_mensuel * 3),  # 3 mois au total
+                'note': 'Dépôt de garantie - Remboursable en fin de bail'
+            })
+            
+        elif type_quittance == 'quittance_loyer' and self.contrat:
+            # Données spécifiques au loyer
+            loyer_mensuel = float(self.contrat.loyer_mensuel) if self.contrat.loyer_mensuel else 0
+            charges_mensuelles = float(self.contrat.charges_mensuelles) if self.contrat.charges_mensuelles else 0
+            
+            donnees_specialisees.update({
+                'loyer_mensuel': int(loyer_mensuel),
+                'charges_mensuelles': int(charges_mensuelles),
+                'total_mensuel': int(loyer_mensuel + charges_mensuelles),
+                'note': 'Loyer mensuel'
+            })
+            
+        elif type_quittance == 'quittance_charges' and self.contrat:
+            # Données spécifiques aux charges
+            charges_mensuelles = float(self.contrat.charges_mensuelles) if self.contrat.charges_mensuelles else 0
+            
+            donnees_specialisees.update({
+                'charges_mensuelles': int(charges_mensuelles),
+                'type_charges': 'Charges mensuelles',
+                'note': 'Charges mensuelles'
+            })
+            
+        elif type_quittance == 'quittance_avance' and self.contrat:
+            # Données spécifiques à l'avance de loyer
+            loyer_mensuel = float(self.contrat.loyer_mensuel) if self.contrat.loyer_mensuel else 0
+            
+            donnees_specialisees.update({
+                'loyer_mensuel': int(loyer_mensuel),
+                'type_avance': 'Avance de loyer',
+                'note': 'Avance de loyer'
+            })
+            
+        elif type_quittance == 'quittance_partiel':
+            # Données spécifiques au paiement partiel
+            donnees_specialisees.update({
+                'type_paiement': 'Paiement partiel',
+                'note': 'Paiement partiel'
+            })
+            
+        else:
+            # Quittance standard
+            donnees_specialisees.update({
+                'note': 'Paiement'
+            })
+            
         return donnees_specialisees
     
     def _generer_quittance_retrait_kbis(self):
@@ -2459,6 +2585,7 @@ class RecapMensuel(models.Model):
     # Montants calculés automatiquement
     total_loyers_bruts = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total des loyers bruts"))
     total_charges_deductibles = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total des charges déductibles"))
+    total_charges_bailleur = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total des charges bailleur"), null=True, blank=True)
     total_net_a_payer = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total net à payer"))
     
     # Compteurs automatiques
@@ -2505,6 +2632,28 @@ class RecapMensuel(models.Model):
     
     def __str__(self):
         return f"Récapitulatif {self.bailleur.get_nom_complet()} - {self.mois_recap.strftime('%B %Y')}"
+    
+    def get_total_charges_bailleur(self):
+        """Retourne le total des charges bailleur, calculé dynamiquement si nécessaire."""
+        if self.total_charges_bailleur is not None:
+            return self.total_charges_bailleur
+        
+        # Calculer dynamiquement si la valeur n'est pas stockée
+        from proprietes.models import ChargesBailleur
+        from django.db.models import Sum
+        from decimal import Decimal
+        
+        if not self.bailleur:
+            return Decimal('0')
+        
+        charges_bailleur = ChargesBailleur.objects.filter(
+            propriete__bailleur=self.bailleur,
+            date_charge__year=self.mois_recap.year,
+            date_charge__month=self.mois_recap.month,
+            statut__in=['en_attente', 'deduite_retrait']
+        ).aggregate(total=Sum('montant_restant'))['total'] or Decimal('0')
+        
+        return charges_bailleur
     
     def get_absolute_url(self):
         return reverse('paiements:detail_recap_mensuel_auto', kwargs={'recap_id': self.pk})
@@ -2556,10 +2705,14 @@ class RecapMensuel(models.Model):
                     charges_mensuelles = Decimal('0')
                 total_charges += charges_mensuelles
         
+        # NOUVEAU : Calculer les charges bailleur pour le mois
+        total_charges_bailleur = self._calculer_charges_bailleur_mois()
+        
         # Mettre à jour les totaux
         self.total_loyers_bruts = total_loyers
         self.total_charges_deductibles = total_charges
-        self.total_net_a_payer = total_loyers - total_charges
+        self.total_charges_bailleur = total_charges_bailleur  # NOUVEAU
+        self.total_net_a_payer = total_loyers - total_charges - total_charges_bailleur  # MODIFIÉ
         self.nombre_proprietes = nombre_proprietes
         self.nombre_contrats_actifs = nombre_contrats
         
@@ -2567,6 +2720,33 @@ class RecapMensuel(models.Model):
         self.calculer_garanties_financieres()
         
         self.save()
+    
+    def _calculer_charges_bailleur_mois(self):
+        """
+        Calcule les charges bailleur pour le mois du récapitulatif.
+        Utilise le service intelligent des charges bailleur.
+        """
+        try:
+            from paiements.services_charges_bailleur import ServiceChargesBailleurIntelligent
+            
+            # Utiliser le service intelligent pour calculer les charges
+            charges_data = ServiceChargesBailleurIntelligent.calculer_charges_bailleur_pour_mois(
+                self.bailleur, self.mois_recap
+            )
+            
+            return charges_data.get('total_charges', Decimal('0'))
+            
+        except Exception as e:
+            # En cas d'erreur, utiliser la méthode de base
+            from proprietes.models import ChargesBailleur
+            from django.db.models import Sum
+            
+            return ChargesBailleur.objects.filter(
+                propriete__bailleur=self.bailleur,
+                date_charge__year=self.mois_recap.year,
+                date_charge__month=self.mois_recap.month,
+                statut__in=['en_attente', 'deduite_retrait']
+            ).aggregate(total=Sum('montant_restant'))['total'] or Decimal('0')
     
     def calculer_garanties_financieres(self):
         """Calcule et vérifie si les garanties financières sont suffisantes."""

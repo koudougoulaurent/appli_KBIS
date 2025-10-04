@@ -337,13 +337,10 @@ class ServiceContexteIntelligentRetraits:
             is_deleted=False
         ).aggregate(total=Sum('montant'))['total'] or 0
         
-        # Charges de bailleur ce mois
-        charges_bailleur_ce_mois = ChargesBailleur.objects.filter(
-            propriete__bailleur=bailleur,
-            date_charge__year=mois_actuel.year,
-            date_charge__month=mois_actuel.month,
-            statut__in=['en_attente', 'deduite_retrait']
-        ).aggregate(total=Sum('montant_restant'))['total'] or 0
+        # Charges de bailleur ce mois (intégration intelligente)
+        charges_bailleur_ce_mois = ServiceContexteIntelligentRetraits._calculer_charges_bailleur_intelligentes(
+            bailleur, mois_actuel
+        )
         
         # Total des charges
         total_charges = charges_ce_mois + charges_bailleur_ce_mois
@@ -367,7 +364,10 @@ class ServiceContexteIntelligentRetraits:
             'total_charges': total_charges,
             'montant_net_a_payer': montant_net,
             'retrait_existant': retrait_existant.id if retrait_existant else None,
-            'peut_creer_retrait': montant_net > 0 and not retrait_existant
+            'peut_creer_retrait': montant_net > 0 and not retrait_existant,
+            'details_charges_bailleur': ServiceContexteIntelligentRetraits._get_details_charges_bailleur(
+                bailleur, mois_actuel
+            )
         }
     
     @staticmethod
@@ -418,6 +418,80 @@ class ServiceContexteIntelligentRetraits:
             })
         
         return alertes
+    
+    @staticmethod
+    def _calculer_charges_bailleur_intelligentes(bailleur, mois):
+        """
+        Calcule intelligemment les charges bailleur pour un mois donné.
+        Utilise le service intelligent des charges bailleur.
+        """
+        try:
+            from paiements.services_charges_bailleur import ServiceChargesBailleurIntelligent
+            
+            # Utiliser le service intelligent pour calculer les charges
+            charges_data = ServiceChargesBailleurIntelligent.calculer_charges_bailleur_pour_mois(
+                bailleur, mois
+            )
+            
+            return charges_data.get('total_charges', 0)
+            
+        except Exception as e:
+            # En cas d'erreur, utiliser la méthode de base
+            from proprietes.models import ChargesBailleur
+            return ChargesBailleur.objects.filter(
+                propriete__bailleur=bailleur,
+                date_charge__year=mois.year,
+                date_charge__month=mois.month,
+                statut__in=['en_attente', 'deduite_retrait']
+            ).aggregate(total=Sum('montant_restant'))['total'] or 0
+    
+    @staticmethod
+    def _get_details_charges_bailleur(bailleur, mois):
+        """
+        Récupère les détails des charges bailleur pour un mois donné.
+        """
+        try:
+            from paiements.services_charges_bailleur import ServiceChargesBailleurIntelligent
+            
+            # Utiliser le service intelligent pour obtenir les détails
+            charges_data = ServiceChargesBailleurIntelligent.calculer_charges_bailleur_pour_mois(
+                bailleur, mois
+            )
+            
+            return {
+                'charges_par_propriete': charges_data.get('charges_par_propriete', {}),
+                'charges_details': charges_data.get('charges_details', []),
+                'nombre_charges': charges_data.get('nombre_charges', 0),
+                'total_charges': charges_data.get('total_charges', 0)
+            }
+            
+        except Exception as e:
+            return {
+                'charges_par_propriete': {},
+                'charges_details': [],
+                'nombre_charges': 0,
+                'total_charges': 0,
+                'erreur': str(e)
+            }
+    
+    @staticmethod
+    def integrer_charges_bailleur_automatiquement(retrait):
+        """
+        Intègre automatiquement les charges bailleur dans un retrait.
+        """
+        try:
+            from paiements.services_charges_bailleur import ServiceChargesBailleurIntelligent
+            
+            # Utiliser le service intelligent pour l'intégration
+            resultat = ServiceChargesBailleurIntelligent.integrer_charges_dans_retrait(retrait)
+            
+            return resultat
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'erreur': str(e)
+            }
     
     @staticmethod
     def _get_suggestions_retrait(bailleur):

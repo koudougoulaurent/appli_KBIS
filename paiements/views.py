@@ -5,7 +5,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods, require_POST
 from django.views.generic import ListView, CreateView, UpdateView, DetailView, DeleteView
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.db.models import Q, Sum, Count, F, Case, When, DecimalField
 from django.db.models.functions import Coalesce
 from django.utils import timezone
@@ -79,7 +79,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods, require_POST
 from django.views.generic import ListView, CreateView, UpdateView, DetailView, DeleteView
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.db.models import Q, Sum, Count, F, Case, When, DecimalField
 from django.db.models.functions import Coalesce
 from django.utils import timezone
@@ -190,7 +190,7 @@ def paiements_dashboard(request):
         total=models.Sum('total_net_a_payer')
     )['total'] or 0
     
-    # Récapitulatifs récents (5 derniers)
+    # Récapitulatifs récents (5 derniers) - réactivé maintenant que la colonne existe
     recaps_recents = RecapMensuel.objects.filter(
         is_deleted=False
     ).select_related('bailleur').order_by('-date_creation')[:5]
@@ -823,7 +823,7 @@ def liste_retraits(request):
 
 @login_required
 def ajouter_retrait(request):
-    """Ajouter un retrait bailleur."""
+    """Ajouter un retrait bailleur avec déduction automatique des charges."""
     # Vérification des permissions
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
     if not permissions['allowed']:
@@ -833,27 +833,26 @@ def ajouter_retrait(request):
     if request.method == 'POST':
         form = RetraitBailleurForm(request.POST)
         if form.is_valid():
-            retrait = form.save(commit=False)
-            retrait.cree_par = request.user
-            
-            # Traitement spécial pour le champ mois_retrait
+            # Rediriger vers le récapitulatif au lieu de créer directement
+            bailleur_id = form.cleaned_data.get('bailleur').id
             mois_retrait = form.cleaned_data.get('mois_retrait')
+            
             if mois_retrait:
                 # S'assurer que c'est le premier jour du mois
                 if mois_retrait.day != 1:
                     mois_retrait = mois_retrait.replace(day=1)
-                retrait.mois_retrait = mois_retrait
-            
-            retrait.save()
-            messages.success(request, f'Retrait créé avec succès pour {retrait.bailleur.nom} {retrait.bailleur.prenom}')
-            return redirect('paiements:retraits_liste')
+                
+                # Rediriger vers le récapitulatif
+                return redirect(f'{reverse("paiements:recap_retrait_bailleur", args=[bailleur_id])}?mois={mois_retrait.month}&annee={mois_retrait.year}')
+            else:
+                messages.error(request, 'Veuillez sélectionner un mois de retrait.')
         else:
             messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
     else:
         form = RetraitBailleurForm()
     
     # Récupérer la liste des bailleurs pour le contexte
-    bailleurs = Bailleur.objects.filter(est_actif=True).order_by('nom', 'prenom')
+    bailleurs = Bailleur.objects.filter(actif=True).order_by('nom', 'prenom')
     
     context = get_context_with_entreprise_config({
         'form': form,
@@ -862,6 +861,132 @@ def ajouter_retrait(request):
     })
     
     return render(request, 'paiements/retrait_ajouter.html', context)
+
+@login_required
+def creer_retrait_depuis_recap(request):
+    """Crée le retrait depuis le récapitulatif avec déduction automatique des charges."""
+    # Vérification des permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:liste')
+    
+    if request.method == 'POST':
+        # Récupérer les données du formulaire
+        bailleur_id = request.POST.get('bailleur')
+        mois_retrait = request.POST.get('mois_retrait')
+        montant_loyers_bruts = request.POST.get('montant_loyers_bruts')
+        montant_charges_deductibles = request.POST.get('montant_charges_deductibles')
+        montant_net_a_payer = request.POST.get('montant_net_a_payer')
+        
+        try:
+            # Récupérer le bailleur
+            bailleur = Bailleur.objects.get(id=bailleur_id)
+            
+            # Créer le retrait
+            retrait = RetraitBailleur.objects.create(
+                bailleur=bailleur,
+                mois_retrait=mois_retrait,
+                montant_loyers_bruts=montant_loyers_bruts,
+                montant_charges_deductibles=montant_charges_deductibles,
+                montant_net_a_payer=montant_net_a_payer,
+                statut='en_attente',
+                type_retrait='mensuel',
+                mode_retrait='virement',
+                date_demande=timezone.now().date(),
+                cree_par=request.user
+            )
+            
+            # Appliquer automatiquement les charges de bailleur
+            resultat_charges = retrait.appliquer_charges_automatiquement()
+            
+            if resultat_charges['success'] and resultat_charges['charges_appliquees'] > 0:
+                messages.success(request, 
+                    f'Retrait créé avec succès pour {retrait.bailleur.nom} {retrait.bailleur.prenom}. '
+                    f'{resultat_charges["message"]}'
+                )
+            else:
+                messages.success(request, f'Retrait créé avec succès pour {retrait.bailleur.nom} {retrait.bailleur.prenom}')
+                if not resultat_charges['success']:
+                    messages.warning(request, f'Attention: {resultat_charges["message"]}')
+            
+            return redirect('paiements:retraits_liste')
+            
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la création du retrait: {str(e)}')
+            return redirect('paiements:retraits_liste')
+    
+    return redirect('paiements:retraits_liste')
+
+@login_required
+def recap_retrait_bailleur(request, bailleur_id):
+    """Affiche le récapitulatif avant création du retrait avec les charges à déduire."""
+    # Vérification des permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:liste')
+    
+    # Récupérer le bailleur
+    bailleur = get_object_or_404(Bailleur, pk=bailleur_id)
+    
+    # Récupérer le mois depuis les paramètres GET
+    mois = request.GET.get('mois')
+    annee = request.GET.get('annee')
+    
+    if not mois or not annee:
+        # Par défaut, mois actuel
+        from django.utils import timezone
+        mois_actuel = timezone.now()
+        mois = mois_actuel.month
+        annee = mois_actuel.year
+    
+    try:
+        mois = int(mois)
+        annee = int(annee)
+    except (ValueError, TypeError):
+        messages.error(request, 'Mois ou année invalide.')
+        return redirect('paiements:retraits_liste')
+    
+    # Créer un retrait temporaire pour les calculs
+    from datetime import date
+    mois_retrait = date(annee, mois, 1)
+    
+    # Utiliser le service intelligent pour calculer le retrait
+    from .services_retraits_bailleur import ServiceRetraitsBailleurIntelligent
+    calcul_retrait = ServiceRetraitsBailleurIntelligent.calculer_retrait_mensuel_bailleur(
+        bailleur, mois, annee
+    )
+    
+    # Calculer les charges qui seront déduites
+    retrait_temp = RetraitBailleur(
+        bailleur=bailleur,
+        mois_retrait=mois_retrait,
+        montant_loyers_bruts=calcul_retrait['total_loyers'],
+        montant_charges_deductibles=calcul_retrait['total_charges_deductibles'],
+        montant_net_a_payer=calcul_retrait['montant_net']
+    )
+    
+    charges_calcul = retrait_temp.calculer_charges_automatiquement()
+    
+    # Récupérer les propriétés du bailleur
+    proprietes = Propriete.objects.filter(
+        bailleur=bailleur,
+        is_deleted=False
+    ).select_related('type_bien')
+    
+    context = get_context_with_entreprise_config({
+        'bailleur': bailleur,
+        'mois': mois,
+        'annee': annee,
+        'mois_retrait': mois_retrait,
+        'calcul_retrait': calcul_retrait,
+        'charges_calcul': charges_calcul,
+        'proprietes': proprietes,
+        'title': f'Récapitulatif Retrait - {bailleur.nom} {bailleur.prenom}'
+    })
+    
+    return render(request, 'paiements/recap_retrait_bailleur.html', context)
 
 @login_required
 def detail_retrait(request, pk):
@@ -890,9 +1015,112 @@ def detail_retrait(request, pk):
     # Vérifier si l'utilisateur peut voir les montants (PRIVILEGE uniquement)
     can_see_amounts = check_group_permissions(request.user, ['PRIVILEGE'], 'view')['allowed']
     
+    # Gérer l'affichage des montants confidentiels via session
+    show_confidential = request.session.get('show_confidential_amounts', False)
+    if request.GET.get('toggle_confidential') == '1':
+        show_confidential = not show_confidential
+        request.session['show_confidential_amounts'] = show_confidential
+    
+    # L'utilisateur peut voir les montants s'il a les permissions OU s'il a activé l'affichage confidentiel
+    display_amounts = can_see_amounts or show_confidential
+    
+    # Récupérer les propriétés louées avec leurs détails pour le mois du retrait
+    proprietes_louees = []
+    total_loyers_bruts = Decimal('0')
+    total_charges_deductibles = Decimal('0')
+    total_charges_bailleur = Decimal('0')
+    
+    from proprietes.models import Propriete
+    from contrats.models import Contrat
+    from proprietes.models import ChargesBailleur
+    from paiements.models import ChargeDeductible
+    from decimal import Decimal
+    
+    # Récupérer toutes les propriétés du bailleur avec des contrats actifs
+    proprietes = Propriete.objects.filter(
+        bailleur=retrait.bailleur,
+        is_deleted=False
+    ).prefetch_related('contrats__locataire')
+    
+    for propriete in proprietes:
+        # Contrat actif pour cette propriété
+        contrat_actif = propriete.contrats.filter(
+            est_actif=True,
+            est_resilie=False
+        ).first()
+        
+        # Calculer les montants pour le mois du retrait
+        mois_retrait = retrait.mois_retrait
+        
+        # Initialiser les valeurs par défaut
+        loyer_mensuel = Decimal('0')
+        charges_mensuelles = Decimal('0')
+        loyer_brut = Decimal('0')
+        charges_deductibles = Decimal('0')
+        charges_bailleur = Decimal('0')
+        montant_net = Decimal('0')
+        
+        if contrat_actif:
+            # Loyers bruts (loyer + charges mensuelles)
+            loyer_mensuel = Decimal(str(contrat_actif.loyer_mensuel or '0'))
+            charges_mensuelles = Decimal(str(contrat_actif.charges_mensuelles or '0'))
+            loyer_brut = loyer_mensuel + charges_mensuelles
+            
+            # Charges déductibles pour le mois
+            charges_deductibles = ChargeDeductible.objects.filter(
+                contrat=contrat_actif,
+                date_charge__year=mois_retrait.year,
+                date_charge__month=mois_retrait.month,
+                statut='validee'
+            ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
+            
+            # Montant net pour cette propriété
+            montant_net = loyer_brut - charges_deductibles - charges_bailleur
+        
+        # Charges bailleur pour le mois (même sans contrat actif)
+        charges_bailleur = ChargesBailleur.objects.filter(
+            propriete=propriete,
+            date_charge__year=mois_retrait.year,
+            date_charge__month=mois_retrait.month,
+            statut__in=['en_attente', 'deduite_retrait']
+        ).aggregate(total=Sum('montant_restant'))['total'] or Decimal('0')
+        
+        # Créer le détail de la propriété (avec ou sans contrat actif)
+        propriete_detail = {
+            'propriete': propriete,
+            'contrat': contrat_actif,
+            'locataire': contrat_actif.locataire if contrat_actif else None,
+            'loyer_mensuel': loyer_mensuel,
+            'charges_mensuelles': charges_mensuelles,
+            'loyer_brut': loyer_brut,
+            'charges_deductibles': charges_deductibles,
+            'charges_bailleur': charges_bailleur,
+            'montant_net': montant_net,
+            'statut_contrat': 'Actif' if contrat_actif else 'Aucun contrat actif',
+            'a_contrat_actif': bool(contrat_actif)
+        }
+        
+        proprietes_louees.append(propriete_detail)
+        
+        # Cumuler les totaux seulement pour les propriétés avec contrats actifs
+        if contrat_actif:
+            total_loyers_bruts += loyer_brut
+            total_charges_deductibles += charges_deductibles
+            total_charges_bailleur += charges_bailleur
+    
+    # Calculer le montant net total
+    montant_net_total = total_loyers_bruts - total_charges_deductibles - total_charges_bailleur
+    
     context = get_context_with_entreprise_config({
         'retrait': retrait,
-        'can_see_amounts': can_see_amounts,  # Flag pour le template
+        'can_see_amounts': can_see_amounts,  # Flag pour le template (permissions)
+        'display_amounts': display_amounts,  # Flag pour l'affichage réel
+        'show_confidential': show_confidential,  # Flag pour l'état de l'affichage confidentiel
+        'proprietes_louees': proprietes_louees,
+        'total_loyers_bruts': total_loyers_bruts,
+        'total_charges_deductibles': total_charges_deductibles,
+        'total_charges_bailleur': total_charges_bailleur,
+        'montant_net_total': montant_net_total,
         'title': f'Détails du Retrait #{retrait.id}'
     })
     
@@ -1011,7 +1239,7 @@ def liste_recaps_mensuels(request):
     
     # Récupérer tous les bailleurs pour le filtre
     from proprietes.models import Bailleur
-    bailleurs = Bailleur.objects.filter(is_deleted=False).order_by('nom', 'prenom')
+    bailleurs = Bailleur.objects.all().order_by('nom', 'prenom')
     
     context = get_context_with_entreprise_config({
         'recaps': page_obj,
@@ -1576,27 +1804,68 @@ def liste_retraits_bailleur(request):
         return redirect('paiements:dashboard')
     
     # Récupérer tous les retraits avec relations
-    retraits = RetraitBailleur.objects.filter(
-        is_deleted=False
-    ).select_related(
+    retraits = RetraitBailleur.objects.all().select_related(
         'bailleur', 'cree_par', 'valide_par', 'paye_par'
     ).order_by('-date_creation')
     
+    # Filtres
+    statut = request.GET.get('statut')
+    if statut:
+        retraits = retraits.filter(statut=statut)
+    
+    bailleur_id = request.GET.get('bailleur')
+    if bailleur_id:
+        retraits = retraits.filter(bailleur_id=bailleur_id)
+    
+    mois = request.GET.get('mois')
+    if mois:
+        try:
+            from datetime import datetime
+            date_mois = datetime.strptime(mois, '%Y-%m').date()
+            retraits = retraits.filter(mois_retrait__year=date_mois.year, mois_retrait__month=date_mois.month)
+        except ValueError:
+            pass
+    
     # Vérifier si l'utilisateur peut voir les montants (PRIVILEGE uniquement)
     can_see_amounts = check_group_permissions(request.user, ['PRIVILEGE'], 'view')['allowed']
+    
+    # Statistiques dynamiques et exactes
+    from proprietes.models import Propriete
+    
+    # Compter seulement les retraits pour des bailleurs qui ont des propriétés louées
+    retraits_avec_proprietes = RetraitBailleur.objects.filter(
+        bailleur__proprietes__contrats__est_actif=True,
+        bailleur__proprietes__contrats__est_resilie=False
+    ).distinct()
+    
+    total_retraits = retraits_avec_proprietes.count()
+    montant_total = retraits_avec_proprietes.aggregate(total=Sum('montant_net_a_payer'))['total'] or 0
+    en_attente = retraits_avec_proprietes.filter(statut='en_attente').count()
+    payes = retraits_avec_proprietes.filter(statut='paye').count()
     
     # Pagination
     paginator = Paginator(retraits, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
+    # Récupérer tous les bailleurs pour le filtre
+    from proprietes.models import Bailleur
+    bailleurs = Bailleur.objects.all().order_by('nom', 'prenom')
+    
     context = get_context_with_entreprise_config({
-        'retraits': page_obj,
+        'page_obj': page_obj,
         'can_see_amounts': can_see_amounts,
-        'title': 'Liste des Retraits Bailleur'
+        'stats': {
+            'total_retraits': total_retraits,
+            'total_montant': montant_total,
+            'retraits_en_attente': en_attente,
+            'retraits_payes': payes,
+        },
+        'bailleurs': bailleurs,
+        'title': 'Retraits aux Bailleurs'
     })
     
-    return render(request, 'paiements/retraits/retrait_liste_securisee.html', context)
+    return render(request, 'paiements/retraits/retrait_list.html', context)
 
 @login_required
 def paiement_caution_avance_create(request):
@@ -2269,6 +2538,7 @@ def get_calculation_preview(request):
         # Calculer les totaux pour l'aperçu
         total_loyers = Decimal('0')
         total_charges = Decimal('0')
+        total_charges_bailleur = Decimal('0')  # NOUVEAU
         nombre_proprietes = 0
         nombre_contrats = 0
         nombre_paiements = 0
@@ -2311,9 +2581,17 @@ def get_calculation_preview(request):
                         statut='validee'
                     )
                     total_charges += sum(charge.montant for charge in charges_mois)
+                    
+                    # NOUVEAU : Charges bailleur du mois
+                    charges_bailleur_mois = propriete.charges_bailleur.filter(
+                        date_charge__year=mois_date.year,
+                        date_charge__month=mois_date.month,
+                        statut__in=['en_attente', 'deduite_retrait']
+                    )
+                    total_charges_bailleur += sum(charge.montant_restant for charge in charges_bailleur_mois)
         
-        # Calculer le montant net
-        total_net = total_loyers - total_charges
+        # Calculer le montant net (incluant les charges bailleur)
+        total_net = total_loyers - total_charges - total_charges_bailleur
         
         # Vérifier s'il existe déjà des récapitulatifs pour ce mois
         recaps_existants = RecapMensuel.objects.filter(
@@ -2327,6 +2605,7 @@ def get_calculation_preview(request):
             'data': {
                 'total_loyers': float(total_loyers),
                 'total_charges': float(total_charges),
+                'total_charges_bailleur': float(total_charges_bailleur),  # NOUVEAU
                 'total_net': float(total_net),
                 'nombre_proprietes': nombre_proprietes,
                 'nombre_contrats': nombre_contrats,
@@ -2866,75 +3145,3 @@ def generer_pdf_recap_detaille_paysage(request, recap_id):
         messages.error(request, f"Erreur lors de la génération du PDF détaillé: {str(e)}")
         return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
 
-@login_required
-def creer_retrait_depuis_recap(request, recap_id):
-    """Crée un retrait bailleur depuis un récapitulatif mensuel."""
-    try:
-        recap = get_object_or_404(RecapMensuel, id=recap_id, is_deleted=False)
-        
-        # Vérification des permissions
-        permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'add')
-        if not permissions['allowed']:
-            messages.error(request, permissions['message'])
-            return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
-        
-        # Vérifier que le récapitulatif est validé
-        if recap.statut != 'valide':
-            messages.error(request, "Le récapitulatif doit être validé avant de pouvoir créer un retrait.")
-            return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
-        
-        # Vérifier qu'il n'y a pas déjà un retrait pour ce mois et ce bailleur
-        retrait_existant = RetraitBailleur.objects.filter(
-            bailleur=recap.bailleur,
-            mois_retrait=recap.mois_recap,
-            statut__in=['en_attente', 'valide', 'paye']
-        ).first()
-        
-        if retrait_existant:
-            messages.info(request, f"Un retrait existe déjà pour {recap.bailleur.get_nom_complet()} - {recap.mois_recap.strftime('%B %Y')}")
-            return redirect('paiements:detail_retrait_bailleur', retrait_id=retrait_existant.id)
-        
-        if request.method == 'POST':
-            # Créer le retrait avec les données du récapitulatif
-            retrait = RetraitBailleur.objects.create(
-                bailleur=recap.bailleur,
-                mois_retrait=recap.mois_recap,
-                montant_loyers_bruts=recap.total_loyers_bruts,
-                montant_charges_deductibles=recap.total_charges_deductibles,
-                montant_net_a_payer=recap.total_net_a_payer,
-                type_retrait='mensuel',
-                statut='en_attente',
-                mode_retrait=request.POST.get('mode_retrait', 'virement'),
-                date_demande=timezone.now().date(),
-                reference_virement=request.POST.get('reference_retrait', ''),
-                notes=request.POST.get('observations', f'Retrait basé sur le récapitulatif mensuel {recap.mois_recap.strftime("%B %Y")}'),
-                cree_par=request.user,
-                recap_lie=recap  # Lier le retrait au récapitulatif
-            )
-            
-            # Mettre à jour le statut du récapitulatif
-            recap.statut = 'paye'
-            recap.date_paiement = timezone.now()
-            recap.save()
-            
-            messages.success(request, 
-                f"Retrait créé avec succès pour {recap.bailleur.get_nom_complet()} - "
-                f"Montant: {recap.total_net_a_payer:.0f} F CFA"
-            )
-            return redirect('paiements:detail_retrait_bailleur', retrait_id=retrait.id)
-        
-        # Préparer le contexte pour le formulaire
-        context = {
-            'recap': recap,
-            'bailleur': recap.bailleur,
-            'montant_net': recap.total_net_a_payer,
-            'page_title': f'Créer un Retrait - {recap.bailleur.get_nom_complet()}',
-            'page_icon': 'cash-coin',
-            'description': f'Retrait basé sur le récapitulatif de {recap.mois_recap.strftime("%B %Y")}'
-        }
-        
-        return render(request, 'paiements/creer_retrait_depuis_recap.html', context)
-        
-    except Exception as e:
-        messages.error(request, f"Erreur lors de la création du retrait: {str(e)}")
-        return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)

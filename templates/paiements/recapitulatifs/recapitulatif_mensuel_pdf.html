@@ -251,7 +251,7 @@
                         {% endif %}
                     </td>
                     <td class="text-right">{{ detail.loyer_mensuel|floatformat:0 }} F CFA</td>
-                    <td class="text-right">{{ detail.total_charges_bailleur|floatformat:0 }} F CFA</td>
+                    <td class="text-right">{{ detail.get_total_charges_bailleur|floatformat:0 }} F CFA</td>
                     <td class="text-right">{{ detail.montant_net_a_payer|floatformat:0 }} F CFA</td>
                 </tr>
                 {% endfor %}

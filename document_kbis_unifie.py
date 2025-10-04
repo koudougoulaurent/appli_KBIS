@@ -524,9 +524,9 @@ class DocumentKBISUnifie:
                     </div>
                 </div>
                 """
-        except Exception as e:
-            # Fallback vers les valeurs par défaut en cas d'erreur
-            return f"""
+            except Exception as e:
+                # Fallback vers les valeurs par défaut en cas d'erreur
+                return f"""
             <div class="entete-principal">
                 <div class="logo-section">
                     <div class="logo-kbis">

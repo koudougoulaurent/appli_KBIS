@@ -21,6 +21,7 @@ urlpatterns = [
     
     # URLs pour les actions AJAX
     path('<int:pk>/mark-read/', views.mark_as_read, name='mark_as_read'),
+    path('<int:pk>/mark-unread/', views.mark_as_unread, name='mark_as_unread'),
     path('mark-all-as-read/', views.mark_all_as_read, name='mark_all_as_read'),
     path('notification-count/', views.notification_count, name='notification_count'),
     

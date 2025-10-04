@@ -276,6 +276,7 @@ class Locataire(DuplicatePreventionMixin, models.Model):
     is_deleted = models.BooleanField(default=False, verbose_name=_("Supprimé logiquement"))
     
     class Meta:
+        app_label = 'proprietes'
         verbose_name = _("Locataire")
         verbose_name_plural = _("Locataires")
         ordering = ['nom', 'prenom']
@@ -474,6 +475,7 @@ class Propriete(models.Model):
     is_deleted = models.BooleanField(default=False, verbose_name=_("Supprimé logiquement"))
     
     class Meta:
+        app_label = 'proprietes'
         verbose_name = _("Propriété")
         verbose_name_plural = _("Propriétés")
         ordering = ['-date_creation']
@@ -696,6 +698,56 @@ class Propriete(models.Model):
         charges = self.charges_locataire or 0
         return loyer + charges
     
+    def get_charges_bailleur_en_cours(self):
+        """Retourne le montant total des charges bailleur en cours pour cette propriété."""
+        from django.db.models import Sum
+        
+        total = ChargesBailleur.objects.filter(
+            propriete=self,
+            statut__in=['en_attente', 'deduite_retrait']
+        ).aggregate(
+            total=Sum('montant_restant')
+        )['total']
+        
+        return total or 0
+    
+    def get_total_mensuel_bailleur(self):
+        """
+        Retourne le montant total mensuel que le bailleur doit recevoir
+        pour toutes ses propriétés louées (loyers - charges déductibles).
+        """
+        from django.db.models import Sum
+        from contrats.models import Contrat
+        
+        # Calculer le total des loyers de toutes les propriétés du bailleur
+        total_loyers = Propriete.objects.filter(
+            bailleur=self.bailleur,
+            is_deleted=False
+        ).aggregate(
+            total=Sum('loyer_actuel')
+        )['total'] or 0
+        
+        # Calculer le total des charges déductibles de toutes les propriétés du bailleur
+        total_charges_deductibles = Contrat.objects.filter(
+            propriete__bailleur=self.bailleur,
+            est_actif=True
+        ).aggregate(
+            total=Sum('charges_deductibles')
+        )['total'] or 0
+        
+        # Calculer le total des charges bailleur de toutes les propriétés du bailleur
+        total_charges_bailleur = ChargesBailleur.objects.filter(
+            propriete__bailleur=self.bailleur,
+            statut__in=['en_attente', 'deduite_retrait']
+        ).aggregate(
+            total=Sum('montant_restant')
+        )['total'] or 0
+        
+        # Montant net = loyers - charges déductibles - charges bailleur
+        montant_net = total_loyers - total_charges_deductibles - total_charges_bailleur
+        
+        return max(0, montant_net)  # Ne pas retourner de montant négatif
+    
     def get_nombre_unites_locatives(self):
         """Retourne le nombre d'unités locatives dans cette propriété."""
         return self.unites_locatives.filter(is_deleted=False).count()
@@ -828,6 +880,7 @@ class Photo(models.Model):
     )
     
     class Meta:
+        app_label = 'proprietes'
         verbose_name = _("Photo")
         verbose_name_plural = _("Photos")
         ordering = ['ordre', 'date_creation']
@@ -968,6 +1021,21 @@ class ChargesBailleur(models.Model):
         verbose_name=_("Date de paiement")
     )
     
+    # Informations de déduction
+    motif_deduction = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        verbose_name=_("Motif de la déduction"),
+        help_text=_("Raison de la déduction du retrait mensuel")
+    )
+    notes_deduction = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name=_("Notes de déduction"),
+        help_text=_("Commentaires sur la déduction")
+    )
+    
     # Métadonnées
     date_creation = models.DateTimeField(
         auto_now_add=True,
@@ -986,6 +1054,7 @@ class ChargesBailleur(models.Model):
     )
     
     class Meta:
+        app_label = 'proprietes'
         verbose_name = _("Charge bailleur")
         verbose_name_plural = _("Charges bailleur")
         ordering = ['-date_charge']
@@ -1056,15 +1125,16 @@ class ChargesBailleur(models.Model):
     def creer_log_deduction(self, montant_deduit):
         """Crée un log de déduction pour traçabilité."""
         try:
-            from core.models import LogAudit
-            LogAudit.objects.create(
-                modele='ChargesBailleur',
-                instance_id=self.id,
-                action='deduction_retrait',
-                utilisateur=self.cree_par,
-                description=f'Déduction de {montant_deduit} F CFA du retrait mensuel',
-                donnees_avant={},
-                donnees_apres={
+            from core.models import AuditLog
+            from django.contrib.contenttypes.models import ContentType
+            content_type = ContentType.objects.get_for_model(ChargesBailleur)
+            AuditLog.objects.create(
+                content_type=content_type,
+                object_id=self.id,
+                action='update',
+                user=self.cree_par,
+                details={
+                    'description': f'Déduction de {montant_deduit} F CFA du retrait mensuel',
                     'montant_deja_deduit': str(self.montant_deja_deduit),
                     'montant_restant': str(self.montant_restant),
                     'statut': self.statut
@@ -1092,6 +1162,123 @@ class ChargesBailleur(models.Model):
         if self.montant <= 0:
             return 0
         return (self.montant_deja_deduit / self.montant) * 100
+    
+    def get_statut_color(self):
+        """Retourne la couleur CSS selon le statut."""
+        colors = {
+            'en_attente': 'warning',
+            'payee': 'success',
+            'remboursee': 'info',
+            'deduite_retrait': 'primary',
+            'annulee': 'danger'
+        }
+        return colors.get(self.statut, 'secondary')
+    
+    def get_priorite_color(self):
+        """Retourne la couleur CSS selon la priorité."""
+        colors = {
+            'basse': 'success',
+            'normale': 'info',
+            'haute': 'warning',
+            'urgente': 'danger'
+        }
+        return colors.get(self.priorite, 'secondary')
+    
+    def est_en_retard(self):
+        """Vérifie si la charge est en retard de paiement."""
+        if self.date_echeance and self.statut == 'en_attente':
+            from django.utils import timezone
+            return timezone.now().date() > self.date_echeance
+        return False
+    
+    def get_jours_retard(self):
+        """Retourne le nombre de jours de retard."""
+        if self.est_en_retard():
+            from django.utils import timezone
+            return (timezone.now().date() - self.date_echeance).days
+        return 0
+    
+    def peut_etre_annulee(self):
+        """Vérifie si la charge peut être annulée."""
+        return self.statut in ['en_attente']
+    
+    def peut_etre_modifiee(self):
+        """Vérifie si la charge peut être modifiée."""
+        return self.statut in ['en_attente']
+    
+    def get_montant_restant_pourcentage(self):
+        """Retourne le pourcentage du montant restant par rapport au montant total."""
+        if self.montant <= 0:
+            return 0
+        return (self.montant_restant / self.montant) * 100
+    
+    def get_historique_deductions(self):
+        """Retourne l'historique des déductions pour cette charge."""
+        try:
+            from core.models import AuditLog
+            from django.contrib.contenttypes.models import ContentType
+            content_type = ContentType.objects.get_for_model(ChargesBailleur)
+            return AuditLog.objects.filter(
+                content_type=content_type,
+                object_id=self.id,
+                action='update'
+            ).order_by('-timestamp')
+        except Exception:
+            return []
+    
+    def get_impact_sur_retrait(self, mois_retrait=None):
+        """
+        Calcule l'impact de cette charge sur un retrait mensuel.
+        
+        Args:
+            mois_retrait: Mois du retrait (par défaut: mois de la charge)
+            
+        Returns:
+            Dict contenant l'impact calculé
+        """
+        from decimal import Decimal
+        from django.utils import timezone
+        
+        if mois_retrait is None:
+            mois_retrait = self.date_charge.replace(day=1)
+        
+        # Vérifier si la charge est dans le bon mois
+        if (self.date_charge.year != mois_retrait.year or 
+            self.date_charge.month != mois_retrait.month):
+            return {
+                'impact': Decimal('0'),
+                'raison': 'Charge hors période'
+            }
+        
+        # Vérifier si la charge peut être déduite
+        if not self.peut_etre_deduit():
+            return {
+                'impact': Decimal('0'),
+                'raison': 'Charge non déductible'
+            }
+        
+        return {
+            'impact': self.get_montant_deductible(),
+            'raison': 'Charge déductible',
+            'montant_total': self.montant,
+            'montant_deja_deduit': self.montant_deja_deduit,
+            'montant_restant': self.montant_restant,
+            'progression': self.get_progression_deduction()
+        }
+    
+    def get_resume_financier(self):
+        """Retourne un résumé financier de la charge."""
+        return {
+            'montant_total': self.montant,
+            'montant_deja_deduit': self.montant_deja_deduit,
+            'montant_restant': self.montant_restant,
+            'progression_deduction': self.get_progression_deduction(),
+            'statut': self.get_statut_display(),
+            'priorite': self.get_priorite_display(),
+            'peut_etre_deduit': self.peut_etre_deduit(),
+            'est_en_retard': self.est_en_retard(),
+            'jours_retard': self.get_jours_retard()
+        }
 
 
 class ChargesBailleurRetrait(models.Model):
@@ -1124,6 +1311,7 @@ class ChargesBailleurRetrait(models.Model):
     )
     
     class Meta:
+        app_label = 'proprietes'
         verbose_name = _("Liaison charge bailleur - retrait")
         verbose_name_plural = _("Liaisons charges bailleur - retraits")
         unique_together = ['charge_bailleur', 'retrait_bailleur']
@@ -1249,6 +1437,7 @@ class Document(models.Model):
     is_deleted = models.BooleanField(default=False, verbose_name=_("Supprimé logiquement"))
     
     class Meta:
+        app_label = 'proprietes'
         verbose_name = _("Document")
         verbose_name_plural = _("Documents")
         ordering = ['-date_creation']
@@ -1426,6 +1615,7 @@ class UniteLocative(models.Model):
     is_deleted = models.BooleanField(default=False, verbose_name=_("Supprimé logiquement"))
     
     class Meta:
+        app_label = 'proprietes'
         verbose_name = _("Unité locative")
         verbose_name_plural = _("Unités locatives")
         ordering = ['propriete', 'etage', 'numero_unite']
@@ -1645,6 +1835,7 @@ class ReservationUnite(models.Model):
     is_deleted = models.BooleanField(default=False, verbose_name=_("Supprimé logiquement"))
     
     class Meta:
+        app_label = 'proprietes'
         verbose_name = _("Réservation d'unité")
         verbose_name_plural = _("Réservations d'unités")
         ordering = ['-date_reservation']
@@ -1792,6 +1983,7 @@ class Piece(models.Model):
     is_deleted = models.BooleanField(default=False, verbose_name=_("Supprimé logiquement"))
     
     class Meta:
+        app_label = 'proprietes'
         verbose_name = _("Pièce")
         verbose_name_plural = _("Pièces")
         ordering = ['propriete', 'type_piece', 'numero_piece']
@@ -2084,6 +2276,7 @@ class PieceContrat(models.Model):
     date_modification = models.DateTimeField(auto_now=True, verbose_name=_("Date de modification"))
     
     class Meta:
+        app_label = 'proprietes'
         verbose_name = _("Pièce-Contrat")
         verbose_name_plural = _("Pièces-Contrats")
         unique_together = ['piece', 'contrat']
@@ -2194,6 +2387,7 @@ class ChargeCommune(models.Model):
     objects = NonDeletedManager()
     
     class Meta:
+        app_label = 'proprietes'
         verbose_name = _("Charge commune")
         verbose_name_plural = _("Charges communes")
         ordering = ['-date_creation']
@@ -2346,6 +2540,7 @@ class RepartitionChargeCommune(models.Model):
     )
     
     class Meta:
+        app_label = 'proprietes'
         verbose_name = _("Répartition charge commune")
         verbose_name_plural = _("Répartitions charges communes")
         unique_together = ['charge_commune', 'piece_contrat', 'mois', 'annee']
@@ -2425,6 +2620,7 @@ class AccesEspacePartage(models.Model):
     date_modification = models.DateTimeField(auto_now=True, verbose_name=_("Date de modification"))
     
     class Meta:
+        app_label = 'proprietes'
         verbose_name = _("Accès espace partagé")
         verbose_name_plural = _("Accès espaces partagés")
         unique_together = ['piece_privee', 'espace_partage']

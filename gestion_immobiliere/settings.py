@@ -11,6 +11,9 @@ DEBUG = True
 # Forcer DEBUG = True même si une variable d'environnement le définit autrement
 if os.environ.get('DEBUG') == 'False':
     DEBUG = True
+
+# Forcer DEBUG = True pour le développement
+DEBUG = True
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'appli-kbis.onrender.com', '.onrender.com', '*']
 ROOT_URLCONF = 'gestion_immobiliere.urls'
 
@@ -29,9 +32,9 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',  # Pour l'intégration Bootstrap 5
     'core',
     'utilisateurs',
-    'proprietes',
-    'contrats',
-    'paiements',
+    'proprietes.apps.ProprietesConfig',
+    'contrats.apps.ContratsConfig',
+    'paiements.apps.PaiementsConfig',
     'notifications',
 ]
 
@@ -142,8 +145,8 @@ if os.environ.get('RENDER'):
     ]
     
     # Configuration de sécurité pour production
-    DEBUG = False
-    ALLOWED_HOSTS = ['appli-kbis.onrender.com', '.onrender.com']
+    # DEBUG = False  # Commenté pour le développement
+    ALLOWED_HOSTS = ['appli-kbis.onrender.com', '.onrender.com', 'localhost', '127.0.0.1']
     
     # Configuration de session
     SESSION_COOKIE_SECURE = True

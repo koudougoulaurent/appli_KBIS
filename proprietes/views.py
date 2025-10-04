@@ -425,40 +425,10 @@ def liste_charges_bailleur(request):
 def ajouter_charge_bailleur(request):
     """
     Vue pour ajouter une charge bailleur avec documents
+    Redirige vers la nouvelle vue intelligente
     """
-    # Vérification des permissions : ADMINISTRATION et PRIVILEGE peuvent ajouter
-    from core.utils import check_group_permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
-        return redirect('proprietes:liste_charges_bailleur')
-    
-    if request.method == 'POST':
-        form = ChargesBailleurForm(request.POST, request.FILES)
-        if form.is_valid():
-            charge = form.save(commit=False)
-            charge.cree_par = request.user
-            charge.save()
-            
-            # Utiliser la méthode save du formulaire pour gérer les documents
-            form.save(user=request.user)
-            
-            messages.success(
-                request, 
-                f'Charge "{charge.titre}" ajoutée avec succès! '
-                f'Documents justificatifs créés automatiquement.'
-            )
-            return redirect('proprietes:liste_charges_bailleur')
-        else:
-            messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
-    else:
-        form = ChargesBailleurForm()
-    
-    context = {
-        'form': form,
-        'title': 'Ajouter une charge bailleur'
-    }
-    return render(request, 'proprietes/charge_bailleur_ajouter.html', context)
+    # Redirection vers la nouvelle vue intelligente
+    return redirect('proprietes:creer_charge_bailleur')
 
 
 @login_required
@@ -517,7 +487,7 @@ def detail_charge_bailleur(request, pk):
 @login_required
 def deduction_charge_bailleur(request, pk):
     """
-    Vue pour déduire une charge bailleur du loyer
+    Vue pour déduire une charge bailleur du retrait mensuel du bailleur
     """
     # Vérification des permissions : Seul PRIVILEGE peut modifier
     from core.utils import check_group_permissions
@@ -532,17 +502,41 @@ def deduction_charge_bailleur(request, pk):
         form = ChargesBailleurDeductionForm(charge.propriete, request.POST)
         if form.is_valid():
             montant_deduit = form.cleaned_data['montant_deduction']
+            motif = form.cleaned_data.get('motif', '')
+            notes = form.cleaned_data.get('notes', '')
             
             # Appliquer la déduction
             montant_effectivement_deduit = charge.marquer_comme_deduit(montant_deduit)
             
+            # Intégrer la charge dans le retrait mensuel du bailleur
+            from paiements.services_retraits_bailleur import ServiceRetraitsBailleurIntelligent
+            
+            # Utiliser le service intelligent pour intégrer la charge
+            retrait = ServiceRetraitsBailleurIntelligent.integrer_charge_dans_retrait(
+                charge=charge,
+                montant_deduit=montant_effectivement_deduit,
+                user=request.user
+            )
+            
+            # Ajouter le motif et les notes à la charge
+            if motif:
+                charge.motif_deduction = motif
+            if notes:
+                charge.notes_deduction = notes
+            charge.save()
+            
             messages.success(
                 request, 
-                f'Déduction de {montant_effectivement_deduit} F CFA appliquée avec succès!'
+                f'Déduction de {montant_effectivement_deduit} F CFA appliquée avec succès! '
+                f'La charge a été intégrée dans le retrait mensuel du bailleur. '
+                f'Motif: {motif}'
             )
             return redirect('proprietes:detail_charge_bailleur', pk=pk)
         else:
-            messages.error(request, 'Veuillez corriger les erreurs dans le formulaire.')
+            # Afficher les erreurs spécifiques
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{form.fields[field].label}: {error}')
     else:
         form = ChargesBailleurDeductionForm(charge.propriete)
     
