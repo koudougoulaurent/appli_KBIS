@@ -464,14 +464,16 @@ def api_statistiques_propriete(request, propriete_id):
 
 @login_required
 def recherche_unites(request):
-    """Vue de recherche avancée pour les unités locatives."""
+    """Vue de recherche avancée pour les unités locatives optimisée."""
     form = UniteRechercheForm(request.GET or None)
     unites = UniteLocative.objects.none()
     stats = {}
     recherche_effectuee = False
     
     if form.is_valid():
-        # Construction de la requête de base
+        # Base QuerySet avec annotations optimisées
+        from django.db.models import Sum, Count, F, Case, When, DecimalField, Q
+        
         unites = UniteLocative.objects.select_related(
             'propriete', 
             'propriete__bailleur', 
@@ -480,7 +482,43 @@ def recherche_unites(request):
         ).prefetch_related(
             'pieces',
             'reservations'
-        ).filter(is_deleted=False)
+        ).filter(is_deleted=False).annotate(
+            # Loyer formaté
+            loyer_formatted=Case(
+                When(loyer_mensuel__isnull=False, then='loyer_mensuel'),
+                default=0,
+                output_field=DecimalField(max_digits=10, decimal_places=2)
+            ),
+            # Nom complet du bailleur
+            bailleur_nom_complet=Case(
+                When(bailleur__nom__isnull=False, 
+                     bailleur__prenom__isnull=False,
+                     then=F('bailleur__nom') + ' ' + F('bailleur__prenom')),
+                When(bailleur__nom__isnull=False,
+                     then=F('bailleur__nom')),
+                When(propriete__bailleur__nom__isnull=False,
+                     propriete__bailleur__prenom__isnull=False,
+                     then=F('propriete__bailleur__nom') + ' ' + F('propriete__bailleur__prenom')),
+                When(propriete__bailleur__nom__isnull=False,
+                     then=F('propriete__bailleur__nom')),
+                default='Bailleur inconnu',
+                output_field=models.CharField(max_length=200)
+            ),
+            # Adresse complète de la propriété
+            propriete_adresse_complete=Case(
+                When(propriete__adresse__isnull=False,
+                     propriete__ville__isnull=False,
+                     then=F('propriete__adresse') + ', ' + F('propriete__ville')),
+                When(propriete__adresse__isnull=False,
+                     then=F('propriete__adresse')),
+                default='Adresse non renseignée',
+                output_field=models.CharField(max_length=300)
+            ),
+            # Nombre de pièces
+            nombre_pieces=Count('pieces', distinct=True),
+            # Nombre de réservations
+            nombre_reservations=Count('reservations', distinct=True)
+        )
         
         # Application des filtres
         search = form.cleaned_data.get('search')
@@ -595,34 +633,74 @@ def recherche_unites(request):
         
         recherche_effectuee = True
         
-        # Calcul des statistiques
+        # Calcul des statistiques optimisées
         if unites.exists():
+            # Statistiques de base avec requêtes optimisées
+            total_unites = unites.count()
+            
+            # Statistiques par statut en une seule requête
+            stats_par_statut = unites.values('statut').annotate(
+                count=Count('id'),
+                loyer_total=Sum('loyer_mensuel')
+            ).order_by('statut')
+            
+            # Calcul des totaux
             stats = {
-                'total_unites': unites.count(),
-                'unites_disponibles': unites.filter(statut='disponible').count(),
-                'unites_occupees': unites.filter(statut='occupee').count(),
-                'unites_reservees': unites.filter(statut='reservee').count(),
-                'loyer_moyen': unites.aggregate(Avg('loyer_mensuel'))['loyer_mensuel__avg'] or 0,
-                'loyer_total': unites.aggregate(Sum('loyer_mensuel'))['loyer_mensuel__sum'] or 0,
-                'surface_moyenne': unites.filter(surface__isnull=False).aggregate(Avg('surface'))['surface__avg'] or 0,
-                'surface_totale': unites.filter(surface__isnull=False).aggregate(Sum('surface'))['surface__sum'] or 0,
+                'total_unites': total_unites,
+                'unites_disponibles': 0,
+                'unites_occupees': 0,
+                'unites_reservees': 0,
+                'loyer_moyen': 0,
+                'loyer_total': 0,
+                'surface_moyenne': 0,
+                'surface_totale': 0,
             }
             
-            # Répartition par type
+            # Remplir les statistiques par statut
+            for stat in stats_par_statut:
+                if stat['statut'] == 'disponible':
+                    stats['unites_disponibles'] = stat['count']
+                elif stat['statut'] == 'occupee':
+                    stats['unites_occupees'] = stat['count']
+                elif stat['statut'] == 'reservee':
+                    stats['unites_reservees'] = stat['count']
+            
+            # Calculs agrégés optimisés
+            from django.db.models import Avg
+            agregats = unites.aggregate(
+                loyer_moyen=Avg('loyer_mensuel'),
+                loyer_total=Sum('loyer_mensuel'),
+                surface_moyenne=Avg('surface'),
+                surface_totale=Sum('surface')
+            )
+            
+            stats.update({
+                'loyer_moyen': agregats['loyer_moyen'] or 0,
+                'loyer_total': agregats['loyer_total'] or 0,
+                'surface_moyenne': agregats['surface_moyenne'] or 0,
+                'surface_totale': agregats['surface_totale'] or 0,
+            })
+            
+            # Répartition par type (optimisée)
             stats['repartition_types'] = list(unites.values('type_unite').annotate(
                 count=Count('id'),
                 loyer_total=Sum('loyer_mensuel')
             ).order_by('-count'))
             
-            # Répartition par statut
-            stats['repartition_statuts'] = list(unites.values('statut').annotate(
-                count=Count('id'),
-                loyer_total=Sum('loyer_mensuel')
-            ).order_by('-count'))
+            # Répartition par statut (déjà calculée)
+            stats['repartition_statuts'] = list(stats_par_statut)
             
-            # Répartition par propriété
+            # Répartition par propriété (optimisée)
             stats['repartition_proprietes'] = list(unites.values(
                 'propriete__titre', 'propriete__id'
+            ).annotate(
+                count=Count('id'),
+                loyer_total=Sum('loyer_mensuel')
+            ).order_by('-count')[:10])
+            
+            # Statistiques par bailleur
+            stats['repartition_bailleurs'] = list(unites.values(
+                'bailleur_nom_complet'
             ).annotate(
                 count=Count('id'),
                 loyer_total=Sum('loyer_mensuel')

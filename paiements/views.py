@@ -350,11 +350,47 @@ def ajouter_paiement(request):
 
 @login_required
 def liste_paiements(request):
-    """Liste des paiements avec recherche et filtres."""
+    """Liste des paiements avec recherche et filtres optimisés."""
     try:
-        # Récupérer tous les paiements non supprimés
+        # Récupérer les filtres
+        query = request.GET.get('q', '')
+        statut_filter = request.GET.get('statut', '')
+        type_filter = request.GET.get('type_paiement', '')
+        date_debut = request.GET.get('date_debut', '')
+        date_fin = request.GET.get('date_fin', '')
+        
+        # Base QuerySet avec annotations optimisées
+        from django.db.models import Sum, Count, F, Case, When, DecimalField
+        
         paiements = Paiement.objects.filter(is_deleted=False).select_related(
             'contrat__locataire', 'contrat__propriete', 'cree_par'
+        ).annotate(
+            # Montant total formaté
+            montant_total_formatted=Case(
+                When(montant__isnull=False, then='montant'),
+                default=0,
+                output_field=DecimalField(max_digits=10, decimal_places=2)
+            ),
+            # Nom complet du locataire
+            locataire_nom_complet=Case(
+                When(contrat__locataire__nom__isnull=False, 
+                     contrat__locataire__prenom__isnull=False,
+                     then=F('contrat__locataire__nom') + ' ' + F('contrat__locataire__prenom')),
+                When(contrat__locataire__nom__isnull=False,
+                     then=F('contrat__locataire__nom')),
+                default='Locataire inconnu',
+                output_field=models.CharField(max_length=200)
+            ),
+            # Adresse complète de la propriété
+            propriete_adresse_complete=Case(
+                When(contrat__propriete__adresse__isnull=False,
+                     contrat__propriete__ville__isnull=False,
+                     then=F('contrat__propriete__adresse') + ', ' + F('contrat__propriete__ville')),
+                When(contrat__propriete__adresse__isnull=False,
+                     then=F('contrat__propriete__adresse')),
+                default='Adresse non renseignée',
+                output_field=models.CharField(max_length=300)
+            )
         ).order_by('-date_creation')
         
         # Récupérer le paiement de test pour l'afficher en premier
@@ -363,25 +399,49 @@ def liste_paiements(request):
             is_deleted=False
         ).first()
         
-        # Recherche
-        query = request.GET.get('q', '')
+        # Recherche optimisée
         if query:
             paiements = paiements.filter(
                 Q(reference_paiement__icontains=query) |
                 Q(contrat__numero_contrat__icontains=query) |
                 Q(contrat__locataire__nom__icontains=query) |
                 Q(contrat__locataire__prenom__icontains=query) |
-                Q(contrat__propriete__adresse__icontains=query)
+                Q(contrat__propriete__adresse__icontains=query) |
+                Q(contrat__propriete__ville__icontains=query) |
+                Q(nom_payeur__icontains=query)
             )
         
-        # Filtres
-        statut_filter = request.GET.get('statut', '')
+        # Filtres optimisés
         if statut_filter:
             paiements = paiements.filter(statut=statut_filter)
         
-        type_filter = request.GET.get('type_paiement', '')
         if type_filter:
             paiements = paiements.filter(type_paiement=type_filter)
+        
+        # Filtres de dates
+        if date_debut:
+            paiements = paiements.filter(date_paiement__gte=date_debut)
+        
+        if date_fin:
+            paiements = paiements.filter(date_paiement__lte=date_fin)
+        
+        # Calcul des statistiques avec requêtes optimisées
+        total_paiements = paiements.count()
+        montant_total = paiements.aggregate(
+            total=Sum('montant')
+        )['total'] or 0
+        
+        # Statistiques par statut
+        stats_par_statut = paiements.values('statut').annotate(
+            count=Count('id'),
+            montant_total=Sum('montant')
+        ).order_by('statut')
+        
+        # Statistiques par type
+        stats_par_type = paiements.values('type_paiement').annotate(
+            count=Count('id'),
+            montant_total=Sum('montant')
+        ).order_by('type_paiement')
         
         # Pagination
         paginator = Paginator(paiements, 20)
@@ -391,13 +451,28 @@ def liste_paiements(request):
         context = {
             'page_obj': page_obj,
             'paiements': page_obj,
-            'paiement_test': paiement_test,  # Paiement de test pour validation
+            'paiement_test': paiement_test,
             'statuts': Paiement.STATUT_CHOICES,
             'types_paiement': Paiement.TYPE_PAIEMENT_CHOICES,
             'query': query,
             'statut_filter': statut_filter,
             'type_filter': type_filter,
-            'title': 'Liste des Paiements'
+            'date_debut': date_debut,
+            'date_fin': date_fin,
+            'title': 'Liste des Paiements',
+            'statistiques': {
+                'total_paiements': total_paiements,
+                'montant_total': montant_total,
+                'stats_par_statut': stats_par_statut,
+                'stats_par_type': stats_par_type,
+            },
+            'filtres_actifs': {
+                'query': query,
+                'statut': statut_filter,
+                'type_paiement': type_filter,
+                'date_debut': date_debut,
+                'date_fin': date_fin,
+            }
         }
         
         return render(request, 'paiements/liste.html', context)
