@@ -1140,69 +1140,108 @@ def liste_contrats_caution(request):
         messages.error(request, permissions['message'])
         return redirect('core:dashboard')
     
-    # Récupérer tous les contrats actifs avec leurs relations
+    # Récupérer les filtres
+    statut_caution = request.GET.get('statut_caution', '')
+    statut_avance = request.GET.get('statut_avance', '')
+    bailleur_id = request.GET.get('bailleur', '')
+    
+    # Base QuerySet avec annotations pour les paiements
+    from django.db.models import Sum, Case, When, DecimalField, Q
+    from decimal import Decimal
+    
     contrats = Contrat.objects.filter(
         est_actif=True,
         est_resilie=False
-    ).select_related('propriete', 'locataire', 'propriete__bailleur').order_by('-date_creation')
+    ).select_related('propriete', 'locataire', 'propriete__bailleur').annotate(
+        # Montants requis
+        montant_caution_requis=Case(
+            When(depot_garantie__isnull=False, then='depot_garantie'),
+            default=0,
+            output_field=DecimalField(max_digits=10, decimal_places=2)
+        ),
+        montant_avance_requis=Case(
+            When(avance_loyer__isnull=False, then='avance_loyer'),
+            default=0,
+            output_field=DecimalField(max_digits=10, decimal_places=2)
+        ),
+        # Montants payés
+        montant_caution_paye=Sum(
+            'paiements__montant',
+            filter=Q(paiements__type_paiement='caution', paiements__statut='valide'),
+            default=0
+        ),
+        montant_avance_paye=Sum(
+            'paiements__montant',
+            filter=Q(paiements__type_paiement='avance_loyer', paiements__statut='valide'),
+            default=0
+        )
+    ).order_by('-date_creation')
     
-    # Filtres
-    statut_caution = request.GET.get('statut_caution')
-    statut_avance = request.GET.get('statut_avance')
-    bailleur_id = request.GET.get('bailleur')
-    
-    # Appliquer les filtres de statut basés sur les vrais paiements
-    contrats_filtres = []
-    for contrat in contrats:
-        caution_payee = contrat.get_caution_payee_dynamique()
-        avance_payee = contrat.get_avance_payee_dynamique()
-        
-        # Filtre statut caution
-        if statut_caution:
-            if statut_caution == 'complet' and not (caution_payee and avance_payee):
-                continue
-            elif statut_caution == 'caution_seule' and not (caution_payee and not avance_payee):
-                continue
-            elif statut_caution == 'avance_seule' and not (not caution_payee and avance_payee):
-                continue
-            elif statut_caution == 'en_attente' and not (not caution_payee and not avance_payee):
-                continue
-        
-        # Filtre statut avance
-        if statut_avance:
-            if statut_avance == 'payee' and not avance_payee:
-                continue
-            elif statut_avance == 'non_payee' and avance_payee:
-                continue
-        
-        contrats_filtres.append(contrat)
-    
-    contrats = contrats_filtres
-    
-    # Filtre par bailleur
+    # Appliquer les filtres par bailleur en premier (plus efficace)
     if bailleur_id:
-        contrats = [c for c in contrats if c.propriete.bailleur_id == int(bailleur_id)]
+        contrats = contrats.filter(propriete__bailleur_id=bailleur_id)
     
-    # Calculer les statistiques basées sur les vrais paiements
-    total_contrats = len(contrats)
-    contrats_complets = 0
-    contrats_en_attente = 0
-    cautions_payees = 0
-    avances_payees = 0
+    # Appliquer les filtres de statut avec des requêtes optimisées
+    if statut_caution == 'complet':
+        # Contrats où caution ET avance sont payées
+        contrats = contrats.filter(
+            Q(montant_caution_requis__lte=F('montant_caution_paye')) &
+            Q(montant_avance_requis__lte=F('montant_avance_paye'))
+        )
+    elif statut_caution == 'caution_seule':
+        # Contrats où seule la caution est payée
+        contrats = contrats.filter(
+            Q(montant_caution_requis__lte=F('montant_caution_paye')) &
+            Q(montant_avance_requis__gt=F('montant_avance_paye'))
+        )
+    elif statut_caution == 'avance_seule':
+        # Contrats où seule l'avance est payée
+        contrats = contrats.filter(
+            Q(montant_caution_requis__gt=F('montant_caution_paye')) &
+            Q(montant_avance_requis__lte=F('montant_avance_paye'))
+        )
+    elif statut_caution == 'en_attente':
+        # Contrats en attente (aucun paiement)
+        contrats = contrats.filter(
+            Q(montant_caution_requis__gt=F('montant_caution_paye')) &
+            Q(montant_avance_requis__gt=F('montant_avance_paye'))
+        )
     
-    for contrat in contrats:
-        if contrat.get_caution_payee_dynamique() and contrat.get_avance_payee_dynamique():
-            contrats_complets += 1
-        elif not contrat.get_caution_payee_dynamique() and not contrat.get_avance_payee_dynamique():
-            contrats_en_attente += 1
-        
-        if contrat.get_caution_payee_dynamique():
-            cautions_payees += 1
-        if contrat.get_avance_payee_dynamique():
-            avances_payees += 1
+    # Filtre par statut d'avance
+    if statut_avance == 'payee':
+        contrats = contrats.filter(montant_avance_requis__lte=F('montant_avance_paye'))
+    elif statut_avance == 'non_payee':
+        contrats = contrats.filter(montant_avance_requis__gt=F('montant_avance_paye'))
+    
+    # Calculer les statistiques avec des requêtes optimisées
+    from django.db.models import F, Count
+    
+    # Statistiques générales
+    total_contrats = contrats.count()
+    
+    # Contrats complets (caution ET avance payées)
+    contrats_complets = contrats.filter(
+        Q(montant_caution_requis__lte=F('montant_caution_paye')) &
+        Q(montant_avance_requis__lte=F('montant_avance_paye'))
+    ).count()
+    
+    # Contrats en attente (aucun paiement)
+    contrats_en_attente = contrats.filter(
+        Q(montant_caution_requis__gt=F('montant_caution_paye')) &
+        Q(montant_avance_requis__gt=F('montant_avance_paye'))
+    ).count()
+    
+    # Cautions payées
+    cautions_payees = contrats.filter(
+        montant_caution_requis__lte=F('montant_caution_paye')
+    ).count()
+    
+    # Avances payées
+    avances_payees = contrats.filter(
+        montant_avance_requis__lte=F('montant_avance_paye')
+    ).count()
     
     # Pagination
-    from django.core.paginator import Paginator
     paginator = Paginator(contrats, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -1230,6 +1269,11 @@ def liste_contrats_caution(request):
             'contrats_en_attente': contrats_en_attente,
             'cautions_payees': cautions_payees,
             'avances_payees': avances_payees,
+        },
+        'filtres_actifs': {
+            'statut_caution': statut_caution,
+            'statut_avance': statut_avance,
+            'bailleur': bailleur_id,
         }
     }
     

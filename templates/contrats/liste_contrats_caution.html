@@ -20,7 +20,7 @@
                 <select name="statut_caution" id="statut_caution" class="form-select">
                     <option value="">Tous</option>
                     {% for value, label in statuts_caution %}
-                        <option value="{{ value }}" {% if request.GET.statut_caution == value %}selected{% endif %}>{{ label }}</option>
+                        <option value="{{ value }}" {% if filtres_actifs.statut_caution == value %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -29,7 +29,7 @@
                 <select name="statut_avance" id="statut_avance" class="form-select">
                     <option value="">Tous</option>
                     {% for value, label in statuts_avance %}
-                        <option value="{{ value }}" {% if request.GET.statut_avance == value %}selected{% endif %}>{{ label }}</option>
+                        <option value="{{ value }}" {% if filtres_actifs.statut_avance == value %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -38,7 +38,7 @@
                 <select name="bailleur" id="bailleur" class="form-select">
                     <option value="">Tous les bailleurs</option>
                     {% for bailleur in bailleurs %}
-                        <option value="{{ bailleur.id }}" {% if request.GET.bailleur == bailleur.id|stringformat:"s" %}selected{% endif %}>
+                        <option value="{{ bailleur.id }}" {% if filtres_actifs.bailleur == bailleur.id|stringformat:"s" %}selected{% endif %}>
                             {{ bailleur.get_nom_complet }}
                         </option>
                     {% endfor %}
@@ -104,8 +104,8 @@
                                     {{ contrat.get_depot_garantie_formatted }}
                                 </span>
                                 <br>
-                                {% if contrat.depot_garantie and contrat.depot_garantie != '0' and contrat.depot_garantie != '0.00' %}
-                                    {% if contrat.get_caution_payee_dynamique %}
+                                {% if contrat.montant_caution_requis > 0 %}
+                                    {% if contrat.montant_caution_paye >= contrat.montant_caution_requis %}
                                         <small class="badge bg-success">Payée</small>
                                     {% else %}
                                         <small class="badge bg-danger">Non payée</small>
@@ -119,8 +119,8 @@
                                     {{ contrat.get_avance_loyer_formatted }}
                                 </span>
                                 <br>
-                                {% if contrat.avance_loyer and contrat.avance_loyer != '0' and contrat.avance_loyer != '0.00' %}
-                                    {% if contrat.get_avance_payee_dynamique %}
+                                {% if contrat.montant_avance_requis > 0 %}
+                                    {% if contrat.montant_avance_paye >= contrat.montant_avance_requis %}
                                         <small class="badge bg-success">Payée</small>
                                     {% else %}
                                         <small class="badge bg-danger">Non payée</small>
@@ -135,10 +135,26 @@
                                 </span>
                             </td>
                             <td>
-                                {% if contrat.peut_commencer_location_dynamique %}
-                                    <span class="badge bg-success">Complet</span>
+                                {% if contrat.montant_caution_requis > 0 and contrat.montant_avance_requis > 0 %}
+                                    {% if contrat.montant_caution_paye >= contrat.montant_caution_requis and contrat.montant_avance_paye >= contrat.montant_avance_requis %}
+                                        <span class="badge bg-success">Complet</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">En attente</span>
+                                    {% endif %}
+                                {% elif contrat.montant_caution_requis > 0 %}
+                                    {% if contrat.montant_caution_paye >= contrat.montant_caution_requis %}
+                                        <span class="badge bg-success">Complet</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">En attente</span>
+                                    {% endif %}
+                                {% elif contrat.montant_avance_requis > 0 %}
+                                    {% if contrat.montant_avance_paye >= contrat.montant_avance_requis %}
+                                        <span class="badge bg-success">Complet</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">En attente</span>
+                                    {% endif %}
                                 {% else %}
-                                    <span class="badge bg-warning">En attente</span>
+                                    <span class="badge bg-info">Aucun paiement requis</span>
                                 {% endif %}
                             </td>
                             <td>
@@ -147,19 +163,19 @@
                                        class="btn btn-outline-primary" title="Voir les détails">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    {% if not contrat.get_caution_payee_dynamique %}
+                                    {% if contrat.montant_caution_requis > 0 and contrat.montant_caution_paye < contrat.montant_caution_requis %}
                                         <a href="{% url 'contrats:marquer_caution_payee' contrat.id %}" 
                                            class="btn btn-outline-success" title="Marquer caution payée">
                                             <i class="bi bi-shield-check"></i>
                                         </a>
                                     {% endif %}
-                                    {% if not contrat.get_avance_payee_dynamique %}
+                                    {% if contrat.montant_avance_requis > 0 and contrat.montant_avance_paye < contrat.montant_avance_requis %}
                                         <a href="{% url 'contrats:marquer_avance_payee' contrat.id %}" 
                                            class="btn btn-outline-info" title="Marquer avance payée">
                                             <i class="bi bi-cash-coin"></i>
                                         </a>
                                     {% endif %}
-                                    {% if contrat.get_caution_payee_dynamique or contrat.get_avance_payee_dynamique %}
+                                    {% if contrat.montant_caution_paye >= contrat.montant_caution_requis or contrat.montant_avance_paye >= contrat.montant_avance_requis %}
                                         <a href="{% url 'contrats:imprimer_recu_caution' contrat.id %}" 
                                            class="btn btn-outline-secondary" title="Imprimer reçu" target="_blank">
                                             <i class="bi bi-printer"></i>
