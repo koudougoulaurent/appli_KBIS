@@ -57,7 +57,7 @@ def historique_paiements_partiels(request, contrat_id, mois, annee):
             "Vous pouvez aussi <a href='/contrats/ajouter/'>ajouter un nouveau contrat</a>."
         )
         return render(request, 'paiements/historique_partiel.html', {'contrat': None, 'paiements': [], 'mois': mois, 'annee': annee})
-    montant_du_mois = paiements.first().montant_du_mois if paiements.exists() else Decimal(contrat.loyer_mensuel)
+    montant_du_mois = paiements.first().montant_du_mois if paiements.exists() else Decimal(str(contrat.loyer_mensuel)) if contrat.loyer_mensuel else Decimal('0')
     total_paye = sum([p.montant for p in paiements])
     montant_restant = max(montant_du_mois - total_paye, 0)
     statut = 'valide' if montant_restant == 0 else 'partiellement_payé'
@@ -1386,7 +1386,7 @@ def creer_recap_mensuel(request):
                 )
                 
                 # Calculer les totaux
-                recap.calculer_totaux()
+                recap.calculer_totaux_bailleur()
                 
                 messages.success(request, f'Récapitulatif créé avec succès pour {bailleur.get_nom_complet()} - {mois_recap.strftime("%B %Y")}')
                 return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap.id)
@@ -1430,6 +1430,9 @@ def detail_recap_mensuel(request, recap_id):
     except RecapMensuel.DoesNotExist:
         messages.error(request, 'Récapitulatif introuvable.')
         return redirect('paiements:liste_recaps_mensuels')
+    
+    # Recalculer automatiquement les totaux pour s'assurer qu'ils sont à jour
+    recap.calculer_totaux_bailleur()
     
     # Calculer les statistiques détaillées
     stats = {
@@ -1768,12 +1771,12 @@ def imprimer_recap_mensuel(request, recap_id):
                 
                 # Récupérer les paiements de caution et d'avance
                 paiements_caution = contrat_actif.paiements.filter(
-                    type_paiement='caution',
+                    type_paiement__in=['caution', 'depot_garantie'],
                     statut='valide'
                 ).aggregate(total=Sum('montant'))['total'] or 0
                 
                 paiements_avance = contrat_actif.paiements.filter(
-                    type_paiement='avance',
+                    type_paiement__in=['avance_loyer', 'avance'],
                     statut='valide'
                 ).aggregate(total=Sum('montant'))['total'] or 0
                 
@@ -2523,7 +2526,7 @@ def generer_recap_mensuel_automatique(request):
                         )
                         
                         # Calculer automatiquement tous les totaux et vérifier les garanties
-                        recap.calculer_totaux()
+                        recap.calculer_totaux_bailleur()
                         
                         # Classer selon les garanties financières
                         if recap.garanties_suffisantes:
@@ -2895,7 +2898,7 @@ def creer_recap_mensuel_bailleur(request, bailleur_id):
         )
         
         # Calculer les totaux automatiquement
-        recap.calculer_totaux()
+        recap.calculer_totaux_bailleur()
         recap.save()
         
         # Message de succès avec information sur la détection automatique
@@ -3101,12 +3104,12 @@ def generer_pdf_recap_detaille_paysage(request, recap_id):
                 
                 # Récupérer les paiements de caution et d'avance
                 paiements_caution = contrat_actif.paiements.filter(
-                    type_paiement='caution',
+                    type_paiement__in=['caution', 'depot_garantie'],
                     statut='valide'
                 ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
                 
                 paiements_avance = contrat_actif.paiements.filter(
-                    type_paiement='avance',
+                    type_paiement__in=['avance_loyer', 'avance'],
                     statut='valide'
                 ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
                 

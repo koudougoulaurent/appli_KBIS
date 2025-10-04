@@ -149,16 +149,42 @@ def creer_retrait_automatique(request):
                 mois, annee, request.user
             )
             
-            # Messages
+            # Messages détaillés
             if resultat['retraits_crees'] > 0:
                 messages.success(
                     request, 
                     f'{resultat["retraits_crees"]} retraits créés automatiquement avec succès'
                 )
-            else:
+            
+            # Messages informatifs
+            if resultat['retraits_existants'] > 0:
                 messages.info(
                     request, 
-                    f'Aucun nouveau retrait créé - {resultat["retraits_existants"]} retraits existent déjà'
+                    f'{resultat["retraits_existants"]} retraits existent déjà pour ce mois'
+                )
+            
+            if resultat['cautions_manquantes'] > 0:
+                messages.warning(
+                    request, 
+                    f'{resultat["cautions_manquantes"]} bailleurs ont des cautions non payées mais loyers du mois payés - retraits créés'
+                )
+            
+            if resultat['loyers_manquants'] > 0:
+                messages.error(
+                    request, 
+                    f'{resultat["loyers_manquants"]} bailleurs ont des cautions ET loyers manquants - retraits non créés'
+                )
+            
+            if resultat['aucun_loyer'] > 0:
+                messages.info(
+                    request, 
+                    f'{resultat["aucun_loyer"]} bailleurs n\'ont pas de loyers à retirer ce mois'
+                )
+            
+            if resultat['retraits_crees'] == 0 and resultat['retraits_existants'] == 0 and resultat['cautions_manquantes'] == 0 and resultat['aucun_loyer'] == 0:
+                messages.info(
+                    request, 
+                    'Aucun retrait à créer pour ce mois'
                 )
             
             return redirect('paiements:liste_retraits')

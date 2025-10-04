@@ -93,10 +93,15 @@
                 <h5><i class="bi bi-calendar"></i> Dates</h5>
                 <div class="row">
                     <div class="col-md-6">
-                        {{ form.date_demande|as_crispy_field }}
+                        {{ form.mois_retrait|as_crispy_field }}
                     </div>
                     <div class="col-md-6">
-                        {{ form.date_versement|as_crispy_field }}
+                        <!-- Champ masqué pour la date de demande (auto_now_add) -->
+                        <div class="form-group">
+                            <label class="form-label">Date de demande</label>
+                            <input type="text" class="form-control" value="Automatique" readonly>
+                            <small class="form-text text-muted">La date de demande sera automatiquement définie lors de la création</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -106,10 +111,22 @@
                 <h5><i class="bi bi-bank"></i> Informations Bancaires</h5>
                 <div class="row">
                     <div class="col-md-6">
-                        {{ form.numero_cheque|as_crispy_field }}
+                        <div class="form-group">
+                            <label class="form-label">Mode de retrait</label>
+                            <select class="form-select" disabled>
+                                <option>{{ form.instance.mode_retrait|default:"Virement bancaire" }}</option>
+                            </select>
+                            <small class="form-text text-muted">Le mode de retrait est défini ci-dessus</small>
+                        </div>
                     </div>
                     <div class="col-md-6">
-                        {{ form.reference_virement|as_crispy_field }}
+                        <div class="form-group">
+                            <label class="form-label">Type de retrait</label>
+                            <select class="form-select" disabled>
+                                <option>{{ form.instance.type_retrait|default:"Mensuel" }}</option>
+                            </select>
+                            <small class="form-text text-muted">Le type de retrait est défini ci-dessus</small>
+                        </div>
                     </div>
                 </div>
             </div>

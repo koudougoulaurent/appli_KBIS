@@ -51,7 +51,7 @@ class QuickActionsGenerator:
                 'badge': bailleur.proprietes.count()
             },
             {
-                'url': reverse('paiements:retraits_bailleur', args=[bailleur.pk]),
+                'url': reverse('paiements:retraits_liste'),
                 'label': 'Voir Retraits',
                 'icon': 'cash-coin',
                 'style': 'btn-info',
@@ -246,7 +246,7 @@ class QuickActionsGenerator:
         """Actions rapides pour un paiement"""
         return [
             {
-                'url': reverse('paiements:modifier', args=[paiement.pk]),
+                'url': reverse('paiements:detail', args=[paiement.pk]),
                 'label': 'Modifier',
                 'icon': 'pencil',
                 'style': 'btn-primary',
@@ -255,7 +255,7 @@ class QuickActionsGenerator:
                 'shortcut': 'Ctrl+M'
             },
             {
-                'url': reverse('paiements:valider', args=[paiement.pk]),
+                'url': reverse('paiements:valider_paiement', args=[paiement.pk]),
                 'label': 'Valider',
                 'icon': 'check-circle',
                 'style': 'btn-success',
@@ -264,7 +264,7 @@ class QuickActionsGenerator:
                 'confirm': 'Confirmer la validation de ce paiement ?'
             },
             {
-                'url': reverse('paiements:refuser', args=[paiement.pk]),
+                'url': reverse('paiements:refuser_paiement', args=[paiement.pk]),
                 'label': 'Refuser',
                 'icon': 'x-circle',
                 'style': 'btn-danger',
@@ -273,7 +273,7 @@ class QuickActionsGenerator:
                 'confirm': 'Confirmer le refus de ce paiement ?'
             },
             {
-                'url': reverse('paiements:generer_recu', args=[paiement.pk]),
+                'url': reverse('paiements:detail', args=[paiement.pk]),
                 'label': 'Générer Reçu',
                 'icon': 'file-earmark-text',
                 'style': 'btn-info',
@@ -281,7 +281,7 @@ class QuickActionsGenerator:
                 'tooltip': f'Générer un reçu pour {paiement.reference_paiement}'
             },
             {
-                'url': reverse('paiements:dupliquer', args=[paiement.pk]),
+                'url': reverse('paiements:ajouter'),
                 'label': 'Dupliquer',
                 'icon': 'copy',
                 'style': 'btn-outline-primary',
@@ -343,7 +343,7 @@ class QuickActionsGenerator:
         """Actions rapides pour la page des retraits d'un bailleur"""
         return [
             {
-                'url': reverse('paiements:ajouter_retrait_bailleur', args=[bailleur.pk]),
+                'url': reverse('paiements:retrait_ajouter'),
                 'label': 'Nouveau Retrait',
                 'icon': 'plus-circle',
                 'style': 'btn-success',
@@ -360,7 +360,7 @@ class QuickActionsGenerator:
                 'tooltip': f'Retour aux détails de {bailleur.get_nom_complet()}'
             },
             {
-                'url': reverse('paiements:export_retraits_bailleur', args=[bailleur.pk]),
+                'url': reverse('paiements:retraits_liste'),
                 'label': 'Exporter',
                 'icon': 'download',
                 'style': 'btn-outline-info',
@@ -368,7 +368,7 @@ class QuickActionsGenerator:
                 'tooltip': f'Exporter les retraits de {bailleur.get_nom_complet()}'
             },
             {
-                'url': reverse('paiements:generer_rapport_retraits', args=[bailleur.pk]),
+                'url': reverse('paiements:retraits_liste'),
                 'label': 'Rapport',
                 'icon': 'file-earmark-text',
                 'style': 'btn-outline-success',
@@ -382,7 +382,7 @@ class QuickActionsGenerator:
         """Actions rapides pour un retrait spécifique"""
         return [
             {
-                'url': reverse('paiements:modifier_retrait_bailleur', args=[retrait.pk]),
+                'url': reverse('paiements:retrait_modifier', args=[retrait.pk]),
                 'label': 'Modifier',
                 'icon': 'pencil',
                 'style': 'btn-primary',
@@ -400,7 +400,7 @@ class QuickActionsGenerator:
                 'confirm': 'Confirmer la validation de ce retrait ?'
             },
             {
-                'url': reverse('paiements:marquer_paye_retrait', args=[retrait.pk]),
+                'url': reverse('paiements:marquer_retrait_paye', args=[retrait.pk]),
                 'label': 'Marquer Payé',
                 'icon': 'cash-coin',
                 'style': 'btn-info',
@@ -408,7 +408,7 @@ class QuickActionsGenerator:
                 'tooltip': f'Marquer le retrait de {retrait.mois_retrait.strftime("%B %Y")} comme payé'
             },
             {
-                'url': reverse('paiements:generer_recu_retrait', args=[retrait.pk]),
+                'url': reverse('paiements:generer_quittance_retrait', args=[retrait.pk]),
                 'label': 'Générer Reçu',
                 'icon': 'file-earmark-text',
                 'style': 'btn-outline-primary',
@@ -416,7 +416,7 @@ class QuickActionsGenerator:
                 'tooltip': f'Générer un reçu pour le retrait de {retrait.mois_retrait.strftime("%B %Y")}'
             },
             {
-                'url': reverse('paiements:retraits_bailleur', args=[retrait.bailleur.pk]),
+                'url': reverse('paiements:retraits_liste'),
                 'label': 'Retour Liste',
                 'icon': 'arrow-left',
                 'style': 'btn-outline-secondary',

@@ -2801,7 +2801,7 @@ class RecapMensuel(models.Model):
                 ).aggregate(total=Sum('montant'))['total'] or 0
                 
                 paiements_avance = contrat_actif.paiements.filter(
-                    type_paiement='avance',
+                    type_paiement__in=['avance_loyer', 'avance'],
                     statut='valide'
                 ).aggregate(total=Sum('montant'))['total'] or 0
                 

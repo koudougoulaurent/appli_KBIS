@@ -625,7 +625,7 @@ def detail_bailleur(request, pk):
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
-        return redirect('proprietes:liste_bailleurs')
+        return redirect('proprietes:bailleurs_liste')
     
     bailleur = get_object_or_404(Bailleur, pk=pk)
     
@@ -659,7 +659,7 @@ def detail_bailleur(request, pk):
         'contrats_actifs': contrats_actifs,
         'breadcrumbs': [
             {'url': 'core:dashboard', 'label': 'Tableau de bord'},
-            {'url': 'proprietes:liste_bailleurs', 'label': 'Bailleurs'},
+            {'url': 'proprietes:bailleurs_liste', 'label': 'Bailleurs'},
             {'label': bailleur.get_nom_complet()}
         ]
     }
@@ -682,7 +682,7 @@ def ajouter_bailleur(request):
     permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
-        return redirect('proprietes:liste_bailleurs')
+        return redirect('proprietes:bailleurs_liste')
     
     if request.method == 'POST':
         # Gérer les valeurs par défaut avant la validation
@@ -775,7 +775,7 @@ def ajouter_bailleur(request):
         'title': 'Ajouter un bailleur',
         'breadcrumbs': [
             {'url': 'core:dashboard', 'label': 'Tableau de bord'},
-            {'url': 'proprietes:liste_bailleurs', 'label': 'Bailleurs'},
+            {'url': 'proprietes:bailleurs_liste', 'label': 'Bailleurs'},
             {'label': 'Ajouter'}
         ]
     }
@@ -847,7 +847,7 @@ def proprietes_bailleur(request, pk):
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
-        return redirect('proprietes:liste_bailleurs')
+        return redirect('proprietes:bailleurs_liste')
     
     bailleur = get_object_or_404(Bailleur, pk=pk)
     proprietes = bailleur.proprietes.select_related('type_bien', 'bailleur').prefetch_related('contrats').order_by('-date_creation')
@@ -866,7 +866,7 @@ def proprietes_bailleur(request, pk):
         'stats': stats,
         'breadcrumbs': [
             {'url': 'core:dashboard', 'label': 'Tableau de bord'},
-            {'url': 'proprietes:liste_bailleurs', 'label': 'Bailleurs'},
+            {'url': 'proprietes:bailleurs_liste', 'label': 'Bailleurs'},
             {'url': f'/proprietes/bailleurs/{bailleur.pk}/', 'label': bailleur.get_nom_complet()},
             {'label': 'Ses Propriétés'}
         ],
@@ -1002,17 +1002,224 @@ class SupprimerLocataireView(SuppressionGeneriqueView):
     model = Locataire
     
     def get_redirect_url(self, obj):
-        return 'proprietes:liste_locataires'
+        return 'proprietes:locataires_liste'
     
     def get_success_message(self, obj):
         return f"Locataire {obj.get_nom_complet()} supprimé avec succès."
+    
+    def get_object(self):
+        """Récupère l'objet à supprimer."""
+        return get_object_or_404(self.model, pk=self.kwargs['pk'])
+    
+    def get_template_names(self):
+        """Retourne le template approprié selon le contexte."""
+        obj = self.get_object()
+        
+        # Si le locataire a des contrats actifs, utiliser le template avancé
+        if obj.a_des_contrats_actifs():
+            return ['proprietes/confirm_supprimer_locataire_avance.html']
+        else:
+            # Sinon, utiliser le template de suppression définitive
+            return ['proprietes/confirm_supprimer_locataire_definitif.html']
+    
+    def get_context_data(self, **kwargs):
+        """Ajoute des informations sur les contrats actifs au contexte."""
+        context = {}
+        obj = self.get_object()
+        
+        # Vérifier les contrats actifs
+        contrats_actifs = obj.get_contrats_actifs()
+        context['contrats_actifs'] = contrats_actifs
+        context['a_des_contrats_actifs'] = obj.a_des_contrats_actifs()
+        context['peut_etre_supprime_definitivement'] = obj.peut_etre_supprime_definitivement()
+        
+        # Pour le template avancé, ajouter d'autres informations
+        if obj.a_des_contrats_actifs():
+            from contrats.models import Contrat
+            from paiements.models import Paiement
+            
+            # Contrats inactifs
+            contrats_inactifs = Contrat.objects.filter(
+                locataire=obj,
+                est_actif=False,
+                is_deleted=False
+            )
+            context['contrats_inactifs'] = contrats_inactifs
+            
+            # Nombre de paiements
+            paiements_count = Paiement.objects.filter(contrat__locataire=obj).count()
+            context['paiements_count'] = paiements_count
+            
+            # Recommandation
+            context['recommandation'] = 'desactiver' if contrats_actifs.exists() else 'supprimer'
+            
+            # Autres locataires pour le transfert
+            autres_locataires = Locataire.objects.filter(
+                statut='actif',
+                est_supprime=False
+            ).exclude(pk=obj.pk)
+            context['autres_locataires'] = autres_locataires
+        
+        return context
+    
+    def get(self, request, *args, **kwargs):
+        """Affiche le template de confirmation de suppression."""
+        obj = self.get_object()
+        context = self.get_context_data()
+        template_name = self.get_template_names()[0]
+        return render(request, template_name, context)
+    
+    def post(self, request, *args, **kwargs):
+        """Gère la suppression avec vérifications de sécurité."""
+        print(f"POST reçu pour suppression locataire: {request.POST}")
+        obj = self.get_object()
+        print(f"Objet récupéré: {obj}")
+        
+        # Vérifier les permissions
+        from core.utils import check_group_permissions
+        permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'delete')
+        if not permissions['allowed']:
+            messages.error(request, permissions['message'])
+            return redirect(self.get_redirect_url(obj))
+        
+        action = request.POST.get('action')
+        
+        if action == 'logical_delete':
+            # Suppression logique (mise en corbeille) - toujours autorisée
+            return self.logical_delete(request, obj)
+            
+        elif action == 'permanent_delete':
+            # Suppression définitive - nécessite des vérifications
+            return self.permanent_delete(request, obj)
+            
+        elif action == 'cancel':
+            return redirect(self.get_redirect_url(obj))
+        
+        return redirect(self.get_redirect_url(obj))
+    
+    def logical_delete(self, request, obj):
+        """Effectue une suppression logique (mise en corbeille)."""
+        from django.utils import timezone
+        from core.models import AuditLog
+        from django.contrib.contenttypes.models import ContentType
+        
+        # Log d'audit - filtrer les champs non sérialisables
+        old_data = {}
+        for f in obj._meta.fields:
+            try:
+                value = getattr(obj, f.name)
+                # Convertir les objets non sérialisables en string
+                if hasattr(value, 'url'):  # FieldFile
+                    old_data[f.name] = str(value.url) if value else None
+                elif hasattr(value, 'pk'):  # ForeignKey
+                    old_data[f.name] = value.pk if value else None
+                elif isinstance(value, (str, int, float, bool, type(None))):
+                    old_data[f.name] = value
+                else:
+                    old_data[f.name] = str(value)
+            except Exception:
+                old_data[f.name] = str(getattr(obj, f.name, None))
+        obj.est_supprime = True
+        obj.date_suppression = timezone.now()
+        obj.save()
+        
+        # Log d'audit
+        AuditLog.objects.create(
+            content_type=ContentType.objects.get_for_model(Locataire),
+            object_id=obj.pk,
+            action='delete',
+            details={
+                'old_data': old_data,
+                'new_data': {'est_supprime': True, 'date_suppression': str(timezone.now())},
+                'action_type': 'LOGICAL_DELETE'
+            },
+            object_repr=str(obj),
+            user=request.user,
+            ip_address=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')
+        )
+        
+        messages.success(request, f"Locataire {obj.get_nom_complet()} supprimé logiquement et placé dans la corbeille.")
+        return redirect(self.get_redirect_url(obj))
+    
+    def permanent_delete(self, request, obj):
+        """Effectue une suppression définitive avec vérifications de sécurité."""
+        from core.models import AuditLog
+        from django.contrib.contenttypes.models import ContentType
+        
+        # Vérification 1: Le locataire ne doit pas avoir de contrats actifs
+        if obj.a_des_contrats_actifs():
+            contrats_actifs = obj.get_contrats_actifs()
+            messages.error(
+                request, 
+                f"Impossible de supprimer définitivement {obj.get_nom_complet()}. "
+                f"Ce locataire a {contrats_actifs.count()} contrat(s) actif(s). "
+                f"Veuillez d'abord résilier ou transférer ces contrats."
+            )
+            return redirect(self.get_redirect_url(obj))
+        
+        # Vérification 2: Confirmation multiple
+        confirmation_1 = request.POST.get('confirmation_1') == 'on'
+        confirmation_2 = request.POST.get('confirmation_2') == 'on'
+        confirmation_3 = request.POST.get('confirmation_3') == 'on'
+        
+        if not (confirmation_1 and confirmation_2 and confirmation_3):
+            messages.error(
+                request, 
+                "Vous devez confirmer les trois cases de sécurité pour effectuer une suppression définitive."
+            )
+            return redirect(self.get_redirect_url(obj))
+        
+        # Vérification 3: Mot de passe de confirmation
+        password_confirmation = request.POST.get('password_confirmation', '')
+        if not request.user.check_password(password_confirmation):
+            messages.error(request, "Le mot de passe de confirmation est incorrect.")
+            return redirect(self.get_redirect_url(obj))
+        
+        # Log d'audit avant suppression - filtrer les champs non sérialisables
+        old_data = {}
+        for f in obj._meta.fields:
+            try:
+                value = getattr(obj, f.name)
+                # Convertir les objets non sérialisables en string
+                if hasattr(value, 'url'):  # FieldFile
+                    old_data[f.name] = str(value.url) if value else None
+                elif hasattr(value, 'pk'):  # ForeignKey
+                    old_data[f.name] = value.pk if value else None
+                elif isinstance(value, (str, int, float, bool, type(None))):
+                    old_data[f.name] = value
+                else:
+                    old_data[f.name] = str(value)
+            except Exception:
+                old_data[f.name] = str(getattr(obj, f.name, None))
+        AuditLog.objects.create(
+            content_type=ContentType.objects.get_for_model(Locataire),
+            object_id=obj.pk,
+            action='delete',
+            details={
+                'old_data': old_data,
+                'new_data': None,
+                'action_type': 'PERMANENT_DELETE'
+            },
+            object_repr=str(obj),
+            user=request.user,
+            ip_address=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')
+        )
+        
+        # Suppression définitive
+        nom_complet = obj.get_nom_complet()
+        obj.delete()
+        
+        messages.success(request, f"Locataire {nom_complet} supprimé définitivement de la base de données.")
+        return redirect(self.get_redirect_url(obj))
 
 
 class SupprimerBailleurView(SuppressionGeneriqueView):
     model = Bailleur
     
     def get_redirect_url(self, obj):
-        return 'proprietes:liste_bailleurs'
+        return 'proprietes:bailleurs_liste'
     
     def get_success_message(self, obj):
         return f"Bailleur {obj.get_nom_complet()} supprimé avec succès."
@@ -1133,7 +1340,7 @@ def detail_locataire(request, pk):
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
-        return redirect('proprietes:liste_locataires')
+        return redirect('proprietes:locataires_liste')
     
     locataire = get_object_or_404(Locataire, pk=pk)
     
@@ -1166,7 +1373,7 @@ def detail_locataire(request, pk):
     from paiements.models import ChargeDeductible
     charges_deductibles = ChargeDeductible.objects.filter(
         contrat__locataire=locataire
-    ).order_by('-date_creation')[:5]
+    ).order_by('-date_charge')[:5]
     
     context = {
         'locataire': locataire,
@@ -1177,7 +1384,7 @@ def detail_locataire(request, pk):
         'charges_deductibles': charges_deductibles,
         'breadcrumbs': [
             {'url': 'core:dashboard', 'label': 'Tableau de bord'},
-            {'url': 'proprietes:liste_locataires', 'label': 'Locataires'},
+            {'url': 'proprietes:locataires_liste', 'label': 'Locataires'},
             {'label': locataire.get_nom_complet()}
         ],
         'quick_actions': QuickActionsGenerator.get_actions_for_locataire(locataire, request)
@@ -1482,9 +1689,17 @@ def corbeille_locataires(request):
             return redirect('proprietes:corbeille_locataires')
             
         elif action == 'supprimer_definitivement' and locataires_ids:
-            # Suppression définitive
+            # Suppression définitive avec vérifications de sécurité
             locataires_a_supprimer = Locataire.objects.filter(id__in=locataires_ids, est_supprime=True)
+            locataires_supprimes_avec_succes = []
+            locataires_avec_contrats_actifs = []
+            
             for locataire in locataires_a_supprimer:
+                # Vérifier s'il a des contrats actifs
+                if locataire.a_des_contrats_actifs():
+                    locataires_avec_contrats_actifs.append(locataire)
+                    continue
+                
                 # Log d'audit avant suppression
                 old_data = {f.name: getattr(locataire, f.name) for f in locataire._meta.fields}
                 AuditLog.objects.create(
@@ -1498,9 +1713,32 @@ def corbeille_locataires(request):
                     user_agent=request.META.get('HTTP_USER_AGENT', '')
                 )
                 locataire.delete()
+                locataires_supprimes_avec_succes.append(locataire)
             
-            messages.success(request, f"{locataires_a_supprimer.count()} locataire(s) supprimé(s) définitivement.")
+            # Messages de résultat
+            if locataires_supprimes_avec_succes:
+                messages.success(request, f"{len(locataires_supprimes_avec_succes)} locataire(s) supprimé(s) définitivement.")
+            
+            if locataires_avec_contrats_actifs:
+                noms_locataires = [loc.get_nom_complet() for loc in locataires_avec_contrats_actifs]
+                messages.error(
+                    request, 
+                    f"Impossible de supprimer définitivement {len(locataires_avec_contrats_actifs)} locataire(s) "
+                    f"car ils ont des contrats actifs : {', '.join(noms_locataires)}. "
+                    f"Veuillez d'abord résilier ou transférer leurs contrats."
+                )
+            
             return redirect('proprietes:corbeille_locataires')
+    
+    # Analyser les locataires pour les statistiques
+    locataires_avec_contrats_actifs = []
+    locataires_restaurables = []
+    
+    for locataire in locataires_supprimes:
+        if locataire.a_des_contrats_actifs():
+            locataires_avec_contrats_actifs.append(locataire)
+        else:
+            locataires_restaurables.append(locataire)
     
     # Pagination
     paginator = Paginator(locataires_supprimes, 20)
@@ -1510,6 +1748,9 @@ def corbeille_locataires(request):
     context = {
         'locataires': page_obj,
         'page_obj': page_obj,
+        'locataires_supprimes': locataires_supprimes,
+        'locataires_avec_contrats': locataires_avec_contrats_actifs,
+        'locataires_restaurables': locataires_restaurables,
     }
     
     return render(request, 'proprietes/corbeille_locataires.html', context)
@@ -1738,7 +1979,7 @@ def recherche_avancee_bailleurs(request):
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
-        return redirect('proprietes:liste_bailleurs')
+        return redirect('proprietes:bailleurs_liste')
     
     # Récupérer les paramètres de recherche
     nom = request.GET.get('nom', '')
@@ -1811,7 +2052,7 @@ def recherche_avancee_locataires(request):
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
-        return redirect('proprietes:liste_locataires')
+        return redirect('proprietes:locataires_liste')
     
     # Récupérer les paramètres de recherche
     nom = request.GET.get('nom', '')

@@ -495,14 +495,14 @@ class Contrat(models.Model):
         from paiements.models import Paiement
         
         try:
-            montant_caution_requis = Decimal(self.depot_garantie) if self.depot_garantie else Decimal('0')
+            montant_caution_requis = Decimal(str(self.depot_garantie)) if self.depot_garantie else Decimal('0')
             if montant_caution_requis <= 0:
-                return False  # Pas de caution requise = pas payée (pour l'affichage)
+                return None  # Pas de caution requise = None (pour l'affichage "Non requise")
             
-            # Récupérer les paiements de caution validés
+            # Récupérer les paiements de caution validés (inclure tous les types possibles)
             paiements_caution = Paiement.objects.filter(
                 contrat=self,
-                type_paiement='caution',
+                type_paiement__in=['caution', 'depot_garantie'],
                 statut='valide'
             ).aggregate(total=models.Sum('montant'))['total'] or 0
             
@@ -517,14 +517,14 @@ class Contrat(models.Model):
         from paiements.models import Paiement
         
         try:
-            montant_avance_requis = Decimal(self.avance_loyer) if self.avance_loyer else Decimal('0')
+            montant_avance_requis = Decimal(str(self.avance_loyer)) if self.avance_loyer else Decimal('0')
             if montant_avance_requis <= 0:
-                return False  # Pas d'avance requise = pas payée (pour l'affichage)
+                return None  # Pas d'avance requise = None (pour l'affichage "Non requise")
             
-            # Récupérer les paiements d'avance validés
+            # Récupérer les paiements d'avance validés (inclure tous les types possibles)
             paiements_avance = Paiement.objects.filter(
                 contrat=self,
-                type_paiement='avance_loyer',
+                type_paiement__in=['avance_loyer', 'avance'],
                 statut='valide'
             ).aggregate(total=models.Sum('montant'))['total'] or 0
             

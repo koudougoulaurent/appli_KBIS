@@ -696,7 +696,7 @@ class RecapMensuelAdmin(admin.ModelAdmin):
         """Action pour recalculer les totaux des récapitulatifs."""
         updated = 0
         for recap in queryset:
-            recap.calculer_totaux()
+            recap.calculer_totaux_bailleur()
             updated += 1
         self.message_user(request, f'{updated} récapitulatif(s) recalculé(s) avec succès.')
     recalculer_totaux.short_description = _("Recalculer les totaux")

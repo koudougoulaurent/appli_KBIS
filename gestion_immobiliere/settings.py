@@ -14,6 +14,9 @@ if os.environ.get('DEBUG') == 'False':
 
 # Forcer DEBUG = True pour le développement
 DEBUG = True
+# Forcer DEBUG = True même si une variable d'environnement le définit autrement
+if os.environ.get('DEBUG') == 'False':
+    DEBUG = True
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'appli-kbis.onrender.com', '.onrender.com', '*']
 ROOT_URLCONF = 'gestion_immobiliere.urls'
 
@@ -70,6 +73,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'gestion_immobiliere.wsgi.application'
 
+# Configuration de base de données par défaut
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -111,26 +115,35 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 # Configuration pour Render
 if os.environ.get('RENDER'):
     # Configuration de base de données pour Render
-    import dj_database_url
-    DATABASE_URL = os.environ.get('DATABASE_URL')
-    
-    # Validation de DATABASE_URL
-    if DATABASE_URL and DATABASE_URL.strip() and not DATABASE_URL.startswith("b'") and not DATABASE_URL.startswith("b\""):
-        try:
-            DATABASES = {
-                'default': dj_database_url.parse(DATABASE_URL)
-            }
-        except Exception as e:
-            print(f"Erreur parsing DATABASE_URL: {e}")
-            # Fallback vers SQLite en cas d'erreur
+    try:
+        import dj_database_url
+        DATABASE_URL = os.environ.get('DATABASE_URL')
+        
+        # Validation de DATABASE_URL
+        if DATABASE_URL and DATABASE_URL.strip() and not DATABASE_URL.startswith("b'") and not DATABASE_URL.startswith("b\""):
+            try:
+                DATABASES = {
+                    'default': dj_database_url.parse(DATABASE_URL)
+                }
+            except Exception as e:
+                print(f"Erreur parsing DATABASE_URL: {e}")
+                # Fallback vers SQLite en cas d'erreur
+                DATABASES = {
+                    'default': {
+                        'ENGINE': 'django.db.backends.sqlite3',
+                        'NAME': BASE_DIR / 'db.sqlite3',
+                    }
+                }
+        else:
+            # Fallback vers SQLite si pas de DATABASE_URL valide
             DATABASES = {
                 'default': {
                     'ENGINE': 'django.db.backends.sqlite3',
                     'NAME': BASE_DIR / 'db.sqlite3',
                 }
             }
-    else:
-        # Fallback vers SQLite si pas de DATABASE_URL valide
+    except ImportError:
+        # Si dj_database_url n'est pas installé, utiliser SQLite
         DATABASES = {
             'default': {
                 'ENGINE': 'django.db.backends.sqlite3',

@@ -28,7 +28,7 @@
                 <div class="col-md-3">
                     <div class="card bg-info text-white">
                         <div class="card-body text-center">
-                            <h4 class="mb-0">{{ locataires_supprimes.count }}</h4>
+                            <h4 class="mb-0">{{ locataires_supprimes|length }}</h4>
                             <small>Locataires en Corbeille</small>
                         </div>
                     </div>
@@ -36,24 +36,24 @@
                 <div class="col-md-3">
                     <div class="card bg-warning text-dark">
                         <div class="card-body text-center">
-                            <h4 class="mb-0">{{ locataires_avec_contrats.count }}</h4>
-                            <small>Avec Contrats Orphelins</small>
+                            <h4 class="mb-0">{{ locataires_avec_contrats|length }}</h4>
+                            <small>Avec Contrats Actifs</small>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="card bg-success text-white">
                         <div class="card-body text-center">
-                            <h4 class="mb-0">{{ locataires_restaurables.count }}</h4>
-                            <small>Restaurables</small>
+                            <h4 class="mb-0">{{ locataires_restaurables|length }}</h4>
+                            <small>Supprimables Définitivement</small>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="card bg-danger text-white">
+                    <div class="card bg-secondary text-white">
                         <div class="card-body text-center">
-                            <h4 class="mb-0">{{ locataires_irrecuperables.count }}</h4>
-                            <small>Irrécupérables</small>
+                            <h4 class="mb-0">{{ locataires_supprimes|length|add:"-"|add:locataires_avec_contrats|length }}</h4>
+                            <small>Restaurables</small>
                         </div>
                     </div>
                 </div>
@@ -119,26 +119,27 @@
                                     <th>Email</th>
                                     <th>Téléphone</th>
                                     <th>Date Suppression</th>
-                                    <th>Contrats Orphelins</th>
+                                    <th>Contrats Actifs</th>
                                     <th>Statut</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for locataire in locataires_supprimes %}
-                                <tr class="{% if locataire.contrats_orphelins %}table-warning{% endif %}">
+                                <tr class="{% if locataire.a_des_contrats_actifs %}table-warning{% endif %}">
                                     <td>
-                                        <input type="checkbox" name="locataire_ids" value="{{ locataire.pk }}" 
+                                        <input type="checkbox" name="locataires" value="{{ locataire.pk }}" 
                                                class="form-check-input locataire-checkbox" 
                                                id="locataire_{{ locataire.pk }}" 
-                                               title="Sélectionner {{ locataire.nom }} {{ locataire.prenom }}">
+                                               title="Sélectionner {{ locataire.nom }} {{ locataire.prenom }}"
+                                               {% if locataire.a_des_contrats_actifs %}disabled title="Impossible de sélectionner - a des contrats actifs"{% endif %}>
                                         <label for="locataire_{{ locataire.pk }}" class="visually-hidden">Sélectionner {{ locataire.nom }} {{ locataire.prenom }}</label>
                                     </td>
                                     <td>
                                         <strong>{{ locataire.nom }} {{ locataire.prenom }}</strong>
-                                        {% if locataire.contrats_orphelins %}
+                                        {% if locataire.a_des_contrats_actifs %}
                                             <i class="bi bi-exclamation-triangle text-warning" 
-                                               title="A des contrats orphelins"></i>
+                                               title="A des contrats actifs - ne peut pas être supprimé définitivement"></i>
                                         {% endif %}
                                     </td>
                                     <td>{{ locataire.email|default:"-" }}</td>
@@ -149,24 +150,27 @@
                                         </small>
                                     </td>
                                     <td>
-                                        {% if locataire.contrats_orphelins %}
+                                        {% if locataire.a_des_contrats_actifs %}
                                             <span class="badge bg-warning">
-                                                {{ locataire.contrats_orphelins.count }} contrat(s)
+                                                <i class="bi bi-exclamation-triangle"></i> 
+                                                {{ locataire.get_contrats_actifs.count }} actif(s)
                                             </span>
                                         {% else %}
-                                            <span class="badge bg-success">Aucun</span>
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle"></i> Aucun
+                                            </span>
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if locataire.contrats_orphelins %}
-                                            <span class="badge bg-warning">Avec Contrats</span>
+                                        {% if locataire.a_des_contrats_actifs %}
+                                            <span class="badge bg-warning">Avec Contrats Actifs</span>
                                         {% else %}
-                                            <span class="badge bg-success">Restaurable</span>
+                                            <span class="badge bg-success">Supprimable</span>
                                         {% endif %}
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm" role="group">
-                                            {% if not locataire.contrats_orphelins %}
+                                            {% if not locataire.a_des_contrats_actifs %}
                                             <form method="post" class="d-inline">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="action" value="restaurer">

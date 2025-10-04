@@ -169,14 +169,14 @@
                             {% for charge in charges_deductibles %}
                             <div class="list-group-item d-flex justify-content-between align-items-center">
                                 <div>
-                                    <h6 class="mb-1">{{ charge.libelle }}</h6>
+                                    <h6 class="mb-1">{{ charge.description }}</h6>
                                     <small class="text-muted">{{ charge.contrat.propriete.titre }}</small>
                                     <br>
                                     <small class="text-muted">{{ charge.date_charge|date:"d/m/Y" }}</small>
                                 </div>
                                 <div class="text-end">
-                                    <span class="badge bg-{{ charge.get_statut_display_color }} rounded-pill">
-                                        {{ charge.get_statut_display }}
+                                    <span class="badge bg-{% if charge.est_valide %}success{% else %}warning{% endif %} rounded-pill">
+                                        {% if charge.est_valide %}Validé{% else %}En attente{% endif %}
                                     </span>
                                     <br>
                                     <small class="text-muted">{{ charge.montant }} F CFA</small>

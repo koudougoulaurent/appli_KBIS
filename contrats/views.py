@@ -173,7 +173,7 @@ def ajouter_contrat(request):
                     from paiements.models import Paiement
                     paiement_caution = Paiement.objects.create(
                         contrat=contrat,
-                        type_paiement='caution',
+                        type_paiement='depot_garantie',
                         montant=contrat.depot_garantie,
                         mode_paiement=form.cleaned_data.get('mode_paiement_caution', 'especes'),
                         date_paiement=form.cleaned_data.get('date_paiement_caution', timezone.now().date()),
@@ -198,10 +198,15 @@ def ajouter_contrat(request):
                 try:
                     # Créer automatiquement le paiement d'avance de loyer
                     from paiements.models import Paiement
+                    from decimal import Decimal
+                    
+                    # Convertir le montant d'avance en Decimal
+                    montant_avance = Decimal(str(contrat.avance_loyer)) if contrat.avance_loyer else Decimal('0')
+                    
                     paiement_avance = Paiement.objects.create(
                         contrat=contrat,
-                        type_paiement='avance_loyer',
-                        montant=contrat.avance_loyer,
+                        type_paiement='avance',
+                        montant=montant_avance,
                         mode_paiement=form.cleaned_data.get('mode_paiement_avance', 'especes'),
                         date_paiement=form.cleaned_data.get('date_paiement_avance', timezone.now().date()),
                         cree_par=request.user,
@@ -1142,6 +1147,68 @@ def liste_contrats_caution(request):
         messages.error(request, permissions['message'])
         return redirect('core:dashboard')
     
+    # CORRECTION AUTOMATIQUE DES STATUTS - Force la correction à chaque chargement
+    try:
+        from django.db import transaction
+        from decimal import Decimal
+        from paiements.models import Paiement
+        
+        with transaction.atomic():
+            # Récupérer tous les contrats actifs
+            contrats_a_corriger = Contrat.objects.filter(
+                est_actif=True,
+                est_resilie=False
+            ).select_related('propriete', 'locataire')
+            
+            contrats_corriges = 0
+            
+            for contrat in contrats_a_corriger:
+                # Montants requis
+                caution_requise = Decimal(str(contrat.depot_garantie)) if contrat.depot_garantie else Decimal('0')
+                avance_requise = Decimal(str(contrat.avance_loyer)) if contrat.avance_loyer else Decimal('0')
+                
+                # Calculer les montants payés avec tous les types possibles
+                paiements_caution = Paiement.objects.filter(
+                    contrat=contrat,
+                    type_paiement__in=['caution', 'depot_garantie'],
+                    statut='valide'
+                )
+                
+                montant_caution_paye = sum(p.montant for p in paiements_caution)
+                
+                paiements_avance = Paiement.objects.filter(
+                    contrat=contrat,
+                    type_paiement__in=['avance_loyer', 'avance'],
+                    statut='valide'
+                )
+                
+                montant_avance_paye = sum(p.montant for p in paiements_avance)
+                
+                # Vérifier les statuts
+                caution_payee = montant_caution_paye >= caution_requise if caution_requise > 0 else True
+                avance_payee = montant_avance_paye >= avance_requise if avance_requise > 0 else True
+                
+                # Mettre à jour les champs du contrat
+                contrat_modified = False
+                
+                if contrat.caution_payee != caution_payee:
+                    contrat.caution_payee = caution_payee
+                    contrat_modified = True
+                
+                if contrat.avance_loyer_payee != avance_payee:
+                    contrat.avance_loyer_payee = avance_payee
+                    contrat_modified = True
+                
+                if contrat_modified:
+                    contrat.save()
+                    contrats_corriges += 1
+            
+            if contrats_corriges > 0:
+                messages.info(request, f'Correction automatique effectuée : {contrats_corriges} contrats mis à jour.')
+                
+    except Exception as e:
+        messages.warning(request, f'Erreur lors de la correction automatique : {str(e)}')
+    
     # Récupérer les filtres
     statut_caution = request.GET.get('statut_caution', '')
     statut_avance = request.GET.get('statut_avance', '')
@@ -1166,18 +1233,40 @@ def liste_contrats_caution(request):
             default=0,
             output_field=DecimalField(max_digits=10, decimal_places=2)
         ),
-        # Montants payés
+        # Montants payés - Correction pour inclure tous les types de paiement possibles
         montant_caution_paye=Sum(
             'paiements__montant',
-            filter=Q(paiements__type_paiement='caution', paiements__statut='valide'),
+            filter=Q(paiements__type_paiement__in=['caution', 'depot_garantie'], paiements__statut='valide'),
             default=0
         ),
         montant_avance_paye=Sum(
             'paiements__montant',
-            filter=Q(paiements__type_paiement='avance_loyer', paiements__statut='valide'),
+            filter=Q(paiements__type_paiement__in=['avance_loyer', 'avance'], paiements__statut='valide'),
             default=0
         )
     ).order_by('-date_creation')
+    
+    # CORRECTION CRITIQUE : Mettre à jour les annotations avec les vrais statuts des contrats
+    # Car les annotations ne reflètent pas les changements en temps réel
+    for contrat in contrats:
+        # Recalculer les montants payés en temps réel
+        paiements_caution = Paiement.objects.filter(
+            contrat=contrat,
+            type_paiement__in=['caution', 'depot_garantie'],
+            statut='valide'
+        )
+        montant_caution_paye = sum(p.montant for p in paiements_caution)
+        
+        paiements_avance = Paiement.objects.filter(
+            contrat=contrat,
+            type_paiement__in=['avance_loyer', 'avance'],
+            statut='valide'
+        )
+        montant_avance_paye = sum(p.montant for p in paiements_avance)
+        
+        # Mettre à jour les annotations avec les vrais montants
+        contrat.montant_caution_paye = montant_caution_paye
+        contrat.montant_avance_paye = montant_avance_paye
     
     # Appliquer les filtres par bailleur en premier (plus efficace)
     if bailleur_id:
@@ -1304,18 +1393,38 @@ def marquer_caution_payee(request, contrat_id):
         if date_paiement:
             try:
                 date_paiement = datetime.strptime(date_paiement, '%Y-%m-%d').date()
-                contrat.marquer_caution_payee(date_paiement)
-                messages.success(request, 'Caution marquée comme payée.')
             except ValueError:
                 messages.error(request, 'Date de paiement invalide.')
+                return redirect('contrats:liste_contrats_caution')
         else:
-            contrat.marquer_caution_payee()
-            messages.success(request, 'Caution marquée comme payée.')
+            date_paiement = timezone.now().date()
+        
+        # Créer un vrai paiement de caution dans la base de données
+        from paiements.models import Paiement
+        from decimal import Decimal
+        
+        # Convertir le montant de caution en Decimal
+        montant_caution = Decimal(str(contrat.depot_garantie)) if contrat.depot_garantie else Decimal('0')
+        
+        paiement = Paiement.objects.create(
+            contrat=contrat,
+            type_paiement='depot_garantie',
+            montant=montant_caution,
+            mode_paiement='especes',
+            date_paiement=date_paiement,
+            statut='valide',
+            cree_par=request.user,
+            notes=f'Paiement de caution marqué comme payé pour le contrat {contrat.numero_contrat}'
+        )
+        
+        # Marquer le contrat comme payé
+        contrat.marquer_caution_payee(date_paiement)
+        messages.success(request, 'Caution marquée comme payée.')
         
         # Créer le reçu de caution
         recu, created = RecuCaution.objects.get_or_create(contrat=contrat)
         
-        return redirect('contrats:detail_contrat_caution', contrat_id=contrat.id)
+        return redirect('contrats:liste_contrats_caution')
     
     return render(request, 'contrats/marquer_caution_payee.html', {'contrat': contrat})
 
@@ -1342,18 +1451,38 @@ def marquer_avance_payee(request, contrat_id):
         if date_paiement:
             try:
                 date_paiement = datetime.strptime(date_paiement, '%Y-%m-%d').date()
-                contrat.marquer_avance_payee(date_paiement)
-                messages.success(request, 'Avance de loyer marquée comme payée.')
             except ValueError:
                 messages.error(request, 'Date de paiement invalide.')
+                return redirect('contrats:liste_contrats_caution')
         else:
-            contrat.marquer_avance_payee()
-            messages.success(request, 'Avance de loyer marquée comme payée.')
+            date_paiement = timezone.now().date()
+        
+        # Créer un vrai paiement d'avance dans la base de données
+        from paiements.models import Paiement
+        from decimal import Decimal
+        
+        # Convertir le montant d'avance en Decimal
+        montant_avance = Decimal(str(contrat.avance_loyer)) if contrat.avance_loyer else Decimal('0')
+        
+        paiement = Paiement.objects.create(
+            contrat=contrat,
+            type_paiement='avance',
+            montant=montant_avance,
+            mode_paiement='especes',
+            date_paiement=date_paiement,
+            statut='valide',
+            cree_par=request.user,
+            notes=f'Paiement d\'avance marqué comme payé pour le contrat {contrat.numero_contrat}'
+        )
+        
+        # Marquer le contrat comme payé
+        contrat.marquer_avance_payee(date_paiement)
+        messages.success(request, 'Avance de loyer marquée comme payée.')
         
         # Créer le reçu de caution
         recu, created = RecuCaution.objects.get_or_create(contrat=contrat)
         
-        return redirect('contrats:detail_contrat_caution', contrat_id=contrat.id)
+        return redirect('contrats:liste_contrats_caution')
     
     return render(request, 'contrats/marquer_avance_payee.html', {'contrat': contrat})
 
@@ -2332,7 +2461,7 @@ def gestion_cautions(request):
     # Récupérer les paiements de caution
     from paiements.models import Paiement
     paiements_caution = Paiement.objects.filter(
-        type_paiement='caution'
+        type_paiement__in=['caution', 'depot_garantie']
     ).select_related('contrat', 'contrat__propriete', 'contrat__locataire')
     
     # Calculer les statistiques
@@ -2379,6 +2508,91 @@ def gestion_cautions(request):
     }
     
     return render(request, 'contrats/gestion_cautions.html', context)
+
+
+@login_required
+def forcer_correction_statuts(request):
+    """Force la correction des statuts de paiement pour tous les contrats."""
+    
+    # Vérification des permissions : Seuls PRIVILEGE et ADMINISTRATION peuvent forcer la correction
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('contrats:liste')
+    
+    if request.method == 'POST':
+        try:
+            from django.db import transaction
+            from decimal import Decimal
+            
+            contrats_corriges = 0
+            contrats_avec_problemes = 0
+            
+            with transaction.atomic():
+                # Récupérer tous les contrats actifs
+                contrats = Contrat.objects.filter(
+                    est_actif=True,
+                    est_resilie=False
+                ).select_related('propriete', 'locataire')
+                
+                for contrat in contrats:
+                    # Montants requis
+                    caution_requise = Decimal(str(contrat.depot_garantie)) if contrat.depot_garantie else Decimal('0')
+                    avance_requise = Decimal(str(contrat.avance_loyer)) if contrat.avance_loyer else Decimal('0')
+                    
+                    # Calculer les montants payés avec tous les types possibles
+                    paiements_caution = Paiement.objects.filter(
+                        contrat=contrat,
+                        type_paiement__in=['caution', 'depot_garantie'],
+                        statut='valide'
+                    )
+                    
+                    montant_caution_paye = sum(p.montant for p in paiements_caution)
+                    
+                    paiements_avance = Paiement.objects.filter(
+                        contrat=contrat,
+                        type_paiement__in=['avance_loyer', 'avance'],
+                        statut='valide'
+                    )
+                    
+                    montant_avance_paye = sum(p.montant for p in paiements_avance)
+                    
+                    # Vérifier les statuts
+                    caution_payee = montant_caution_paye >= caution_requise if caution_requise > 0 else True
+                    avance_payee = montant_avance_paye >= avance_requise if avance_requise > 0 else True
+                    
+                    # Mettre à jour les champs du contrat
+                    contrat_modified = False
+                    
+                    if contrat.caution_payee != caution_payee:
+                        contrat.caution_payee = caution_payee
+                        contrat_modified = True
+                    
+                    if contrat.avance_loyer_payee != avance_payee:
+                        contrat.avance_loyer_payee = avance_payee
+                        contrat_modified = True
+                    
+                    if contrat_modified:
+                        contrat.save()
+                        contrats_corriges += 1
+                    
+                    # Vérifier les problèmes
+                    if caution_requise > 0 and not caution_payee:
+                        contrats_avec_problemes += 1
+                    
+                    if avance_requise > 0 and not avance_payee:
+                        contrats_avec_problemes += 1
+            
+            messages.success(
+                request, 
+                f'Correction terminée ! {contrats_corriges} contrats corrigés, {contrats_avec_problemes} contrats avec des problèmes.'
+            )
+            
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la correction : {str(e)}')
+    
+    return redirect('contrats:liste_contrats_caution')
 
 
 # Vues de suppression génériques

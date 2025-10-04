@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator
 from django.urls import reverse
@@ -97,10 +98,11 @@ class RecapMensuel(models.Model):
             return date.today().replace(day=1) - relativedelta(months=1)
     
     def calculer_totaux_bailleur(self):
-        """Calcule les totaux pour le bailleur avec les charges dynamiques."""
+        """Calcule les totaux pour le bailleur avec les charges dynamiques et les paiements réels."""
         from decimal import Decimal
-        from django.db.models import Sum
+        from django.db.models import Sum, Q
         from proprietes.models import ChargesBailleur
+        from datetime import datetime
         
         try:
             # Initialiser les totaux
@@ -115,13 +117,14 @@ class RecapMensuel(models.Model):
             proprietes = self.bailleur.proprietes.filter(is_deleted=False)
             nombre_proprietes = proprietes.count()
             
-            # Calculer les loyers bruts pour le mois
+            # Calculer les loyers bruts pour le mois - basé sur les contrats actifs
             for propriete in proprietes:
-                # Récupérer les contrats actifs pour cette propriété
+                # Récupérer les contrats actifs pour cette propriété au moment du récapitulatif
                 contrats_actifs = propriete.contrats.filter(
                     est_actif=True,
-                    date_debut__lte=self.mois_recap,
-                    date_fin__gte=self.mois_recap
+                    date_debut__lte=self.mois_recap
+                ).filter(
+                    models.Q(date_fin__gte=self.mois_recap) | models.Q(date_fin__isnull=True)
                 )
                 
                 for contrat in contrats_actifs:
@@ -133,6 +136,33 @@ class RecapMensuel(models.Model):
                     # Charges déductibles du contrat
                     charges_mensuelles = contrat.charges_mensuelles or Decimal('0')
                     total_charges_deductibles += charges_mensuelles
+            
+            # NOUVEAU : Calculer les paiements réels reçus pour ce mois
+            # Utiliser une requête directe pour éviter les imports circulaires
+            from django.db import connection
+            
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT COUNT(*), COALESCE(SUM(montant), 0)
+                    FROM paiements_paiement p
+                    JOIN contrats_contrat c ON p.contrat_id = c.id
+                    JOIN proprietes_propriete pr ON c.propriete_id = pr.id
+                    WHERE pr.bailleur_id = %s
+                    AND EXTRACT(YEAR FROM p.date_paiement) = %s
+                    AND EXTRACT(MONTH FROM p.date_paiement) = %s
+                    AND p.statut IN ('valide', 'encaisse')
+                """, [self.bailleur.id, self.mois_recap.year, self.mois_recap.month])
+                
+                result = cursor.fetchone()
+                nombre_paiements_recus = result[0] if result else 0
+                total_paiements_reels = Decimal(str(result[1])) if result and result[1] else Decimal('0')
+            
+            # Si des paiements réels existent, les utiliser pour les totaux
+            if nombre_paiements_recus > 0 and total_paiements_reels > total_loyers:
+                total_loyers = total_paiements_reels
+                
+                # Lier automatiquement les paiements au récapitulatif
+                self.lier_paiements_automatiquement()
             
             # Calculer les charges bailleur pour le mois
             charges_bailleur_mois = ChargesBailleur.objects.filter(
@@ -194,6 +224,34 @@ class RecapMensuel(models.Model):
         ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
         
         return charges_disponibles
+    
+    def lier_paiements_automatiquement(self):
+        """Lie automatiquement les paiements du mois au récapitulatif."""
+        from django.db import connection
+        
+        with connection.cursor() as cursor:
+            # Récupérer les IDs des paiements pour ce mois et ce bailleur
+            cursor.execute("""
+                SELECT p.id
+                FROM paiements_paiement p
+                JOIN contrats_contrat c ON p.contrat_id = c.id
+                JOIN proprietes_propriete pr ON c.propriete_id = pr.id
+                WHERE pr.bailleur_id = %s
+                AND EXTRACT(YEAR FROM p.date_paiement) = %s
+                AND EXTRACT(MONTH FROM p.date_paiement) = %s
+                AND p.statut IN ('valide', 'encaisse')
+            """, [self.bailleur.id, self.mois_recap.year, self.mois_recap.month])
+            
+            paiement_ids = [row[0] for row in cursor.fetchall()]
+            
+            # Lier les paiements au récapitulatif
+            if paiement_ids:
+                # Utiliser une requête directe pour éviter les imports circulaires
+                cursor.execute("""
+                    INSERT INTO paiements_recapmensuel_paiements_concernes (recapmensuel_id, paiement_id)
+                    SELECT %s, unnest(%s::int[])
+                    ON CONFLICT DO NOTHING
+                """, [self.id, paiement_ids])
 
 
 class ChargeDeductible(models.Model):
@@ -1063,15 +1121,17 @@ class RetraitBailleur(models.Model):
         self.updated_at = timezone.now()
         
         # Marquer les charges bailleur comme utilisées
-        charges_utilisees = ChargeBailleur.objects.filter(
-            bailleur=self.bailleur,
-            mois_charge__year=self.mois_retrait.year,
-            mois_charge__month=self.mois_retrait.month,
-            statut='valide'
+        from proprietes.models import ChargesBailleur
+        charges_utilisees = ChargesBailleur.objects.filter(
+            propriete__bailleur=self.bailleur,
+            date_charge__year=self.mois_retrait.year,
+            date_charge__month=self.mois_retrait.month,
+            statut='en_attente'
         )
         
-        for charge in charges_utilisees:
-            charge.marquer_utilise(self)
+        # TODO: Implémenter la logique de marquage des charges comme utilisées
+        # for charge in charges_utilisees:
+        #     charge.marquer_utilise(self)
         
         # Sauvegarder seulement les champs modifiés
         self.save(update_fields=['statut', 'date_paiement', 'updated_at'])

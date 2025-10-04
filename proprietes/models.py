@@ -341,6 +341,43 @@ class Locataire(DuplicatePreventionMixin, models.Model):
         
         return stats
 
+    def a_des_contrats_actifs(self):
+        """
+        Vérifie si le locataire a des contrats actifs.
+        Retourne True si le locataire a des contrats actifs, False sinon.
+        """
+        from contrats.models import Contrat
+        from django.utils import timezone
+        
+        # Vérifier les contrats actifs (non résiliés et non supprimés)
+        contrats_actifs = self.contrats.filter(
+            est_actif=True,
+            est_resilie=False,
+            is_deleted=False
+        )
+        
+        return contrats_actifs.exists()
+    
+    def get_contrats_actifs(self):
+        """
+        Retourne tous les contrats actifs du locataire.
+        """
+        from contrats.models import Contrat
+        from django.utils import timezone
+        
+        return self.contrats.filter(
+            est_actif=True,
+            est_resilie=False,
+            is_deleted=False
+        ).order_by('-date_debut')
+    
+    def peut_etre_supprime_definitivement(self):
+        """
+        Vérifie si le locataire peut être supprimé définitivement.
+        Un locataire peut être supprimé définitivement seulement s'il n'a aucun contrat actif.
+        """
+        return not self.a_des_contrats_actifs()
+
 
 class Propriete(models.Model):
     """Modèle pour les propriétés immobilières."""

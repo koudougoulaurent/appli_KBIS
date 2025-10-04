@@ -309,54 +309,93 @@ class ContratPDFService:
         
         # === EN-TÊTE ===
         if self.config_entreprise:
-            # En-tête avec couleur de fond
-            canvas_obj.setFillColor(colors.lightblue)
-            canvas_obj.rect(0, page_height - 3*cm, page_width, 3*cm, fill=1, stroke=0)
-            
-            # Bordure en bas de l'en-tête
-            canvas_obj.setStrokeColor(colors.darkblue)
-            canvas_obj.setLineWidth(2)
-            canvas_obj.line(0, page_height - 3*cm, page_width, page_height - 3*cm)
-            
-            # Logo de l'entreprise (si disponible)
+            # Utiliser l'image d'en-tête personnalisée KBIS
             try:
-                logo_path = self.config_entreprise.get_logo_prioritaire()
-                if logo_path and os.path.exists(logo_path):
-                    # Redimensionner le logo pour l'en-tête
-                    logo_width = 2*cm
-                    logo_height = 1.5*cm
+                entete_path = self.config_entreprise.get_entete_prioritaire()
+                if entete_path and os.path.exists(entete_path):
+                    # Utiliser l'image d'en-tête personnalisée
+                    from reportlab.lib.utils import ImageReader
+                    img = ImageReader(entete_path)
+                    img_width, img_height = img.getSize()
                     
-                    # Positionner le logo à gauche
-                    logo_x = 1*cm
-                    logo_y = page_height - 2.5*cm
+                    # Calculer les dimensions optimales pour l'en-tête
+                    max_width = page_width - 2*cm  # Largeur maximale de la page
+                    max_height = 4*cm  # Hauteur maximale pour l'en-tête
                     
-                    canvas_obj.drawImage(logo_path, logo_x, logo_y, logo_width, logo_height)
+                    # Redimensionner proportionnellement
+                    aspect_ratio = img_width / img_height
+                    if aspect_ratio > (max_width / max_height):
+                        entete_width = max_width
+                        entete_height = max_width / aspect_ratio
+                    else:
+                        entete_height = max_height
+                        entete_width = max_height * aspect_ratio
                     
-                    # Texte de l'entreprise à droite du logo
-                    text_x = logo_x + logo_width + 0.5*cm
-                    text_y = page_height - 2.2*cm
+                    # Centrer l'en-tête
+                    entete_x = (page_width - entete_width) / 2
+                    entete_y = page_height - entete_height - 0.5*cm
+                    
+                    canvas_obj.drawImage(entete_path, entete_x, entete_y, entete_width, entete_height)
+                    
                 else:
-                    # Pas de logo - centrer le texte
-                    text_x = 2*cm
-                    text_y = page_height - 2.2*cm
+                    # Fallback vers l'ancien système si l'image n'existe pas
+                    # En-tête avec couleur de fond
+                    canvas_obj.setFillColor(colors.lightblue)
+                    canvas_obj.rect(0, page_height - 3*cm, page_width, 3*cm, fill=1, stroke=0)
                     
-            except (OSError, IOError, ValueError):
-                # En cas d'erreur avec le logo
-                text_x = 2*cm
-                text_y = page_height - 2.2*cm
-            
-            # Nom de l'entreprise
-            canvas_obj.setFillColor(colors.darkblue)
-            canvas_obj.setFont("Helvetica-Bold", 16)
-            canvas_obj.drawString(text_x, text_y, self.config_entreprise.nom_entreprise)
-            
-            # Adresse complète
-            canvas_obj.setFont("Helvetica", 10)
-            canvas_obj.drawString(text_x, text_y - 0.4*cm, self.config_entreprise.get_adresse_complete())
-            
-            # Informations de contact complètes
-            canvas_obj.setFont("Helvetica", 9)
-            canvas_obj.drawString(text_x, text_y - 0.8*cm, self.config_entreprise.get_contact_complet())
+                    # Bordure en bas de l'en-tête
+                    canvas_obj.setStrokeColor(colors.darkblue)
+                    canvas_obj.setLineWidth(2)
+                    canvas_obj.line(0, page_height - 3*cm, page_width, page_height - 3*cm)
+                    
+                    # Logo de l'entreprise (si disponible)
+                    try:
+                        logo_path = self.config_entreprise.get_logo_prioritaire()
+                        if logo_path and os.path.exists(logo_path):
+                            # Redimensionner le logo pour l'en-tête
+                            logo_width = 2*cm
+                            logo_height = 1.5*cm
+                            
+                            # Positionner le logo à gauche
+                            logo_x = 1*cm
+                            logo_y = page_height - 2.5*cm
+                            
+                            canvas_obj.drawImage(logo_path, logo_x, logo_y, logo_width, logo_height)
+                            
+                            # Texte de l'entreprise à droite du logo
+                            text_x = logo_x + logo_width + 0.5*cm
+                            text_y = page_height - 2.2*cm
+                        else:
+                            # Pas de logo - centrer le texte
+                            text_x = 2*cm
+                            text_y = page_height - 2.2*cm
+                            
+                    except (OSError, IOError, ValueError):
+                        # En cas d'erreur avec le logo
+                        text_x = 2*cm
+                        text_y = page_height - 2.2*cm
+                    
+                    # Nom de l'entreprise
+                    canvas_obj.setFillColor(colors.darkblue)
+                    canvas_obj.setFont("Helvetica-Bold", 16)
+                    canvas_obj.drawString(text_x, text_y, self.config_entreprise.nom_entreprise)
+                    
+                    # Adresse complète
+                    canvas_obj.setFont("Helvetica", 10)
+                    canvas_obj.drawString(text_x, text_y - 0.4*cm, self.config_entreprise.get_adresse_complete())
+                    
+                    # Informations de contact complètes
+                    canvas_obj.setFont("Helvetica", 9)
+                    canvas_obj.drawString(text_x, text_y - 0.8*cm, self.config_entreprise.get_contact_complet())
+                    
+            except (OSError, IOError, ValueError, AttributeError) as e:
+                print(f"Erreur lors de l'ajout de l'en-tête personnalisé: {e}")
+                # Fallback vers l'ancien système en cas d'erreur
+                canvas_obj.setFillColor(colors.lightblue)
+                canvas_obj.rect(0, page_height - 3*cm, page_width, 3*cm, fill=1, stroke=0)
+                canvas_obj.setFillColor(colors.darkblue)
+                canvas_obj.setFont("Helvetica-Bold", 16)
+                canvas_obj.drawString(2*cm, page_height - 2.2*cm, self.config_entreprise.nom_entreprise)
         
         # === PIED DE PAGE SIMPLIFIÉ ===
         # Fond du pied de page réduit
@@ -834,7 +873,7 @@ class RecuCautionPDFService:
                     canvas_obj.setFont("Helvetica", 9)
                     canvas_obj.drawString(text_x, text_y - 0.8*cm, self.config_entreprise.get_contact_complet())
                     
-            except Exception as e:
+            except (OSError, IOError, ValueError, AttributeError) as e:
                 print(f"Erreur lors de l'ajout de l'en-tête personnalisé: {e}")
                 # Fallback vers l'ancien système en cas d'erreur
                 canvas_obj.setFillColor(colors.lightgreen)

@@ -55,6 +55,7 @@ urlpatterns = [
     
     # URL pour la gestion globale des cautions
     path('gestion-cautions/', views.gestion_cautions, name='gestion_cautions'),
+    path('forcer-correction-statuts/', views.forcer_correction_statuts, name='forcer_correction_statuts'),
 
     # URLs pour la gestion des résiliations
     path('resiliations/', views.liste_resiliations, name='liste_resiliations'),
