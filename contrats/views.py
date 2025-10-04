@@ -1146,7 +1146,7 @@ def liste_contrats_caution(request):
     bailleur_id = request.GET.get('bailleur', '')
     
     # Base QuerySet avec annotations pour les paiements
-    from django.db.models import Sum, Case, When, DecimalField, Q
+    from django.db.models import Sum, Case, When, DecimalField, Q, F
     from decimal import Decimal
     
     contrats = Contrat.objects.filter(
@@ -1214,7 +1214,7 @@ def liste_contrats_caution(request):
         contrats = contrats.filter(montant_avance_requis__gt=F('montant_avance_paye'))
     
     # Calculer les statistiques avec des requêtes optimisées
-    from django.db.models import F, Count
+    from django.db.models import Count
     
     # Statistiques générales
     total_contrats = contrats.count()
