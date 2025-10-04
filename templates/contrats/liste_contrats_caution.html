@@ -104,10 +104,14 @@
                                     {{ contrat.get_depot_garantie_formatted }}
                                 </span>
                                 <br>
-                                {% if contrat.get_caution_payee_dynamique %}
-                                    <small class="badge bg-success">Payée</small>
+                                {% if contrat.depot_garantie and contrat.depot_garantie != '0' and contrat.depot_garantie != '0.00' %}
+                                    {% if contrat.get_caution_payee_dynamique %}
+                                        <small class="badge bg-success">Payée</small>
+                                    {% else %}
+                                        <small class="badge bg-danger">Non payée</small>
+                                    {% endif %}
                                 {% else %}
-                                    <small class="badge bg-danger">Non payée</small>
+                                    <small class="badge bg-secondary">Non requise</small>
                                 {% endif %}
                             </td>
                             <td class="text-end">
@@ -115,10 +119,14 @@
                                     {{ contrat.get_avance_loyer_formatted }}
                                 </span>
                                 <br>
-                                {% if contrat.get_avance_payee_dynamique %}
-                                    <small class="badge bg-success">Payée</small>
+                                {% if contrat.avance_loyer and contrat.avance_loyer != '0' and contrat.avance_loyer != '0.00' %}
+                                    {% if contrat.get_avance_payee_dynamique %}
+                                        <small class="badge bg-success">Payée</small>
+                                    {% else %}
+                                        <small class="badge bg-danger">Non payée</small>
+                                    {% endif %}
                                 {% else %}
-                                    <small class="badge bg-danger">Non payée</small>
+                                    <small class="badge bg-secondary">Non requise</small>
                                 {% endif %}
                             </td>
                             <td class="text-end">

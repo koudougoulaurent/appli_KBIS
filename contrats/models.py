@@ -495,7 +495,7 @@ class Contrat(models.Model):
         try:
             montant_caution_requis = Decimal(self.depot_garantie) if self.depot_garantie else Decimal('0')
             if montant_caution_requis <= 0:
-                return True  # Pas de caution requise
+                return False  # Pas de caution requise = pas payée (pour l'affichage)
             
             # Récupérer les paiements de caution validés
             paiements_caution = Paiement.objects.filter(
@@ -517,7 +517,7 @@ class Contrat(models.Model):
         try:
             montant_avance_requis = Decimal(self.avance_loyer) if self.avance_loyer else Decimal('0')
             if montant_avance_requis <= 0:
-                return True  # Pas d'avance requise
+                return False  # Pas d'avance requise = pas payée (pour l'affichage)
             
             # Récupérer les paiements d'avance validés
             paiements_avance = Paiement.objects.filter(
@@ -533,9 +533,28 @@ class Contrat(models.Model):
     
     def get_statut_paiements_dynamique(self):
         """Retourne le statut des paiements basé sur les vrais paiements."""
+        from decimal import Decimal
+        
+        # Vérifier si des montants sont requis
+        caution_requise = Decimal(self.depot_garantie) if self.depot_garantie else Decimal('0')
+        avance_requise = Decimal(self.avance_loyer) if self.avance_loyer else Decimal('0')
+        
+        # Si aucun montant n'est requis
+        if caution_requise <= 0 and avance_requise <= 0:
+            return "Aucun paiement requis"
+        
         caution_payee = self.get_caution_payee_dynamique()
         avance_payee = self.get_avance_payee_dynamique()
         
+        # Si seulement la caution est requise
+        if caution_requise > 0 and avance_requise <= 0:
+            return "Complet" if caution_payee else "En attente de caution"
+        
+        # Si seulement l'avance est requise
+        if caution_requise <= 0 and avance_requise > 0:
+            return "Complet" if avance_payee else "En attente d'avance"
+        
+        # Si les deux sont requis
         if caution_payee and avance_payee:
             return "Complet"
         elif caution_payee:
@@ -547,6 +566,25 @@ class Contrat(models.Model):
     
     def peut_commencer_location_dynamique(self):
         """Vérifie si le locataire peut commencer la location basé sur les vrais paiements."""
+        from decimal import Decimal
+        
+        # Vérifier si des montants sont requis
+        caution_requise = Decimal(self.depot_garantie) if self.depot_garantie else Decimal('0')
+        avance_requise = Decimal(self.avance_loyer) if self.avance_loyer else Decimal('0')
+        
+        # Si aucun montant n'est requis, la location peut commencer
+        if caution_requise <= 0 and avance_requise <= 0:
+            return True
+        
+        # Si seulement la caution est requise
+        if caution_requise > 0 and avance_requise <= 0:
+            return self.get_caution_payee_dynamique()
+        
+        # Si seulement l'avance est requise
+        if caution_requise <= 0 and avance_requise > 0:
+            return self.get_avance_payee_dynamique()
+        
+        # Si les deux sont requis
         return self.get_caution_payee_dynamique() and self.get_avance_payee_dynamique()
 
 
