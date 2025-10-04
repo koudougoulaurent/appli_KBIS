@@ -287,6 +287,7 @@ def ajouter_paiement(request):
             try:
                 paiement = form.save(commit=False)
                 paiement.cree_par = request.user
+                # Le champ date_creation sera automatiquement défini par auto_now_add=True
                 
                 # Gérer le champ mois_paye comme une date
                 mois_paye_date = request.POST.get('mois_paye', '')

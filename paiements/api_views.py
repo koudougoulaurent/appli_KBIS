@@ -576,7 +576,7 @@ class PaiementCautionAvanceViewSet(viewsets.ModelViewSet):
     ViewSet pour la gestion des paiements de caution et avance via API REST.
     """
     queryset = Paiement.objects.filter(
-        type_paiement__in=['caution', 'avance_loyer', 'depot_garantie']
+        type_paiement__in=['caution', 'avance', 'avance_loyer', 'depot_garantie']
     ).select_related(
         'contrat__locataire',
         'contrat__propriete',

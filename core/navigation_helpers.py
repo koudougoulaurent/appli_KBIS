@@ -185,7 +185,7 @@ class ContractNavigationHelper(NavigationHelper):
         
         if user.groupe_travail.nom.upper() == 'PRIVILEGE':
             actions.append(
-                ('Supprimer', reverse('contrats:supprimer', args=[contrat.pk]), 'btn-outline-danger', 'trash', 'Supprimer ce contrat', 'Voulez-vous vraiment supprimer ce contrat ?')
+                ('Supprimer', reverse('contrats:supprimer_contrat', args=[contrat.pk]), 'btn-outline-danger', 'trash', 'Supprimer ce contrat', 'Voulez-vous vraiment supprimer ce contrat ?')
             )
         
         return NavigationHelper.create_quick_actions(*actions)

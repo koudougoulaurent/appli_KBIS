@@ -1,7 +1,7 @@
 """
 Mixins pour la gestion de la suppression sécurisée des éléments
 """
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
@@ -143,11 +143,32 @@ class SuppressionGeneriqueView(SuppressionViewMixin, View):
             messages.error(request, "Vous n'avez pas l'autorisation de supprimer cet élément.")
             return redirect(self.get_redirect_url(obj))
         
+        # Prepare field data for display
+        field_data = []
+        for field in obj._meta.fields:
+            if field.name in ['titre', 'nom', 'adresse', 'ville', 'email', 'telephone']:
+                value = field.value_from_object(obj)
+                if value:
+                    field_data.append({
+                        'name': field.name,
+                        'verbose_name': field.verbose_name,
+                        'value': value
+                    })
+        
+        # Determine the correct list URL name based on the app
+        list_url_name = 'liste'  # Default for most apps
+        if obj._meta.app_label == 'contrats':
+            list_url_name = 'contrats:liste'
+        else:
+            list_url_name = f"{obj._meta.app_label}:liste"
+        
         context = {
             'obj': obj,
             'title': f'Supprimer {obj._meta.verbose_name}',
             'model_name': obj._meta.verbose_name,
             'app_name': obj._meta.app_label,
+            'field_data': field_data,
+            'list_url_name': list_url_name,
         }
         
         return render(request, 'core/confirm_supprimer_generique.html', context)

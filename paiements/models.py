@@ -1,14 +1,11 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator
-from django.utils import timezone
 from django.urls import reverse
 from decimal import Decimal
 from datetime import date
 from contrats.models import Contrat
 from proprietes.managers import NonDeletedManager
-from django.conf import settings
-from proprietes.models import Bailleur, Propriete
 
 
 class RecapMensuel(models.Model):
@@ -256,6 +253,26 @@ class ChargeDeductible(models.Model):
 class Paiement(models.Model):
     """Modèle pour les paiements de loyer avec support des paiements partiels."""
     
+    # Constantes pour les choix
+    TYPE_PAIEMENT_CHOICES = [
+        ('loyer', 'Loyer'),
+        ('caution', 'Caution'),
+        ('avance', 'Avance'),
+        ('avance_loyer', 'Avance de loyer'),
+        ('depot_garantie', 'Dépôt de garantie'),
+        ('charges', 'Charges'),
+        ('regularisation', 'Régularisation'),
+        ('paiement_partiel', 'Paiement partiel'),
+        ('autre', 'Autre'),
+    ]
+    
+    STATUT_CHOICES = [
+        ('en_attente', 'En attente'),
+        ('valide', 'Validé'),
+        ('refuse', 'Refusé'),
+        ('annule', 'Annulé'),
+    ]
+    
     # Relations
     contrat = models.ForeignKey(
         Contrat,
@@ -280,18 +297,14 @@ class Paiement(models.Model):
     montant_net_paye = models.DecimalField(
         max_digits=10,
         decimal_places=2,
+        default=0,
         verbose_name=_("Montant net payé")
     )
     
     # Type et mode de paiement
     type_paiement = models.CharField(
         max_length=20,
-        choices=[
-            ('loyer', 'Loyer'),
-            ('caution', 'Caution'),
-            ('avance', 'Avance'),
-            ('charges', 'Charges'),
-        ],
+        choices=TYPE_PAIEMENT_CHOICES,
         default='loyer',
         verbose_name=_("Type de paiement")
     )
@@ -317,14 +330,41 @@ class Paiement(models.Model):
     # Statut
     statut = models.CharField(
         max_length=20,
-        choices=[
-            ('en_attente', 'En attente'),
-            ('valide', 'Validé'),
-            ('refuse', 'Refusé'),
-            ('annule', 'Annulé'),
-        ],
+        choices=STATUT_CHOICES,
         default='en_attente',
         verbose_name=_("Statut")
+    )
+    
+    # Paiement partiel
+    est_paiement_partiel = models.BooleanField(
+        default=False,
+        verbose_name=_("Paiement partiel")
+    )
+    
+    # Mois payé
+    mois_paye = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_("Mois payé"),
+        help_text=_("Mois pour lequel le paiement est effectué")
+    )
+    
+    # Montants pour paiements partiels
+    montant_du_mois = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_("Montant dû pour le mois"),
+        help_text=_("Montant total dû pour le mois (loyer + charges)")
+    )
+    
+    montant_restant_du = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Montant restant dû"),
+        help_text=_("Montant restant à payer pour ce mois")
     )
     
     # Informations bancaires
@@ -337,6 +377,33 @@ class Paiement(models.Model):
         max_length=100,
         blank=True,
         verbose_name=_("Référence du virement")
+    )
+    
+    # Référence de paiement
+    reference_paiement = models.CharField(
+        max_length=50,
+        blank=True,
+        unique=True,
+        verbose_name=_("Référence de paiement"),
+        help_text=_("Référence unique du paiement")
+    )
+    
+    # Numéro de paiement
+    numero_paiement = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        unique=True,
+        verbose_name=_("Numéro Paiement"),
+        help_text=_("Numéro unique professionnel du paiement")
+    )
+    
+    # Libellé du paiement
+    libelle = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name=_("Libellé du paiement"),
+        help_text=_("Description ou motif du paiement")
     )
     
     # Notes
@@ -355,10 +422,63 @@ class Paiement(models.Model):
         related_name='paiements_valides',
         verbose_name=_("Validé par")
     )
+    date_validation = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date de validation")
+    )
+    
+    # Annulation
+    annule_par = models.ForeignKey(
+        'utilisateurs.Utilisateur',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiements_annules',
+        verbose_name=_("Annulé par")
+    )
+    date_annulation = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date d'annulation")
+    )
+    raison_annulation = models.TextField(
+        blank=True,
+        verbose_name=_("Raison de l'annulation")
+    )
+    
+    # Refus
+    refuse_par = models.ForeignKey(
+        'utilisateurs.Utilisateur',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiements_refuses',
+        verbose_name=_("Refusé par")
+    )
+    date_refus = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date de refus")
+    )
+    raison_refus = models.TextField(
+        blank=True,
+        verbose_name=_("Raison du refus")
+    )
     
     # Métadonnées
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    date_creation = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de création"))
+    date_modification = models.DateTimeField(auto_now=True, verbose_name=_("Date de modification"))
+    cree_par = models.ForeignKey(
+        'utilisateurs.Utilisateur',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiements_crees',
+        verbose_name=_("Créé par")
+    )
     is_deleted = models.BooleanField(default=False)
     deleted_at = models.DateTimeField(null=True, blank=True)
     deleted_by = models.ForeignKey(
@@ -381,6 +501,75 @@ class Paiement(models.Model):
     
     def __str__(self):
         return f"Paiement {self.montant} F CFA - {self.contrat.locataire.get_nom_complet()}"
+    
+    def save(self, *args, **kwargs):
+        """Sauvegarde personnalisée pour calculer automatiquement les montants"""
+        from django.utils import timezone
+        
+        # Calculer le montant net payé si pas défini
+        if not self.montant_net_paye:
+            self.montant_net_paye = self.montant - self.montant_charges_deduites
+        
+        # S'assurer que les champs de date sont définis
+        if not self.date_creation:
+            self.date_creation = timezone.now()
+        
+        # Générer la référence de paiement si elle n'existe pas
+        if not hasattr(self, 'reference_paiement') or not self.reference_paiement:
+            self.reference_paiement = self.generate_reference_paiement()
+        
+        # Générer le numéro de paiement si il n'existe pas
+        if not hasattr(self, 'numero_paiement') or not self.numero_paiement:
+            self.numero_paiement = self.generate_numero_paiement()
+        
+        # Générer le libellé si il n'existe pas
+        if not hasattr(self, 'libelle') or not self.libelle:
+            self.libelle = self.generate_libelle()
+        
+        # Mettre à jour la date de modification
+        self.date_modification = timezone.now()
+        
+        super().save(*args, **kwargs)
+    
+    def generate_reference_paiement(self):
+        """Génère une référence de paiement unique"""
+        from django.utils import timezone
+        from datetime import datetime
+        
+        # Format: PAI-YYYYMMDD-HHMMSS-XXXX
+        now = timezone.now()
+        timestamp = now.strftime('%Y%m%d-%H%M%S')
+        
+        # Compter les paiements du jour pour avoir un numéro séquentiel
+        today = now.date()
+        count_today = Paiement.objects.filter(
+            date_creation__date=today
+        ).count() + 1
+        
+        return f"PAI-{timestamp}-{count_today:04d}"
+    
+    def generate_numero_paiement(self):
+        """Génère un numéro de paiement unique"""
+        from django.utils import timezone
+        
+        # Format: PAI-YYYYMMDD-XXXX
+        now = timezone.now()
+        date_str = now.strftime('%Y%m%d')
+        
+        # Compter les paiements du jour
+        today = now.date()
+        count_today = Paiement.objects.filter(
+            date_creation__date=today
+        ).count() + 1
+        
+        return f"PAI-{date_str}-{count_today:04d}"
+    
+    def generate_libelle(self):
+        """Génère un libellé automatique pour le paiement"""
+        type_paiement_display = dict(self.TYPE_PAIEMENT_CHOICES).get(self.type_paiement, self.type_paiement)
+        locataire_nom = self.contrat.locataire.get_nom_complet() if self.contrat.locataire else "N/A"
+        
+        return f"{type_paiement_display} - {locataire_nom} - {self.date_paiement.strftime('%d/%m/%Y')}"
     
     def get_statut_color(self):
         """Retourne la couleur Bootstrap pour le statut"""
@@ -588,7 +777,11 @@ class Paiement(models.Model):
             'loyer': 'recu_loyer',
             'caution': 'recu_caution',
             'avance': 'recu_avance',
+            'avance_loyer': 'recu_avance',
+            'depot_garantie': 'recu_caution',
             'charges': 'recu_charges',
+            'regularisation': 'recu',
+            'paiement_partiel': 'recu',
             'autre': 'recu',
         }
         return mapping.get(self.type_paiement, 'recu')
