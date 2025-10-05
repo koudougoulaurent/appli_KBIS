@@ -79,7 +79,7 @@
                         <h5><i class="bi bi-info-circle"></i> Informations du contrat</h5>
                         <p><strong>Contrat:</strong> {{ contrat_obj.numero_contrat }}</p>
                         <p><strong>Locataire:</strong> {{ contrat_obj.locataire.nom }} {{ contrat_obj.locataire.prenom }}</p>
-                        <p><strong>Propriété:</strong> {{ contrat_obj.propriete.nom }}<br>
+                        <p><strong>Propriété:</strong> {{ contrat_obj.propriete.titre }}<br>
                         <span class="text-muted">Adresse: {{ contrat_obj.propriete.adresse }}</span></p>
                         {% if contrat_obj.unite_locative %}
                         <p><strong>Unité locative:</strong> {{ contrat_obj.unite_locative.nom }}<br>

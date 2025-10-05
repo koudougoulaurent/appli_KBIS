@@ -221,7 +221,7 @@ def ajax_charges_disponibles(request, retrait_id):
                 'montant_deductible': float(detail['montant_deductible']),
                 'statut': charge.get_statut_display(),
                 'date_charge': charge.date_charge.strftime('%d/%m/%Y'),
-                'propriete': charge.propriete.nom
+                'propriete': charge.propriete.titre
             })
         
         return JsonResponse({

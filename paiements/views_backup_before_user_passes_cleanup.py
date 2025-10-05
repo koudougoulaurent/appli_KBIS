@@ -1795,7 +1795,13 @@ def charges_deductibles_liste(request):
     
     statuts_counts = {}
     for statut, label in ChargeDeductible._meta.get_field('statut').choices:
-        statuts_counts[statut] = ChargeDeductible.objects.filter(statut=statut).count()
+        # ChargeDeductible n'a pas de champ statut, utiliser est_valide
+        if statut == 'en_attente':
+            statuts_counts[statut] = ChargeDeductible.objects.filter(est_valide=False).count()
+        elif statut == 'validee':
+            statuts_counts[statut] = ChargeDeductible.objects.filter(est_valide=True).count()
+        else:
+            statuts_counts[statut] = 0
     
     # Statistiques par type de charge
     types_charges_counts = {}
@@ -2139,10 +2145,10 @@ class ChargeDeductibleListView(PrivilegeButtonsMixin, IntelligentListView):
         
         # Statistiques
         context['total_charges'] = ChargeDeductible.objects.count()
-        context['charges_en_attente'] = ChargeDeductible.objects.filter(statut='en_attente').count()
-        context['charges_validées'] = ChargeDeductible.objects.filter(statut='validee').count()
-        context['charges_deduites'] = ChargeDeductible.objects.filter(statut='deduite').count()
-        context['charges_refusees'] = ChargeDeductible.objects.filter(statut='refusee').count()
+        context['charges_en_attente'] = ChargeDeductible.objects.filter(est_valide=False).count()
+        context['charges_validées'] = ChargeDeductible.objects.filter(est_valide=True).count()
+        context['charges_deduites'] = 0  # Pas de champ pour les charges déduites
+        context['charges_refusees'] = 0  # Pas de champ pour les charges refusées
         
         # Montant total
         from django.db.models import Sum

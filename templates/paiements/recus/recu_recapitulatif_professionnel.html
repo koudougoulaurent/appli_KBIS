@@ -373,7 +373,7 @@
                     {% for detail in totaux.details_proprietes %}
                 <tr>
                     <td>
-                        <strong>{{ detail.propriete.nom|default:detail.propriete.adresse|default:"Propriété #"|add:detail.propriete.id|stringformat:"%s" }}</strong><br>
+                        <strong>{{ detail.propriete.titre|default:detail.propriete.adresse|default:"Propriété #"|add:detail.propriete.id|stringformat:"%s" }}</strong><br>
                         <span class="text-muted">Adresse: {{ detail.propriete.adresse|default:"Non renseignée" }}</span><br>
                         <small>{{ detail.propriete.ville|default:"" }}</small>
                     </td>

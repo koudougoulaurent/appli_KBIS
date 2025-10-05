@@ -381,7 +381,7 @@
                     {% for propriete in proprietes_details %}
                         <tr>
                             <td class="property-info">
-                                {{ propriete.nom|default:propriete.adresse|default:"Propriété #"|add:propriete.id|stringformat:"%s" }}<br>
+                                {{ propriete.titre|default:propriete.adresse|default:"Propriété #"|add:propriete.id|stringformat:"%s" }}<br>
                                 <small style="color: #7f8c8d;">ID: {{ propriete.id }}</small>
                             </td>
                             <td class="property-info">

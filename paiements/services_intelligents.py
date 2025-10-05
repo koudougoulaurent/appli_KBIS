@@ -159,11 +159,11 @@ class ServiceContexteIntelligent:
             total=Coalesce(Sum('montant'), Decimal('0.00'))
         )['total']
         
-        charges_en_attente = charges.filter(statut='en_attente').aggregate(
+        charges_en_attente = charges.filter(est_valide=False).aggregate(
             total=Coalesce(Sum('montant'), Decimal('0.00'))
         )['total']
         
-        charges_validees = charges.filter(statut='validee').aggregate(
+        charges_validees = charges.filter(est_valide=True).aggregate(
             total=Coalesce(Sum('montant'), Decimal('0.00'))
         )['total']
         

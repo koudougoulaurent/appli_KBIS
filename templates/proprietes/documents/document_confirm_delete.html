@@ -28,7 +28,7 @@
                             <li><strong>Type :</strong> {{ document.get_type_document_display }}</li>
                             <li><strong>Date de création :</strong> {{ document.date_creation|date:"d/m/Y H:i" }}</li>
                             {% if document.propriete %}
-                            <li><strong>Propriété :</strong> {{ document.propriete.nom }}</li>
+                            <li><strong>Propriété :</strong> {{ document.propriete.titre }}</li>
                             {% endif %}
                             {% if document.bailleur %}
                             <li><strong>Bailleur :</strong> {{ document.bailleur.nom }}</li>
