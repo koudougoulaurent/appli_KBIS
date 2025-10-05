@@ -147,51 +147,25 @@ class ConfigurationEntrepriseAdmin(admin.ModelAdmin):
     readonly_fields = ['date_creation', 'date_modification', 'afficher_logo']
     
     def afficher_logo(self, obj):
-        """Affiche un aperçu du logo et de l'en-tête dans l'admin"""
-        # Vérifier d'abord l'en-tête personnalisé
-        if obj.entete_upload:
+        """Affiche un aperçu du logo dans l'admin"""
+        # Vérifier le logo uploadé
+        if obj.logo:
             return format_html(
                 '<div style="text-align: center;">'
-                '<img src="{}" style="max-width: 200px; max-height: 80px; border: 2px solid #dc3545;" alt="En-tête personnalisé" />'
-                '<br><small style="color: #dc3545;"><strong>En-tête personnalisé (PRIORITÉ ABSOLUE)</strong></small>'
-                '<br><small style="color: #6c757d;">Remplace complètement le logo et le texte</small>'
+                '<img src="{}" style="max-width: 100px; max-height: 60px; border: 2px solid #28a745;" alt="Logo" />'
+                '<br><small style="color: #28a745;">Logo configuré</small>'
                 '</div>',
-                obj.entete_upload.url
+                obj.logo.url
             )
-        
-        # Sinon, afficher le logo
-        if obj.logo_upload:
-            # Logo uploadé (prioritaire)
+        else:
+            # Aucun logo configuré
             return format_html(
-                '<div style="text-align: center;">'
-                '<img src="{}" style="max-width: 100px; max-height: 60px; border: 2px solid #28a745;" alt="Logo uploadé" />'
-                '<br><small style="color: #28a745;">Logo uploadé (prioritaire)</small>'
-                '</div>',
-                obj.logo_upload.url
+                '<div style="text-align: center; padding: 20px; border: 2px dashed #6c757d; background-color: #f8f9fa;">'
+                '<span style="color: #6c757d; font-size: 24px;">📷</span>'
+                '<br><small style="color: #6c757d;">Aucun logo configuré</small>'
+                '<br><small style="color: #6c757d;">Utilisez le champ "Logo" ci-dessous</small>'
+                '</div>'
             )
-        elif obj.logo_url:
-            # Logo externe
-            if obj.logo_url.startswith('http'):
-                return format_html(
-                    '<div style="text-align: center;">'
-                    '<img src="{}" style="max-width: 100px; max-height: 60px; border: 2px solid #007cba;" alt="Logo externe" />'
-                    '<br><small style="color: #007cba;">Logo externe</small>'
-                    '</div>',
-                    obj.logo_url
-                )
-            else:
-                return format_html(
-                    '<div style="text-align: center;">'
-                    '<img src="/media/{}" style="max-width: 100px; max-height: 60px; border: 2px solid #007cba;" alt="Logo local" />'
-                    '<br><small style="color: #007cba;">Logo local</small>'
-                    '</div>',
-                    obj.logo_url
-                )
-        return format_html(
-            '<div style="text-align: center; color: #6c757d; font-style: italic;">'
-            'Aucun logo ni en-tête configuré'
-            '</div>'
-        )
     
     afficher_logo.short_description = "Aperçu du logo"
     
