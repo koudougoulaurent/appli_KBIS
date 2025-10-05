@@ -8,7 +8,8 @@ from .admin_actions import (
     regenerate_all_pdfs, 
     clear_pdf_cache, 
     show_cache_stats, 
-    force_regenerate_now
+    force_regenerate_now,
+    suppression_definitive_conditionnelle
 )
 
 # Register your models here.
@@ -81,7 +82,7 @@ class ConfigurationEntrepriseAdmin(admin.ModelAdmin):
     form = ConfigurationEntrepriseAdminForm
     
     list_display = ['nom_entreprise', 'ville', 'afficher_logo']
-    actions = [regenerate_all_pdfs, clear_pdf_cache, show_cache_stats, force_regenerate_now]
+    actions = [regenerate_all_pdfs, clear_pdf_cache, show_cache_stats, force_regenerate_now, suppression_definitive_conditionnelle]
     
     # Forcer la mise à jour des champs
     def get_form(self, request, obj=None, **kwargs):
