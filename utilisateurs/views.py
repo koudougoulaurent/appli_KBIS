@@ -119,7 +119,7 @@ def dashboard_groupe(request, groupe_nom):
     derniers_elements = {}
     
     if groupe_nom == 'CAISSE':
-        from paiements.models import Paiement, Retrait
+        from paiements.models import Paiement, RetraitBailleur
         from django.db.models import Sum
         from datetime import datetime
         
@@ -127,35 +127,34 @@ def dashboard_groupe(request, groupe_nom):
         mois_courant = datetime.now().month
         annee_courante = datetime.now().year
         
-        # Requête optimisée pour les statistiques
+        # Requête optimisée pour les statistiques (montants masqués pour sécurité)
         stats_paiements = Paiement.objects.filter(
             date_paiement__month=mois_courant,
             date_paiement__year=annee_courante
         ).aggregate(
-            total_paiements=Sum('montant'),
             count_paiements=Count('id')
         )
         
-        stats_retraits = Retrait.objects.filter(
+        stats_retraits = RetraitBailleur.objects.filter(
             date_demande__month=mois_courant,
             date_demande__year=annee_courante
         ).aggregate(
-            total_retraits=Sum('montant_net_a_payer')
+            count_retraits=Count('id')
         )
         
         stats_cautions = Paiement.objects.filter(
             type_paiement='depot_garantie',
             statut='valide'
         ).aggregate(
-            total_cautions=Sum('montant')
+            count_cautions=Count('id')
         )
         
         stats_attente = Paiement.objects.filter(statut='en_attente').count()
         
         stats = {
-            'paiements_mois': stats_paiements['total_paiements'] or 0,
-            'retraits_mois': stats_retraits['total_retraits'] or 0,
-            'cautions_cours': stats_cautions['total_cautions'] or 0,
+            'paiements_mois': stats_paiements['count_paiements'] or 0,
+            'retraits_mois': stats_retraits['count_retraits'] or 0,
+            'cautions_cours': stats_cautions['count_cautions'] or 0,
             'paiements_attente': stats_attente,
         }
         
@@ -1440,7 +1439,7 @@ def get_model_class(model_name):
         'utilisateur': 'utilisateurs.Utilisateur',
         'paiement': 'paiements.Paiement',
         'recu': 'paiements.Recu',
-        'retrait': 'paiements.Retrait',
+        'retrait': 'paiements.RetraitBailleur',
         'comptebancaire': 'paiements.CompteBancaire',
         'chargedeductible': 'paiements.ChargeDeductible',
         'contrat': 'contrats.Contrat',

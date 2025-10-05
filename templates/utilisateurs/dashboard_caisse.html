@@ -26,7 +26,7 @@
                             <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
                                 Paiements du mois
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="paiements-mois">{{ stats.paiements_mois|floatformat:2 }} F CFA</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="paiements-mois">{{ stats.paiements_mois }} transaction{{ stats.paiements_mois|pluralize }}</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-calendar fa-2x text-gray-300"></i>
@@ -44,7 +44,7 @@
                             <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
                                 Retraits du mois
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="retraits-mois">{{ stats.retraits_mois|floatformat:2 }} F CFA</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="retraits-mois">{{ stats.retraits_mois }} retrait{{ stats.retraits_mois|pluralize }}</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-bank fa-2x text-gray-300"></i>
@@ -62,7 +62,7 @@
                             <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
                                 Cautions en cours
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="cautions-cours">{{ stats.cautions_cours|floatformat:2 }} F CFA</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="cautions-cours">{{ stats.cautions_cours }} caution{{ stats.cautions_cours|pluralize }}</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-shield-alt fa-2x text-gray-300"></i>

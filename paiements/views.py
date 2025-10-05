@@ -425,22 +425,18 @@ def liste_paiements(request):
         if date_fin:
             paiements = paiements.filter(date_paiement__lte=date_fin)
         
-        # Calcul des statistiques avec requêtes optimisées
+        # Calcul des statistiques avec requêtes optimisées (montant masqué pour sécurité)
         total_paiements = paiements.count()
-        montant_total = paiements.aggregate(
-            total=Sum('montant')
-        )['total'] or 0
+        # montant_total masqué pour sécurité
         
-        # Statistiques par statut
+        # Statistiques par statut (montants masqués pour sécurité)
         stats_par_statut = paiements.values('statut').annotate(
-            count=Count('id'),
-            montant_total=Sum('montant')
+            count=Count('id')
         ).order_by('statut')
         
-        # Statistiques par type
+        # Statistiques par type (montants masqués pour sécurité)
         stats_par_type = paiements.values('type_paiement').annotate(
-            count=Count('id'),
-            montant_total=Sum('montant')
+            count=Count('id')
         ).order_by('type_paiement')
         
         # Pagination
@@ -462,7 +458,6 @@ def liste_paiements(request):
             'title': 'Liste des Paiements',
             'statistiques': {
                 'total_paiements': total_paiements,
-                'montant_total': montant_total,
                 'stats_par_statut': stats_par_statut,
                 'stats_par_type': stats_par_type,
             },

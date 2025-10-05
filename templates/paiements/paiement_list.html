@@ -114,14 +114,14 @@
         </div>
     </div>
 
-    <!-- Montant total -->
+    <!-- Statistiques sécurisées -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card bg-info text-white">
                 <div class="card-body text-center">
                     <h3 class="mb-0">
-                        <i class="bi bi-currency-exchange me-2"></i>
-                        Montant Total: {{ montant_total|floatformat:2 }} F CFA
+                        <i class="bi bi-list-check me-2"></i>
+                        Total: {{ total_paiements }} paiement{{ total_paiements|pluralize }}
                     </h3>
                 </div>
             </div>
