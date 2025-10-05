@@ -1080,6 +1080,16 @@ class Paiement(models.Model):
             })
         
         return donnees_speciales
+    
+    def get_statut_display_color(self):
+        """Retourne la couleur CSS pour le statut du paiement."""
+        colors = {
+            'en_attente': '#ffc107',  # Jaune
+            'valide': '#28a745',      # Vert
+            'refuse': '#dc3545',      # Rouge
+            'annule': '#6c757d',      # Gris
+        }
+        return colors.get(self.statut, '#6c757d')
 
 
 # =============================================================================
