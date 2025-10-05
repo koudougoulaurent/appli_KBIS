@@ -9,8 +9,6 @@ from django.urls import reverse
 from django.utils.html import format_html
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from .pdf_cache import PDFRegenerationService, PDFCacheManager
-from .signals import force_regenerate_all_documents
 import threading
 
 def regenerate_all_pdfs(modeladmin, request, queryset):
@@ -19,6 +17,7 @@ def regenerate_all_pdfs(modeladmin, request, queryset):
     """
     def regenerate_in_background():
         try:
+            from .pdf_cache import PDFRegenerationService
             result = PDFRegenerationService.regenerate_all_documents()
             if result['success']:
                 print(f"✅ Régénération automatique terminée: {result['total_regenerated']} documents mis à jour")
@@ -43,6 +42,7 @@ def clear_pdf_cache(modeladmin, request, queryset):
     """
     Action pour vider le cache des PDF
     """
+    from .pdf_cache import PDFCacheManager
     PDFCacheManager.invalidate_all_pdf_cache()
     messages.success(request, "🗑️ Cache des PDF vidé avec succès.")
 
@@ -52,6 +52,7 @@ def show_cache_stats(modeladmin, request, queryset):
     """
     Action pour afficher les statistiques du cache
     """
+    from .pdf_cache import PDFCacheManager
     stats = PDFCacheManager.get_cache_stats()
     messages.info(
         request,
@@ -65,6 +66,7 @@ def force_regenerate_now(modeladmin, request, queryset):
     Action pour forcer la régénération immédiate
     """
     try:
+        from .signals import force_regenerate_all_documents
         result = force_regenerate_all_documents()
         if result['success']:
             messages.success(
