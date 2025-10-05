@@ -2014,7 +2014,7 @@ def tableau_bord_list(request):
 def quittance_detail(request, pk):
     """Afficher le détail d'une quittance de paiement avec le même format que recu-kbis."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste')
@@ -2049,7 +2049,7 @@ def quittance_detail(request, pk):
 def quittance_list(request):
     """Liste des récépissés de paiement."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste')
@@ -2086,7 +2086,7 @@ def quittance_list(request):
 def marquer_quittance_imprimee(request, pk):
     """Marquer une quittance comme imprimée."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'modify')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'modify')
     if not permissions['allowed']:
         return JsonResponse({'success': False, 'message': permissions['message']}, status=403)
     
@@ -2116,7 +2116,7 @@ def marquer_quittance_imprimee(request, pk):
 def marquer_quittance_envoyee(request, pk):
     """Marquer une quittance comme envoyée."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'modify')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'modify')
     if not permissions['allowed']:
         return JsonResponse({'success': False, 'message': permissions['message']}, status=403)
     
@@ -2148,7 +2148,7 @@ def marquer_quittance_envoyee(request, pk):
 def marquer_quittance_archivee(request, pk):
     """Marquer une quittance comme archivée."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'modify')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'modify')
     if not permissions['allowed']:
         return JsonResponse({'success': False, 'message': permissions['message']}, status=403)
     
@@ -2179,7 +2179,7 @@ def marquer_quittance_archivee(request, pk):
 def generer_quittance_manuelle(request, paiement_pk):
     """Générer manuellement une quittance pour un paiement existant."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'add')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'add')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:detail', pk=paiement_pk)

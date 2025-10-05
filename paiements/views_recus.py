@@ -27,7 +27,7 @@ def liste_recus_recapitulatifs(request):
     """Liste des reçus de récapitulatifs."""
     
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('core:dashboard')
@@ -91,7 +91,7 @@ def detail_recu_recapitulatif(request, pk):
     """Détail d'un reçu de récapitulatif."""
     
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste_recus_recapitulatifs')
@@ -116,7 +116,7 @@ def creer_recu_recapitulatif(request, recapitulatif_id):
     """Créer un reçu pour un récapitulatif."""
     
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'add')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'add')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste_recus_recapitulatifs')
@@ -167,7 +167,7 @@ def imprimer_recu_recapitulatif(request, pk):
     """Imprimer un reçu de récapitulatif en PDF."""
     
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste_recus_recapitulatifs')
@@ -261,7 +261,7 @@ def imprimer_recu_recapitulatif_gestimmob(request, pk):
     """Imprimer un reçu de récapitulatif avec le template GESTIMMOB."""
     
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste_recus_recapitulatifs')
@@ -374,7 +374,7 @@ def apercu_recu_recapitulatif_gestimmob(request, pk):
     """Aperçu du reçu de récapitulatif avec le template GESTIMMOB."""
     
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste_recus_recapitulatifs')
@@ -425,7 +425,7 @@ def creer_recu_gestimmob_recapitulatif(request, recapitulatif_id):
     """Créer un reçu GESTIMMOB pour un récapitulatif."""
     
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'add')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'add')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste_recus_recapitulatifs')
@@ -452,7 +452,7 @@ def apercu_recu_recapitulatif(request, pk):
     """Aperçu d'un reçu de récapitulatif."""
     
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste_recus_recapitulatifs')
@@ -479,7 +479,7 @@ def marquer_recu_envoye(request, pk):
     """Marquer un reçu comme envoyé."""
     
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'change')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'change')
     if not permissions['allowed']:
         return JsonResponse({'success': False, 'message': permissions['message']})
     
@@ -507,7 +507,7 @@ def valider_recu_recapitulatif(request, pk):
     """Valider un reçu de récapitulatif."""
     
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'change')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'change')
     if not permissions['allowed']:
         return JsonResponse({'success': False, 'message': permissions['message']})
     
@@ -534,7 +534,7 @@ def statistiques_recus_recapitulatifs(request):
     """Statistiques des reçus de récapitulatifs."""
     
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('core:dashboard')

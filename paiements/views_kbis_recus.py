@@ -15,7 +15,7 @@ from .models import Paiement, RetraitBailleur
 def generer_recu_kbis_dynamique(request, paiement_pk):
     """Génère un récépissé avec le nouveau système KBIS IMMOBILIER dynamique."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'add')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'add')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:detail', pk=paiement_pk)

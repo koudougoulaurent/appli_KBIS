@@ -30,7 +30,7 @@ def liste_recapitulatifs(request):
     
     # Vérification des permissions avec fallback pour PRIVILEGE
     from core.utils import check_group_permissions_with_fallback
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -127,7 +127,7 @@ def detail_recapitulatif(request, recapitulatif_id):
     
     # Vérification des permissions avec fallback pour PRIVILEGE
     from core.utils import check_group_permissions_with_fallback
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -161,7 +161,7 @@ def generer_recapitulatif_kbis(request, recapitulatif_id):
     
     # Vérification des permissions
     from core.utils import check_group_permissions_with_fallback
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -427,7 +427,7 @@ def valider_recapitulatif(request, recapitulatif_id):
     
     # Vérification des permissions avec fallback pour PRIVILEGE
     from core.utils import check_group_permissions_with_fallback
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -472,7 +472,7 @@ def envoyer_recapitulatif(request, recapitulatif_id):
     
     # Vérification des permissions avec fallback pour PRIVILEGE
     from core.utils import check_group_permissions_with_fallback
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -517,7 +517,7 @@ def marquer_paye_recapitulatif(request, recapitulatif_id):
     
     # Vérification des permissions avec fallback pour PRIVILEGE
     from core.utils import check_group_permissions_with_fallback
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -562,7 +562,7 @@ def telecharger_pdf_recapitulatif(request, recapitulatif_id):
     
     # Vérification des permissions avec fallback pour PRIVILEGE
     from core.utils import check_group_permissions_with_fallback
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -596,7 +596,7 @@ def apercu_recapitulatif(request, recapitulatif_id):
     
     # Vérification des permissions avec fallback pour PRIVILEGE
     from core.utils import check_group_permissions_with_fallback
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -628,7 +628,7 @@ def statistiques_recapitulatifs(request):
     
     # Vérification des permissions avec fallback pour PRIVILEGE
     from core.utils import check_group_permissions_with_fallback
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -722,7 +722,7 @@ def generer_recapitulatif_automatique(request):
     
     # Vérification des permissions avec fallback pour PRIVILEGE
     from core.utils import check_group_permissions_with_fallback
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
