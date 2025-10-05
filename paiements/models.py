@@ -102,7 +102,7 @@ class RecapMensuel(models.Model):
         from decimal import Decimal
         from django.db.models import Sum, Q
         from proprietes.models import ChargesBailleur
-        from datetime import datetime
+        from datetime import datetime, timedelta
         
         try:
             # Initialiser les totaux
@@ -118,51 +118,75 @@ class RecapMensuel(models.Model):
             nombre_proprietes = proprietes.count()
             
             # Calculer les loyers bruts pour le mois - basé sur les contrats actifs
+            # Calculer les dates de début et fin du mois
+            mois_debut = self.mois_recap.replace(day=1)
+            if self.mois_recap.month == 12:
+                mois_fin = self.mois_recap.replace(year=self.mois_recap.year + 1, month=1, day=1) - timedelta(days=1)
+            else:
+                mois_fin = self.mois_recap.replace(month=self.mois_recap.month + 1, day=1) - timedelta(days=1)
+            
             for propriete in proprietes:
                 # Récupérer les contrats actifs pour cette propriété au moment du récapitulatif
                 contrats_actifs = propriete.contrats.filter(
                     est_actif=True,
-                    date_debut__lte=self.mois_recap
+                    est_resilie=False,
+                    date_debut__lte=mois_fin
                 ).filter(
-                    models.Q(date_fin__gte=self.mois_recap) | models.Q(date_fin__isnull=True)
+                    models.Q(date_fin__gte=mois_debut) | models.Q(date_fin__isnull=True)
                 )
                 
                 for contrat in contrats_actifs:
                     nombre_contrats_actifs += 1
-                    # Loyer mensuel
-                    loyer_mensuel = contrat.loyer_mensuel or Decimal('0')
+                    # Loyer mensuel - conversion sécurisée
+                    loyer_mensuel = contrat.loyer_mensuel
+                    if loyer_mensuel is None:
+                        loyer_mensuel = Decimal('0')
+                    elif isinstance(loyer_mensuel, str):
+                        try:
+                            loyer_mensuel = Decimal(str(loyer_mensuel))
+                        except:
+                            loyer_mensuel = Decimal('0')
+                    else:
+                        loyer_mensuel = Decimal(str(loyer_mensuel))
                     total_loyers += loyer_mensuel
                     
-                    # Charges déductibles du contrat
-                    charges_mensuelles = contrat.charges_mensuelles or Decimal('0')
+                    # Charges déductibles du contrat - conversion sécurisée
+                    charges_mensuelles = contrat.charges_mensuelles
+                    if charges_mensuelles is None:
+                        charges_mensuelles = Decimal('0')
+                    elif isinstance(charges_mensuelles, str):
+                        try:
+                            charges_mensuelles = Decimal(str(charges_mensuelles))
+                        except:
+                            charges_mensuelles = Decimal('0')
+                    else:
+                        charges_mensuelles = Decimal(str(charges_mensuelles))
                     total_charges_deductibles += charges_mensuelles
             
             # NOUVEAU : Calculer les paiements réels reçus pour ce mois
             # Utiliser une requête directe pour éviter les imports circulaires
             from django.db import connection
             
-            with connection.cursor() as cursor:
-                cursor.execute("""
-                    SELECT COUNT(*), COALESCE(SUM(montant), 0)
-                    FROM paiements_paiement p
-                    JOIN contrats_contrat c ON p.contrat_id = c.id
-                    JOIN proprietes_propriete pr ON c.propriete_id = pr.id
-                    WHERE pr.bailleur_id = %s
-                    AND EXTRACT(YEAR FROM p.date_paiement) = %s
-                    AND EXTRACT(MONTH FROM p.date_paiement) = %s
-                    AND p.statut IN ('valide', 'encaisse')
-                """, [self.bailleur.id, self.mois_recap.year, self.mois_recap.month])
-                
-                result = cursor.fetchone()
-                nombre_paiements_recus = result[0] if result else 0
-                total_paiements_reels = Decimal(str(result[1])) if result and result[1] else Decimal('0')
+            # Calculer les paiements réels reçus pour ce mois
+            paiements_mois = Paiement.objects.filter(
+                contrat__propriete__bailleur=self.bailleur,
+                date_paiement__year=self.mois_recap.year,
+                date_paiement__month=self.mois_recap.month,
+                statut='confirme'
+            )
+            
+            nombre_paiements_recus = paiements_mois.count()
+            total_paiements_reels = sum(p.montant for p in paiements_mois) if paiements_mois.exists() else Decimal('0')
             
             # Si des paiements réels existent, les utiliser pour les totaux
             if nombre_paiements_recus > 0 and total_paiements_reels > total_loyers:
                 total_loyers = total_paiements_reels
                 
                 # Lier automatiquement les paiements au récapitulatif
-                self.lier_paiements_automatiquement()
+                try:
+                    self.lier_paiements_automatiquement()
+                except:
+                    pass  # Ignorer les erreurs de liaison
             
             # Calculer les charges bailleur pour le mois
             charges_bailleur_mois = ChargesBailleur.objects.filter(
@@ -252,6 +276,166 @@ class RecapMensuel(models.Model):
                     SELECT %s, unnest(%s::int[])
                     ON CONFLICT DO NOTHING
                 """, [self.id, paiement_ids])
+
+    def generer_pdf_recapitulatif(self):
+        """Génère le PDF du récapitulatif mensuel."""
+        from django.template.loader import render_to_string
+        from django.utils import timezone
+        from io import BytesIO
+        from datetime import timedelta
+        
+        try:
+            # Essayer d'utiliser xhtml2pdf si disponible
+            from xhtml2pdf import pisa
+            
+            # Récupérer les totaux globaux
+            totaux = self.calculer_totaux_globaux()
+            
+            # Récupérer les détails des propriétés et contrats
+            proprietes_details = self.get_proprietes_details()
+            
+            # Charger l'image en Base64
+            import base64
+            import os
+            image_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'images', 'enteteEnImage.png')
+            entete_base64 = ""
+            try:
+                with open(image_path, "rb") as image_file:
+                    entete_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+            except:
+                # Si l'image n'est pas trouvée, utiliser une chaîne vide
+                entete_base64 = ""
+            
+            # Rendre le template HTML
+            html_content = render_to_string(
+                'paiements/recapitulatifs/recapitulatif_mensuel_pdf.html',
+                {
+                    'recapitulatif': self,
+                    'totaux': totaux,
+                    'proprietes_details': proprietes_details,
+                    'date_generation': timezone.now(),
+                    'entete_base64': entete_base64,
+                }
+            )
+            
+            # Créer le PDF avec xhtml2pdf
+            pdf_buffer = BytesIO()
+            pisa_status = pisa.CreatePDF(html_content, dest=pdf_buffer)
+            
+            if pisa_status.err:
+                raise Exception(f"Erreur lors de la génération du PDF: {pisa_status.err}")
+            
+            pdf_content = pdf_buffer.getvalue()
+            pdf_buffer.close()
+            
+            return pdf_content
+            
+        except ImportError:
+            # Fallback si xhtml2pdf n'est pas disponible
+            from django.http import HttpResponse
+            from django.template.loader import render_to_string
+            
+            # Récupérer les totaux globaux
+            totaux = self.calculer_totaux_globaux()
+            
+            # Récupérer les détails des propriétés et contrats
+            proprietes_details = self.get_proprietes_details()
+            
+            # Rendre le template HTML simple
+            html_content = render_to_string(
+                'paiements/recapitulatifs/recapitulatif_mensuel_simple.html',
+                {
+                    'recapitulatif': self,
+                    'totaux': totaux,
+                    'proprietes_details': proprietes_details,
+                    'date_generation': timezone.now(),
+                }
+            )
+            
+            # Retourner le HTML comme fallback
+            return html_content.encode('utf-8')
+
+    def calculer_totaux_globaux(self):
+        """Calcule les totaux globaux pour l'affichage."""
+        return {
+            'total_loyers_bruts': self.total_loyers_bruts,
+            'total_charges_deductibles': self.total_charges_deductibles,
+            'total_charges_bailleur': self.total_charges_bailleur or 0,
+            'total_net_a_payer': self.total_net_a_payer,
+            'nombre_proprietes': self.nombre_proprietes,
+            'nombre_contrats_actifs': self.nombre_contrats_actifs,
+            'nombre_paiements_recus': self.nombre_paiements_recus,
+        }
+
+    def get_nom_fichier_pdf(self):
+        """Génère le nom du fichier PDF du récapitulatif."""
+        return f"recapitulatif_{self.mois_recap.strftime('%Y_%m')}_{self.bailleur.get_nom_complet().replace(' ', '_')}.pdf"
+
+    def get_proprietes_details(self):
+        """Récupère les détails des propriétés, contrats et locataires pour le PDF."""
+        from datetime import timedelta
+        from decimal import Decimal
+        
+        proprietes_details = []
+        
+        # Calculer les dates de début et fin du mois
+        mois_debut = self.mois_recap.replace(day=1)
+        if self.mois_recap.month == 12:
+            mois_fin = self.mois_recap.replace(year=self.mois_recap.year + 1, month=1, day=1) - timedelta(days=1)
+        else:
+            mois_fin = self.mois_recap.replace(month=self.mois_recap.month + 1, day=1) - timedelta(days=1)
+        
+        # Récupérer les propriétés du bailleur
+        proprietes = self.bailleur.proprietes.filter(is_deleted=False)
+        
+        for propriete in proprietes:
+            # Récupérer les contrats actifs pour cette propriété au moment du récapitulatif
+            contrats_actifs = propriete.contrats.filter(
+                est_actif=True,
+                est_resilie=False,
+                date_debut__lte=mois_fin
+            ).filter(
+                models.Q(date_fin__gte=mois_debut) | models.Q(date_fin__isnull=True)
+            )
+            
+            for contrat in contrats_actifs:
+                # Conversion sécurisée des montants
+                loyer_mensuel = contrat.loyer_mensuel
+                if loyer_mensuel is None:
+                    loyer_mensuel = Decimal('0')
+                elif isinstance(loyer_mensuel, str):
+                    try:
+                        loyer_mensuel = Decimal(str(loyer_mensuel))
+                    except:
+                        loyer_mensuel = Decimal('0')
+                else:
+                    loyer_mensuel = Decimal(str(loyer_mensuel))
+                
+                charges_mensuelles = contrat.charges_mensuelles
+                if charges_mensuelles is None:
+                    charges_mensuelles = Decimal('0')
+                elif isinstance(charges_mensuelles, str):
+                    try:
+                        charges_mensuelles = Decimal(str(charges_mensuelles))
+                    except:
+                        charges_mensuelles = Decimal('0')
+                else:
+                    charges_mensuelles = Decimal(str(charges_mensuelles))
+                
+                # Calculer le net à payer
+                net_a_payer = loyer_mensuel - charges_mensuelles
+                
+                proprietes_details.append({
+                    'propriete': propriete,
+                    'contrat': contrat,
+                    'locataire': contrat.locataire,
+                    'loyer_mensuel': loyer_mensuel,
+                    'charges_deductibles': charges_mensuelles,
+                    'net_a_payer': net_a_payer,
+                    'adresse_complete': f"{propriete.adresse}, {propriete.ville}" if propriete.ville else propriete.adresse,
+                })
+        
+        return proprietes_details
 
 
 class ChargeDeductible(models.Model):

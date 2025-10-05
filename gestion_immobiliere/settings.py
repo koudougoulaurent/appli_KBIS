@@ -8,15 +8,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-test-key-for-local-development-only'
 DEBUG = True
-# Forcer DEBUG = True même si une variable d'environnement le définit autrement
-if os.environ.get('DEBUG') == 'False':
-    DEBUG = True
-
-# Forcer DEBUG = True pour le développement
-DEBUG = True
-# Forcer DEBUG = True même si une variable d'environnement le définit autrement
-if os.environ.get('DEBUG') == 'False':
-    DEBUG = True
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'appli-kbis.onrender.com', '.onrender.com', '*']
 ROOT_URLCONF = 'gestion_immobiliere.urls'
 

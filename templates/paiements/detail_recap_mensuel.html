@@ -28,6 +28,11 @@
             <i class="bi bi-cash-coin"></i> Payer le Bailleur
         </button>
         {% endif %}
+        {% if user.is_superuser or 'PRIVILEGE' in user.groups.values_list:'name' %}
+        <a href="{% url 'paiements:supprimer_recap_mensuel' recap_id=recap.id %}" class="btn btn-danger">
+            <i class="bi bi-trash"></i> Supprimer
+        </a>
+        {% endif %}
     </div>
 </div>
 
@@ -36,7 +41,7 @@
     <div class="card-header bg-primary text-white">
         <h5 class="card-title mb-0">
             <i class="bi bi-info-circle"></i>
-            Récapitulatif Mensuel - {{ recap.bailleur.get_nom_complet }}
+            Récapitulatif Mensuel - {{ recap.bailleur.get_nom_complet|default:recap.bailleur.nom|default:recap.bailleur.username }}
         </h5>
     </div>
     <div class="card-body">

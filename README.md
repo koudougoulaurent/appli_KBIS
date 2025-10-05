@@ -101,27 +101,38 @@ L'interface d'administration est accessible à l'adresse http://127.0.0.1:8000/a
 - `templates/` - Templates HTML
 - `utilisateurs/` - Gestion des utilisateurs et des groupes
 
-## Améliorations récentes
+## 🚀 Fonctionnalités principales
 
-### Design et présentation
-- Simplification du design avec réduction des dégradés
+### 📊 Système de récapitulatifs mensuels (NOUVEAU)
+- **Génération automatique** de rapports financiers mensuels
+- **PDF professionnels** avec en-tête personnalisé et pied de page dynamique
+- **Calculs précis** des loyers, charges et paiements
+- **Gestion des permissions** (superusers et groupe PRIVILEGE)
+- **Suppression logique** des récapitulatifs
+- **Interface intuitive** pour la création et consultation
+
+### 🏠 Gestion immobilière complète
+- Gestion des propriétés, bailleurs et locataires
+- Contrats de location avec suivi des paiements
+- Système de notifications intégré
+- Rapports financiers détaillés
+
+### 🎨 Design et présentation
+- Interface moderne et responsive
 - Palette de couleurs unifiée avec de meilleurs contrastes
 - Système de design complet avec variables CSS
+- En-têtes et pieds de page personnalisables
 
-### Performance
-- Réduction des animations non essentielles
-- Fichier CSS minifié pour de meilleurs performances
-- Optimisation des fichiers statiques
+### 🔒 Sécurité et permissions
+- Système de groupes d'utilisateurs (PRIVILEGE, CAISSE, ADMINISTRATION)
+- Contrôle d'accès granulaire
+- Suppression logique des données sensibles
+- Validation robuste des données
 
-### Accessibilité
-- Amélioration des contrastes pour respecter les normes WCAG
-- Ajout d'attributs ARIA dans les templates
-- Navigation clavier améliorée
+## 📚 Documentation
 
-### Expérience utilisateur
-- Indicateur de chargement global
-- Messages de feedback améliorés
-- Navigation simplifiée
+- **[Documentation des récapitulatifs](DOCUMENTATION_RECAPITULATIFS.md)** - Guide complet du système de récapitulatifs
+- **[Guide d'installation](README-INSTALLATION.md)** - Instructions détaillées d'installation
 
 ## Dépannage
 

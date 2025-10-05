@@ -2849,6 +2849,89 @@ def generer_pdf_recaps_lot(request):
     })
 
 @login_required
+def supprimer_recap_mensuel(request, recap_id):
+    """Supprime un récapitulatif mensuel (suppression logique)."""
+    try:
+        recap = get_object_or_404(RecapMensuel, id=recap_id, is_deleted=False)
+        
+        # Vérifier les permissions - Seuls les superusers et le groupe PRIVILEGE peuvent supprimer
+        if not (request.user.is_superuser or request.user.groups.filter(name='PRIVILEGE').exists()):
+            messages.error(request, "Vous n'avez pas les permissions pour supprimer un récapitulatif.")
+            return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
+        
+        if request.method == 'POST':
+            # Effectuer la suppression logique
+            recap.is_deleted = True
+            recap.deleted_at = timezone.now()
+            recap.deleted_by = request.user
+            recap.save()
+            
+            messages.success(request, f"Le récapitulatif de {recap.bailleur.get_nom_complet()} pour {recap.mois_recap.strftime('%B %Y')} a été supprimé avec succès.")
+            return redirect('paiements:liste_recaps_mensuels_auto')
+        
+        # Afficher la page de confirmation
+        context = get_context_with_entreprise_config({
+            'recap': recap,
+            'page_title': 'Confirmer la suppression',
+            'title': f'Supprimer le récapitulatif - {recap.bailleur.get_nom_complet()}',
+        })
+        
+        return render(request, 'paiements/confirmer_suppression_recap.html', context)
+        
+    except Exception as e:
+        messages.error(request, f"Erreur lors de la suppression du récapitulatif: {str(e)}")
+        return redirect('paiements:liste_recaps_mensuels_auto')
+
+@login_required
+def restaurer_recap_mensuel(request, recap_id):
+    """Restaure un récapitulatif mensuel supprimé."""
+    try:
+        recap = get_object_or_404(RecapMensuel, id=recap_id, is_deleted=True)
+        
+        # Vérifier les permissions - Seuls les superusers et le groupe PRIVILEGE peuvent restaurer
+        if not (request.user.is_superuser or request.user.groups.filter(name='PRIVILEGE').exists()):
+            messages.error(request, "Vous n'avez pas les permissions pour restaurer un récapitulatif.")
+            return redirect('paiements:liste_recaps_mensuels_auto')
+        
+        # Restaurer le récapitulatif
+        recap.is_deleted = False
+        recap.deleted_at = None
+        recap.deleted_by = None
+        recap.save()
+        
+        messages.success(request, f"Le récapitulatif de {recap.bailleur.get_nom_complet()} pour {recap.mois_recap.strftime('%B %Y')} a été restauré avec succès.")
+        return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
+        
+    except Exception as e:
+        messages.error(request, f"Erreur lors de la restauration du récapitulatif: {str(e)}")
+        return redirect('paiements:liste_recaps_mensuels_auto')
+
+@login_required
+def liste_recaps_supprimes(request):
+    """Liste les récapitulatifs supprimés (superuser et PRIVILEGE uniquement)."""
+    # Vérifier les permissions
+    if not (request.user.is_superuser or request.user.groups.filter(name='PRIVILEGE').exists()):
+        messages.error(request, "Vous n'avez pas les permissions pour voir les récapitulatifs supprimés.")
+        return redirect('paiements:liste_recaps_mensuels_auto')
+    
+    # Récupérer les récapitulatifs supprimés
+    recaps_supprimes = RecapMensuel.objects.filter(is_deleted=True).order_by('-deleted_at')
+    
+    # Pagination
+    paginator = Paginator(recaps_supprimes, 20)
+    page_number = request.GET.get('page')
+    recaps = paginator.get_page(page_number)
+    
+    context = get_context_with_entreprise_config({
+        'recaps': recaps,
+        'page_title': 'Récapitulatifs Supprimés',
+        'title': 'Récapitulatifs Supprimés',
+        'total_supprimes': recaps_supprimes.count(),
+    })
+    
+    return render(request, 'paiements/recaps_supprimes.html', context)
+
+@login_required
 def apercu_pdf_recap_mensuel(request, recap_id):
     """Affiche un aperçu HTML du récapitulatif mensuel."""
     try:

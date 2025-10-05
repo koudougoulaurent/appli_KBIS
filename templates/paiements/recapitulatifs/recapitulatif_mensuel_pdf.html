@@ -15,22 +15,50 @@
             font-size: 12px;
             line-height: 1.4;
             color: #333;
+            margin: 0;
+            padding: 0;
         }
         
         .header {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .header img {
+            max-width: 100%;
+            height: auto;
+            max-height: 120px;
+        }
+        
+        .footer {
+            width: 100%;
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+            margin-top: 20px;
+        }
+        
+        .main-content {
+            margin-top: 20px;
+        }
+        
+        .document-title {
             text-align: center;
             margin-bottom: 30px;
             border-bottom: 2px solid #007bff;
             padding-bottom: 20px;
         }
         
-        .header h1 {
+        .document-title h1 {
             color: #007bff;
             font-size: 24px;
             margin: 0;
         }
         
-        .header h2 {
+        .document-title h2 {
             color: #666;
             font-size: 18px;
             margin: 10px 0 0 0;
@@ -158,11 +186,17 @@
     </style>
 </head>
 <body>
-    <!-- En-tête -->
+    <!-- En-tête statique avec image Base64 -->
     <div class="header">
-        <h1>RÉCAPITULATIF MENSUEL</h1>
-        <h2>{{ recapitulatif.get_type_recapitulatif_display }} - {{ recapitulatif.mois_recapitulatif|date:"F Y" }}</h2>
+        <img src="data:image/png;base64,{{ entete_base64 }}" alt="En-tête KBIS" />
     </div>
+    
+    <!-- Contenu principal -->
+    <div class="main-content">
+        <div class="document-title">
+            <h1>RÉCAPITULATIF MENSUEL</h1>
+            <h2>{{ recapitulatif.bailleur.get_nom_complet|default:recapitulatif.bailleur.nom }} - {{ recapitulatif.mois_recap|date:"F Y" }}</h2>
+        </div>
     
     <!-- Informations du bailleur -->
     <div class="info-section">
@@ -170,7 +204,7 @@
         <div class="info-grid">
             <div class="info-row">
                 <div class="info-label">Nom complet :</div>
-                <div class="info-value">{{ recapitulatif.bailleur.nom }} {{ recapitulatif.bailleur.prenom }}</div>
+                <div class="info-value">{{ recapitulatif.bailleur.get_nom_complet|default:recapitulatif.bailleur.nom }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Numéro bailleur :</div>
@@ -197,11 +231,7 @@
         <div class="info-grid">
             <div class="info-row">
                 <div class="info-label">Mois de référence :</div>
-                <div class="info-value">{{ recapitulatif.mois_recapitulatif|date:"F Y" }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Type :</div>
-                <div class="info-value">{{ recapitulatif.get_type_recapitulatif_display }}</div>
+                <div class="info-value">{{ recapitulatif.mois_recap|date:"F Y" }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Statut :</div>
@@ -239,22 +269,28 @@
                 </tr>
             </thead>
             <tbody>
-                {% for detail in totaux.details_proprietes %}
-                <tr>
-                    <td>{{ detail.propriete.titre }}</td>
-                    <td>{{ detail.propriete.adresse }}</td>
-                    <td>
-                        {% if detail.locataire %}
-                            {{ detail.locataire.nom }} {{ detail.locataire.prenom }}
-                        {% else %}
-                            Non défini
-                        {% endif %}
-                    </td>
-                    <td class="text-right">{{ detail.loyer_mensuel|floatformat:0 }} F CFA</td>
-                    <td class="text-right">{{ detail.get_total_charges_bailleur|floatformat:0 }} F CFA</td>
-                    <td class="text-right">{{ detail.montant_net_a_payer|floatformat:0 }} F CFA</td>
-                </tr>
-                {% endfor %}
+                {% if proprietes_details %}
+                    {% for detail in proprietes_details %}
+                    <tr>
+                        <td>{{ detail.propriete.titre|default:"N/A" }}</td>
+                        <td>{{ detail.adresse_complete }}</td>
+                        <td>
+                            {% if detail.locataire %}
+                                {{ detail.locataire.get_nom_complet|default:detail.locataire.nom|default:"N/A" }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td class="text-right">{{ detail.loyer_mensuel|floatformat:0 }} F CFA</td>
+                        <td class="text-right">{{ detail.charges_deductibles|floatformat:0 }} F CFA</td>
+                        <td class="text-right">{{ detail.net_a_payer|floatformat:0 }} F CFA</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center">Aucune propriété active trouvée pour ce mois</td>
+                    </tr>
+                {% endif %}
             </tbody>
         </table>
     </div>
@@ -284,13 +320,13 @@
     </div>
     {% endif %}
     
-    <!-- Pied de page -->
-    <div class="footer">
-        <p>Document généré le {{ date_generation|date:"d/m/Y à H:i" }}</p>
-        <p>Récapitulatif ID: {{ recapitulatif.id }} | Version: {{ recapitulatif.version }}</p>
-        {% if recapitulatif.hash_securite %}
-        <p>Hash de sécurité: {{ recapitulatif.hash_securite }}</p>
-        {% endif %}
+        <!-- Pied de page dynamique depuis CONFIGURATION ENTREPRISE -->
+        <div class="footer">
+            <p><strong>{{ entreprise_config.nom_entreprise|default:"KBIS IMMOBILIER" }}</strong> - {{ entreprise_config.adresse|default:"pissy 10050 ouagadougou Burkina Faso" }}{% if entreprise_config.ville %}, {{ entreprise_config.ville }}{% endif %}{% if entreprise_config.code_postal %}, {{ entreprise_config.code_postal }}{% endif %}</p>
+            <p>Tél: {{ entreprise_config.telephone|default:"+226 70 20 54 91" }}{% if entreprise_config.telephone_2 %} | Tél 2: {{ entreprise_config.telephone_2 }}{% endif %} | Email: {{ entreprise_config.email|default:"kbissarl2022@gmail.com" }}</p>
+            {% if entreprise_config.site_web %}<p>Web: {{ entreprise_config.site_web }}</p>{% endif %}
+            <p>{% if entreprise_config.rccm %}RCCM: {{ entreprise_config.rccm }}{% endif %}{% if entreprise_config.ifu %} | IFU: {{ entreprise_config.ifu }}{% endif %}</p>
+        </div>
     </div>
 </body>
 </html>

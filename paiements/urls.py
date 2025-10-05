@@ -188,6 +188,13 @@ urlpatterns = [
     path('recaps-mensuels-automatiques/<int:recap_id>/pdf/', views.generer_pdf_recap_mensuel, name='generer_pdf_recap_mensuel'),
     path('recaps-mensuels-automatiques/<int:recap_id>/apercu/', views.apercu_pdf_recap_mensuel, name='apercu_pdf_recap_mensuel'),
     path('recaps-mensuels-automatiques/pdf-lot/', views.generer_pdf_recaps_lot, name='generer_pdf_recaps_lot'),
+    
+    # URLs pour la suppression des récapitulatifs (superuser et PRIVILEGE uniquement)
+    path('recaps-mensuels-automatiques/<int:recap_id>/supprimer/', views.supprimer_recap_mensuel, name='supprimer_recap_mensuel'),
+    path('recaps-mensuels-automatiques/<int:recap_id>/restaurer/', views.restaurer_recap_mensuel, name='restaurer_recap_mensuel'),
+    path('recaps-mensuels-automatiques/supprimes/', views.liste_recaps_supprimes, name='liste_recaps_supprimes'),
+    
+    
 
     # ✅ SYSTÈME DE VALIDATION DES PAIEMENTS
     path('paiement/<int:pk>/valider/', views.valider_paiement, name='valider_paiement'),
