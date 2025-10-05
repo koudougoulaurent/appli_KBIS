@@ -24,7 +24,7 @@ class GroupeTravail(models.Model):
     description = models.TextField(blank=True)
     permissions = models.JSONField(default=dict, help_text="Permissions spécifiques au groupe")
     actif = models.BooleanField(default=True)
-    date_creation = models.DateTimeField(default=timezone.now)
+    date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
     
     class Meta:
@@ -126,7 +126,7 @@ class Utilisateur(DuplicatePreventionMixin, AbstractUser):
     derniere_connexion = models.DateTimeField(null=True, blank=True)
     
     # Métadonnées
-    date_creation = models.DateTimeField(default=timezone.now)
+    date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
     
     # Suppression logique
