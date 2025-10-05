@@ -43,55 +43,34 @@ class AuditLogAdmin(admin.ModelAdmin):
 
 
 class ConfigurationEntrepriseAdminForm(forms.ModelForm):
-    """Formulaire personnalisé pour la configuration de l'entreprise avec validation du logo et de l'en-tête"""
+    """Formulaire personnalisé pour la configuration de l'entreprise avec validation du logo"""
     
     class Meta:
         model = ConfigurationEntreprise
         fields = '__all__'
         widgets = {
-            'entete_upload': forms.FileInput(attrs={
-                'class': 'form-control-file',
-                'accept': 'image/*',
-                'title': 'En-tête complet de votre entreprise (remplace le logo et le texte)'
-            }),
-            'logo_upload': forms.FileInput(attrs={
+            'logo': forms.FileInput(attrs={
                 'class': 'form-control-file',
                 'accept': 'image/*',
                 'title': 'Logo de votre entreprise'
             }),
         }
     
-    def clean_entete_upload(self):
-        """Valide l'en-tête uploadé"""
-        entete_file = self.files.get('entete_upload')
-        if entete_file:
-            # Validation spécifique pour l'en-tête (plus permissive)
-            if entete_file.size > 10 * 1024 * 1024:  # 10MB
-                raise ValidationError("L'en-tête ne doit pas dépasser 10MB")
+    def clean_logo(self):
+        """Valide le logo uploadé"""
+        logo_file = self.files.get('logo')
+        if logo_file:
+            # Validation simple pour le logo
+            if logo_file.size > 5 * 1024 * 1024:  # 5MB
+                raise ValidationError("Le logo ne doit pas dépasser 5MB")
             
             # Vérifier le type de fichier
             allowed_extensions = ['.png', '.jpg', '.jpeg']
             import os
-            file_extension = os.path.splitext(entete_file.name)[1].lower()
+            file_extension = os.path.splitext(logo_file.name)[1].lower()
             if file_extension not in allowed_extensions:
                 raise ValidationError(f"Format non supporté. Formats autorisés: {', '.join(allowed_extensions)}")
-        return entete_file
-    
-    def clean_logo_upload(self):
-        """Valide le logo uploadé"""
-        logo_file = self.files.get('logo_upload')
-        if logo_file:
-            validation = valider_logo_entreprise(logo_file)
-            if not validation['valid']:
-                raise ValidationError(validation['message'])
         return logo_file
-    
-    def clean_logo_url(self):
-        """Valide l'URL du logo externe"""
-        logo_url = self.cleaned_data.get('logo_url')
-        if logo_url and not logo_url.startswith(('http://', 'https://')):
-            raise ValidationError("L'URL doit commencer par http:// ou https://")
-        return logo_url
 
 
 @admin.register(ConfigurationEntreprise)
