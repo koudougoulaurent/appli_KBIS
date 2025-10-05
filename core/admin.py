@@ -110,36 +110,28 @@ class ConfigurationEntrepriseAdmin(admin.ModelAdmin):
         form = super().get_form(request, obj, **kwargs)
         return form
     list_filter = ['ville', 'pays']
-    search_fields = ['nom_entreprise', 'adresse', 'ville', 'email']
+    search_fields = ['nom_entreprise', 'adresse_ligne1', 'ville', 'email']
     
     fieldsets = (
         ('Informations de base', {
             'fields': ('nom_entreprise', 'slogan')
         }),
         ('Adresse', {
-            'fields': ('adresse', 'code_postal', 'ville', 'pays')
+            'fields': ('adresse_ligne1', 'adresse_ligne2', 'code_postal', 'ville', 'pays')
         }),
         ('Contact', {
-            'fields': ('telephone', 'email', 'site_web')
+            'fields': ('telephone', 'telephone_2', 'email', 'site_web')
         }),
         ('Identité visuelle', {
-            'fields': ('entete_upload', 'logo_upload', 'logo_url', 'couleur_principale', 'couleur_secondaire'),
-            'description': 'Configurez l\'identité visuelle de votre entreprise. L\'en-tête uploadé a la priorité absolue, puis le logo uploadé, puis l\'URL externe.'
+            'fields': ('logo', 'couleur_principale', 'couleur_secondaire'),
+            'description': 'Configurez l\'identité visuelle de votre entreprise.'
         }),
         ('Informations légales', {
-            'fields': ('siret', 'numero_licence', 'capital_social'),
+            'fields': ('rccm', 'ifu', 'numero_compte_contribuable'),
             'description': 'Ces informations apparaîtront sur vos documents'
         }),
-        ('Informations bancaires', {
-            'fields': ('iban', 'bic', 'banque'),
-            'description': 'Informations pour les paiements'
-        }),
-        ('Textes personnalisés', {
-            'fields': ('texte_contrat', 'texte_resiliation'),
-            'description': 'Textes personnalisés pour vos documents'
-        }),
         ('Métadonnées', {
-            'fields': ('date_creation', 'date_modification'),
+            'fields': ('active', 'date_creation', 'date_modification'),
             'classes': ('collapse',)
         })
     )
