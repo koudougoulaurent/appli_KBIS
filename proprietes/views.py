@@ -918,9 +918,12 @@ def supprimer_bailleur(request, pk):
             AuditLog.objects.create(
                 content_type=ContentType.objects.get_for_model(Bailleur),
                 object_id=bailleur.pk,
-                action='DELETE',
-                old_data=old_data,
-                new_data={'est_supprime': True, 'date_suppression': str(timezone.now())},
+                action='delete',
+                details={
+                    'old_data': old_data,
+                    'new_data': {'est_supprime': True, 'date_suppression': str(timezone.now())}
+                },
+                object_repr=str(bailleur),
                 user=request.user,
                 ip_address=request.META.get('REMOTE_ADDR'),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')
@@ -1570,9 +1573,12 @@ def supprimer_locataire(request, pk):
             AuditLog.objects.create(
                 content_type=ContentType.objects.get_for_model(Locataire),
                 object_id=locataire.pk,
-                action='DELETE',
-                old_data=old_data,
-                new_data={'est_supprime': True, 'date_suppression': str(timezone.now())},
+                action='delete',
+                details={
+                    'old_data': old_data,
+                    'new_data': {'est_supprime': True, 'date_suppression': str(timezone.now())}
+                },
+                object_repr=str(locataire),
                 user=request.user,
                 ip_address=request.META.get('REMOTE_ADDR'),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')
@@ -1591,9 +1597,12 @@ def supprimer_locataire(request, pk):
             AuditLog.objects.create(
                 content_type=ContentType.objects.get_for_model(Locataire),
                 object_id=locataire.pk,
-                action='DEACTIVATE',
-                old_data=old_data,
-                new_data={'statut': 'inactif'},
+                action='update',
+                details={
+                    'old_data': old_data,
+                    'new_data': {'statut': 'inactif'}
+                },
+                object_repr=str(locataire),
                 user=request.user,
                 ip_address=request.META.get('REMOTE_ADDR'),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')
@@ -1615,9 +1624,12 @@ def supprimer_locataire(request, pk):
                     AuditLog.objects.create(
                         content_type=ContentType.objects.get_for_model(Locataire),
                         object_id=locataire.pk,
-                        action='TRANSFER_CONTRACTS',
-                        old_data={'contrats_count': contrats_transferes.count()},
-                        new_data={'nouveau_locataire_id': nouveau_locataire_id},
+                        action='update',
+                        details={
+                            'old_data': {'contrats_count': contrats_transferes.count()},
+                            'new_data': {'nouveau_locataire_id': nouveau_locataire_id}
+                        },
+                        object_repr=str(locataire),
                         user=request.user,
                         ip_address=request.META.get('REMOTE_ADDR'),
                         user_agent=request.META.get('HTTP_USER_AGENT', '')
@@ -1677,9 +1689,12 @@ def corbeille_locataires(request):
                 AuditLog.objects.create(
                     content_type=ContentType.objects.get_for_model(Locataire),
                     object_id=locataire.pk,
-                    action='RESTORE',
-                    old_data={'est_supprime': True},
-                    new_data={'est_supprime': False},
+                    action='update',
+                    details={
+                        'old_data': {'est_supprime': True},
+                        'new_data': {'est_supprime': False}
+                    },
+                    object_repr=str(locataire),
                     user=request.user,
                     ip_address=request.META.get('REMOTE_ADDR'),
                     user_agent=request.META.get('HTTP_USER_AGENT', '')
@@ -1705,9 +1720,12 @@ def corbeille_locataires(request):
                 AuditLog.objects.create(
                     content_type=ContentType.objects.get_for_model(Locataire),
                     object_id=locataire.pk,
-                    action='PERMANENT_DELETE',
-                    old_data=old_data,
-                    new_data=None,
+                    action='delete',
+                    details={
+                        'old_data': old_data,
+                        'new_data': None
+                    },
+                    object_repr=str(locataire),
                     user=request.user,
                     ip_address=request.META.get('REMOTE_ADDR'),
                     user_agent=request.META.get('HTTP_USER_AGENT', '')

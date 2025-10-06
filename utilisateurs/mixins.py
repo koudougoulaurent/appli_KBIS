@@ -97,23 +97,24 @@ class PrivilegeButtonsMixin:
                     }
                 })
             
-            # Bouton Suppression Forcée/Urgente - TOUJOURS visible pour PRIVILEGE
-            actions.append({
-                'type': 'force_delete',
-                'url': self.get_force_delete_url(obj),
-                'icon': 'exclamation-triangle-fill',
-                'style': 'danger',
-                'title': 'Suppression Forcée/Urgente - Vérification des contrats actifs',
-                'class': 'btn-force-delete-privilege',
-                'data': {
-                    'object-id': obj.id,
-                    'object-name': str(obj),
-                    'model-name': obj._meta.model_name,
-                    'can-force-delete': str(contract_check['can_force_delete']).lower(),
-                    'contracts-count': contract_check['contracts_count'],
-                    'force-delete-message': contract_check['message']
-                }
-            })
+            # Bouton Suppression Forcée/Urgente - Seulement si nécessaire
+            if contract_check['contracts_count'] > 0 or not contract_check['can_force_delete']:
+                actions.append({
+                    'type': 'force_delete',
+                    'url': self.get_force_delete_url(obj),
+                    'icon': 'exclamation-triangle-fill',
+                    'style': 'danger',
+                    'title': 'Suppression Forcée/Urgente - Vérification des contrats actifs',
+                    'class': 'btn-force-delete-privilege',
+                    'data': {
+                        'object-id': obj.id,
+                        'object-name': str(obj),
+                        'model-name': obj._meta.model_name,
+                        'can-force-delete': str(contract_check['can_force_delete']).lower(),
+                        'contracts-count': contract_check['contracts_count'],
+                        'force-delete-message': contract_check['message']
+                    }
+                })
             
             privilege_actions[obj.id] = actions
         

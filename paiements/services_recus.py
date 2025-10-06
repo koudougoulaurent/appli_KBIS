@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.db.models import Q
 from django.contrib.auth import get_user_model
 
-from .models import RecuRecapitulatif, RecapitulatifMensuelBailleur
+from .models import RecuRecapitulatif, RecapMensuel
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -26,7 +26,7 @@ class ServiceGenerationRecus:
         Génère automatiquement un reçu pour un récapitulatif.
         
         Args:
-            recapitulatif: Instance de RecapitulatifMensuelBailleur
+            recapitulatif: Instance de RecapMensuel
             utilisateur: Utilisateur qui génère le reçu (optionnel)
         
         Returns:
@@ -64,7 +64,7 @@ class ServiceGenerationRecus:
         Génère automatiquement un reçu GESTIMMOB pour un récapitulatif.
         
         Args:
-            recapitulatif: Instance de RecapitulatifMensuelBailleur
+            recapitulatif: Instance de RecapMensuel
             utilisateur: Utilisateur qui génère le reçu (optionnel)
         
         Returns:
@@ -107,7 +107,7 @@ class ServiceGenerationRecus:
         Génère des reçus en lot pour plusieurs récapitulatifs.
         
         Args:
-            recapitulatifs: QuerySet ou liste de RecapitulatifMensuelBailleur
+            recapitulatifs: QuerySet ou liste de RecapMensuel
             utilisateur: Utilisateur qui génère les reçus (optionnel)
         
         Returns:
@@ -139,7 +139,7 @@ class ServiceGenerationRecus:
             list: Liste des reçus créés
         """
         # Récupérer tous les récapitulatifs du mois
-        recapitulatifs = RecapitulatifMensuelBailleur.objects.filter(
+        recapitulatifs = RecapMensuel.objects.filter(
             mois_recap=mois,
             statut__in=['valide', 'envoye']
         ).exclude(
@@ -160,7 +160,7 @@ class ServiceGenerationRecus:
             list: Liste des reçus créés
         """
         # Récupérer tous les récapitulatifs du bailleur sans reçu
-        recapitulatifs = RecapitulatifMensuelBailleur.objects.filter(
+        recapitulatifs = RecapMensuel.objects.filter(
             bailleur=bailleur,
             statut__in=['valide', 'envoye']
         ).exclude(
