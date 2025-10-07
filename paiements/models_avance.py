@@ -229,10 +229,17 @@ class AvanceLoyer(models.Model):
             if nombre_mois <= 0:
                 return "Aucun mois couvert"
             
-            # 2. Commencer au mois suivant la date d'avance
-            mois_debut = self.date_avance.replace(day=1) + relativedelta(months=1)
+            # 2. Trouver le dernier mois de paiement (dernière quittance de loyer)
+            dernier_mois_paiement = self._get_dernier_mois_paiement()
             
-            # 3. Générer la liste des mois couverts par l'avance
+            # 3. Commencer au mois suivant le dernier paiement
+            if dernier_mois_paiement:
+                mois_debut = dernier_mois_paiement + relativedelta(months=1)
+            else:
+                # Si pas de paiement précédent, commencer au mois suivant la date d'avance
+                mois_debut = self.date_avance.replace(day=1) + relativedelta(months=1)
+            
+            # 4. Générer la liste des mois couverts par l'avance
             mois_regles = []
             mois_courant = mois_debut
             
@@ -240,15 +247,16 @@ class AvanceLoyer(models.Model):
                 mois_regles.append(mois_courant.strftime('%B %Y'))
                 mois_courant = mois_courant + relativedelta(months=1)
             
-            # 4. Convertir les mois en français
+            # 5. Convertir les mois en français
             mois_regles_fr = [self._convertir_mois_francais(mois) for mois in mois_regles]
             
-            # 5. Retourner la liste formatée des mois couverts
+            # 6. Retourner la liste formatée des mois couverts
             return ', '.join(mois_regles_fr)
             
         except Exception as e:
             print(f"Erreur lors du calcul des mois couverts: {str(e)}")
             return f"{self.nombre_mois_couverts} mois couverts par l'avance"
+
 
     def _get_dernier_mois_paiement(self):
         """Récupère le dernier mois de paiement (dernière quittance)"""

@@ -36,10 +36,25 @@ class PaiementForm(forms.ModelForm):
         model = Paiement
         fields = [
             'contrat', 'montant', 'type_paiement', 'mode_paiement',
-            'date_paiement', 'numero_cheque', 'reference_virement', 'notes'
+            'date_paiement', 'mois_paye', 'numero_cheque', 'reference_virement', 'notes'
         ]
         widgets = {
             'date_paiement': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'mois_paye': forms.Select(attrs={'class': 'form-select'}, choices=[
+                ('', '-- Sélectionner un mois --'),
+                ('janvier', 'Janvier'),
+                ('février', 'Février'),
+                ('mars', 'Mars'),
+                ('avril', 'Avril'),
+                ('mai', 'Mai'),
+                ('juin', 'Juin'),
+                ('juillet', 'Juillet'),
+                ('août', 'Août'),
+                ('septembre', 'Septembre'),
+                ('octobre', 'Octobre'),
+                ('novembre', 'Novembre'),
+                ('décembre', 'Décembre'),
+            ]),
             'montant': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'type_paiement': forms.Select(attrs={'class': 'form-select'}),
             'mode_paiement': forms.Select(attrs={'class': 'form-select'}),
@@ -62,6 +77,7 @@ class PaiementForm(forms.ModelForm):
             'type_paiement': _('Type de paiement'),
             'mode_paiement': _('Mode de paiement'),
             'date_paiement': _('Date de paiement'),
+            'mois_paye': _('Mois payé'),
             # 'reference_paiement': _('Référence de paiement'),  # Champ supprimé
             'numero_cheque': _('Numéro de chèque'),
             'reference_virement': _('Référence virement'),

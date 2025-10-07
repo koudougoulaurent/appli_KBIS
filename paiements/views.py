@@ -289,19 +289,14 @@ def ajouter_paiement(request):
                 paiement.cree_par = request.user
                 # Le champ date_creation sera automatiquement défini par auto_now_add=True
                 
-                # Gérer le champ mois_paye comme une date
-                mois_paye_date = request.POST.get('mois_paye', '')
-                if mois_paye_date:
-                    # Convertir la date en format "mois année" (ex: "octobre 2025")
-                    try:
-                        from datetime import datetime
-                        date_obj = datetime.strptime(mois_paye_date, '%Y-%m-%d')
-                        mois_nom = date_obj.strftime('%B').lower()
-                        annee = date_obj.year
-                        paiement.mois_paye = f"{mois_nom} {annee}"
-                    except ValueError:
-                        # Si la conversion échoue, utiliser la valeur telle quelle
-                        paiement.mois_paye = mois_paye_date
+                # Gérer le champ mois_paye comme un nom de mois
+                mois_paye_nom = request.POST.get('mois_paye', '')
+                if mois_paye_nom:
+                    # Le mois est maintenant directement un nom de mois (ex: "janvier", "février", etc.)
+                    # Ajouter l'année actuelle
+                    from datetime import datetime
+                    annee_actuelle = datetime.now().year
+                    paiement.mois_paye = f"{mois_paye_nom} {annee_actuelle}"
                 
                 paiement.save()
                 

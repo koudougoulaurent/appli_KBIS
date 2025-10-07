@@ -156,17 +156,15 @@
                                 </div>
                                 
                                 <div class="mb-3">
-                                    <label for="mois_paye" class="form-label">MOIS PAYÉ</label>
-                                    <input type="date" 
-                                           name="mois_paye" 
-                                           id="mois_paye"
-                                           class="form-control" 
-                                           value="">
+                                    <label for="{{ form.mois_paye.id_for_label }}" class="form-label">{{ form.mois_paye.label }}</label>
+                                    {{ form.mois_paye }}
+                                    {% if form.mois_paye.errors %}
+                                        <div class="text-danger">{{ form.mois_paye.errors }}</div>
+                                    {% endif %}
                                     <div class="form-text">
                                         <button type="button" class="btn btn-outline-primary btn-sm" id="auto-detect-month">
                                             <i class="bi bi-magic"></i> Détecter automatiquement
                                         </button>
-                                        <span class="ms-2" id="selected-month-display"></span>
                                     </div>
                                 </div>
                                 
@@ -347,7 +345,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Fonction pour calculer et afficher le résumé
     // Validation du montant et du mois payé à la soumission
     const paiementForm = document.getElementById('paiement-form');
-    const moisPayeInput = document.getElementById('id_mois_paye');
     
     if (paiementForm) {
         paiementForm.addEventListener('submit', function(e) {
@@ -444,36 +441,35 @@ document.addEventListener('DOMContentLoaded', function() {
         montantInput.addEventListener('input', updateMontantSummary);
     }
     
-    // Gestion du champ mois_paye (type date)
-    const moisPayeInput = document.getElementById('mois_paye');
+    // Gestion du champ mois_paye (type select)
+    const moisPayeInput = document.getElementById('id_mois_paye');
     const selectedMonthDisplay = document.getElementById('selected-month-display');
     const datePaiementInput = document.getElementById('id_date_paiement');
     const autoDetectButton = document.getElementById('auto-detect-month');
     
-    // Fonction pour afficher la sélection
+    // Fonction pour afficher la sélection (simplifiée)
     function updateMoisPaye() {
-        if (moisPayeInput && moisPayeInput.value) {
-            const date = new Date(moisPayeInput.value);
-            if (!isNaN(date.getTime())) {
-                const mois = date.toLocaleDateString('fr-FR', { month: 'long' });
-                const annee = date.getFullYear();
-                const moisPayeValue = `${mois} ${annee}`;
-                selectedMonthDisplay.textContent = `Sélectionné: ${moisPayeValue}`;
-                selectedMonthDisplay.className = 'ms-2 text-success fw-bold';
-            }
-        } else {
-            selectedMonthDisplay.textContent = '';
-            selectedMonthDisplay.className = 'ms-2';
-        }
+        // Plus d'affichage de duplication - le select se suffit à lui-même
+        console.log('Mois sélectionné:', moisPayeInput.value);
     }
     
     // Fonction pour détecter automatiquement le mois depuis la date de paiement
     function detectMonthFromDate() {
         if (datePaiementInput && datePaiementInput.value) {
-            // Copier la date de paiement vers le champ mois_paye
-            moisPayeInput.value = datePaiementInput.value;
-            updateMoisPaye();
-            console.log('Mois détecté automatiquement depuis la date de paiement');
+            // Extraire le mois de la date de paiement
+            const date = new Date(datePaiementInput.value);
+            const mois = date.toLocaleDateString('fr-FR', { month: 'long' }).toLowerCase();
+            
+            // Trouver l'option correspondante dans le select
+            const options = moisPayeInput.options;
+            for (let i = 0; i < options.length; i++) {
+                if (options[i].value === mois) {
+                    moisPayeInput.selectedIndex = i;
+                    updateMoisPaye();
+                    console.log('Mois détecté automatiquement depuis la date de paiement:', mois);
+                    return;
+                }
+            }
         } else {
             alert('Veuillez d\'abord sélectionner une date de paiement.');
         }

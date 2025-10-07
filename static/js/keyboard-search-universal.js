@@ -88,7 +88,7 @@ class KeyboardSearchUniversal {
      * Initialiser la recherche clavier sur les selects normaux
      */
     initKeyboardSearch() {
-        $('select:not([data-toggle="select2"])').each(function() {
+        $('select.keyboard-search:not([data-toggle="select2"])').each(function() {
             const $select = $(this);
             
             // Créer un wrapper avec input de recherche

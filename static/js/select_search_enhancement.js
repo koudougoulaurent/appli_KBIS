@@ -14,8 +14,8 @@ class SelectSearchEnhancement {
     }
 
     enhanceSelectFields() {
-        // Sélectionner tous les champs select qui n'ont pas déjà été améliorés
-        const selectFields = document.querySelectorAll('select.form-select:not([data-enhanced])');
+        // Sélectionner seulement les champs select qui ont la classe 'enhanced-select'
+        const selectFields = document.querySelectorAll('select.form-select.enhanced-select:not([data-enhanced])');
         
         selectFields.forEach(select => {
             this.enhanceSingleSelect(select);

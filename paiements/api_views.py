@@ -290,15 +290,24 @@ def api_contexte_intelligent_contrat(request, contrat_id):
                 toutes_les_avances = avances_actives.union(avances_recentes)
                 
                 # *** CALCULER LE PROCHAIN MOIS (avec ou sans avances) ***
+                prochain_mois_paiement_avec_avances = None
                 try:
-                    prochain_mois_paiement_avec_avances = ServiceGestionAvance.calculer_prochain_mois_paiement(contrat)
-                    prochain_mois = prochain_mois_paiement_avec_avances.month
-                    
-                    # Déterminer le type de suggestion
                     if toutes_les_avances.exists():
+                        # *** AVEC AVANCES : Calculer le prochain mois en tenant compte des avances ***
+                        prochain_mois_paiement_avec_avances = ServiceGestionAvance.calculer_prochain_mois_paiement(contrat)
+                        prochain_mois = prochain_mois_paiement_avec_avances.month
                         mois_suggere = f"Prochain paiement avec avances: {prochain_mois_paiement_avec_avances.strftime('%B %Y')}"
                     else:
-                        mois_suggere = f"Prochain paiement: {prochain_mois_paiement_avec_avances.strftime('%B %Y')}"
+                        # *** SANS AVANCES : Calculer normalement ***
+                        derniers_mois = [p.date_paiement.month for p in paiements_recents if p.date_paiement]
+                        if derniers_mois:
+                            dernier_mois = max(derniers_mois)
+                            prochain_mois = (dernier_mois % 12) + 1
+                            mois_suggere = f"Prochain paiement: {prochain_mois}"
+                        else:
+                            from datetime import datetime
+                            prochain_mois = datetime.now().month
+                            mois_suggere = "Mois actuel"
                         
                 except Exception as e:
                     print(f"Erreur calcul prochain mois: {str(e)}")

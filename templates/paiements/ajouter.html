@@ -234,17 +234,15 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="mois_paye" class="form-label">MOIS PAYÉ</label>
-                                    <input type="date" 
-                                           name="mois_paye" 
-                                           id="mois_paye"
-                                           class="form-control" 
-                                           value="">
+                                    <label for="{{ form.mois_paye.id_for_label }}" class="form-label">{{ form.mois_paye.label }}</label>
+                                    {{ form.mois_paye }}
+                                    {% if form.mois_paye.errors %}
+                                        <div class="text-danger">{{ form.mois_paye.errors }}</div>
+                                    {% endif %}
                                     <div class="form-text">
                                         <button type="button" class="btn btn-outline-primary btn-sm" id="auto-detect-month">
                                             <i class="bi bi-magic"></i> Détecter automatiquement
                                         </button>
-                                        <span class="ms-2" id="selected-month-display"></span>
                                     </div>
                                 </div>
                             </div>
@@ -996,28 +994,17 @@ $('#id_contrat, #id_mois_paye').on('change', function() {
 });
 
 // Gestion du champ mois_paye (type date)
-const moisPayeInput = document.getElementById('mois_paye');
+const moisPayeInput = document.getElementById('id_mois_paye');
 console.log('DEBUG: moisPayeInput trouvé:', !!moisPayeInput);
 console.log('DEBUG: Type du champ:', moisPayeInput?.type);
 const selectedMonthDisplay = document.getElementById('selected-month-display');
 const datePaiementInput = document.getElementById('id_date_paiement');
 const autoDetectButton = document.getElementById('auto-detect-month');
 
-// Fonction pour afficher la sélection
+// Fonction pour afficher la sélection (simplifiée)
 function updateMoisPaye() {
-    if (moisPayeInput && moisPayeInput.value) {
-        const date = new Date(moisPayeInput.value);
-        if (!isNaN(date.getTime())) {
-            const mois = date.toLocaleDateString('fr-FR', { month: 'long' });
-            const annee = date.getFullYear();
-            const moisPayeValue = `${mois} ${annee}`;
-            selectedMonthDisplay.textContent = `Sélectionné: ${moisPayeValue}`;
-            selectedMonthDisplay.className = 'ms-2 text-success fw-bold';
-        }
-    } else {
-        selectedMonthDisplay.textContent = '';
-        selectedMonthDisplay.className = 'ms-2';
-    }
+    // Plus d'affichage de duplication - le select se suffit à lui-même
+    console.log('Mois sélectionné:', moisPayeInput.value);
 }
 
 // Fonction pour valider le mois de paiement
@@ -1104,183 +1091,54 @@ function updateMoisPaye() {
 // Fonction pour détecter automatiquement le mois depuis la date de paiement
         function detectMonthFromDate() {
             console.log('DEBUG: detectMonthFromDate() appelée');
-            // *** DÉTECTION INTELLIGENTE BASÉE SUR LES AVANCES ***
-            const contratId = $('#id_contrat').val();
-            console.log('DEBUG: Contrat ID:', contratId);
             
-            if (contratId && window.contexteContrat) {
-                console.log('Contexte contrat disponible:', window.contexteContrat);
+            // Priorité 1: Utiliser le prochain mois calculé avec les avances
+            const contratId = $('#id_contrat').val();
+            if (contratId && window.contexteContrat && window.contexteContrat.prochain_mois_paiement_avec_avances) {
+                const prochainMois = window.contexteContrat.prochain_mois_paiement_avec_avances;
+                console.log('Avances actives détectées - Prochain mois suggéré:', prochainMois);
                 
-                // Priorité 1: Utiliser le prochain mois calculé avec les avances (seulement si avances vraiment actives)
-                console.log('DEBUG: prochain_mois_paiement_avec_avances:', window.contexteContrat.prochain_mois_paiement_avec_avances);
-                console.log('DEBUG: montant_avances_disponible:', window.contexteContrat.montant_avances_disponible);
+                // Extraire le nom du mois du string "Mois Année"
+                const moisAnnee = prochainMois.split(' ');
+                const mois = moisAnnee[0].toLowerCase();
                 
-                if (window.contexteContrat.prochain_mois_paiement_avec_avances) {
-                    const prochainMois = window.contexteContrat.prochain_mois_paiement_avec_avances;
-                    console.log('Avances actives détectées - Prochain mois suggéré:', prochainMois);
-                    
-                    // Convertir le mois suggéré en date (premier jour du mois)
-                    const moisAnnee = prochainMois.split(' ');
-                    const mois = moisAnnee[0];
-                    const annee = parseInt(moisAnnee[1]);
-                    
-                    // Mapping des mois français vers les numéros (JavaScript 0-indexé)
-                    // CORRECTION : Juillet = 7, donc index JavaScript = 6
-                    const moisMapping = {
-                        'Janvier': 0, 'Février': 1, 'Mars': 2, 'Avril': 3, 'Mai': 4, 'Juin': 5,
-                        'Juillet': 6, 'Août': 7, 'Septembre': 8, 'Octobre': 9, 'Novembre': 10, 'Décembre': 11
-                    };
-                    
-                    if (moisMapping[mois] !== undefined) {
-                        // *** CORRECTION : Créer une date valide pour le mois suggéré ***
-                        const dateSuggeree = new Date(annee, moisMapping[mois], 1);
-                        const formattedDate = dateSuggeree.toISOString().split('T')[0];
+                // Trouver l'option correspondante dans le select
+                const options = moisPayeInput.options;
+                for (let i = 0; i < options.length; i++) {
+                    if (options[i].value === mois) {
+                        moisPayeInput.selectedIndex = i;
+                        updateMoisPaye();
                         
-                        console.log('DEBUG: Mois suggéré:', prochainMois);
-                        console.log('DEBUG: Mois extrait:', mois);
-                        console.log('DEBUG: Année extraite:', annee);
-                        console.log('DEBUG: Index mois JavaScript:', moisMapping[mois]);
-                        console.log('DEBUG: Date suggérée (objet):', dateSuggeree);
-                        console.log('DEBUG: Mois de la date suggérée:', dateSuggeree.getMonth());
-                        console.log('DEBUG: Année de la date suggérée:', dateSuggeree.getFullYear());
-                        console.log('DEBUG: Date formatée (ISO):', formattedDate);
-                        console.log('DEBUG: moisPayeInput existe:', !!moisPayeInput);
-                        console.log('DEBUG: Valeur avant:', moisPayeInput.value);
-                        
-                        // *** VALIDATION : Vérifier que la date générée est dans le bon mois ***
-                        const dateVerification = new Date(formattedDate);
-                        if (dateVerification.getMonth() === moisMapping[mois] && dateVerification.getFullYear() === annee) {
-                            moisPayeInput.value = formattedDate;
-                            console.log('DEBUG: Valeur après:', moisPayeInput.value);
-                            updateMoisPaye();
-                        } else {
-                            console.error('DEBUG: Erreur de conversion - Mois attendu:', mois, 'Mois obtenu:', dateVerification.getMonth());
-                            // Fallback : forcer le premier jour du mois
-                            const dateForcee = new Date(annee, moisMapping[mois], 1);
-                            moisPayeInput.value = dateForcee.toISOString().split('T')[0];
-                            updateMoisPaye();
-                        }
-                        
-                        // Afficher une notification
                         selectedMonthDisplay.innerHTML = `
                             <span class="text-success">
-                                <i class="bi bi-calendar-check"></i> 
+                                <i class="bi bi-check-circle"></i> 
                                 Suggéré par les avances: ${prochainMois}
                             </span>
                         `;
                         return;
                     }
                 }
+            }
+            
+            // Priorité 2: Utiliser la date de paiement si disponible
+            if (datePaiementInput && datePaiementInput.value) {
+                const date = new Date(datePaiementInput.value);
+                const mois = date.toLocaleDateString('fr-FR', { month: 'long' }).toLowerCase();
                 
-                // Priorité 2: Calculer intelligemment le prochain mois basé sur les paiements récents
-                if (window.contexteContrat.paiements_recents && window.contexteContrat.paiements_recents.length > 0) {
-                    // Vérifier si les avances sont épuisées
-                    if (window.contexteContrat.montant_avances_disponible === 0 && 
-                        window.contexteContrat.prochain_mois_paiement_avec_avances) {
-                        console.log('Avances épuisées - Passage au calcul normal');
-                    } else {
-                        console.log('Calcul intelligent basé sur les paiements récents');
-                    }
-                    
-                    // Trouver le dernier paiement de loyer
-                    const derniersPaiements = window.contexteContrat.paiements_recents.filter(p => 
-                        p.type === 'Loyer' || p.type === 'loyer'
-                    );
-                    
-                    if (derniersPaiements.length > 0) {
-                        // Prendre le dernier paiement de loyer
-                        const dernierPaiement = derniersPaiements[0];
-                        const dateDernierPaiement = new Date(dernierPaiement.date.split('/').reverse().join('-'));
-                        
-                        // Calculer le mois suivant
-                        const moisSuivant = new Date(dateDernierPaiement);
-                        moisSuivant.setMonth(moisSuivant.getMonth() + 1);
-                        moisSuivant.setDate(1); // Premier jour du mois
-                        
-                        moisPayeInput.value = moisSuivant.toISOString().split('T')[0];
+                // Trouver l'option correspondante dans le select
+                const options = moisPayeInput.options;
+                for (let i = 0; i < options.length; i++) {
+                    if (options[i].value === mois) {
+                        moisPayeInput.selectedIndex = i;
                         updateMoisPaye();
-                        
-                        const moisNoms = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-                                        'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-                        const nomMois = moisNoms[moisSuivant.getMonth()];
-                        const annee = moisSuivant.getFullYear();
-                        
-                        // Message différent selon si les avances sont épuisées
-                        const messageAvances = (window.contexteContrat.montant_avances_disponible === 0 && 
-                                              window.contexteContrat.prochain_mois_paiement_avec_avances) 
-                            ? ' (avances épuisées)' : ' (après dernier paiement)';
-                        
-                        selectedMonthDisplay.innerHTML = `
-                            <span class="text-info">
-                                <i class="bi bi-calendar"></i> 
-                                Suggéré: ${nomMois} ${annee}${messageAvances}
-                            </span>
-                        `;
+                        console.log('Mois détecté automatiquement depuis la date de paiement:', mois);
                         return;
-                    }
-                }
-                
-                // Priorité 3: Utiliser le prochain mois normal si disponible
-                if (window.contexteContrat.prochain_mois_paiement) {
-                    const prochainMois = window.contexteContrat.prochain_mois_paiement;
-                    console.log('Prochain mois normal suggéré:', prochainMois);
-                    
-                    // Si c'est un nombre (mois), l'utiliser directement
-                    if (typeof prochainMois === 'number') {
-                        const anneeActuelle = new Date().getFullYear();
-                        const dateSuggeree = new Date(anneeActuelle, prochainMois - 1, 1); // -1 car les mois JS commencent à 0
-                        moisPayeInput.value = dateSuggeree.toISOString().split('T')[0];
-                        updateMoisPaye();
-                        
-                        const moisNoms = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-                                        'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-                        const nomMois = moisNoms[prochainMois - 1];
-                        
-                        selectedMonthDisplay.innerHTML = `
-                            <span class="text-info">
-                                <i class="bi bi-calendar"></i> 
-                                Suggéré: ${nomMois} ${anneeActuelle}
-                            </span>
-                        `;
-                        return;
-                    }
-                    
-                    // Si c'est une chaîne, essayer de la parser
-                    if (typeof prochainMois === 'string') {
-                        const moisAnnee = prochainMois.split(' ');
-                        const mois = moisAnnee[0];
-                        const annee = parseInt(moisAnnee[1]);
-                        
-                        const moisMapping = {
-                            'Janvier': 0, 'Février': 1, 'Mars': 2, 'Avril': 3, 'Mai': 4, 'Juin': 5,
-                            'Juillet': 6, 'Août': 7, 'Septembre': 8, 'Octobre': 9, 'Novembre': 10, 'Décembre': 11
-                        };
-                        
-                        if (moisMapping[mois] !== undefined) {
-                            const dateSuggeree = new Date(annee, moisMapping[mois], 1);
-                            moisPayeInput.value = dateSuggeree.toISOString().split('T')[0];
-                            updateMoisPaye();
-                            
-                            selectedMonthDisplay.innerHTML = `
-                                <span class="text-info">
-                                    <i class="bi bi-calendar"></i> 
-                                    Suggéré: ${prochainMois}
-                                </span>
-                            `;
-                            return;
-                        }
                     }
                 }
             }
             
-            // Fallback : Utiliser la date de paiement si disponible
-            if (datePaiementInput && datePaiementInput.value) {
-                moisPayeInput.value = datePaiementInput.value;
-                updateMoisPaye();
-                console.log('Mois détecté automatiquement depuis la date de paiement');
-            } else {
-                alert('Aucune information disponible pour la détection automatique. Veuillez sélectionner une date de paiement ou un contrat.');
-            }
+            // Fallback
+            alert('Aucune information disponible pour la détection automatique. Veuillez sélectionner une date de paiement ou un contrat.');
         }
 
 // Événements pour le champ mois_paye
