@@ -377,7 +377,7 @@
                                 <td>{{ consommation.montant_restant_apres|floatformat:0 }} F CFA</td>
                                 <td>
                                     {% if consommation.paiement %}
-                                        <a href="{% url 'paiements:detail' consommation.paiement.id %}" class="btn btn-sm btn-outline-primary">
+                                        <a href="/paiements/detail/{{ consommation.paiement.id }}/" class="btn btn-sm btn-outline-primary">
                                             Voir
                                         </a>
                                     {% else %}

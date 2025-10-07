@@ -1,8 +1,6 @@
 from django.urls import path
 from . import views_avance, views_monitoring_avance
 
-app_name = 'avances'
-
 urlpatterns = [
     # Dashboard des avances
     path('', views_avance.dashboard_avances, name='dashboard_avances'),

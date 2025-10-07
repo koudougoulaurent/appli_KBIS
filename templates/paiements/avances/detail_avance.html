@@ -120,7 +120,7 @@
                     <p class="text-muted mb-0">Informations détaillées et suivi de l'avance</p>
                 </div>
                 <div>
-                    <a href="{% url 'paiements:liste_avances' %}" class="btn btn-secondary">
+                    <a href="/paiements/avances/liste/" class="btn btn-secondary">
                         <i class="bi bi-arrow-left"></i> Retour à la liste
                     </a>
                 </div>
@@ -235,17 +235,17 @@
                 </h5>
                 
                 <div class="d-grid gap-2">
-                    <a href="{% url 'paiements:historique_contrat' avance.contrat.id %}" 
+                    <a href="/paiements/historique/contrat/{{ avance.contrat.id }}/" 
                        class="btn btn-primary btn-action">
                         <i class="bi bi-clock-history"></i> Historique des Paiements
                     </a>
                     
-                    <a href="{% url 'paiements:generer_rapport_avances_pdf' avance.contrat.id %}" 
+                    <a href="/paiements/avances/rapport-historique-pdf/{{ avance.contrat.id }}/" 
                        class="btn btn-success btn-action">
                         <i class="bi bi-file-pdf"></i> Générer Rapport PDF
                     </a>
                     
-                    <a href="{% url 'paiements:liste_avances' %}" 
+                    <a href="/paiements/avances/liste/" 
                        class="btn btn-secondary btn-action">
                         <i class="bi bi-list"></i> Toutes les Avances
                     </a>
@@ -346,7 +346,7 @@
                 </div>
                 
                 <div class="text-center mt-3">
-                    <a href="{% url 'paiements:historique_contrat' avance.contrat.id %}" 
+                    <a href="/paiements/historique/contrat/{{ avance.contrat.id }}/" 
                        class="btn btn-outline-primary">
                         <i class="bi bi-eye"></i> Voir l'historique complet
                     </a>
