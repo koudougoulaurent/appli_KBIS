@@ -194,31 +194,31 @@
     </div>
     {% endif %}
 
-    {% if rapport %}
+    {% if rapport and not rapport.erreur %}
     <!-- Statistiques globales -->
     <div class="row mb-4">
         <div class="col-md-3">
             <div class="stat-card">
-                <h3>{{ rapport.statistiques.total_avances }}</h3>
+                <h3>{{ rapport.total_avances }}</h3>
                 <p class="mb-0">Total Avances</p>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="stat-card critique">
-                <h3>{{ rapport.statistiques.avances_critiques }}</h3>
+            <div class="stat-card {% if rapport.avances_critiques > 0 %}critique{% else %}normale{% endif %}">
+                <h3>{{ rapport.avances_critiques }}</h3>
                 <p class="mb-0">Critiques</p>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="stat-card avancee">
-                <h3>{{ rapport.statistiques.avances_avancees }}</h3>
-                <p class="mb-0">Avancées</p>
+            <div class="stat-card {% if rapport.avances_actives > 0 %}avancee{% else %}epuisee{% endif %}">
+                <h3>{{ rapport.avances_actives }}</h3>
+                <p class="mb-0">Actives</p>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="stat-card normale">
-                <h3>{{ rapport.statistiques.avances_normales }}</h3>
-                <p class="mb-0">Normales</p>
+            <div class="stat-card {% if rapport.avances_epuisees > 0 %}epuisee{% else %}normale{% endif %}">
+                <h3>{{ rapport.avances_epuisees }}</h3>
+                <p class="mb-0">Épuisées</p>
             </div>
         </div>
     </div>
@@ -232,17 +232,25 @@
                     Progression Globale des Avances
                 </h4>
                 <div class="progression-bar">
-                    <div class="progression-fill" style="width: {{ rapport.montants.pourcentage_consomme|floatformat:1 }}%"></div>
+                    <div class="progression-fill" style="width: {{ rapport.pourcentage_consomme|floatformat:1 }}%"></div>
                 </div>
                 <div class="row mt-3">
                     <div class="col-md-4">
-                        <strong>Montant Total:</strong> {{ rapport.montants.total_avances|floatformat:0 }} F CFA
+                        <strong>Montant Total:</strong> {{ rapport.montant_total_avances|floatformat:0 }} F CFA
                     </div>
                     <div class="col-md-4">
-                        <strong>Consommé:</strong> {{ rapport.montants.total_consomme|floatformat:0 }} F CFA
+                        <strong>Consommé:</strong> {{ rapport.montant_total_avances|add:rapport.montant_restant_total|floatformat:0 }} F CFA
                     </div>
                     <div class="col-md-4">
-                        <strong>Restant:</strong> {{ rapport.montants.total_restant|floatformat:0 }} F CFA
+                        <strong>Restant:</strong> {{ rapport.montant_restant_total|floatformat:0 }} F CFA
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-6">
+                        <strong>Progression Moyenne:</strong> {{ rapport.progression_moyenne|floatformat:1 }}%
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Contrats avec Avances:</strong> {{ stats_supplementaires.total_contrats_avec_avances }}
                     </div>
                 </div>
             </div>
@@ -259,25 +267,26 @@
                     <i class="bi bi-exclamation-triangle"></i>
                     Avances Critiques ({{ avances_critiques|length }})
                 </h4>
-                {% for avance_info in avances_critiques %}
+                {% for alerte in avances_critiques %}
                 <div class="avance-item critique">
                     <div class="row align-items-center">
                         <div class="col-md-4">
-                            <h6 class="mb-1">{{ avance_info.avance.contrat.locataire.get_nom_complet }}</h6>
-                            <p class="text-muted mb-0">Contrat: {{ avance_info.avance.contrat.numero_contrat }}</p>
+                            <h6 class="mb-1">{{ alerte.avance.contrat.locataire.get_nom_complet }}</h6>
+                            <p class="text-muted mb-0">Contrat: {{ alerte.avance.contrat.numero_contrat }}</p>
+                            <small class="text-danger">{{ alerte.message }}</small>
                         </div>
                         <div class="col-md-3">
                             <div class="progression-bar">
-                                <div class="progression-fill critique" style="width: {{ avance_info.pourcentage_reel|floatformat:1 }}%"></div>
+                                <div class="progression-fill critique" style="width: {{ alerte.progression|floatformat:1 }}%"></div>
                             </div>
-                            <small class="text-muted">{{ avance_info.pourcentage_reel|floatformat:1 }}% consommé</small>
+                            <small class="text-muted">{{ alerte.progression|floatformat:1 }}% consommé</small>
                         </div>
                         <div class="col-md-3">
-                            <strong>Restant:</strong> {{ avance_info.montant_restant|floatformat:0 }} F CFA<br>
-                            <small class="text-muted">{{ avance_info.mois_restants_estimes }} mois restants</small>
+                            <strong>Restant:</strong> {{ alerte.avance.montant_restant|floatformat:0 }} F CFA<br>
+                            <small class="text-muted">Type: {{ alerte.type_alerte }}</small>
                         </div>
                         <div class="col-md-2 text-end">
-                            <a href="{% url 'paiements:detail_progression_avance' avance_info.avance.id %}" class="btn btn-sm btn-outline-primary">
+                            <a href="{% url 'paiements:detail_progression_avance' alerte.avance.id %}" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-eye"></i> Détails
                             </a>
                         </div>
@@ -295,43 +304,52 @@
             <div class="monitoring-card">
                 <h4 class="mb-3">
                     <i class="bi bi-list-check text-primary"></i>
-                    Toutes les Avances
+                    Toutes les Avances ({{ toutes_avances|length }})
                 </h4>
-                {% if rapport.progressions %}
-                    {% for progression in rapport.progressions %}
-                    <div class="avance-item {{ progression.statut_progression }}">
+                {% if toutes_avances %}
+                    {% for avance in toutes_avances %}
+                    {% with progression=avance|add:0 %}
+                    <div class="avance-item {% if avance.statut == 'epuisee' %}epuisee{% elif avance.statut == 'active' %}normale{% else %}critique{% endif %}">
                         <div class="row align-items-center">
                             <div class="col-md-3">
-                                <h6 class="mb-1">{{ progression.avance.contrat.locataire.get_nom_complet }}</h6>
-                                <p class="text-muted mb-0">Contrat: {{ progression.avance.contrat.numero_contrat }}</p>
+                                <h6 class="mb-1">{{ avance.contrat.locataire.get_nom_complet }}</h6>
+                                <p class="text-muted mb-0">Contrat: {{ avance.contrat.numero_contrat }}</p>
+                                <small class="text-muted">Créée le: {{ avance.date_avance|date:"d/m/Y" }}</small>
                             </div>
                             <div class="col-md-2">
                                 <strong>Montant:</strong><br>
-                                <span class="text-primary">{{ progression.avance.montant_avance|floatformat:0 }} F CFA</span>
+                                <span class="text-primary">{{ avance.montant_avance|floatformat:0 }} F CFA</span><br>
+                                <small class="text-muted">{{ avance.nombre_mois_couverts }} mois</small>
                             </div>
                             <div class="col-md-3">
                                 <div class="progression-bar">
-                                    <div class="progression-fill {{ progression.statut_progression }}" style="width: {{ progression.pourcentage_reel|floatformat:1 }}%"></div>
+                                    {% widthratio avance.montant_avance|add:avance.montant_restant avance.montant_avance 100 as progression_pct %}
+                                    <div class="progression-fill {% if avance.statut == 'epuisee' %}epuisee{% elif avance.statut == 'active' %}normale{% else %}critique{% endif %}" style="width: {{ progression_pct|floatformat:1 }}%"></div>
                                 </div>
-                                <small class="text-muted">{{ progression.pourcentage_reel|floatformat:1 }}% consommé</small>
+                                <small class="text-muted">Statut: {{ avance.get_statut_display }}</small>
                             </div>
                             <div class="col-md-2">
                                 <strong>Restant:</strong><br>
-                                <span class="text-success">{{ progression.montant_restant|floatformat:0 }} F CFA</span>
+                                <span class="text-success">{{ avance.montant_restant|floatformat:0 }} F CFA</span><br>
+                                <small class="text-muted">Loyer: {{ avance.loyer_mensuel|floatformat:0 }} F CFA/mois</small>
                             </div>
                             <div class="col-md-2 text-end">
-                                <a href="{% url 'paiements:detail_progression_avance' progression.avance.id %}" class="btn btn-sm btn-outline-primary">
+                                <a href="{% url 'paiements:detail_progression_avance' avance.id %}" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-eye"></i> Détails
                                 </a>
                             </div>
                         </div>
                     </div>
+                    {% endwith %}
                     {% endfor %}
                 {% else %}
                     <div class="text-center py-4">
                         <i class="bi bi-house-add display-1 text-muted"></i>
                         <h4 class="text-muted mt-3">Aucune avance trouvée</h4>
                         <p class="text-muted">Commencez par ajouter une avance de loyer</p>
+                        <a href="{% url 'paiements:ajouter' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Ajouter une avance
+                        </a>
                     </div>
                 {% endif %}
             </div>
@@ -420,4 +438,6 @@
     }, 300000);
 </script>
 {% endblock %}
+
+
 

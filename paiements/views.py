@@ -328,6 +328,10 @@ def ajouter_paiement(request):
                         from datetime import datetime
                         from dateutil.relativedelta import relativedelta
                         
+                        # *** SYNCHRONISATION AUTOMATIQUE DES AVANCES ***
+                        # Synchroniser toutes les consommations manquantes avant le traitement
+                        ServiceGestionAvance.synchroniser_consommations_manquantes(paiement.contrat)
+                        
                         # Déterminer le mois du paiement
                         mois_paiement = paiement.date_paiement.replace(day=1)
                         

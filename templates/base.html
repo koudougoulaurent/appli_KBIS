@@ -23,6 +23,7 @@
     <link href="{% static 'css/proprietes.css' %}" rel="stylesheet">
     <link href="{% static 'css/performance-optimizations.css' %}" rel="stylesheet">
     <link href="{% static 'css/quick-actions-enhanced.css' %}" rel="stylesheet">
+    <link href="{% static 'css/quick_actions.css' %}" rel="stylesheet">
     <!-- Keyboard Search CSS -->
     <link href="{% static 'css/keyboard-search.css' %}" rel="stylesheet">
     <!-- KBIS Header & Footer CSS -->
@@ -828,8 +829,19 @@
     <script src="{% static 'js/fix_select_display.js' %}"></script>
     <!-- Amélioration de la recherche dans les champs select -->
     <script src="{% static 'js/select_search_enhancement.js' %}"></script>
+    <!-- Raccourcis clavier universels -->
+    <script src="{% static 'js/universal_shortcuts.js' %}"></script>
     
     {% block extra_js %}{% endblock %}
+    
+    <!-- Actions Rapides -->
+    {% include 'includes/quick_actions.html' %}
+    
+    <!-- Recherche Globale -->
+    {% include 'includes/global_search.html' %}
+    
+    <!-- Notifications Rapides -->
+    {% include 'includes/quick_notifications.html' %}
     
     <!-- Pied de page avec image -->
     {% include 'includes/footer_only.html' %}

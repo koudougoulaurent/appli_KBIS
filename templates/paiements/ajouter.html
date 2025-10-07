@@ -880,12 +880,14 @@ function remplirChampsIntelligents(data) {
     // Mode de paiement suggéré
     $('#id_mode_paiement').val('virement');
     
-    // Référence de paiement intelligente
-    const referenceIntelligente = `PAI-${data.contrat.numero_contrat}-${data.calculs.mois_paiement_suggere}`;
+    // Référence de paiement intelligente - VERSION CACHE BUSTER 2
+    console.log('🚀 CACHE BUSTER 2 - VERSION ULTRA NOUVELLE');
+    const moisSuggere = data.prochain_mois_paiement_avec_avances || data.mois_suggere || 'Mois';
+    const referenceIntelligente = `PAI-${data.contrat.numero_contrat}-${moisSuggere}`;
     $('#id_reference_paiement').val(referenceIntelligente);
     
     // Notes intelligentes
-    const notesIntelligentes = `Paiement loyer ${data.calculs.mois_paiement_suggere} - Contrat ${data.contrat.numero_contrat}`;
+    const notesIntelligentes = `Paiement loyer ${moisSuggere} - Contrat ${data.contrat.numero_contrat}`;
     $('#id_notes').val(notesIntelligentes);
     
     console.log('✅ Champs remplis intelligemment');
@@ -1110,8 +1112,10 @@ function updateMoisPaye() {
                 console.log('Contexte contrat disponible:', window.contexteContrat);
                 
                 // Priorité 1: Utiliser le prochain mois calculé avec les avances (seulement si avances vraiment actives)
-                if (window.contexteContrat.prochain_mois_paiement_avec_avances && 
-                    window.contexteContrat.montant_avances_disponible > 0) {
+                console.log('DEBUG: prochain_mois_paiement_avec_avances:', window.contexteContrat.prochain_mois_paiement_avec_avances);
+                console.log('DEBUG: montant_avances_disponible:', window.contexteContrat.montant_avances_disponible);
+                
+                if (window.contexteContrat.prochain_mois_paiement_avec_avances) {
                     const prochainMois = window.contexteContrat.prochain_mois_paiement_avec_avances;
                     console.log('Avances actives détectées - Prochain mois suggéré:', prochainMois);
                     
@@ -1121,27 +1125,41 @@ function updateMoisPaye() {
                     const annee = parseInt(moisAnnee[1]);
                     
                     // Mapping des mois français vers les numéros (JavaScript 0-indexé)
+                    // CORRECTION : Juillet = 7, donc index JavaScript = 6
                     const moisMapping = {
                         'Janvier': 0, 'Février': 1, 'Mars': 2, 'Avril': 3, 'Mai': 4, 'Juin': 5,
                         'Juillet': 6, 'Août': 7, 'Septembre': 8, 'Octobre': 9, 'Novembre': 10, 'Décembre': 11
                     };
                     
                     if (moisMapping[mois] !== undefined) {
+                        // *** CORRECTION : Créer une date valide pour le mois suggéré ***
                         const dateSuggeree = new Date(annee, moisMapping[mois], 1);
                         const formattedDate = dateSuggeree.toISOString().split('T')[0];
                         
                         console.log('DEBUG: Mois suggéré:', prochainMois);
                         console.log('DEBUG: Mois extrait:', mois);
                         console.log('DEBUG: Année extraite:', annee);
-                        console.log('DEBUG: Index mois:', moisMapping[mois]);
-                        console.log('DEBUG: Date suggérée:', dateSuggeree);
-                        console.log('DEBUG: Date formatée:', formattedDate);
+                        console.log('DEBUG: Index mois JavaScript:', moisMapping[mois]);
+                        console.log('DEBUG: Date suggérée (objet):', dateSuggeree);
+                        console.log('DEBUG: Mois de la date suggérée:', dateSuggeree.getMonth());
+                        console.log('DEBUG: Année de la date suggérée:', dateSuggeree.getFullYear());
+                        console.log('DEBUG: Date formatée (ISO):', formattedDate);
                         console.log('DEBUG: moisPayeInput existe:', !!moisPayeInput);
                         console.log('DEBUG: Valeur avant:', moisPayeInput.value);
                         
-                        moisPayeInput.value = formattedDate;
-                        console.log('DEBUG: Valeur après:', moisPayeInput.value);
-                        updateMoisPaye();
+                        // *** VALIDATION : Vérifier que la date générée est dans le bon mois ***
+                        const dateVerification = new Date(formattedDate);
+                        if (dateVerification.getMonth() === moisMapping[mois] && dateVerification.getFullYear() === annee) {
+                            moisPayeInput.value = formattedDate;
+                            console.log('DEBUG: Valeur après:', moisPayeInput.value);
+                            updateMoisPaye();
+                        } else {
+                            console.error('DEBUG: Erreur de conversion - Mois attendu:', mois, 'Mois obtenu:', dateVerification.getMonth());
+                            // Fallback : forcer le premier jour du mois
+                            const dateForcee = new Date(annee, moisMapping[mois], 1);
+                            moisPayeInput.value = dateForcee.toISOString().split('T')[0];
+                            updateMoisPaye();
+                        }
                         
                         // Afficher une notification
                         selectedMonthDisplay.innerHTML = `

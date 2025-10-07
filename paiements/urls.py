@@ -206,6 +206,7 @@ urlpatterns = [
     path('api/contexte-intelligent/contrat/<int:contrat_id>/', api_views.api_contexte_intelligent_contrat, name='api_contexte_intelligent'),
     path('api/creer-avance-rapide/', api_views.api_creer_avance_rapide, name='api_creer_avance_rapide'),
     path('api/convertir-avances-existantes/', api_views.api_convertir_avances_existantes, name='api_convertir_avances_existantes'),
+    path('api/convertir-toutes-avances-existantes/', api_views.api_convertir_toutes_avances_existantes, name='api_convertir_toutes_avances_existantes'),
     path('api/verifier-doublon/', api_views.api_verifier_doublon_paiement, name='api_verifier_doublon'),
     # 🚀 API INTELLIGENTE DES RETRAITS - NOUVEAU !
     path('api/contexte-bailleur/<int:bailleur_id>/', api_intelligente_retraits.APIContexteIntelligentRetraits.as_view(), name='api_contexte_bailleur'),

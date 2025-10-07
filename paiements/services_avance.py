@@ -151,9 +151,13 @@ class ServiceGestionAvance:
     def consommer_avance_pour_mois(contrat, mois):
         """
         Consomme l'avance disponible pour un mois donné
+        Synchronise automatiquement les consommations basées sur les mois écoulés
         """
         try:
             with transaction.atomic():
+                # D'abord, synchroniser toutes les consommations manquantes
+                ServiceGestionAvance.synchroniser_consommations_manquantes(contrat)
+                
                 # Trouver les avances actives pour ce contrat
                 avances_actives = AvanceLoyer.objects.filter(
                     contrat=contrat,
@@ -167,6 +171,16 @@ class ServiceGestionAvance:
                 
                 # Prendre la première avance disponible
                 avance = avances_actives.first()
+                
+                # Vérifier si ce mois a déjà été consommé
+                consommation_existante = ConsommationAvance.objects.filter(
+                    avance=avance,
+                    mois_consomme=mois
+                ).exists()
+                
+                if consommation_existante:
+                    # Le mois a déjà été consommé, retourner le montant
+                    return True, avance.loyer_mensuel
                 
                 # Consommer un mois
                 if avance.consommer_mois(mois):
@@ -187,17 +201,93 @@ class ServiceGestionAvance:
             raise Exception(f"Erreur lors de la consommation de l'avance: {str(e)}")
     
     @staticmethod
+    def synchroniser_consommations_manquantes(contrat):
+        """
+        Synchronise automatiquement les consommations d'avances basées sur les mois écoulés
+        """
+        try:
+            from django.utils import timezone
+            from dateutil.relativedelta import relativedelta
+            
+            # Récupérer toutes les avances actives du contrat
+            avances_actives = AvanceLoyer.objects.filter(
+                contrat=contrat,
+                statut='active',
+                montant_restant__gt=0
+            )
+            
+            for avance in avances_actives:
+                # Calculer les mois écoulés depuis le début de couverture
+                aujourd_hui = timezone.now().date()
+                mois_ecoules = 0
+                
+                if avance.mois_debut_couverture:
+                    mois_ecoules = ((aujourd_hui.year - avance.mois_debut_couverture.year) * 12 +
+                                   (aujourd_hui.month - avance.mois_debut_couverture.month))
+                    
+                    # Si on est au 20 du mois ou plus, considérer qu'un mois s'est écoulé
+                    if aujourd_hui.day >= 20:
+                        mois_ecoules += 1
+                
+                # Calculer combien de mois devraient être consommés selon la logique du 20
+                # Un mois n'est consommé que si on est au 20 du mois ou plus
+                mois_devraient_etre_consommes = 0
+                if mois_ecoules > 0:
+                    # Vérifier si on est au 20 du mois ou plus pour le mois actuel
+                    if aujourd_hui.day >= 20:
+                        mois_devraient_etre_consommes = min(mois_ecoules, avance.nombre_mois_couverts)
+                    else:
+                        # Si on n'est pas au 20, ne consommer que les mois précédents
+                        mois_devraient_etre_consommes = min(mois_ecoules - 1, avance.nombre_mois_couverts)
+                        mois_devraient_etre_consommes = max(0, mois_devraient_etre_consommes)
+                
+                # Calculer combien de mois ont déjà été consommés
+                mois_deja_consommes = ConsommationAvance.objects.filter(avance=avance).count()
+                
+                # Consommer les mois manquants
+                mois_a_consommer = mois_devraient_etre_consommes - mois_deja_consommes
+                
+                for i in range(mois_a_consommer):
+                    mois_a_consommer_date = avance.mois_debut_couverture + relativedelta(months=mois_deja_consommes + i)
+                    
+                    # Vérifier si ce mois est dans la période de couverture
+                    if (avance.mois_debut_couverture <= mois_a_consommer_date <= avance.mois_fin_couverture):
+                        # Consommer ce mois
+                        if avance.consommer_mois(mois_a_consommer_date):
+                            # Créer l'enregistrement de consommation
+                            ConsommationAvance.objects.create(
+                                avance=avance,
+                                paiement=None,  # Consommation automatique
+                                mois_consomme=mois_a_consommer_date,
+                                montant_consomme=avance.loyer_mensuel,
+                                montant_restant_apres=avance.montant_restant
+                            )
+                            
+                            # Mettre à jour le statut si l'avance est épuisée
+                            if avance.montant_restant <= 0:
+                                avance.statut = 'epuisee'
+                                avance.save()
+                
+        except Exception as e:
+            print(f"Erreur lors de la synchronisation des consommations: {str(e)}")
+            # Ne pas lever l'exception pour ne pas bloquer le processus principal
+    
+    @staticmethod
     def calculer_montant_du_mois(contrat, mois):
         """
         Calcule le montant dû pour un mois en tenant compte des avances
+        Synchronise automatiquement les consommations avant le calcul
         """
         try:
-            # Montant du loyer mensuel
-            loyer_mensuel = contrat.loyer_mensuel or Decimal('0')
-            charges_mensuelles = contrat.charges_mensuelles or Decimal('0')
+            # D'abord, synchroniser toutes les consommations manquantes
+            ServiceGestionAvance.synchroniser_consommations_manquantes(contrat)
+            
+            # Montant du loyer mensuel (conversion en Decimal)
+            loyer_mensuel = Decimal(str(contrat.loyer_mensuel)) if contrat.loyer_mensuel else Decimal('0')
+            charges_mensuelles = Decimal(str(contrat.charges_mensuelles)) if contrat.charges_mensuelles else Decimal('0')
             montant_total_du = loyer_mensuel + charges_mensuelles
             
-            # Vérifier s'il y a des avances disponibles
+            # Vérifier s'il y a des avances disponibles pour ce mois
             avance_disponible, montant_avance = ServiceGestionAvance.consommer_avance_pour_mois(contrat, mois)
             
             if avance_disponible:
@@ -208,6 +298,38 @@ class ServiceGestionAvance:
                 
         except Exception as e:
             raise Exception(f"Erreur lors du calcul du montant dû: {str(e)}")
+    
+    @staticmethod
+    def synchroniser_toutes_avances():
+        """
+        Synchronise toutes les avances de tous les contrats
+        À appeler périodiquement pour maintenir la cohérence
+        """
+        try:
+            from contrats.models import Contrat
+            
+            contrats_avec_avances = Contrat.objects.filter(avances_loyer__isnull=False).distinct()
+            total_synchronise = 0
+            
+            for contrat in contrats_avec_avances:
+                try:
+                    ServiceGestionAvance.synchroniser_consommations_manquantes(contrat)
+                    total_synchronise += 1
+                except Exception as e:
+                    print(f"Erreur lors de la synchronisation du contrat {contrat.id}: {str(e)}")
+                    continue
+            
+            return {
+                'success': True,
+                'contrats_traites': total_synchronise,
+                'message': f'{total_synchronise} contrats synchronisés'
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'erreur': str(e)
+            }
     
     @staticmethod
     def traiter_paiement_mensuel(paiement):
@@ -314,15 +436,39 @@ class ServiceGestionAvance:
         """
         Génère un rapport détaillé des avances pour un contrat
         """
-        if not mois_debut:
-            mois_debut = date.today().replace(day=1) - relativedelta(months=12)
-        
-        if not mois_fin:
-            mois_fin = date.today().replace(day=1)
-        
         # Récupérer les données
         avances = ServiceGestionAvance.get_avances_actives_contrat(contrat)
-        historique = ServiceGestionAvance.get_historique_paiements_contrat(contrat, mois_debut, mois_fin)
+        
+        # Calculer la période réelle de couverture des avances
+        periode_debut = None
+        periode_fin = None
+        
+        if avances:
+            # Trouver la date de début la plus ancienne
+            dates_debut = [avance.mois_debut_couverture for avance in avances if avance.mois_debut_couverture]
+            if dates_debut:
+                periode_debut = min(dates_debut)
+            
+            # Trouver la date de fin la plus récente
+            dates_fin = [avance.mois_fin_couverture for avance in avances if avance.mois_fin_couverture]
+            if dates_fin:
+                periode_fin = max(dates_fin)
+        
+        # Si pas de période calculée, utiliser les paramètres par défaut
+        if not periode_debut:
+            if not mois_debut:
+                periode_debut = date.today().replace(day=1) - relativedelta(months=12)
+            else:
+                periode_debut = mois_debut
+        
+        if not periode_fin:
+            if not mois_fin:
+                periode_fin = date.today().replace(day=1)
+            else:
+                periode_fin = mois_fin
+        
+        # Récupérer l'historique des paiements pour la période calculée
+        historique = ServiceGestionAvance.get_historique_paiements_contrat(contrat, periode_debut, periode_fin)
         
         # Calculer les statistiques
         total_avances_versees = sum(avance.montant_avance for avance in avances)
@@ -332,8 +478,8 @@ class ServiceGestionAvance:
         return {
             'contrat': contrat,
             'periode': {
-                'debut': mois_debut,
-                'fin': mois_fin
+                'debut': periode_debut,
+                'fin': periode_fin
             },
             'avances': avances,
             'historique': historique,
@@ -351,9 +497,15 @@ class ServiceGestionAvance:
         Calcule le prochain mois où un paiement sera dû en tenant compte de toutes les avances
         """
         try:
-            # Version simplifiée pour éviter les erreurs
-            aujourd_hui = timezone.now().date()
-            mois_actuel = aujourd_hui.replace(day=1)
+            # Récupérer le dernier paiement de loyer (pas d'avance)
+            try:
+                from .models import Paiement
+                dernier_paiement = Paiement.objects.filter(
+                    contrat=contrat,
+                    type_paiement='loyer'
+                ).order_by('-date_paiement').first()
+            except ImportError:
+                dernier_paiement = None
             
             # Récupérer seulement les avances actives qui ont encore du montant restant
             avances_actives = AvanceLoyer.objects.filter(
@@ -363,17 +515,30 @@ class ServiceGestionAvance:
             )
             
             if not avances_actives.exists():
-                # Pas d'avances, prochain paiement = mois prochain
-                return mois_actuel + relativedelta(months=1)
+                # *** PAS D'AVANCES : Prochain paiement = mois suivant le dernier paiement ***
+                if dernier_paiement:
+                    return dernier_paiement.date_paiement.replace(day=1) + relativedelta(months=1)
+                else:
+                    # Pas de paiement précédent, prochain paiement = mois prochain
+                    return timezone.now().date().replace(day=1) + relativedelta(months=1)
             
-            # Calculer le nombre total de mois couverts
+            # *** AVEC AVANCES : Calculer le prochain mois en tenant compte des avances ***
+            # Calculer le nombre total de mois couverts par les avances
             total_mois_couverts = sum(avance.nombre_mois_couverts for avance in avances_actives)
             
             if total_mois_couverts <= 0:
-                return mois_actuel + relativedelta(months=1)
+                # Avances épuisées, revenir au calcul normal
+                if dernier_paiement:
+                    return dernier_paiement.date_paiement.replace(day=1) + relativedelta(months=1)
+                else:
+                    return timezone.now().date().replace(day=1) + relativedelta(months=1)
             
-            # Calcul simple : mois actuel + 1 + mois couverts
-            prochain_mois = mois_actuel + relativedelta(months=1) + relativedelta(months=total_mois_couverts)
+            # *** LOGIQUE CORRIGÉE : Calculer le prochain mois après consommation des avances ***
+            # Trouver le mois de début de couverture le plus récent
+            mois_debut_couverture = max(avance.mois_debut_couverture for avance in avances_actives)
+            
+            # Le prochain paiement = mois de début + nombre de mois couverts
+            prochain_mois = mois_debut_couverture + relativedelta(months=total_mois_couverts)
             
             return prochain_mois
             

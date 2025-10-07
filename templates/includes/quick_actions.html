@@ -1,86 +1,275 @@
 {% load static %}
-
-<!-- Composant d'actions rapides contextuelles -->
-{% if quick_actions %}
-<div class="quick-actions-container mb-4">
-    <div class="card border-0 shadow-lg">
-        <div class="card-header bg-gradient-primary text-white">
-            <h6 class="card-title mb-0">
-                <i class="bi bi-lightning-charge"></i> Actions Rapides
+<!-- Actions Rapides - Barre flottante -->
+<div id="quick-actions-bar" class="quick-actions-bar">
+    <div class="quick-actions-toggle" onclick="toggleQuickActions()">
+        <i class="bi bi-lightning-charge-fill"></i>
+        <span class="quick-actions-label">Actions Rapides</span>
+    </div>
+    
+    <div class="quick-actions-menu" id="quick-actions-menu">
+        <!-- Section Propriétés -->
+        <div class="quick-actions-section">
+            <h6 class="quick-actions-title">
+                <i class="bi bi-house"></i> Propriétés
             </h6>
+            <div class="quick-actions-grid">
+                <a href="{% url 'proprietes:proprietes_dashboard' %}" class="quick-action-btn" title="Dashboard Propriétés">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{% url 'proprietes:ajouter' %}" class="quick-action-btn" title="Ajouter Propriété">
+                    <i class="bi bi-plus-circle"></i>
+                    <span>Ajouter</span>
+                </a>
+                <a href="{% url 'proprietes:liste' %}" class="quick-action-btn" title="Liste Propriétés">
+                    <i class="bi bi-list-ul"></i>
+                    <span>Liste</span>
+                </a>
+                <a href="{% url 'proprietes:recherche_unites' %}" class="quick-action-btn" title="Rechercher Unités">
+                    <i class="bi bi-search"></i>
+                    <span>Rechercher</span>
+                </a>
+            </div>
         </div>
-        <div class="card-body p-4">
-            <div class="d-flex flex-wrap gap-3">
-                {% for action in quick_actions %}
-                    <a href="{{ action.url }}" 
-                       class="btn {{ action.style|default:'btn-outline-primary' }} quick-action-btn"
-                       title="{{ action.tooltip|default:action.label }}"
-                       {% if action.confirm %}
-                           onclick="return confirm('{{ action.confirm }}')"
-                       {% endif %}>
-                        <i class="bi bi-{{ action.icon|default:'arrow-right' }} me-2"></i>
-                        <span>{{ action.label }}</span>
-                    </a>
-                {% endfor %}
+
+        <!-- Section Contrats -->
+        <div class="quick-actions-section">
+            <h6 class="quick-actions-title">
+                <i class="bi bi-file-text"></i> Contrats
+            </h6>
+            <div class="quick-actions-grid">
+                <a href="{% url 'contrats:dashboard' %}" class="quick-action-btn" title="Dashboard Contrats">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{% url 'contrats:ajouter' %}" class="quick-action-btn" title="Créer Contrat">
+                    <i class="bi bi-plus-circle"></i>
+                    <span>Créer</span>
+                </a>
+                <a href="{% url 'contrats:liste' %}" class="quick-action-btn" title="Liste Contrats">
+                    <i class="bi bi-list-ul"></i>
+                    <span>Liste</span>
+                </a>
+                <a href="{% url 'contrats:orphelins' %}" class="quick-action-btn" title="Contrats Orphelins">
+                    <i class="bi bi-search"></i>
+                    <span>Rechercher</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Section Paiements -->
+        <div class="quick-actions-section">
+            <h6 class="quick-actions-title">
+                <i class="bi bi-credit-card"></i> Paiements
+            </h6>
+            <div class="quick-actions-grid">
+                <a href="{% url 'paiements:dashboard' %}" class="quick-action-btn" title="Dashboard Paiements">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{% url 'paiements:ajouter' %}" class="quick-action-btn" title="Ajouter Paiement">
+                    <i class="bi bi-plus-circle"></i>
+                    <span>Ajouter</span>
+                </a>
+                <a href="{% url 'paiements:liste' %}" class="quick-action-btn" title="Liste Paiements">
+                    <i class="bi bi-list-ul"></i>
+                    <span>Liste</span>
+                </a>
+                <a href="{% url 'paiements:recherche_intelligente' %}" class="quick-action-btn" title="Recherche Intelligente">
+                    <i class="bi bi-piggy-bank"></i>
+                    <span>Avances</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Section Bailleurs/Locataires -->
+        <div class="quick-actions-section">
+            <h6 class="quick-actions-title">
+                <i class="bi bi-people"></i> Personnes
+            </h6>
+            <div class="quick-actions-grid">
+                <a href="{% url 'proprietes:bailleurs_liste' %}" class="quick-action-btn" title="Bailleurs">
+                    <i class="bi bi-person-badge"></i>
+                    <span>Bailleurs</span>
+                </a>
+                <a href="{% url 'proprietes:locataires_liste' %}" class="quick-action-btn" title="Locataires">
+                    <i class="bi bi-people"></i>
+                    <span>Locataires</span>
+                </a>
+                <a href="{% url 'proprietes:ajouter_bailleur' %}" class="quick-action-btn" title="Ajouter Bailleur">
+                    <i class="bi bi-person-plus"></i>
+                    <span>+ Bailleur</span>
+                </a>
+                <a href="{% url 'proprietes:ajouter_locataire' %}" class="quick-action-btn" title="Ajouter Locataire">
+                    <i class="bi bi-person-plus"></i>
+                    <span>+ Locataire</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Section Rapports -->
+        <div class="quick-actions-section">
+            <h6 class="quick-actions-title">
+                <i class="bi bi-graph-up"></i> Rapports
+            </h6>
+            <div class="quick-actions-grid">
+                <a href="{% url 'paiements:tableau_bord_list' %}" class="quick-action-btn" title="Tableaux de Bord">
+                    <i class="bi bi-bar-chart"></i>
+                    <span>Tableaux</span>
+                </a>
+                <a href="{% url 'proprietes:document_list' %}" class="quick-action-btn" title="Documents">
+                    <i class="bi bi-file-earmark"></i>
+                    <span>Documents</span>
+                </a>
+                <a href="{% url 'core:rapports_audit' %}" class="quick-action-btn" title="Audit">
+                    <i class="bi bi-shield-check"></i>
+                    <span>Audit</span>
+                </a>
+                <a href="{% url 'core:intelligent_search' %}" class="quick-action-btn" title="Recherche Intelligente">
+                    <i class="bi bi-search-heart"></i>
+                    <span>Recherche</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Section Configuration -->
+        <div class="quick-actions-section">
+            <h6 class="quick-actions-title">
+                <i class="bi bi-gear"></i> Configuration
+            </h6>
+            <div class="quick-actions-grid">
+                <a href="{% url 'core:configuration_entreprise' %}" class="quick-action-btn" title="Configuration Entreprise">
+                    <i class="bi bi-building"></i>
+                    <span>Entreprise</span>
+                </a>
+                <a href="{% url 'core:tableau_bord_principal' %}" class="quick-action-btn" title="Tableau de Bord Principal">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{% url 'core:tableau_bord_principal' %}" class="quick-action-btn" title="Mon Profil">
+                    <i class="bi bi-person-circle"></i>
+                    <span>Profil</span>
+                </a>
+                <a href="{% url 'core:tableau_bord_principal' %}" class="quick-action-btn" title="Déconnexion">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span>Déconnexion</span>
+                </a>
             </div>
         </div>
     </div>
 </div>
-{% endif %}
 
-<style>
-.quick-actions-container .card-header {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    border-radius: 0.375rem 0.375rem 0 0;
+<!-- Raccourcis clavier -->
+<div id="keyboard-shortcuts-help" class="keyboard-shortcuts-help" style="display: none;">
+    <div class="keyboard-shortcuts-content">
+        <h6><i class="bi bi-keyboard"></i> Raccourcis Clavier</h6>
+        <div class="shortcuts-grid">
+            <div class="shortcut-item">
+                <kbd>Ctrl</kbd> + <kbd>P</kbd> <span>Propriétés</span>
+            </div>
+            <div class="shortcut-item">
+                <kbd>Ctrl</kbd> + <kbd>C</kbd> <span>Contrats</span>
+            </div>
+            <div class="shortcut-item">
+                <kbd>Ctrl</kbd> + <kbd>M</kbd> <span>Paiements</span>
+            </div>
+            <div class="shortcut-item">
+                <kbd>Ctrl</kbd> + <kbd>B</kbd> <span>Bailleurs</span>
+            </div>
+            <div class="shortcut-item">
+                <kbd>Ctrl</kbd> + <kbd>L</kbd> <span>Locataires</span>
+            </div>
+            <div class="shortcut-item">
+                <kbd>Ctrl</kbd> + <kbd>R</kbd> <span>Rapports</span>
+            </div>
+            <div class="shortcut-item">
+                <kbd>Ctrl</kbd> + <kbd>?</kbd> <span>Aide</span>
+            </div>
+            <div class="shortcut-item">
+                <kbd>Esc</kbd> <span>Fermer</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Actions rapides
+function toggleQuickActions() {
+    const menu = document.getElementById('quick-actions-menu');
+    const bar = document.getElementById('quick-actions-bar');
+    
+    if (menu.style.display === 'block') {
+        menu.style.display = 'none';
+        bar.classList.remove('active');
+    } else {
+        menu.style.display = 'block';
+        bar.classList.add('active');
+    }
 }
 
-.quick-action-btn {
-    border-radius: 20px;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    border: 2px solid transparent;
-}
+// Fermer le menu en cliquant à l'extérieur
+document.addEventListener('click', function(event) {
+    const bar = document.getElementById('quick-actions-bar');
+    const menu = document.getElementById('quick-actions-menu');
+    
+    if (!bar.contains(event.target)) {
+        menu.style.display = 'none';
+        bar.classList.remove('active');
+    }
+});
 
-.quick-action-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.quick-action-btn.btn-outline-primary:hover {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    border-color: transparent;
-}
-
-.quick-action-btn.btn-outline-success:hover {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    border-color: transparent;
-}
-
-.quick-action-btn.btn-outline-warning:hover {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    border-color: transparent;
-}
-
-.quick-action-btn.btn-outline-danger:hover {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    border-color: transparent;
-}
-
-.quick-action-btn.btn-outline-info:hover {
-    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-    border-color: transparent;
-}
-
-@media (max-width: 576px) {
-    .quick-actions-container .card-body {
-        padding: 0.75rem;
+// Raccourcis clavier
+document.addEventListener('keydown', function(event) {
+    if (event.ctrlKey) {
+        switch(event.key.toLowerCase()) {
+            case 'p':
+                event.preventDefault();
+                window.location.href = "{% url 'proprietes:proprietes_dashboard' %}";
+                break;
+            case 'c':
+                event.preventDefault();
+                window.location.href = "{% url 'contrats:dashboard' %}";
+                break;
+            case 'm':
+                event.preventDefault();
+                window.location.href = "{% url 'paiements:dashboard' %}";
+                break;
+            case 'b':
+                event.preventDefault();
+                window.location.href = "{% url 'proprietes:bailleurs_liste' %}";
+                break;
+            case 'l':
+                event.preventDefault();
+                window.location.href = "{% url 'proprietes:locataires_liste' %}";
+                break;
+            case 'r':
+                event.preventDefault();
+                window.location.href = "{% url 'paiements:tableau_bord_list' %}";
+                break;
+            case '?':
+                event.preventDefault();
+                toggleKeyboardHelp();
+                break;
+        }
     }
     
-    .quick-action-btn {
-        padding: 0.375rem 0.75rem;
-        font-size: 0.8rem;
+    if (event.key === 'Escape') {
+        document.getElementById('quick-actions-menu').style.display = 'none';
+        document.getElementById('keyboard-shortcuts-help').style.display = 'none';
+        document.getElementById('quick-actions-bar').classList.remove('active');
     }
+});
+
+function toggleKeyboardHelp() {
+    const help = document.getElementById('keyboard-shortcuts-help');
+    help.style.display = help.style.display === 'block' ? 'none' : 'block';
 }
-</style>
+
+// Animation d'entrée pour les boutons
+document.addEventListener('DOMContentLoaded', function() {
+    const buttons = document.querySelectorAll('.quick-action-btn');
+    buttons.forEach((button, index) => {
+        button.style.animationDelay = `${index * 0.05}s`;
+    });
+});
+</script>

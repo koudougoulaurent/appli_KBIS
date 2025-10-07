@@ -33,10 +33,31 @@ def monitoring_avances(request):
             'contrat', 'contrat__locataire', 'contrat__propriete'
         ).order_by('-created_at')[:10]
         
+        # Récupérer toutes les avances pour l'affichage
+        toutes_avances = AvanceLoyer.objects.select_related(
+            'contrat', 'contrat__locataire', 'contrat__propriete'
+        ).order_by('-created_at')
+        
+        # Calculer les statistiques supplémentaires
+        stats_supplementaires = {
+            'total_contrats_avec_avances': AvanceLoyer.objects.values('contrat').distinct().count(),
+            'montant_moyen_avance': 0,
+            'duree_moyenne_avance': 0,
+        }
+        
+        if toutes_avances.exists():
+            montants = [float(a.montant_avance) for a in toutes_avances]
+            durees = [a.nombre_mois_couverts for a in toutes_avances if a.nombre_mois_couverts > 0]
+            
+            stats_supplementaires['montant_moyen_avance'] = round(sum(montants) / len(montants), 2) if montants else 0
+            stats_supplementaires['duree_moyenne_avance'] = round(sum(durees) / len(durees), 1) if durees else 0
+        
         context = {
             'rapport': rapport,
             'avances_critiques': avances_critiques,
             'avances_recentes': avances_recentes,
+            'toutes_avances': toutes_avances,
+            'stats_supplementaires': stats_supplementaires,
             'date_actuelle': timezone.now(),
         }
         
@@ -46,6 +67,11 @@ def monitoring_avances(request):
         context = {
             'erreur': f"Erreur lors du chargement du monitoring: {str(e)}",
             'date_actuelle': timezone.now(),
+            'rapport': {'total_avances': 0, 'message': 'Aucune avance trouvée'},
+            'avances_critiques': [],
+            'avances_recentes': [],
+            'toutes_avances': [],
+            'stats_supplementaires': {'total_contrats_avec_avances': 0, 'montant_moyen_avance': 0, 'duree_moyenne_avance': 0},
         }
         return render(request, 'paiements/avances/monitoring_avances.html', context)
 
@@ -85,6 +111,7 @@ def detail_progression_avance(request, avance_id):
             'consommations': consommations,
             'historique_paiements': historique_paiements[:12],  # 12 derniers mois
             'stats_detaillees': stats_detaillees,
+            'mois_couverts_liste': avance.get_mois_couverts_liste(),
         }
         
         return render(request, 'paiements/avances/detail_progression_avance.html', context)
@@ -134,18 +161,18 @@ def envoyer_alertes_ajax(request):
     if request.method == 'POST':
         try:
             # Envoyer les alertes
-            message = ServiceMonitoringAvance.envoyer_alertes_expiration()
+            resultat = ServiceMonitoringAvance.envoyer_alertes()
             
-            if message:
+            if resultat.get('success', False):
                 return JsonResponse({
                     'success': True,
-                    'message': 'Alertes envoyées',
-                    'details': message
+                    'message': resultat.get('message', 'Alertes envoyées'),
+                    'alertes_envoyees': resultat.get('alertes_envoyees', 0)
                 })
             else:
                 return JsonResponse({
-                    'success': True,
-                    'message': 'Aucune alerte à envoyer'
+                    'success': False,
+                    'message': resultat.get('erreur', 'Erreur lors de l\'envoi des alertes')
                 })
                 
         except Exception as e:

@@ -1,0 +1,235 @@
+{% load static %}
+<!-- Actions Rapides de Page -->
+<div class="page-quick-actions">
+    <div class="page-actions-container">
+        <!-- Actions contextuelles basées sur la page actuelle -->
+        {% if request.resolver_match.app_name == 'proprietes' %}
+            <div class="page-action-group">
+                <h6><i class="bi bi-house"></i> Propriétés</h6>
+                <div class="page-actions">
+                    <a href="{% url 'proprietes:proprietes_dashboard' %}" class="page-action-btn">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="{% url 'proprietes:ajouter' %}" class="page-action-btn">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>Ajouter</span>
+                    </a>
+                    <a href="{% url 'proprietes:liste' %}" class="page-action-btn">
+                        <i class="bi bi-list-ul"></i>
+                        <span>Liste</span>
+                    </a>
+                    <a href="{% url 'proprietes:recherche_unites' %}" class="page-action-btn">
+                        <i class="bi bi-search"></i>
+                        <span>Rechercher</span>
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if request.resolver_match.app_name == 'contrats' %}
+            <div class="page-action-group">
+                <h6><i class="bi bi-file-text"></i> Contrats</h6>
+                <div class="page-actions">
+                    <a href="{% url 'contrats:dashboard' %}" class="page-action-btn">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="{% url 'contrats:ajouter' %}" class="page-action-btn">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>Créer</span>
+                    </a>
+                    <a href="{% url 'contrats:liste' %}" class="page-action-btn">
+                        <i class="bi bi-list-ul"></i>
+                        <span>Liste</span>
+                    </a>
+                    <a href="{% url 'contrats:orphelins' %}" class="page-action-btn">
+                        <i class="bi bi-search"></i>
+                        <span>Rechercher</span>
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if request.resolver_match.app_name == 'paiements' %}
+            <div class="page-action-group">
+                <h6><i class="bi bi-credit-card"></i> Paiements</h6>
+                <div class="page-actions">
+                    <a href="{% url 'paiements:dashboard' %}" class="page-action-btn">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="{% url 'paiements:ajouter' %}" class="page-action-btn">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>Ajouter</span>
+                    </a>
+                    <a href="{% url 'paiements:liste' %}" class="page-action-btn">
+                        <i class="bi bi-list-ul"></i>
+                        <span>Liste</span>
+                    </a>
+                    <a href="{% url 'paiements:recherche_intelligente' %}" class="page-action-btn">
+                        <i class="bi bi-piggy-bank"></i>
+                        <span>Avances</span>
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Actions communes -->
+        <div class="page-action-group">
+            <h6><i class="bi bi-people"></i> Personnes</h6>
+            <div class="page-actions">
+                <a href="{% url 'proprietes:bailleurs_liste' %}" class="page-action-btn">
+                    <i class="bi bi-person-badge"></i>
+                    <span>Bailleurs</span>
+                </a>
+                <a href="{% url 'proprietes:locataires_liste' %}" class="page-action-btn">
+                    <i class="bi bi-people"></i>
+                    <span>Locataires</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="page-action-group">
+            <h6><i class="bi bi-graph-up"></i> Rapports</h6>
+            <div class="page-actions">
+                <a href="{% url 'paiements:tableau_bord_list' %}" class="page-action-btn">
+                    <i class="bi bi-bar-chart"></i>
+                    <span>Tableaux</span>
+                </a>
+                <a href="{% url 'proprietes:document_list' %}" class="page-action-btn">
+                    <i class="bi bi-file-earmark"></i>
+                    <span>Documents</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-quick-actions {
+    position: fixed;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 999;
+    max-width: 200px;
+}
+
+.page-actions-container {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    padding: 15px;
+    border: 1px solid #e9ecef;
+}
+
+.page-action-group {
+    margin-bottom: 15px;
+}
+
+.page-action-group:last-child {
+    margin-bottom: 0;
+}
+
+.page-action-group h6 {
+    color: #495057;
+    font-size: 0.8em;
+    font-weight: 600;
+    margin-bottom: 8px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.page-action-group h6 i {
+    color: #007bff;
+    font-size: 1em;
+}
+
+.page-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.page-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #495057;
+    font-size: 0.8em;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.page-action-btn:hover {
+    background: #007bff;
+    color: white;
+    transform: translateX(5px);
+    text-decoration: none;
+}
+
+.page-action-btn i {
+    font-size: 1em;
+    width: 16px;
+    text-align: center;
+}
+
+.page-action-btn span {
+    font-size: 0.8em;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .page-quick-actions {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-quick-actions {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        top: auto;
+        max-width: 90%;
+    }
+    
+    .page-actions-container {
+        display: flex;
+        gap: 10px;
+        padding: 10px;
+        overflow-x: auto;
+    }
+    
+    .page-action-group {
+        margin-bottom: 0;
+        min-width: 150px;
+    }
+    
+    .page-actions {
+        flex-direction: row;
+        gap: 5px;
+    }
+    
+    .page-action-btn {
+        flex-direction: column;
+        padding: 6px 8px;
+        text-align: center;
+        min-width: 60px;
+    }
+    
+    .page-action-btn span {
+        font-size: 0.7em;
+    }
+}
+</style>

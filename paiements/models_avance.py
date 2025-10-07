@@ -91,6 +91,18 @@ class AvanceLoyer(models.Model):
         verbose_name_plural = _("Avances de loyer")
         ordering = ['-date_avance']
     
+    def get_mois_couverts_liste(self):
+        """Retourne la liste des mois couverts par l'avance"""
+        if not self.mois_debut_couverture or not self.nombre_mois_couverts:
+            return []
+        
+        mois_liste = []
+        for i in range(self.nombre_mois_couverts):
+            mois = self.mois_debut_couverture + relativedelta(months=i)
+            mois_liste.append(mois)
+        
+        return mois_liste
+
     def __str__(self):
         return f"Avance {self.montant_avance} F CFA - {self.contrat.locataire.get_nom_complet()}"
     
@@ -120,7 +132,16 @@ class AvanceLoyer(models.Model):
         self.nombre_mois_couverts = mois_complets
         
         # Définir les dates de couverture
-        self.mois_debut_couverture = self.date_avance.replace(day=1)
+        # LOGIQUE INTELLIGENTE : Si l'avance est versée en fin de mois, elle prend effet le mois suivant
+        mois_avance = self.date_avance.replace(day=1)
+        jour_avance = self.date_avance.day
+        
+        # Si l'avance est versée après le 15 du mois, elle prend effet le mois suivant
+        if jour_avance > 15:
+            self.mois_debut_couverture = mois_avance + relativedelta(months=1)
+        else:
+            self.mois_debut_couverture = mois_avance
+            
         if mois_complets > 0:
             self.mois_fin_couverture = self.mois_debut_couverture + relativedelta(months=mois_complets - 1)
         else:
@@ -289,12 +310,15 @@ class AvanceLoyer(models.Model):
         if not self.est_mois_couvert(mois_consomme):
             return False
         
-        # Consommer le loyer mensuel
-        self.montant_restant -= self.loyer_mensuel
+        # Consommer le loyer mensuel (conversion en Decimal)
+        loyer_decimal = Decimal(str(self.loyer_mensuel))
+        montant_restant_decimal = Decimal(str(self.montant_restant))
+        self.montant_restant = montant_restant_decimal - loyer_decimal
         
         # Mettre à jour le statut
         if self.montant_restant <= 0:
             self.statut = 'epuisee'
+            self.montant_restant = Decimal('0')
         
         self.save()
         return True
@@ -364,6 +388,8 @@ class ConsommationAvance(models.Model):
         'Paiement',
         on_delete=models.CASCADE,
         related_name='consommations_avance',
+        null=True,
+        blank=True,
         verbose_name=_("Paiement")
     )
     

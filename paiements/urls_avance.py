@@ -1,7 +1,7 @@
 from django.urls import path
 from . import views_avance, views_monitoring_avance
 
-# app_name = 'avances'  # Commenté pour intégration directe
+app_name = 'avances'
 
 urlpatterns = [
     # Dashboard des avances

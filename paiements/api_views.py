@@ -289,24 +289,34 @@ def api_contexte_intelligent_contrat(request, contrat_id):
                 # Combiner les deux types d'avances
                 toutes_les_avances = avances_actives.union(avances_recentes)
                 
-                if toutes_les_avances.exists():
-                    # *** AVANCES ACTIVES : Calculer le prochain mois en tenant compte des avances ***
-                    try:
-                        prochain_mois_paiement_avec_avances = ServiceGestionAvance.calculer_prochain_mois_paiement(contrat)
-                        prochain_mois = prochain_mois_paiement_avec_avances.month
+                # *** CALCULER LE PROCHAIN MOIS (avec ou sans avances) ***
+                try:
+                    prochain_mois_paiement_avec_avances = ServiceGestionAvance.calculer_prochain_mois_paiement(contrat)
+                    prochain_mois = prochain_mois_paiement_avec_avances.month
+                    
+                    # Déterminer le type de suggestion
+                    if toutes_les_avances.exists():
                         mois_suggere = f"Prochain paiement avec avances: {prochain_mois_paiement_avec_avances.strftime('%B %Y')}"
-                    except Exception as e:
-                        print(f"Erreur calcul prochain mois: {str(e)}")
-                        # Fallback : calculer normalement
-                        derniers_mois = [p.date_paiement.month for p in paiements_recents if p.date_paiement]
-                        if derniers_mois:
-                            dernier_mois = max(derniers_mois)
-                            prochain_mois = (dernier_mois % 12) + 1
-                            mois_suggere = f"Suivant le dernier paiement ({prochain_mois})"
-                        else:
-                            from datetime import datetime
-                            prochain_mois = datetime.now().month
-                            mois_suggere = "Mois actuel"
+                    else:
+                        mois_suggere = f"Prochain paiement: {prochain_mois_paiement_avec_avances.strftime('%B %Y')}"
+                        
+                except Exception as e:
+                    print(f"Erreur calcul prochain mois: {str(e)}")
+                    # Fallback : calculer normalement
+                    derniers_mois = [p.date_paiement.month for p in paiements_recents if p.date_paiement]
+                    if derniers_mois:
+                        dernier_mois = max(derniers_mois)
+                        prochain_mois = (dernier_mois % 12) + 1
+                        mois_suggere = f"Suivant le dernier paiement ({prochain_mois})"
+                    else:
+                        from datetime import datetime
+                        prochain_mois = datetime.now().month
+                        mois_suggere = "Mois actuel"
+                    prochain_mois_paiement_avec_avances = None
+                
+                if toutes_les_avances.exists():
+                    # *** AVANCES ACTIVES : Informations supplémentaires ***
+                    pass  # Les informations sont déjà calculées plus haut
                 else:
                     # *** PAS D'AVANCES : Calculer normalement ***
                     derniers_mois = [p.date_paiement.month for p in paiements_recents if p.date_paiement]
@@ -438,7 +448,7 @@ def api_contexte_intelligent_contrat(request, contrat_id):
                     } for avance in avances_actives
                 ],
                 'prochain_mois_paiement': prochain_mois,
-                'prochain_mois_paiement_avec_avances': _convertir_mois_francais_api(prochain_mois_paiement_avec_avances.strftime('%B %Y')) if 'prochain_mois_paiement_avec_avances' in locals() else None,
+                'prochain_mois_paiement_avec_avances': _convertir_mois_francais_api(prochain_mois_paiement_avec_avances.strftime('%B %Y')) if 'prochain_mois_paiement_avec_avances' in locals() and prochain_mois_paiement_avec_avances else None,
                 'date_expiration_avances': date_expiration_avances.strftime('%d/%m/%Y') if date_expiration_avances else None,
                 'mois_suggere': mois_suggere,
                 'total_charges': clean_numeric_value(contrat.charges_mensuelles),
@@ -533,6 +543,7 @@ def api_convertir_avances_existantes(request):
             )
             
             avances_creees = 0
+            erreurs = []
             
             for paiement in paiements_avance:
                 # Vérifier si un AvanceLoyer existe déjà pour ce paiement
@@ -551,19 +562,150 @@ def api_convertir_avances_existantes(request):
                             date_avance=paiement.date_paiement,
                             notes=f"Converti depuis paiement {paiement.id}"
                         )
+                        # S'assurer que l'avance est active
+                        avance.statut = 'active'
+                        avance.save()
                         avances_creees += 1
+                        print(f"OK - Avance creee pour paiement {paiement.id} (contrat {contrat_id})")
                     except Exception as e:
-                        print(f"Erreur création AvanceLoyer pour paiement {paiement.id}: {str(e)}")
+                        erreur_msg = f"Erreur creation AvanceLoyer pour paiement {paiement.id}: {str(e)}"
+                        print(erreur_msg)
+                        erreurs.append(erreur_msg)
                         continue
+                else:
+                    print(f"IGNORE - Avance existe deja pour paiement {paiement.id} (contrat {contrat_id})")
+            
+            # Si aucune avance n'a été créée pour ce contrat, vérifier s'il y a des contrats avec des avances manquantes
+            if avances_creees == 0:
+                print(f"VERIFICATION - Aucune avance creee pour le contrat {contrat_id}, verification globale...")
+                
+                # Vérifier tous les contrats qui ont des paiements d'avance sans AvanceLoyer
+                contrats_avec_avances_manquantes = Contrat.objects.filter(
+                    paiements__type_paiement__in=['avance_loyer', 'avance'],
+                    paiements__statut='valide'
+                ).distinct()
+                
+                total_avances_manquantes = 0
+                for contrat_verif in contrats_avec_avances_manquantes:
+                    paiements_verif = Paiement.objects.filter(
+                        contrat=contrat_verif,
+                        type_paiement__in=['avance_loyer', 'avance'],
+                        statut='valide'
+                    )
+                    
+                    for paiement_verif in paiements_verif:
+                        avance_existante_verif = AvanceLoyer.objects.filter(
+                            contrat=paiement_verif.contrat,
+                            montant_avance=paiement_verif.montant,
+                            date_avance=paiement_verif.date_paiement
+                        ).first()
+                        
+                        if not avance_existante_verif:
+                            total_avances_manquantes += 1
+                            print(f"ATTENTION - Contrat {contrat_verif.id}: Paiement {paiement_verif.id} sans AvanceLoyer")
+                
+                if total_avances_manquantes > 0:
+                    message = f"Aucune avance créée pour ce contrat, mais {total_avances_manquantes} avances manquantes détectées dans d'autres contrats. Utilisez la conversion globale."
+                else:
+                    message = "Toutes les avances sont déjà converties."
+            else:
+                message = f'{avances_creees} avances créées avec succès'
             
             return JsonResponse({
                 'success': True,
                 'avances_creees': avances_creees,
-                'message': f'{avances_creees} avances créées avec succès'
+                'message': message,
+                'erreurs': erreurs
             })
             
         except Contrat.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Contrat non trouvé'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
+
+@csrf_exempt
+def api_convertir_toutes_avances_existantes(request):
+    """API pour convertir TOUS les paiements d'avance de TOUS les contrats en AvanceLoyer actifs"""
+    if request.method == 'POST':
+        try:
+            from .services_avance import ServiceGestionAvance
+            from .models_avance import AvanceLoyer
+            from contrats.models import Contrat
+            from decimal import Decimal
+            
+            # Trouver tous les contrats qui ont des paiements d'avance
+            # Récupérer d'abord tous les paiements d'avance, puis les contrats uniques
+            paiements_avance = Paiement.objects.filter(
+                type_paiement__in=['avance_loyer', 'avance'],
+                statut='valide'
+            )
+            
+            # Récupérer les contrats uniques
+            contrats_ids = set(p.contrat_id for p in paiements_avance)
+            contrats_avec_avances = Contrat.objects.filter(id__in=contrats_ids)
+            
+            total_avances_creees = 0
+            total_erreurs = []
+            contrats_traites = []
+            
+            for contrat in contrats_avec_avances:
+                print(f"Traitement du contrat {contrat.id}...")
+                contrats_traites.append(contrat.id)
+                
+                # Trouver tous les paiements d'avance de ce contrat
+                paiements_avance = Paiement.objects.filter(
+                    contrat=contrat,
+                    type_paiement__in=['avance_loyer', 'avance'],
+                    statut='valide'
+                )
+                
+                avances_creees_contrat = 0
+                
+                for paiement in paiements_avance:
+                    # Vérifier si un AvanceLoyer existe déjà pour ce paiement
+                    avance_existant = AvanceLoyer.objects.filter(
+                        contrat=paiement.contrat,
+                        montant_avance=paiement.montant,
+                        date_avance=paiement.date_paiement
+                    ).first()
+                    
+                    if not avance_existant:
+                        # Créer l'AvanceLoyer manquant
+                        try:
+                            avance = ServiceGestionAvance.creer_avance_loyer(
+                                contrat=paiement.contrat,
+                                montant_avance=Decimal(str(paiement.montant)),
+                                date_avance=paiement.date_paiement,
+                                notes=f"Converti depuis paiement {paiement.id}"
+                            )
+                            # S'assurer que l'avance est active
+                            avance.statut = 'active'
+                            avance.save()
+                            avances_creees_contrat += 1
+                            print(f"OK - Avance creee pour paiement {paiement.id} (contrat {contrat.id})")
+                        except Exception as e:
+                            erreur_msg = f"Contrat {contrat.id}, Paiement {paiement.id}: {str(e)}"
+                            print(f"ERREUR - {erreur_msg}")
+                            total_erreurs.append(erreur_msg)
+                            continue
+                    else:
+                        print(f"IGNORE - Avance existe deja pour paiement {paiement.id} (contrat {contrat.id})")
+                
+                total_avances_creees += avances_creees_contrat
+                print(f"RESULTAT Contrat {contrat.id}: {avances_creees_contrat} avances creees")
+            
+            print(f"RESULTAT FINAL: {total_avances_creees} avances creees au total")
+            
+            return JsonResponse({
+                'success': True,
+                'avances_creees': total_avances_creees,
+                'contrats_traites': len(contrats_traites),
+                'message': f'Conversion globale terminée: {total_avances_creees} avances créées pour {len(contrats_traites)} contrats',
+                'erreurs': total_erreurs
+            })
+            
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
     
