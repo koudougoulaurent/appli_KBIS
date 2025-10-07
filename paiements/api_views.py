@@ -10,11 +10,41 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.views import View
+import re
 
 from .models import Paiement
 from .serializers import PaiementSerializer, PaiementDetailSerializer
 from contrats.models import Contrat
 from proprietes.models import Locataire, Propriete
+
+def clean_numeric_value(value):
+    """Nettoie une valeur numérique en supprimant les caractères non numériques"""
+    if not value:
+        return 0.0
+    
+    # Convertir en string et nettoyer
+    str_value = str(value)
+    
+    # Supprimer tous les caractères non numériques sauf le point et la virgule
+    cleaned = re.sub(r'[^\d.,]', '', str_value)
+    
+    # Si il y a plusieurs points, garder seulement le dernier
+    if cleaned.count('.') > 1:
+        parts = cleaned.split('.')
+        cleaned = ''.join(parts[:-1]) + '.' + parts[-1]
+    
+    # Si il y a plusieurs virgules, garder seulement la dernière
+    if cleaned.count(',') > 1:
+        parts = cleaned.split(',')
+        cleaned = ''.join(parts[:-1]) + ',' + parts[-1]
+    
+    # Remplacer la virgule par un point
+    cleaned = cleaned.replace(',', '.')
+    
+    try:
+        return float(cleaned)
+    except (ValueError, TypeError):
+        return 0.0
 
 # 🔍 API DE RECHERCHE RAPIDE DES CONTRATS
 @csrf_exempt
@@ -58,7 +88,7 @@ def api_recherche_contrats_rapide(request):
                 'propriete_adresse': contrat.propriete.adresse,
                 'propriete_titre': contrat.propriete.titre,
                 'score': score,
-                'loyer': float(contrat.loyer_mensuel) if contrat.loyer_mensuel else 0
+                'loyer': clean_numeric_value(contrat.loyer_mensuel)
             })
         
         # Trier par score décroissant
@@ -140,7 +170,7 @@ def api_recherche_bailleur(request):
                     'code_postal': propriete.code_postal,
                     'type_propriete': propriete.type_bien.nom if propriete.type_bien else 'Non défini',
                     'disponibilite': 'Occupée' if not propriete.disponible else 'Disponible',
-                    'loyer_mensuel': float(contrat_actuel.loyer_mensuel) if contrat_actuel else 0,
+                    'loyer_mensuel': clean_numeric_value(contrat_actuel.loyer_mensuel) if contrat_actuel else 0,
                     'locataire': {
                         'nom': contrat_actuel.locataire.nom if contrat_actuel and contrat_actuel.locataire else None,
                         'prenom': contrat_actuel.locataire.prenom if contrat_actuel and contrat_actuel.locataire else None,
@@ -158,9 +188,9 @@ def api_recherche_bailleur(request):
                 retrait_info = {
                     'id': retrait.id,
                     'mois_retrait': retrait.mois_retrait.strftime('%B %Y') if retrait.mois_retrait else 'Date non définie',
-                    'montant_loyers_bruts': float(retrait.montant_loyers_bruts) if retrait.montant_loyers_bruts else 0,
-                    'montant_charges_deductibles': float(retrait.montant_charges_deductibles) if retrait.montant_charges_deductibles else 0,
-                    'montant_net_a_payer': float(retrait.montant_net_a_payer) if retrait.montant_net_a_payer else 0,
+                    'montant_loyers_bruts': clean_numeric_value(retrait.montant_loyers_bruts),
+                    'montant_charges_deductibles': clean_numeric_value(retrait.montant_charges_deductibles),
+                    'montant_net_a_payer': clean_numeric_value(retrait.montant_net_a_payer),
                     'date_demande': retrait.date_demande.strftime('%d/%m/%Y') if retrait.date_demande else 'Date non définie',
                     'statut': retrait.get_statut_display() if hasattr(retrait, 'get_statut_display') else 'Non défini',
                     'type_retrait': retrait.get_type_retrait_display() if hasattr(retrait, 'get_type_retrait_display') else 'Non défini'
@@ -187,8 +217,8 @@ def api_recherche_bailleur(request):
                     'liste': proprietes_data
                 },
                 'loyers': {
-                    'total_mensuel': float(total_loyers_bruts),
-                    'total_annuel': float(total_loyers_bruts * 12)
+                    'total_mensuel': clean_numeric_value(total_loyers_bruts),
+                    'total_annuel': clean_numeric_value(total_loyers_bruts * 12)
                 },
                 'retraits': {
                     'total': retraits_precedents.count(),
@@ -199,7 +229,7 @@ def api_recherche_bailleur(request):
                 'statistiques': {
                     'nombre_proprietes': proprietes_louees.count(),
                     'nombre_contrats_actifs': contrats_actifs.count(),
-                    'moyenne_loyer': float(total_loyers_bruts / proprietes_louees.count()) if proprietes_louees.count() > 0 else 0
+                    'moyenne_loyer': clean_numeric_value(total_loyers_bruts / proprietes_louees.count()) if proprietes_louees.count() > 0 else 0
                 }
             }
             
@@ -233,39 +263,149 @@ def api_contexte_intelligent_contrat(request, contrat_id):
                 is_deleted=False
             ).order_by('-date_paiement')[:5]
             
-            # Calculer le prochain mois de paiement
-            derniers_mois = [p.date_paiement.month for p in paiements_recents if p.date_paiement]
-            prochain_mois = None
-            mois_suggere = None
-            
-            if derniers_mois:
-                # Si il y a des paiements, calculer le mois suivant
-                dernier_mois = max(derniers_mois)
-                prochain_mois = (dernier_mois % 12) + 1
-                mois_suggere = f"Suivant le dernier paiement ({prochain_mois})"
-            else:
-                # Premier paiement : utiliser le mois actuel ou le mois de début de contrat
-                from datetime import datetime
-                mois_actuel = datetime.now().month
-                if contrat.date_debut:
-                    mois_debut = contrat.date_debut.month
-                    if mois_debut == mois_actuel:
-                        prochain_mois = mois_actuel
-                        mois_suggere = "Mois actuel (début de contrat)"
-                    else:
-                        prochain_mois = mois_debut
-                        mois_suggere = f"Mois de début de contrat ({mois_debut})"
+            # *** CALCUL INTELLIGENT DU PROCHAIN MOIS DE PAIEMENT ***
+            # D'abord vérifier s'il y a des avances actives
+            try:
+                from .services_avance import ServiceGestionAvance
+                from .models_avance import AvanceLoyer
+                
+                # Récupérer les avances actives ET récemment épuisées (qui ont encore un impact)
+                from datetime import datetime, timedelta
+                from dateutil.relativedelta import relativedelta
+                date_limite_avances = datetime.now() - timedelta(days=30)  # Avances des 30 derniers jours
+                
+                avances_actives = AvanceLoyer.objects.filter(
+                    contrat=contrat,
+                    statut='active'
+                )
+                
+                # Aussi inclure les avances récemment épuisées qui peuvent encore influencer le prochain paiement
+                avances_recentes = AvanceLoyer.objects.filter(
+                    contrat=contrat,
+                    statut='epuisee',
+                    date_avance__gte=date_limite_avances
+                )
+                
+                # Combiner les deux types d'avances
+                toutes_les_avances = avances_actives.union(avances_recentes)
+                
+                if toutes_les_avances.exists():
+                    # *** AVANCES ACTIVES : Calculer le prochain mois en tenant compte des avances ***
+                    try:
+                        prochain_mois_paiement_avec_avances = ServiceGestionAvance.calculer_prochain_mois_paiement(contrat)
+                        prochain_mois = prochain_mois_paiement_avec_avances.month
+                        mois_suggere = f"Prochain paiement avec avances: {prochain_mois_paiement_avec_avances.strftime('%B %Y')}"
+                    except Exception as e:
+                        print(f"Erreur calcul prochain mois: {str(e)}")
+                        # Fallback : calculer normalement
+                        derniers_mois = [p.date_paiement.month for p in paiements_recents if p.date_paiement]
+                        if derniers_mois:
+                            dernier_mois = max(derniers_mois)
+                            prochain_mois = (dernier_mois % 12) + 1
+                            mois_suggere = f"Suivant le dernier paiement ({prochain_mois})"
+                        else:
+                            from datetime import datetime
+                            prochain_mois = datetime.now().month
+                            mois_suggere = "Mois actuel"
                 else:
-                    prochain_mois = mois_actuel
+                    # *** PAS D'AVANCES : Calculer normalement ***
+                    derniers_mois = [p.date_paiement.month for p in paiements_recents if p.date_paiement]
+                    
+                    if derniers_mois:
+                        # Si il y a des paiements, calculer le mois suivant
+                        dernier_mois = max(derniers_mois)
+                        prochain_mois = (dernier_mois % 12) + 1
+                        mois_suggere = f"Suivant le dernier paiement ({prochain_mois})"
+                    else:
+                        # Premier paiement : utiliser le mois actuel ou le mois de début de contrat
+                        from datetime import datetime
+                        mois_actuel = datetime.now().month
+                        if contrat.date_debut:
+                            mois_debut = contrat.date_debut.month
+                            if mois_debut == mois_actuel:
+                                prochain_mois = mois_actuel
+                                mois_suggere = "Mois actuel (début de contrat)"
+                            else:
+                                prochain_mois = mois_debut
+                                mois_suggere = f"Mois de début de contrat ({mois_debut})"
+                        else:
+                            prochain_mois = mois_actuel
+                            mois_suggere = "Mois actuel"
+                            
+            except Exception as e:
+                # En cas d'erreur, calculer normalement
+                derniers_mois = [p.date_paiement.month for p in paiements_recents if p.date_paiement]
+                if derniers_mois:
+                    dernier_mois = max(derniers_mois)
+                    prochain_mois = (dernier_mois % 12) + 1
+                    mois_suggere = f"Suivant le dernier paiement ({prochain_mois})"
+                else:
+                    from datetime import datetime
+                    prochain_mois = datetime.now().month
                     mois_suggere = "Mois actuel"
+            
+            # *** RÉCUPÉRATION DES INFORMATIONS SUR LES AVANCES ***
+            try:
+                # Récupérer les avances actives (seulement celles qui ont encore du montant restant)
+                avances_actives = AvanceLoyer.objects.filter(
+                    contrat=contrat,
+                    statut='active',
+                    montant_restant__gt=0  # Seulement les avances qui ont encore de l'argent
+                )
+                
+                # Calculer le montant total des avances disponibles
+                montant_avances_disponible = sum(avance.montant_restant for avance in avances_actives)
+                
+                # Calculer le nombre de mois couverts par les avances
+                mois_couverts_par_avances = sum(avance.nombre_mois_couverts for avance in avances_actives)
+                
+                # *** MONITORING DES AVANCES - DÉTECTION AUTOMATIQUE DE LA PROGRESSION ***
+                from .services_monitoring_avance import ServiceMonitoringAvance
+                
+                # Analyser la progression des avances
+                progression_avances = ServiceMonitoringAvance.analyser_progression_avances(contrat)
+                
+                # Détecter les avances à consommer automatiquement
+                avances_a_consommer = ServiceMonitoringAvance.detecter_avances_a_consommer(contrat)
+                
+                # Consommer automatiquement les avances manquantes
+                if avances_a_consommer.get('total_mois_a_consommer', 0) > 0:
+                    consommation_auto = ServiceMonitoringAvance.consommer_avances_manquantes(contrat)
+                    if consommation_auto.get('success'):
+                        print(f"Consommation automatique: {consommation_auto['message']}")
+                        # Recharger les avances après consommation
+                        avances_actives = AvanceLoyer.objects.filter(
+                            contrat=contrat,
+                            statut='active'
+                        )
+                        montant_avances_disponible = sum(avance.montant_restant for avance in avances_actives)
+                        mois_couverts_par_avances = sum(avance.nombre_mois_couverts for avance in avances_actives)
+                
+                # Calculer le prochain mois de paiement en tenant compte des avances
+                prochain_mois_paiement = ServiceGestionAvance.calculer_prochain_mois_paiement(contrat)
+                montant_du_mois_prochain, montant_avance_utilisee = ServiceGestionAvance.calculer_montant_du_mois(
+                    contrat, prochain_mois_paiement
+                )
+                
+                # Calculer la date d'expiration des avances
+                date_expiration_avances = ServiceGestionAvance.calculer_date_expiration_avances(contrat)
+                
+            except Exception as e:
+                # En cas d'erreur, ne pas prendre en compte les avances
+                montant_avances_disponible = 0
+                mois_couverts_par_avances = 0
+                prochain_mois_paiement = date.today().replace(day=1) + relativedelta(months=1)
+                montant_du_mois_prochain = clean_numeric_value(contrat.loyer_mensuel)
+                montant_avance_utilisee = 0
+                date_expiration_avances = None
             
             contexte = {
                 'contrat': {
                     'numero': contrat.numero_contrat,
                     'date_debut': contrat.date_debut.strftime('%d/%m/%Y') if contrat.date_debut else None,
                     'date_fin': contrat.date_fin.strftime('%d/%m/%Y') if contrat.date_fin else None,
-                    'montant_loyer': float(contrat.loyer_mensuel) if contrat.loyer_mensuel else 0,
-                    'charges': float(contrat.charges_mensuelles) if contrat.charges_mensuelles else 0
+                    'montant_loyer': clean_numeric_value(contrat.loyer_mensuel),
+                    'charges': clean_numeric_value(contrat.charges_mensuelles)
                 },
                 'locataire': {
                     'nom_complet': contrat.locataire.get_nom_complet(),
@@ -281,16 +421,37 @@ def api_contexte_intelligent_contrat(request, contrat_id):
                 'paiements_recents': [
                     {
                         'date': p.date_paiement.strftime('%d/%m/%Y'),
-                        'montant': float(p.montant),
+                        'montant': clean_numeric_value(p.montant),
                         'type': p.get_type_paiement_display(),
                         'statut': p.get_statut_display()
                     } for p in paiements_recents
                 ],
+                # *** AJOUT DES AVANCES DANS L'HISTORIQUE ***
+                'avances_recents': [
+                    {
+                        'date': avance.date_avance.strftime('%d/%m/%Y'),
+                        'montant': clean_numeric_value(avance.montant_avance),
+                        'type': 'Avance de loyer',
+                        'statut': 'Active' if avance.statut == 'active' else 'Épuisée',
+                        'mois_couverts': avance.nombre_mois_couverts,
+                        'montant_restant': clean_numeric_value(avance.montant_restant)
+                    } for avance in avances_actives
+                ],
                 'prochain_mois_paiement': prochain_mois,
+                'prochain_mois_paiement_avec_avances': _convertir_mois_francais_api(prochain_mois_paiement_avec_avances.strftime('%B %Y')) if 'prochain_mois_paiement_avec_avances' in locals() else None,
+                'date_expiration_avances': date_expiration_avances.strftime('%d/%m/%Y') if date_expiration_avances else None,
                 'mois_suggere': mois_suggere,
-                'total_charges': float(contrat.charges_mensuelles) if contrat.charges_mensuelles else 0,
-                'net_a_payer': float(contrat.loyer_mensuel) if contrat.loyer_mensuel else 0,
-                'est_premier_paiement': len(paiements_recents) == 0
+                'total_charges': clean_numeric_value(contrat.charges_mensuelles),
+                'net_a_payer': clean_numeric_value(contrat.loyer_mensuel),
+                'est_premier_paiement': len(paiements_recents) == 0,
+                # *** INFORMATIONS SUR LES AVANCES ***
+                'montant_avances_disponible': clean_numeric_value(montant_avances_disponible),
+                'mois_couverts_par_avances': mois_couverts_par_avances,
+                'montant_du_mois_prochain': clean_numeric_value(montant_du_mois_prochain),
+                'montant_avance_utilisee': clean_numeric_value(montant_avance_utilisee),
+                'avances_actives': avances_actives.count() if 'avances_actives' in locals() else 0,
+                'progression_avances': progression_avances if 'progression_avances' in locals() else {},
+                'avances_a_consommer': avances_a_consommer if 'avances_a_consommer' in locals() else {}
             }
             
             return JsonResponse(contexte)
@@ -301,6 +462,112 @@ def api_contexte_intelligent_contrat(request, contrat_id):
             return JsonResponse({'error': str(e)}, status=500)
     
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+
+
+# 🚀 API POUR CRÉER UNE AVANCE RAPIDEMENT
+@csrf_exempt
+def api_creer_avance_rapide(request):
+    """API pour créer une avance rapidement depuis le formulaire de paiement"""
+    if request.method == 'POST':
+        try:
+            from .services_avance import ServiceGestionAvance
+            from .models_avance import AvanceLoyer
+            from contrats.models import Contrat
+            from decimal import Decimal
+            
+            contrat_id = request.POST.get('contrat_id')
+            montant_avance = request.POST.get('montant_avance')
+            notes = request.POST.get('notes', '')
+            
+            if not contrat_id or not montant_avance:
+                return JsonResponse({'success': False, 'error': 'Paramètres manquants'})
+            
+            # Récupérer le contrat
+            contrat = Contrat.objects.get(pk=contrat_id, is_deleted=False)
+            
+            # Créer l'avance
+            avance = ServiceGestionAvance.creer_avance_loyer(
+                contrat=contrat,
+                montant_avance=Decimal(montant_avance),
+                date_avance=timezone.now().date(),
+                notes=notes
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'avance_id': avance.id,
+                'mois_couverts': avance.nombre_mois_couverts,
+                'montant_restant': float(avance.montant_restant),
+                'statut': avance.statut
+            })
+            
+        except Contrat.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Contrat non trouvé'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
+
+@csrf_exempt
+def api_convertir_avances_existantes(request):
+    """API pour convertir tous les paiements d'avance d'un contrat en AvanceLoyer actifs"""
+    if request.method == 'POST':
+        try:
+            from .services_avance import ServiceGestionAvance
+            from .models_avance import AvanceLoyer
+            from contrats.models import Contrat
+            from decimal import Decimal
+            
+            contrat_id = request.POST.get('contrat_id')
+            
+            if not contrat_id:
+                return JsonResponse({'success': False, 'error': 'ID du contrat manquant'})
+            
+            contrat = Contrat.objects.get(pk=contrat_id, is_deleted=False)
+            
+            # Trouver tous les paiements d'avance de ce contrat
+            paiements_avance = Paiement.objects.filter(
+                contrat=contrat,
+                type_paiement__in=['avance_loyer', 'avance'],
+                statut='valide'
+            )
+            
+            avances_creees = 0
+            
+            for paiement in paiements_avance:
+                # Vérifier si un AvanceLoyer existe déjà pour ce paiement
+                avance_existant = AvanceLoyer.objects.filter(
+                    contrat=paiement.contrat,
+                    montant_avance=paiement.montant,
+                    date_avance=paiement.date_paiement
+                ).first()
+                
+                if not avance_existant:
+                    # Créer l'AvanceLoyer manquant
+                    try:
+                        avance = ServiceGestionAvance.creer_avance_loyer(
+                            contrat=paiement.contrat,
+                            montant_avance=Decimal(str(paiement.montant)),
+                            date_avance=paiement.date_paiement,
+                            notes=f"Converti depuis paiement {paiement.id}"
+                        )
+                        avances_creees += 1
+                    except Exception as e:
+                        print(f"Erreur création AvanceLoyer pour paiement {paiement.id}: {str(e)}")
+                        continue
+            
+            return JsonResponse({
+                'success': True,
+                'avances_creees': avances_creees,
+                'message': f'{avances_creees} avances créées avec succès'
+            })
+            
+        except Contrat.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Contrat non trouvé'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
 
 
 class PaiementViewSet(viewsets.ModelViewSet):
@@ -874,3 +1141,30 @@ def api_verifier_doublon_paiement(request):
         'doublon_existe': False,
         'erreur': 'Méthode non autorisée'
     })
+
+def _convertir_mois_francais_api(mois_anglais):
+    """Convertit les mois anglais en français pour l'API"""
+    if not mois_anglais:
+        return mois_anglais
+        
+    mois_francais = {
+        'January': 'Janvier',
+        'February': 'Février', 
+        'March': 'Mars',
+        'April': 'Avril',
+        'May': 'Mai',
+        'June': 'Juin',
+        'July': 'Juillet',
+        'August': 'Août',
+        'September': 'Septembre',
+        'October': 'Octobre',
+        'November': 'Novembre',
+        'December': 'Décembre'
+    }
+    
+    # Remplacer tous les mois anglais par les mois français
+    resultat = mois_anglais
+    for mois_en, mois_fr in mois_francais.items():
+        resultat = resultat.replace(mois_en, mois_fr)
+    
+    return resultat

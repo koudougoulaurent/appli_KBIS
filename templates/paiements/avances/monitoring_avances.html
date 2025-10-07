@@ -1,0 +1,423 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Monitoring des Avances - KBIS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/avances.css' %}">
+<style>
+    .monitoring-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        background: white;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+    }
+    
+    .monitoring-card:hover {
+        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        transform: translateY(-2px);
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-card.critique {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+    }
+    
+    .stat-card.avancee {
+        background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%);
+    }
+    
+    .stat-card.normale {
+        background: linear-gradient(135deg, #48dbfb 0%, #0abde3 100%);
+    }
+    
+    .stat-card.epuisee {
+        background: linear-gradient(135deg, #a8a8a8 0%, #d3d3d3 100%);
+    }
+    
+    .progression-bar {
+        height: 20px;
+        border-radius: 10px;
+        background: #f0f0f0;
+        overflow: hidden;
+        margin: 1rem 0;
+    }
+    
+    .progression-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+        transition: width 0.5s ease;
+        border-radius: 10px;
+    }
+    
+    .progression-fill.critique {
+        background: linear-gradient(90deg, #ff6b6b 0%, #ee5a24 100%);
+    }
+    
+    .progression-fill.avancee {
+        background: linear-gradient(90deg, #feca57 0%, #ff9ff3 100%);
+    }
+    
+    .progression-fill.epuisee {
+        background: linear-gradient(90deg, #a8a8a8 0%, #d3d3d3 100%);
+    }
+    
+    .alert-badge {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        background: #ff4757;
+        color: white;
+        border-radius: 50%;
+        width: 25px;
+        height: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    
+    .action-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-block;
+        margin: 0.25rem;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .btn-sync {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+    }
+    
+    .btn-alert {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        color: white;
+    }
+    
+    .btn-report {
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        color: #333;
+    }
+    
+    .avance-item {
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        background: white;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    
+    .avance-item:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transform: translateY(-1px);
+    }
+    
+    .avance-item.critique {
+        border-left: 5px solid #ff6b6b;
+    }
+    
+    .avance-item.avancee {
+        border-left: 5px solid #feca57;
+    }
+    
+    .avance-item.normale {
+        border-left: 5px solid #48dbfb;
+    }
+    
+    .avance-item.epuisee {
+        border-left: 5px solid #a8a8a8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-graph-up text-primary"></i>
+                        Monitoring des Avances de Loyer
+                    </h1>
+                    <p class="text-muted mb-0">Supervision automatique de la progression des avances</p>
+                </div>
+                <div>
+                    <button class="action-btn btn-sync" onclick="synchroniserAvances()">
+                        <i class="bi bi-arrow-clockwise"></i> Synchroniser
+                    </button>
+                    <button class="action-btn btn-alert" onclick="envoyerAlertes()">
+                        <i class="bi bi-bell"></i> Envoyer Alertes
+                    </button>
+                    <button class="action-btn btn-report" onclick="genererRapport()">
+                        <i class="bi bi-file-text"></i> Rapport
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if erreur %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle"></i>
+                {{ erreur }}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if rapport %}
+    <!-- Statistiques globales -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <h3>{{ rapport.statistiques.total_avances }}</h3>
+                <p class="mb-0">Total Avances</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card critique">
+                <h3>{{ rapport.statistiques.avances_critiques }}</h3>
+                <p class="mb-0">Critiques</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card avancee">
+                <h3>{{ rapport.statistiques.avances_avancees }}</h3>
+                <p class="mb-0">Avancées</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card normale">
+                <h3>{{ rapport.statistiques.avances_normales }}</h3>
+                <p class="mb-0">Normales</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progression globale -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="monitoring-card">
+                <h4 class="mb-3">
+                    <i class="bi bi-pie-chart text-primary"></i>
+                    Progression Globale des Avances
+                </h4>
+                <div class="progression-bar">
+                    <div class="progression-fill" style="width: {{ rapport.montants.pourcentage_consomme|floatformat:1 }}%"></div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-4">
+                        <strong>Montant Total:</strong> {{ rapport.montants.total_avances|floatformat:0 }} F CFA
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Consommé:</strong> {{ rapport.montants.total_consomme|floatformat:0 }} F CFA
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Restant:</strong> {{ rapport.montants.total_restant|floatformat:0 }} F CFA
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Avances critiques -->
+    {% if avances_critiques %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="monitoring-card">
+                <h4 class="mb-3 text-danger">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Avances Critiques ({{ avances_critiques|length }})
+                </h4>
+                {% for avance_info in avances_critiques %}
+                <div class="avance-item critique">
+                    <div class="row align-items-center">
+                        <div class="col-md-4">
+                            <h6 class="mb-1">{{ avance_info.avance.contrat.locataire.get_nom_complet }}</h6>
+                            <p class="text-muted mb-0">Contrat: {{ avance_info.avance.contrat.numero_contrat }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="progression-bar">
+                                <div class="progression-fill critique" style="width: {{ avance_info.pourcentage_reel|floatformat:1 }}%"></div>
+                            </div>
+                            <small class="text-muted">{{ avance_info.pourcentage_reel|floatformat:1 }}% consommé</small>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Restant:</strong> {{ avance_info.montant_restant|floatformat:0 }} F CFA<br>
+                            <small class="text-muted">{{ avance_info.mois_restants_estimes }} mois restants</small>
+                        </div>
+                        <div class="col-md-2 text-end">
+                            <a href="{% url 'paiements:detail_progression_avance' avance_info.avance.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> Détails
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Toutes les avances -->
+    <div class="row">
+        <div class="col-12">
+            <div class="monitoring-card">
+                <h4 class="mb-3">
+                    <i class="bi bi-list-check text-primary"></i>
+                    Toutes les Avances
+                </h4>
+                {% if rapport.progressions %}
+                    {% for progression in rapport.progressions %}
+                    <div class="avance-item {{ progression.statut_progression }}">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <h6 class="mb-1">{{ progression.avance.contrat.locataire.get_nom_complet }}</h6>
+                                <p class="text-muted mb-0">Contrat: {{ progression.avance.contrat.numero_contrat }}</p>
+                            </div>
+                            <div class="col-md-2">
+                                <strong>Montant:</strong><br>
+                                <span class="text-primary">{{ progression.avance.montant_avance|floatformat:0 }} F CFA</span>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="progression-bar">
+                                    <div class="progression-fill {{ progression.statut_progression }}" style="width: {{ progression.pourcentage_reel|floatformat:1 }}%"></div>
+                                </div>
+                                <small class="text-muted">{{ progression.pourcentage_reel|floatformat:1 }}% consommé</small>
+                            </div>
+                            <div class="col-md-2">
+                                <strong>Restant:</strong><br>
+                                <span class="text-success">{{ progression.montant_restant|floatformat:0 }} F CFA</span>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <a href="{% url 'paiements:detail_progression_avance' progression.avance.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> Détails
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-house-add display-1 text-muted"></i>
+                        <h4 class="text-muted mt-3">Aucune avance trouvée</h4>
+                        <p class="text-muted">Commencez par ajouter une avance de loyer</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function synchroniserAvances() {
+        fetch('{% url "paiements:synchroniser_avances_ajax" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Synchronisation réussie !');
+                location.reload();
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la synchronisation');
+        });
+    }
+
+    function envoyerAlertes() {
+        fetch('{% url "paiements:envoyer_alertes_ajax" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Alertes envoyées !');
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de l\'envoi des alertes');
+        });
+    }
+
+    function genererRapport() {
+        fetch('{% url "paiements:rapport_progression_ajax" %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Afficher le rapport dans une nouvelle fenêtre
+                const rapportWindow = window.open('', '_blank');
+                rapportWindow.document.write(`
+                    <html>
+                        <head><title>Rapport de Progression des Avances</title></head>
+                        <body>
+                            <h1>Rapport de Progression des Avances</h1>
+                            <p>Généré le: ${new Date().toLocaleString()}</p>
+                            <pre>${JSON.stringify(data.rapport, null, 2)}</pre>
+                        </body>
+                    </html>
+                `);
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la génération du rapport');
+        });
+    }
+
+    // Auto-refresh toutes les 5 minutes
+    setInterval(function() {
+        location.reload();
+    }, 300000);
+</script>
+{% endblock %}
+

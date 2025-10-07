@@ -3,6 +3,7 @@ from django.db.models.functions import Coalesce, ExtractMonth, ExtractYear
 from django.utils import timezone
 from datetime import datetime, timedelta, date
 from decimal import Decimal
+from dateutil.relativedelta import relativedelta
 import json
 
 from .models import Paiement, ChargeDeductible, QuittancePaiement
@@ -200,28 +201,68 @@ class ServiceContexteIntelligent:
             total=Coalesce(Sum('montant'), Decimal('0.00'))
         )['total']
         
+        # *** INTÉGRATION DES AVANCES DE LOYER ***
+        # Calculer les avances disponibles pour ce contrat
+        try:
+            from .services_avance import ServiceGestionAvance
+            from .models_avance import AvanceLoyer
+            
+            # Récupérer les avances actives
+            avances_actives = AvanceLoyer.objects.filter(
+                contrat=contrat,
+                statut='active'
+            )
+            
+            # Calculer le montant total des avances disponibles
+            montant_avances_disponible = sum(avance.montant_restant for avance in avances_actives)
+            
+            # Calculer le nombre de mois couverts par les avances
+            mois_couverts_par_avances = sum(avance.nombre_mois_couverts for avance in avances_actives)
+            
+            # Calculer le prochain mois de paiement en tenant compte des avances
+            prochain_mois_paiement = ServiceGestionAvance.calculer_prochain_mois_paiement(contrat)
+            
+            # Calculer le montant dû pour le prochain mois de paiement en tenant compte des avances
+            montant_du_mois_prochain, montant_avance_utilisee = ServiceGestionAvance.calculer_montant_du_mois(
+                contrat, prochain_mois_paiement
+            )
+            
+        except Exception as e:
+            # En cas d'erreur, ne pas prendre en compte les avances
+            montant_avances_disponible = Decimal('0')
+            mois_couverts_par_avances = 0
+            montant_du_mois_prochain = Decimal(contrat.loyer_mensuel or '0') + Decimal(contrat.charges_mensuelles or '0')
+            montant_avance_utilisee = Decimal('0')
+        
         # Calcul du loyer net
         loyer_mensuel = Decimal(contrat.loyer_mensuel or '0')
         charges_mensuelles = Decimal(contrat.charges_mensuelles or '0')
         loyer_net = loyer_mensuel - charges_mensuelles
         
-        # Calcul du solde
-        solde_actuel = total_paiements - total_charges_validees
+        # Calcul du solde (incluant les avances)
+        solde_actuel = total_paiements - total_charges_validees + montant_avances_disponible
         
-        # Prochaine échéance
-        aujourd_hui = timezone.now().date()
-        jour_paiement = contrat.jour_paiement
-        
-        if aujourd_hui.day > jour_paiement:
-            # Prochaine échéance le mois prochain
-            if aujourd_hui.month == 12:
-                prochaine_echeance = date(aujourd_hui.year + 1, 1, jour_paiement)
-            else:
-                prochaine_echeance = date(aujourd_hui.year, aujourd_hui.month + 1, jour_paiement)
+        # *** CALCUL INTELLIGENT DE LA PROCHAINE ÉCHÉANCE ***
+        # Si il y a des avances, utiliser le prochain mois de paiement calculé
+        if 'prochain_mois_paiement' in locals() and montant_avances_disponible > 0:
+            # Utiliser le prochain mois de paiement calculé avec les avances
+            prochaine_echeance = prochain_mois_paiement.replace(day=contrat.jour_paiement)
         else:
-            # Échéance ce mois
-            prochaine_echeance = date(aujourd_hui.year, aujourd_hui.month, jour_paiement)
+            # Calcul normal de la prochaine échéance
+            aujourd_hui = timezone.now().date()
+            jour_paiement = contrat.jour_paiement
+            
+            if aujourd_hui.day > jour_paiement:
+                # Prochaine échéance le mois prochain
+                if aujourd_hui.month == 12:
+                    prochaine_echeance = date(aujourd_hui.year + 1, 1, jour_paiement)
+                else:
+                    prochaine_echeance = date(aujourd_hui.year, aujourd_hui.month + 1, jour_paiement)
+            else:
+                # Échéance ce mois
+                prochaine_echeance = date(aujourd_hui.year, aujourd_hui.month, jour_paiement)
         
+        aujourd_hui = timezone.now().date()
         jours_avant_echeance = (prochaine_echeance - aujourd_hui).days
         
         return {
@@ -232,7 +273,13 @@ class ServiceContexteIntelligent:
             'prochaine_echeance': prochaine_echeance,
             'jours_avant_echeance': jours_avant_echeance,
             'statut_solde': 'Positif' if solde_actuel >= 0 else 'Négatif',
-            'montant_du': max(Decimal('0'), -solde_actuel) if solde_actuel < 0 else Decimal('0')
+            'montant_du': max(Decimal('0'), -solde_actuel) if solde_actuel < 0 else Decimal('0'),
+            # *** INFORMATIONS SUR LES AVANCES ***
+            'montant_avances_disponible': montant_avances_disponible,
+            'mois_couverts_par_avances': mois_couverts_par_avances,
+            'montant_du_mois_prochain': montant_du_mois_prochain,
+            'montant_avance_utilisee': montant_avance_utilisee,
+            'avances_actives': avances_actives.count() if 'avances_actives' in locals() else 0
         }
     
     @staticmethod
@@ -270,6 +317,27 @@ class ServiceContexteIntelligent:
                 'niveau': 'warning',
                 'message': f'{charges["charges_en_attente"]} FCfa de charges en attente de validation',
                 'montant': charges['charges_en_attente']
+            })
+        
+        # *** ALERTES POUR LES AVANCES ***
+        calculs = ServiceContexteIntelligent._get_calculs_automatiques(contrat)
+        
+        # Alerte avances disponibles
+        if calculs['montant_avances_disponible'] > 0:
+            alertes.append({
+                'type': 'avances',
+                'niveau': 'success',
+                'message': f'Avances disponibles: {calculs["montant_avances_disponible"]:,.0f} F CFA ({calculs["mois_couverts_par_avances"]} mois couverts)',
+                'montant': calculs['montant_avances_disponible']
+            })
+        
+        # Alerte avances qui vont expirer
+        if calculs['mois_couverts_par_avances'] <= 1 and calculs['montant_avances_disponible'] > 0:
+            alertes.append({
+                'type': 'avances_expiration',
+                'niveau': 'warning',
+                'message': f'Attention: Les avances vont bientôt être épuisées ({calculs["mois_couverts_par_avances"]} mois restant)',
+                'montant': calculs['montant_avances_disponible']
             })
         
         # Alerte contrat expirant

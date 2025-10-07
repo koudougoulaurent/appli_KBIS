@@ -310,7 +310,131 @@ def ajouter_paiement(request):
                     paiement.reference_paiement = paiement.generate_reference_paiement()
                     paiement.save()
                 
-                messages.success(request, f'Paiement {paiement.reference_paiement} créé avec succès!')
+                # *** INTÉGRATION AUTOMATIQUE DES AVANCES ***
+                # Si c'est un paiement d'avance (avance_loyer ou avance), créer automatiquement l'avance
+                if paiement.type_paiement in ['avance_loyer', 'avance']:
+                    try:
+                        from .services_avance import ServiceGestionAvance
+                        avance = ServiceGestionAvance.traiter_paiement_avance(paiement)
+                        messages.success(request, f'Paiement {paiement.reference_paiement} créé avec succès! '
+                                                f'Avance de {avance.nombre_mois_couverts} mois créée automatiquement.')
+                    except Exception as e:
+                        messages.warning(request, f'Paiement {paiement.reference_paiement} créé, mais erreur lors de la création de l\'avance: {str(e)}')
+                elif paiement.type_paiement == 'loyer':
+                    # *** VALIDATION INTELLIGENTE DES PAIEMENTS DE LOYER ***
+                    try:
+                        from .services_avance import ServiceGestionAvance
+                        from .models_avance import AvanceLoyer
+                        from datetime import datetime
+                        from dateutil.relativedelta import relativedelta
+                        
+                        # Déterminer le mois du paiement
+                        mois_paiement = paiement.date_paiement.replace(day=1)
+                        
+                        # Validation 2: Vérifier les avances actives
+                        avances_actives = AvanceLoyer.objects.filter(
+                            contrat=paiement.contrat,
+                            statut='active',
+                            montant_restant__gt=0
+                        )
+                        
+                        if avances_actives.exists():
+                            # Il y a des avances actives - vérifier que le mois correspond
+                            prochain_mois_attendu = ServiceGestionAvance.calculer_prochain_mois_paiement(paiement.contrat)
+                            
+                            if mois_paiement != prochain_mois_attendu:
+                                messages.error(request, f'Avec les avances actives, vous devez payer pour {prochain_mois_attendu.strftime("%B %Y")}. '
+                                                      f'Créez une avance si vous voulez payer pour un autre mois.')
+                                return redirect('paiements:ajouter')
+                            
+                            # L'avance couvre ce mois - ajuster le montant du paiement
+                            avance_couvre, montant_avance = ServiceGestionAvance.verifier_avance_pour_mois(
+                                paiement.contrat, mois_paiement
+                            )
+                            
+                            if avance_couvre:
+                                paiement.montant = montant_avance
+                                paiement.save()
+                                
+                                # Consommer l'avance pour ce mois
+                                avance_consommee, montant_consomme = ServiceGestionAvance.consommer_avance_pour_mois(
+                                    paiement.contrat, mois_paiement
+                                )
+                                
+                                messages.success(request, f'Paiement {paiement.reference_paiement} ajusté avec l\'avance! '
+                                                        f'Montant: {montant_consomme} F CFA pour {mois_paiement.strftime("%B %Y")}')
+                            else:
+                                messages.success(request, f'Paiement {paiement.reference_paiement} créé avec succès!')
+                        else:
+                            # Pas d'avances - vérifier la continuité des paiements
+                            derniers_paiements_loyer = Paiement.objects.filter(
+                                contrat=paiement.contrat,
+                                type_paiement='loyer',
+                                statut='valide'
+                            ).order_by('-date_paiement')
+                            
+                            if derniers_paiements_loyer.exists():
+                                dernier_paiement = derniers_paiements_loyer.first()
+                                mois_dernier_paiement = dernier_paiement.date_paiement.replace(day=1)
+                                
+                                # Vérifier si le mois sélectionné est derrière le dernier paiement
+                                if mois_paiement <= mois_dernier_paiement:
+                                    messages.error(request, f'Impossible de payer pour un mois déjà payé ou derrière le dernier paiement '
+                                                          f'({mois_dernier_paiement.strftime("%B %Y")}).')
+                                    return redirect('paiements:ajouter')
+                                
+                                # Vérifier si c'est le mois suivant le dernier paiement
+                                mois_suivant_attendu = mois_dernier_paiement + relativedelta(months=1)
+                                
+                                if mois_paiement < mois_suivant_attendu:
+                                    messages.error(request, f'Vous devez payer pour le mois suivant le dernier paiement '
+                                                          f'({mois_suivant_attendu.strftime("%B %Y")}).')
+                                    return redirect('paiements:ajouter')
+                            
+                            messages.success(request, f'Paiement {paiement.reference_paiement} créé avec succès!')
+                            
+                    except Exception as e:
+                        messages.warning(request, f'Paiement {paiement.reference_paiement} créé, mais erreur lors de la validation: {str(e)}')
+                
+                # *** NOUVEAU : Vérifier et créer des avances pour les paiements d'avance existants ***
+                # Cette logique s'exécute à chaque ajout de paiement pour s'assurer que tous les paiements d'avance
+                # sont convertis en AvanceLoyer actifs
+                try:
+                    from .models_avance import AvanceLoyer
+                    from .services_avance import ServiceGestionAvance
+                    from decimal import Decimal
+                    
+                    # Trouver tous les paiements d'avance de ce contrat qui n'ont pas encore d'AvanceLoyer correspondant
+                    paiements_avance_manquants = Paiement.objects.filter(
+                        contrat=paiement.contrat,
+                        type_paiement__in=['avance_loyer', 'avance'],
+                        statut='valide'
+                    )
+                    
+                    for paiement_avance in paiements_avance_manquants:
+                        # Vérifier si un AvanceLoyer existe déjà pour ce paiement
+                        avance_existant = AvanceLoyer.objects.filter(
+                            contrat=paiement_avance.contrat,
+                            montant_avance=paiement_avance.montant,
+                            date_avance=paiement_avance.date_paiement
+                        ).first()
+                        
+                        if not avance_existant:
+                            # Créer l'AvanceLoyer manquant
+                            try:
+                                avance = ServiceGestionAvance.creer_avance_loyer(
+                                    contrat=paiement_avance.contrat,
+                                    montant_avance=Decimal(str(paiement_avance.montant)),
+                                    date_avance=paiement_avance.date_paiement,
+                                    notes=f"Créé automatiquement depuis paiement {paiement_avance.id}"
+                                )
+                                print(f"AvanceLoyer créé automatiquement: {avance.id} pour paiement {paiement_avance.id}")
+                            except Exception as e:
+                                print(f"Erreur création AvanceLoyer pour paiement {paiement_avance.id}: {str(e)}")
+                                
+                except Exception as e:
+                    print(f"Erreur lors de la vérification des avances manquantes: {str(e)}")
+                
                 return redirect('paiements:liste')
                 
             except Exception as e:

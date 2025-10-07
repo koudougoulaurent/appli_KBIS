@@ -462,12 +462,31 @@
                                 <span class="d-inline d-lg-none">Contrats</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'paiements:dashboard' %}">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-cash-coin"></i> 
                                 <span class="d-none d-lg-inline">Paiements</span>
                                 <span class="d-inline d-lg-none">Paiements</span>
                             </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'paiements:dashboard' %}">
+                                    <i class="bi bi-speedometer2"></i> Dashboard Paiements
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'paiements:liste' %}">
+                                    <i class="bi bi-list"></i> Liste des Paiements
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'paiements:ajouter' %}">
+                                    <i class="bi bi-plus-circle"></i> Ajouter Paiement
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="/paiements/avances/">
+                                    <i class="bi bi-house-add"></i> Avances de Loyer
+                                    <span class="badge bg-success ms-1">NEW</span>
+                                </a></li>
+                                <li><a class="dropdown-item" href="/paiements/avances/liste/">
+                                    <i class="bi bi-list-check"></i> Liste des Avances
+                                </a></li>
+                            </ul>
                         </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">

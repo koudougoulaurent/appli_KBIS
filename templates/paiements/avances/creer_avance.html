@@ -1,0 +1,429 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Créer une Avance de Loyer - KBIS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/avances.css' %}">
+<style>
+    .form-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .form-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 25px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        border: none;
+        border-radius: 25px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+    }
+    
+    .calculation-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+        border-left: 4px solid #667eea;
+    }
+    
+    .calculation-result {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    
+    .help-text {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-top: 0.5rem;
+    }
+    
+    .required-field::after {
+        content: " *";
+        color: #dc3545;
+    }
+    
+    .info-card {
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border-left: 4px solid #2196f3;
+    }
+    
+    .payment-integration {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-house-add text-primary"></i>
+                        {{ title }}
+                    </h1>
+                    <p class="text-muted mb-0">Créer une nouvelle avance de loyer intégrée au système de paiement</p>
+                </div>
+                <div>
+                    <a href="{% url 'paiements:liste_avances' %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Retour à la liste
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Information sur l'intégration -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="info-card">
+                <h5 class="mb-3">
+                    <i class="bi bi-info-circle"></i>
+                    Intégration au Système de Paiement Intelligent
+                </h5>
+                <p class="mb-2">
+                    Cette avance sera automatiquement intégrée au système de paiement intelligent de KBIS.
+                    Elle sera utilisée pour couvrir les loyers futurs selon les règles de gestion automatique.
+                </p>
+                <ul class="mb-0">
+                    <li>Consommation automatique mensuelle du montant de l'avance</li>
+                    <li>Génération automatique des reçus de paiement</li>
+                    <li>Suivi en temps réel du solde restant</li>
+                    <li>Intégration avec les rapports de recouvrement</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="form-card">
+                <div class="form-header">
+                    <h4 class="mb-0">
+                        <i class="bi bi-calculator"></i>
+                        Création d'Avance avec Calcul Automatique
+                    </h4>
+                    <p class="mb-0 mt-2">Le système calcule automatiquement le nombre de mois couverts</p>
+                </div>
+
+                <form method="post" id="avanceForm">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.contrat.id_for_label }}" class="form-label required-field">
+                                    <i class="bi bi-file-text"></i> Contrat
+                                </label>
+                                {{ form.contrat }}
+                                {% if form.contrat.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.contrat.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="help-text">
+                                    Sélectionnez le contrat concerné par l'avance
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.date_avance.id_for_label }}" class="form-label required-field">
+                                    <i class="bi bi-calendar"></i> Date de l'Avance
+                                </label>
+                                {{ form.date_avance }}
+                                {% if form.date_avance.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.date_avance.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="help-text">
+                                    Date à laquelle l'avance a été versée
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.montant_avance.id_for_label }}" class="form-label required-field">
+                                    <i class="bi bi-cash-coin"></i> Montant de l'Avance (F CFA)
+                                </label>
+                                {{ form.montant_avance }}
+                                {% if form.montant_avance.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.montant_avance.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="help-text">
+                                    Montant total de l'avance versée
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="bi bi-house"></i> Loyer Mensuel
+                                </label>
+                                <input type="text" class="form-control" id="loyer_mensuel" readonly 
+                                       placeholder="Sélectionnez un contrat">
+                                <div class="help-text">
+                                    Loyer mensuel du contrat sélectionné
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Calcul automatique -->
+                    <div class="calculation-card" id="calculationCard" style="display: none;">
+                        <h5 class="mb-3">
+                            <i class="bi bi-calculator"></i> Calcul Automatique
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <div class="calculation-result" id="moisComplets">0</div>
+                                    <div class="small text-muted">Mois complets</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <div class="calculation-result" id="montantRestant">0 F CFA</div>
+                                    <div class="small text-muted">Montant restant</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <div class="calculation-result" id="statutAvance">-</div>
+                                    <div class="small text-muted">Statut</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <div class="calculation-result" id="dateFinCouverture">-</div>
+                                    <div class="small text-muted">Fin de couverture</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.notes.id_for_label }}" class="form-label">
+                            <i class="bi bi-sticky"></i> Notes (optionnel)
+                        </label>
+                        {{ form.notes }}
+                        {% if form.notes.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.notes.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="help-text">
+                            Informations supplémentaires sur cette avance
+                        </div>
+                    </div>
+                    
+                    <!-- Intégration paiement -->
+                    <div class="payment-integration">
+                        <h6 class="mb-2">
+                            <i class="bi bi-credit-card"></i>
+                            Intégration Paiement
+                        </h6>
+                        <p class="mb-0 small">
+                            Cette avance sera automatiquement liée au système de paiement intelligent.
+                            Les loyers futurs seront déduits automatiquement de cette avance.
+                        </p>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-check-circle"></i> Créer l'Avance
+                        </button>
+                        <a href="{% url 'paiements:liste_avances' %}" class="btn btn-secondary btn-lg ms-3">
+                            <i class="bi bi-x-circle"></i> Annuler
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const contratSelect = document.getElementById('{{ form.contrat.id_for_label }}');
+    const montantInput = document.getElementById('{{ form.montant_avance.id_for_label }}');
+    const loyerInput = document.getElementById('loyer_mensuel');
+    const calculationCard = document.getElementById('calculationCard');
+    
+    // Données des contrats (en production, récupérer via AJAX)
+    const contratsData = {};
+    
+    // Charger les données du contrat sélectionné
+    contratSelect.addEventListener('change', function() {
+        const contratId = this.value;
+        if (contratId) {
+            // Récupérer les données du contrat via AJAX
+            fetch(`/paiements/avances/contrat-details-ajax/?contrat_id=${contratId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loyerInput.value = data.loyer_mensuel ? data.loyer_mensuel.toLocaleString() + ' F CFA' : 'Non défini';
+                        contratsData[contratId] = data;
+                        calculateAvance();
+                    } else {
+                        console.error('Erreur:', data.error);
+                        loyerInput.value = 'Erreur de chargement';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur lors du chargement des données du contrat:', error);
+                    loyerInput.value = 'Erreur de chargement';
+                });
+        } else {
+            loyerInput.value = '';
+            calculationCard.style.display = 'none';
+        }
+    });
+    
+    // Calculer l'avance quand le montant change
+    montantInput.addEventListener('input', calculateAvance);
+    
+    function calculateAvance() {
+        const montant = parseFloat(montantInput.value) || 0;
+        const contratId = contratSelect.value;
+        
+        if (montant > 0 && contratId && contratsData[contratId]) {
+            const loyerMensuel = contratsData[contratId].loyer_mensuel || 150000;
+            
+            if (loyerMensuel > 0) {
+                const moisComplets = Math.floor(montant / loyerMensuel);
+                const montantRestant = montant % loyerMensuel;
+                const statut = montantRestant === 0 ? 'Épuisée' : 'Active';
+                
+                // Calculer la date de fin de couverture
+                const dateAvance = new Date(document.getElementById('{{ form.date_avance.id_for_label }}').value);
+                const dateFin = new Date(dateAvance);
+                dateFin.setMonth(dateFin.getMonth() + moisComplets);
+                
+                document.getElementById('moisComplets').textContent = moisComplets;
+                document.getElementById('montantRestant').textContent = montantRestant.toLocaleString() + ' F CFA';
+                document.getElementById('statutAvance').textContent = statut;
+                document.getElementById('dateFinCouverture').textContent = dateFin.toLocaleDateString('fr-FR');
+                
+                calculationCard.style.display = 'block';
+            }
+        } else {
+            calculationCard.style.display = 'none';
+        }
+    }
+    
+    // Animation du formulaire
+    const formCard = document.querySelector('.form-card');
+    formCard.style.opacity = '0';
+    formCard.style.transform = 'translateY(20px)';
+    formCard.style.transition = 'all 0.5s ease';
+    
+    setTimeout(() => {
+        formCard.style.opacity = '1';
+        formCard.style.transform = 'translateY(0)';
+    }, 100);
+    
+    // Validation en temps réel
+    const form = document.getElementById('avanceForm');
+    form.addEventListener('submit', function(e) {
+        const montant = parseFloat(montantInput.value) || 0;
+        const contratId = contratSelect.value;
+        
+        if (!contratId) {
+            e.preventDefault();
+            alert('Veuillez sélectionner un contrat.');
+            return;
+        }
+        
+        if (montant <= 0) {
+            e.preventDefault();
+            alert('Le montant de l\'avance doit être positif.');
+            return;
+        }
+        
+        if (contratsData[contratId] && montant < contratsData[contratId].loyer_mensuel) {
+            e.preventDefault();
+            alert(`L'avance doit être au moins égale au loyer mensuel (${contratsData[contratId].loyer_mensuel.toLocaleString()} F CFA).`);
+            return;
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -906,12 +906,17 @@ class Paiement(models.Model):
         
         if type_quittance == 'quittance_loyer':
             try:
+                # Calculer les mois d'avance absorbés
+                mois_avance_absorbes = self._calculer_mois_avance_absorbes()
+                
                 donnees_speciales.update({
                     'loyer_base': float(self.contrat.loyer_mensuel) if self.contrat else 0,
                     'charges_mensuelles': float(self.contrat.charges_mensuelles) if self.contrat else 0,
                     'total_mensuel': float(self.montant),
-                    'restant_du': 0,  # À calculer selon la logique métier
+                    'restant_du': float(self.montant_restant_du) if hasattr(self, 'montant_restant_du') else 0,
                     'loyer_au_prorata': 0,  # À calculer selon la logique métier
+                    'mois_avance_absorbes': mois_avance_absorbes,
+                    'note_avance': f"Cette avance couvre {mois_avance_absorbes} mois de loyer" if mois_avance_absorbes > 0 else "",
                 })
             except:
                 donnees_speciales.update({
@@ -920,6 +925,8 @@ class Paiement(models.Model):
                     'total_mensuel': float(self.montant),
                     'restant_du': 0,
                     'loyer_au_prorata': 0,
+                    'mois_avance_absorbes': 0,
+                    'note_avance': "",
                 })
         
         elif type_quittance == 'quittance_caution':
@@ -936,15 +943,24 @@ class Paiement(models.Model):
         
         elif type_quittance == 'quittance_avance':
             try:
+                # Calculer les mois couverts par cette avance
+                loyer_mensuel = float(self.contrat.loyer_mensuel) if self.contrat else 0
+                mois_couverts = int(float(self.montant) // loyer_mensuel) if loyer_mensuel > 0 else 0
+                reste = float(self.montant) % loyer_mensuel if loyer_mensuel > 0 else 0
+                
                 donnees_speciales.update({
                     'montant_avance': float(self.montant),
-                    'loyer_mensuel': float(self.contrat.loyer_mensuel) if self.contrat else 0,
-                    'note_speciale': 'Cette avance sera déduite du prochain loyer',
+                    'loyer_mensuel': loyer_mensuel,
+                    'mois_couverts': mois_couverts,
+                    'reste_avance': reste,
+                    'note_speciale': f'Cette avance couvre {mois_couverts} mois de loyer' + (f' + {reste} F CFA' if reste > 0 else ''),
                 })
             except:
                 donnees_speciales.update({
                     'montant_avance': float(self.montant),
                     'loyer_mensuel': 0,
+                    'mois_couverts': 0,
+                    'reste_avance': 0,
                     'note_speciale': 'Avance de loyer',
                 })
         
@@ -956,6 +972,24 @@ class Paiement(models.Model):
             })
         
         return donnees_speciales
+    
+    def _calculer_mois_avance_absorbes(self):
+        """Calcule le nombre de mois d'avance absorbés par ce paiement"""
+        try:
+            from .services_avance import ServiceGestionAvance
+            
+            # Récupérer les avances actives pour ce contrat
+            avances = ServiceGestionAvance.get_avances_actives_contrat(self.contrat)
+            
+            # Calculer le total des mois couverts
+            total_mois = 0
+            for avance in avances:
+                if avance.est_mois_couvert(self.date_paiement.replace(day=1)):
+                    total_mois += 1
+            
+            return total_mois
+        except:
+            return 0
     
     def _generer_recu_kbis_dynamique(self):
         """Génère un récépissé KBIS dynamique avec le format correct."""
@@ -1060,15 +1094,30 @@ class Paiement(models.Model):
         
         elif type_recu == 'recu_avance':
             try:
+                # *** CALCUL AUTOMATIQUE DES MOIS COUVERTS POUR LES AVANCES ***
+                loyer_mensuel = float(self.contrat.loyer_mensuel) if self.contrat and self.contrat.loyer_mensuel else 0
+                montant_avance = float(self.montant)
+                
+                # Calculer le nombre de mois couverts
+                nombre_mois_couverts = int(montant_avance // loyer_mensuel) if loyer_mensuel > 0 else 0
+                
+                # Calculer les mois réglés
+                mois_regle = self._calculer_mois_regle_avance(nombre_mois_couverts)
+                
                 donnees_speciales.update({
-                    'montant_avance': float(self.montant),
-                    'loyer_mensuel': float(self.contrat.loyer_mensuel) if self.contrat else 0,
-                    'note_speciale': 'Cette avance sera déduite du prochain loyer',
+                    'montant_avance': montant_avance,
+                    'loyer_mensuel': loyer_mensuel,
+                    'mois_couverts': nombre_mois_couverts,
+                    'mois_regle': mois_regle,
+                    'note_speciale': f'Avance de {nombre_mois_couverts} mois de loyer',
                 })
-            except:
+            except Exception as e:
+                print(f"Erreur calcul avance: {str(e)}")
                 donnees_speciales.update({
                     'montant_avance': float(self.montant),
                     'loyer_mensuel': 0,
+                    'mois_couverts': 0,
+                    'mois_regle': 'Calcul impossible',
                     'note_speciale': 'Avance de loyer',
                 })
         
@@ -1080,6 +1129,79 @@ class Paiement(models.Model):
             })
         
         return donnees_speciales
+    
+    def _calculer_mois_regle_avance(self, nombre_mois_couverts):
+        """Calcule les mois réglés pour une avance selon la logique : dernier mois de paiement + 1, + 2, etc."""
+        from dateutil.relativedelta import relativedelta
+        from datetime import datetime
+        
+        try:
+            if nombre_mois_couverts <= 0:
+                return "Aucun mois couvert"
+            
+            # *** NOUVELLE LOGIQUE : Dernier mois de paiement + 1, + 2, etc. ***
+            # 1. Trouver le dernier mois de paiement (dernière quittance de loyer)
+            dernier_mois_paiement = self._get_dernier_mois_paiement_avance()
+            
+            if dernier_mois_paiement:
+                # Commencer au mois suivant le dernier paiement
+                mois_debut = dernier_mois_paiement + relativedelta(months=1)
+            else:
+                # Si pas de paiement précédent, commencer au mois suivant la date de paiement
+                mois_debut = self.date_paiement.replace(day=1) + relativedelta(months=1)
+            
+            # 2. Générer la liste des mois réglés
+            mois_regles = []
+            mois_courant = mois_debut
+            
+            for i in range(nombre_mois_couverts):
+                mois_regles.append(mois_courant.strftime('%B %Y'))
+                mois_courant = mois_courant + relativedelta(months=1)
+            
+            # 3. Convertir les mois en français
+            mois_francais = {
+                'January': 'Janvier', 'February': 'Février', 'March': 'Mars',
+                'April': 'Avril', 'May': 'Mai', 'June': 'Juin',
+                'July': 'Juillet', 'August': 'Août', 'September': 'Septembre',
+                'October': 'Octobre', 'November': 'Novembre', 'December': 'Décembre'
+            }
+            
+            mois_regles_fr = []
+            for mois in mois_regles:
+                mois_fr = mois
+                for mois_en, mois_fr_val in mois_francais.items():
+                    mois_fr = mois_fr.replace(mois_en, mois_fr_val)
+                mois_regles_fr.append(mois_fr)
+            
+            return ', '.join(mois_regles_fr)
+            
+        except Exception as e:
+            print(f"Erreur lors du calcul des mois réglés: {str(e)}")
+            return f"{nombre_mois_couverts} mois couverts par l'avance"
+    
+    def _get_dernier_mois_paiement_avance(self):
+        """Récupère le dernier mois de paiement (dernière quittance de loyer) pour le calcul des avances"""
+        try:
+            # Chercher la dernière quittance de loyer pour ce contrat
+            derniere_quittance = Paiement.objects.filter(
+                contrat=self.contrat,
+                type_paiement='loyer',
+                statut='valide'
+            ).order_by('-date_paiement').first()
+            
+            if derniere_quittance:
+                # Retourner le mois de la dernière quittance
+                return derniere_quittance.date_paiement.replace(day=1)
+            
+            # Si pas de quittance, utiliser le mois de début du contrat
+            if self.contrat and self.contrat.date_debut:
+                return self.contrat.date_debut.replace(day=1)
+            
+            return None
+            
+        except Exception as e:
+            print(f"Erreur lors de la récupération du dernier mois de paiement: {str(e)}")
+            return None
 
 
 # =============================================================================

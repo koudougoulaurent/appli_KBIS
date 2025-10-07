@@ -271,7 +271,12 @@ class DocumentKBISUnifie:
                 color: #ffd700;
             }
         </style>
-        """
+            """
+    
+    @classmethod
+    def generer_recu_avance(cls, donnees):
+        """Génère spécifiquement un reçu d'avance de loyer"""
+        return cls.generer_document_unifie(donnees, 'avance')
     
     @classmethod
     def generer_document_unifie(cls, donnees, type_document='quittance'):
@@ -297,6 +302,7 @@ class DocumentKBISUnifie:
             'quittance_retrait_exceptionnel': 'QUITTANCE DE RETRAIT EXCEPTIONNEL N°',
             'facture': 'FACTURE N°',
             'recu': 'RÉCÉPISSÉ N°',
+            'avance': 'RÉCÉPISSÉ D\'AVANCE DE LOYER N°',
             'recu_loyer': 'RÉCÉPISSÉ DE LOYER N°',
             'recu_charges': 'RÉCÉPISSÉ DE CHARGES N°',
             'recu_caution': 'RÉCÉPISSÉ DE CAUTION N°',
@@ -360,7 +366,7 @@ class DocumentKBISUnifie:
                             
                             <div class="champ-document">
                                 <span class="label-champ">Mois réglé</span>
-                                <span class="valeur-champ">{donnees.get('mois_regle', '')}</span>
+                                <span class="valeur-champ">{cls._convertir_mois_francais_unifie(donnees.get('mois_regle', ''))}</span>
                             </div>
                         </div>
                     </div>
@@ -433,6 +439,34 @@ class DocumentKBISUnifie:
                 return f"{dizaines[d]}{'-' + unites[u] if u > 0 else ''}"
         else:
             return f"{nombre}"
+    
+    @classmethod
+    def _convertir_mois_francais_unifie(cls, mois_anglais):
+        """Convertit les mois anglais en français pour tous les reçus d'avance"""
+        if not mois_anglais:
+            return mois_anglais
+            
+        mois_francais = {
+            'January': 'Janvier',
+            'February': 'Février', 
+            'March': 'Mars',
+            'April': 'Avril',
+            'May': 'Mai',
+            'June': 'Juin',
+            'July': 'Juillet',
+            'August': 'Août',
+            'September': 'Septembre',
+            'October': 'Octobre',
+            'November': 'Novembre',
+            'December': 'Décembre'
+        }
+        
+        # Remplacer tous les mois anglais par les mois français
+        resultat = mois_anglais
+        for mois_en, mois_fr in mois_francais.items():
+            resultat = resultat.replace(mois_en, mois_fr)
+        
+        return resultat
     
     @classmethod
     def generer_numero_unique(cls, type_document='quittance'):
@@ -1198,6 +1232,61 @@ class DocumentKBISUnifie:
                     <td><strong>Note</strong></td>
                     <td style="font-weight: bold; color: #c2185b;">
                         Frais de gestion et administration
+                    </td>
+                </tr>
+            </table>
+            """
+        
+        elif type_document == 'avance':
+            # Reçu d'avance de loyer
+            return f"""
+            <table>
+                <tr>
+                    <td>Type de paiement</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('type_paiement', 'Avance de Loyer')}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Mode de paiement</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('mode_paiement', 'Espèces')}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Montant de l'avance</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('montant', 0):,} F CFA
+                    </td>
+                </tr>
+                <tr>
+                    <td>Loyer mensuel</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('loyer_mensuel', 0):,} F CFA
+                    </td>
+                </tr>
+                <tr>
+                    <td>Mois couverts</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('mois_couverts', 0)} mois
+                    </td>
+                </tr>
+                <tr>
+                    <td>Période de couverture</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('date_debut_couverture', '')} - {donnees.get('date_fin_couverture', '')}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Montant restant</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('montant_restant', 0):,} F CFA
+                    </td>
+                </tr>
+                <tr>
+                    <td>Statut</td>
+                    <td style="font-weight: bold;">
+                        {donnees.get('statut', 'Active')}
                     </td>
                 </tr>
             </table>

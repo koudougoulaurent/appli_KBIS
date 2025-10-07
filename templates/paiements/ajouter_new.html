@@ -854,11 +854,8 @@ function afficherContexteComplet(data) {
 function remplirChampsIntelligents(data) {
     console.log('💰 Remplissage intelligent des champs:', data);
     
-    // Montant suggéré (loyer net) - VERSION CACHE BUSTER
-    console.log('🚀 CACHE BUSTER - VERSION NOUVELLE');
+    // Montant suggéré (loyer net) - VERSION CORRIGÉE
     console.log('DEBUG: data.calculs:', data.calculs);
-    console.log('DEBUG: data.contrat:', data.contrat);
-    
     if (data.calculs && data.calculs.loyer_net) {
         console.log('DEBUG: Utilisation loyer_net:', data.calculs.loyer_net);
         $('#id_montant').val(data.calculs.loyer_net);

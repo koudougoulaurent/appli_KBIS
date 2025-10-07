@@ -1,0 +1,386 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Détail Avance de Loyer - KBIS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/avances.css' %}">
+<style>
+    .detail-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .detail-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .stat-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid #667eea;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-top: 0.5rem;
+    }
+    
+    .progress-bar-custom {
+        height: 20px;
+        border-radius: 10px;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .table-custom {
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .table-custom th {
+        background: #f8f9fa;
+        border: none;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    
+    .table-custom td {
+        border: none;
+        vertical-align: middle;
+    }
+    
+    .badge-status {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    .badge-active {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .badge-epuisee {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .badge-annulee {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .btn-action {
+        border-radius: 20px;
+        padding: 0.5rem 1.5rem;
+        font-weight: 600;
+        margin: 0.25rem;
+    }
+    
+    .info-section {
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border-left: 4px solid #2196f3;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-house-check text-primary"></i>
+                        Détail de l'Avance de Loyer
+                    </h1>
+                    <p class="text-muted mb-0">Informations détaillées et suivi de l'avance</p>
+                </div>
+                <div>
+                    <a href="{% url 'paiements:liste_avances' %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Retour à la liste
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Informations principales -->
+        <div class="col-lg-8">
+            <div class="detail-card">
+                <div class="detail-header">
+                    <h4 class="mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        Informations de l'Avance
+                    </h4>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ avance.montant_avance|floatformat:0 }} F CFA</div>
+                            <div class="stat-label">Montant Total de l'Avance</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ avance.montant_restant|floatformat:0 }} F CFA</div>
+                            <div class="stat-label">Montant Restant</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ avance.nombre_mois_couverts }} mois</div>
+                            <div class="stat-label">Mois Couverts</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="stat-card">
+                            <div class="stat-value">
+                                {% if avance.statut == 'active' %}
+                                    <span class="badge badge-status badge-active">Active</span>
+                                {% elif avance.statut == 'epuisee' %}
+                                    <span class="badge badge-status badge-epuisee">Épuisée</span>
+                                {% else %}
+                                    <span class="badge badge-status badge-annulee">Annulée</span>
+                                {% endif %}
+                            </div>
+                            <div class="stat-label">Statut</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Barre de progression -->
+                <div class="mt-4">
+                    <h6>Progression de la Consommation</h6>
+                    <div class="progress mb-2" style="height: 20px;">
+                        <div class="progress-bar progress-bar-custom" 
+                             style="width: {{ stats.pourcentage_consomme|floatformat:1 }}%">
+                            {{ stats.pourcentage_consomme|floatformat:1 }}%
+                        </div>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <small class="text-muted">
+                                Consommé: {{ stats.montant_consomme|floatformat:0 }} F CFA
+                            </small>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">
+                                Restant: {{ avance.montant_restant|floatformat:0 }} F CFA
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Informations du contrat -->
+                <div class="info-section mt-4">
+                    <h6 class="mb-3">
+                        <i class="bi bi-file-text"></i>
+                        Informations du Contrat
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Locataire:</strong> {{ avance.contrat.locataire.nom_complet }}</p>
+                            <p><strong>Propriété:</strong> {{ avance.contrat.propriete.nom }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Loyer Mensuel:</strong> {{ avance.loyer_mensuel|floatformat:0 }} F CFA</p>
+                            <p><strong>Date de l'Avance:</strong> {{ avance.date_avance|date:"d/m/Y" }}</p>
+                        </div>
+                    </div>
+                    {% if avance.notes %}
+                    <div class="mt-3">
+                        <strong>Notes:</strong>
+                        <p class="mb-0">{{ avance.notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions et statistiques -->
+        <div class="col-lg-4">
+            <div class="detail-card">
+                <h5 class="mb-3">
+                    <i class="bi bi-gear"></i>
+                    Actions
+                </h5>
+                
+                <div class="d-grid gap-2">
+                    <a href="{% url 'paiements:historique_contrat' avance.contrat.id %}" 
+                       class="btn btn-primary btn-action">
+                        <i class="bi bi-clock-history"></i> Historique des Paiements
+                    </a>
+                    
+                    <a href="{% url 'paiements:generer_rapport_avances_pdf' avance.contrat.id %}" 
+                       class="btn btn-success btn-action">
+                        <i class="bi bi-file-pdf"></i> Générer Rapport PDF
+                    </a>
+                    
+                    <a href="{% url 'paiements:liste_avances' %}" 
+                       class="btn btn-secondary btn-action">
+                        <i class="bi bi-list"></i> Toutes les Avances
+                    </a>
+                </div>
+                
+                <hr>
+                
+                <h6 class="mb-3">Statistiques</h6>
+                <div class="stat-card">
+                    <div class="stat-value">{{ stats.nombre_mois_consommes }}</div>
+                    <div class="stat-label">Mois Consommés</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-value">{{ avance.loyer_mensuel|floatformat:0 }} F CFA</div>
+                    <div class="stat-label">Montant par Mois</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Historique des consommations -->
+    {% if consommations %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="detail-card">
+                <h5 class="mb-3">
+                    <i class="bi bi-list-check"></i>
+                    Historique des Consommations
+                </h5>
+                
+                <div class="table-responsive">
+                    <table class="table table-custom">
+                        <thead>
+                            <tr>
+                                <th>Mois Consommé</th>
+                                <th>Montant Consommé</th>
+                                <th>Date de Consommation</th>
+                                <th>Solde Restant</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for consommation in consommations %}
+                            <tr>
+                                <td>{{ consommation.mois_consomme|date:"F Y" }}</td>
+                                <td>{{ consommation.montant_consomme|floatformat:0 }} F CFA</td>
+                                <td>{{ consommation.date_consommation|date:"d/m/Y" }}</td>
+                                <td>{{ consommation.solde_restant|floatformat:0 }} F CFA</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Historique des paiements récents -->
+    {% if historique %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="detail-card">
+                <h5 class="mb-3">
+                    <i class="bi bi-clock-history"></i>
+                    Historique des Paiements Récents
+                </h5>
+                
+                <div class="table-responsive">
+                    <table class="table table-custom">
+                        <thead>
+                            <tr>
+                                <th>Mois</th>
+                                <th>Montant Payé</th>
+                                <th>Montant Dû</th>
+                                <th>Avance Utilisée</th>
+                                <th>Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for paiement in historique %}
+                            <tr>
+                                <td>{{ paiement.mois|date:"F Y" }}</td>
+                                <td>{{ paiement.montant_paye|floatformat:0 }} F CFA</td>
+                                <td>{{ paiement.montant_du|floatformat:0 }} F CFA</td>
+                                <td>{{ paiement.montant_avance_utilisee|floatformat:0 }} F CFA</td>
+                                <td>
+                                    {% if paiement.mois_regle %}
+                                        <span class="badge bg-success">Réglé</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">En attente</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="text-center mt-3">
+                    <a href="{% url 'paiements:historique_contrat' avance.contrat.id %}" 
+                       class="btn btn-outline-primary">
+                        <i class="bi bi-eye"></i> Voir l'historique complet
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation des cartes
+    const cards = document.querySelectorAll('.detail-card, .stat-card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'all 0.5s ease';
+        
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+    
+    // Animation de la barre de progression
+    const progressBar = document.querySelector('.progress-bar');
+    if (progressBar) {
+        setTimeout(() => {
+            progressBar.style.transition = 'width 2s ease-in-out';
+        }, 500);
+    }
+});
+</script>
+{% endblock %}
