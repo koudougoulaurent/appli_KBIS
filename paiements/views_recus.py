@@ -16,7 +16,7 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 import logging
 
-# from .models import RecuRecapitulatif, RecapitulatifMensuelBailleur  # Modèles supprimés
+from .models import RecapMensuel, RecuRecapitulatif
 from core.utils import check_group_permissions
 
 logger = logging.getLogger(__name__)
@@ -25,6 +25,13 @@ logger = logging.getLogger(__name__)
 @login_required
 def liste_recus_recapitulatifs(request):
     """Liste des reçus de récapitulatifs."""
+    
+    # Import local pour éviter les problèmes d'import en production
+    try:
+        from .models import RecuRecapitulatif
+    except ImportError:
+        # Fallback si l'import échoue
+        RecuRecapitulatif = None
     
     # Vérification des permissions
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
@@ -79,8 +86,8 @@ def liste_recus_recapitulatifs(request):
         'statut_filter': statut_filter,
         'type_filter': type_filter,
         'search_query': search_query,
-        'statut_choices': RecuRecapitulatif._meta.get_field('statut').choices,
-        'type_choices': RecuRecapitulatif._meta.get_field('type_recu').choices,
+        'statut_choices': RecuRecapitulatif._meta.get_field('statut').choices if RecuRecapitulatif else [],
+        'type_choices': RecuRecapitulatif._meta.get_field('type_recu').choices if RecuRecapitulatif else [],
     }
     
     return render(request, 'paiements/recus/liste_recus_recapitulatifs.html', context)
@@ -115,13 +122,20 @@ def detail_recu_recapitulatif(request, pk):
 def creer_recu_recapitulatif(request, recapitulatif_id):
     """Créer un reçu pour un récapitulatif."""
     
+    # Import local pour éviter les problèmes d'import en production
+    try:
+        from .models import RecuRecapitulatif
+    except ImportError:
+        # Fallback si l'import échoue
+        RecuRecapitulatif = None
+    
     # Vérification des permissions
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'add')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste_recus_recapitulatifs')
     
-    recapitulatif = get_object_or_404(RecapitulatifMensuelBailleur, pk=recapitulatif_id)
+    recapitulatif = get_object_or_404(RecapMensuel, pk=recapitulatif_id)
     
     # Vérifier si un reçu existe déjà
     if hasattr(recapitulatif, 'recu'):
@@ -154,9 +168,9 @@ def creer_recu_recapitulatif(request, recapitulatif_id):
         'page_title': 'Créer un Reçu',
         'page_icon': 'plus-circle',
         'recapitulatif': recapitulatif,
-        'type_choices': RecuRecapitulatif._meta.get_field('type_recu').choices,
-        'template_choices': RecuRecapitulatif._meta.get_field('template_utilise').choices,
-        'format_choices': RecuRecapitulatif._meta.get_field('format_impression').choices,
+        'type_choices': RecuRecapitulatif._meta.get_field('type_recu').choices if RecuRecapitulatif else [],
+        'template_choices': RecuRecapitulatif._meta.get_field('template_utilise').choices if RecuRecapitulatif else [],
+        'format_choices': RecuRecapitulatif._meta.get_field('format_impression').choices if RecuRecapitulatif else [],
     }
     
     return render(request, 'paiements/recus/creer_recu_recapitulatif.html', context)
@@ -430,7 +444,7 @@ def creer_recu_gestimmob_recapitulatif(request, recapitulatif_id):
         messages.error(request, permissions['message'])
         return redirect('paiements:liste_recus_recapitulatifs')
     
-    recapitulatif = get_object_or_404(RecapitulatifMensuelBailleur, pk=recapitulatif_id)
+    recapitulatif = get_object_or_404(RecapMensuel, pk=recapitulatif_id)
     
     try:
         # Utiliser le service pour générer le reçu GESTIMMOB

@@ -565,11 +565,11 @@ class GestionChargesBailleurForm(forms.Form):
     # Contenu de la classe commenté car le modèle n'existe plus
 
 
-# class RecapitulatifMensuelBailleurForm(forms.ModelForm):  # Modèle supprimé
+# class RecapMensuelForm(forms.ModelForm):  # Modèle supprimé
     # """Formulaire pour créer/modifier un récapitulatif mensuel par bailleur."""
     
     # class Meta:
-        # model = RecapitulatifMensuelBailleur
+        # model = RecapMensuel
         # fields = [
         #     'bailleur', 'mois_recapitulatif', 'type_recapitulatif', 'notes'
         # ]
@@ -636,7 +636,7 @@ class GestionChargesBailleurForm(forms.Form):
         
         # if bailleur and mois_recapitulatif and type_recapitulatif:
         #     # Vérifier s'il existe déjà un récapitulatif pour cette combinaison
-        #     existing_recap = RecapitulatifMensuelBailleur.objects.filter(
+        #     existing_recap = RecapMensuel.objects.filter(
         #         bailleur=bailleur,
         #         mois_recapitulatif=mois_recapitulatif,
         #         type_recapitulatif=type_recapitulatif

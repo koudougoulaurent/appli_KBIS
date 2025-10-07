@@ -1812,7 +1812,7 @@ def imprimer_recap_mensuel(request, recap_id):
                 contact = f"{contrat_actif.locataire.telephone or 'N/A'}"
                 
                 proprietes_data.append([
-                    propriete.nom or f"Prop #{propriete.id}",
+                    propriete.titre or f"Prop #{propriete.id}",
                     propriete.adresse or "N/A",
                     f"{contrat_actif.locataire.get_nom_complet()}",
                     contact,
@@ -1902,7 +1902,7 @@ def imprimer_recap_mensuel(request, recap_id):
                 statut = "Complètes" if (paiements_caution >= caution_requise and paiements_avance >= avance_requise) else "Incomplètes"
                 
                 garanties_data.append([
-                    propriete.nom or f"Prop #{propriete.id}",
+                    propriete.titre or f"Prop #{propriete.id}",
                     f"{caution_requise:,.0f}",
                     f"{paiements_caution:,.0f}",
                     f"{avance_requise:,.0f}",
@@ -3335,7 +3335,7 @@ def generer_pdf_recap_detaille_paysage(request, recap_id):
                 
                 propriete_detail = {
                     'id': propriete.id,
-                    'nom': propriete.nom or f"Propriété #{propriete.id}",
+                    'nom': propriete.titre or f"Propriété #{propriete.id}",
                     'adresse': propriete.adresse or "Adresse non renseignée",
                     'ville': propriete.ville or "Ville non renseignée",
                     'locataire': contrat_actif.locataire,
@@ -3392,7 +3392,7 @@ def generer_pdf_recap_detaille_paysage(request, recap_id):
                 
                 for paiement in paiements_mois:
                     historique_paiements.append({
-                        'propriete': propriete.nom or f"Propriété #{propriete.id}",
+                        'propriete': propriete.titre or f"Propriété #{propriete.id}",
                         'locataire': contrat_actif.locataire.get_nom_complet(),
                         'montant': paiement.montant,
                         'date_paiement': paiement.date_paiement,

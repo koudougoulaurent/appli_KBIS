@@ -174,30 +174,51 @@
     <p class="lead mb-0">Vue d'ensemble complète de votre gestion immobilière</p>
 </div>
 
-<!-- Statistiques principales -->
+<!-- Statistiques principales - DYNAMIQUES -->
 <div class="row mb-4">
     <div class="col-xl-3 col-md-6">
         <div class="stat-card text-center">
-            <div class="stat-number">{{ total_proprietes|default:"0" }}</div>
-            <div class="stat-label">Total Propriétés</div>
+            <div class="stat-number" id="total-proprietes">{{ total_proprietes|default:"0" }}</div>
+            <div class="stat-label">Propriétés</div>
+            <small class="text-muted">Total: {{ total_proprietes|default:"0" }}</small>
         </div>
     </div>
     <div class="col-xl-3 col-md-6">
         <div class="stat-card text-center">
-            <div class="stat-number">{{ total_contrats|default:"0" }}</div>
+            <div class="stat-number" id="contrats-actifs">{{ contrats_actifs|default:"0" }}</div>
             <div class="stat-label">Contrats Actifs</div>
+            <small class="text-muted">Total: {{ total_contrats|default:"0" }}</small>
         </div>
     </div>
     <div class="col-xl-3 col-md-6">
         <div class="stat-card text-center">
-            <div class="stat-number">{{ total_paiements|default:"0" }}</div>
-            <div class="stat-label">Total Paiements</div>
+            <div class="stat-number" id="total-paiements">{{ total_paiements|default:"0" }}</div>
+            <div class="stat-label">Paiements</div>
+            <small class="text-muted">Valides: {{ paiements_valides|default:"0" }}</small>
         </div>
     </div>
     <div class="col-xl-3 col-md-6">
         <div class="stat-card text-center">
-            <div class="stat-number">{{ total_bailleurs|default:"0" }}</div>
+            <div class="stat-number" id="total-bailleurs">{{ total_bailleurs|default:"0" }}</div>
             <div class="stat-label">Bailleurs</div>
+            <small class="text-muted">Actifs: {{ bailleurs_actifs|default:"0" }}</small>
+        </div>
+    </div>
+</div>
+
+<!-- Indicateur de statut dynamique -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="alert alert-info d-flex justify-content-between align-items-center">
+            <div>
+                <i class="bi bi-arrow-clockwise me-2"></i>
+                <strong>Statistiques dynamiques</strong> - Dernière mise à jour: {{ derniere_maj|default:"N/A" }}
+            </div>
+            <div>
+                <a href="?refresh=1" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Actualiser
+                </a>
+            </div>
         </div>
     </div>
 </div>
@@ -228,17 +249,27 @@
                 <div class="row">
                     <div class="col-6">
                         <div class="stat-card text-center">
-                            <div class="stat-number">{{ proprietes_louees|default:"0" }}</div>
+                            <div class="stat-number" id="proprietes-louees">{{ proprietes_louees|default:"0" }}</div>
                             <div class="stat-label">Louées</div>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="stat-card text-center">
-                            <div class="stat-number">{{ proprietes_disponibles|default:"0" }}</div>
+                            <div class="stat-number" id="proprietes-disponibles">{{ proprietes_disponibles|default:"0" }}</div>
                             <div class="stat-label">Disponibles</div>
                         </div>
                     </div>
                 </div>
+                {% if unites_stats.total > 0 %}
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Unités: {{ unites_stats.total }} total ({{ unites_stats.disponibles }} dispo, {{ unites_stats.occupees }} occupées)
+                        </small>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -267,13 +298,13 @@
                 <div class="row">
                     <div class="col-6">
                         <div class="stat-card text-center">
-                            <div class="stat-number">{{ contrats_actifs|default:"0" }}</div>
+                            <div class="stat-number" id="contrats-actifs-module">{{ contrats_actifs|default:"0" }}</div>
                             <div class="stat-label">Actifs</div>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="stat-card text-center">
-                            <div class="stat-number">{{ total_contrats|default:"0" }}</div>
+                            <div class="stat-number" id="total-contrats-module">{{ total_contrats|default:"0" }}</div>
                             <div class="stat-label">Total</div>
                         </div>
                     </div>
@@ -312,14 +343,14 @@
                 <div class="row">
                     <div class="col-6">
                         <div class="stat-card text-center">
-                            <div class="stat-number">{{ total_paiements|default:"0" }}</div>
+                            <div class="stat-number" id="total-paiements-module">{{ total_paiements|default:"0" }}</div>
                             <div class="stat-label">Total</div>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="stat-card text-center">
-                            <div class="stat-number">-</div>
-                            <div class="stat-label">Informations confidentielles</div>
+                            <div class="stat-number" id="paiements-attente">{{ paiements_attente|default:"0" }}</div>
+                            <div class="stat-label">En Attente</div>
                         </div>
                     </div>
                 </div>
@@ -351,15 +382,23 @@
                 <div class="row">
                     <div class="col-6">
                         <div class="stat-card text-center">
-                            <div class="stat-number">{{ total_bailleurs|default:"0" }}</div>
+                            <div class="stat-number" id="total-bailleurs-module">{{ total_bailleurs|default:"0" }}</div>
                             <div class="stat-label">Bailleurs</div>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="stat-card text-center">
-                            <div class="stat-number">{{ total_locataires|default:"0" }}</div>
+                            <div class="stat-number" id="total-locataires">{{ total_locataires|default:"0" }}</div>
                             <div class="stat-label">Locataires</div>
                         </div>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-6">
+                        <small class="text-muted">Groupes: {{ total_groupes|default:"0" }}</small>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Notifications: {{ total_notifications|default:"0" }}</small>
                     </div>
                 </div>
             </div>
@@ -461,4 +500,8 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/dashboard-dynamic.js' %}"></script>
 {% endblock %}

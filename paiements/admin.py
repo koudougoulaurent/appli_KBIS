@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
 from django.utils import timezone
+from core.admin_actions import suppression_definitive_conditionnelle
 from .models import (
     Paiement, ChargeDeductible, ChargeBailleur,
     RetraitBailleur, RetraitQuittance, QuittancePaiement
@@ -56,7 +57,7 @@ class PaiementAdmin(admin.ModelAdmin):
     
     readonly_fields = ('created_at', 'updated_at')
     
-    actions = ['valider_paiements', 'refuser_paiements', 'annuler_paiements']
+    actions = ['valider_paiements', 'refuser_paiements', 'annuler_paiements', suppression_definitive_conditionnelle]
     
     def statut_colore(self, obj):
         """Affiche le statut avec une couleur."""
@@ -138,7 +139,7 @@ class ChargeDeductibleAdmin(admin.ModelAdmin):
     
     readonly_fields = ('created_at', 'updated_at')
     
-    actions = ['valider_charges', 'refuser_charges', 'marquer_deduites']
+    actions = ['valider_charges', 'refuser_charges', 'marquer_deduites', suppression_definitive_conditionnelle]
     
     def statut_colore(self, obj):
         """Affiche le statut avec une couleur."""
@@ -306,7 +307,7 @@ class RetraitBailleurAdmin(admin.ModelAdmin):
     
     # filter_horizontal = ['paiements_concernes']  # Champ n'existe pas
     
-    actions = ['valider_retraits', 'marquer_payes', 'annuler_retraits']
+    actions = ['valider_retraits', 'marquer_payes', 'annuler_retraits', suppression_definitive_conditionnelle]
     
     def valider_retraits(self, request, queryset):
         """Valider les retraits sélectionnés."""

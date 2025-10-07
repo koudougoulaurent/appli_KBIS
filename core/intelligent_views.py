@@ -354,7 +354,7 @@ class IntelligentPaiementListView(IntelligentListView):
             },
             {
                 'label': 'En attente',
-                'value': queryset.filter(statut='en_attente').count()
+                'value': queryset.filter(est_valide=False).count()
             },
             {
                 'label': 'Total perçu',

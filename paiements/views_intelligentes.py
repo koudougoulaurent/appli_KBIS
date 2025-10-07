@@ -198,7 +198,7 @@ def dashboard_intelligent(request):
     # Statistiques globales
     total_contrats = Contrat.objects.filter(is_deleted=False).count()
     total_paiements = Paiement.objects.filter(is_deleted=False, statut='valide').count()
-    total_charges = ChargeDeductible.objects.filter(is_deleted=False, statut='en_attente').count()
+    total_charges = ChargeDeductible.objects.filter(is_deleted=False, est_valide=False).count()
     
     context = {
         'contrats_attention': contrats_attention,

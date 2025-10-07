@@ -433,7 +433,7 @@
                             {% for detail in totaux.details_proprietes %}
                             <tr>
                                 <td>
-                                    <strong>{{ detail.propriete.nom|default:detail.propriete.adresse|default:"Propriété #"|add:detail.propriete.id|stringformat:"%s" }}</strong><br>
+                                    <strong>{{ detail.propriete.titre|default:detail.propriete.adresse|default:"Propriété #"|add:detail.propriete.id|stringformat:"%s" }}</strong><br>
                                     <small>{{ detail.propriete.ville|default:"" }}</small>
                                 </td>
                                 <td>{{ detail.locataire.get_nom_complet }}</td>

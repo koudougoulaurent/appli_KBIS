@@ -222,7 +222,7 @@
                                         <option value="">-- Sélectionner un contrat --</option>
                                         {% for contrat in contrats %}
                                         <option value="{{ contrat.id }}" {% if contrat.id|stringformat:"s" == contrat_id %}selected{% endif %}>
-                                            {{ contrat.locataire.nom }} - {{ contrat.propriete.nom_propriete }}
+                                            {{ contrat.locataire.nom }} - {{ contrat.propriete.titre }}
                                         </option>
                                         {% endfor %}
                                     </select>
@@ -265,7 +265,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <p><strong>Locataire:</strong> {{ contrat_obj.locataire.nom }}</p>
-                                <p><strong>Propriété:</strong> {{ contrat_obj.propriete.nom_propriete }}</p>
+                                <p><strong>Propriété:</strong> {{ contrat_obj.propriete.titre }}</p>
                                 <p><strong>Loyer Mensuel:</strong> {{ contrat_obj.montant_loyer_mensuel|floatformat:0 }} FCFA</p>
                             </div>
                             <div class="col-md-6">

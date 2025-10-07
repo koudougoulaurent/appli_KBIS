@@ -2,6 +2,7 @@ from django.urls import path
 from django.shortcuts import redirect
 from .main_views import (
     dashboard,
+    dashboard_stats_api,
     configuration_entreprise,
     changer_devise,
     rapports_audit,
@@ -59,6 +60,7 @@ urlpatterns = [
     
     # Dashboard principal
     path('dashboard/', dashboard, name='dashboard'),
+    path('api/dashboard-stats/', dashboard_stats_api, name='dashboard_stats_api'),
     
     # Configuration
     path('configuration-entreprise/', configuration_entreprise, name='configuration_entreprise'),

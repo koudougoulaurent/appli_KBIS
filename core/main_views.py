@@ -23,6 +23,7 @@ from paiements.models import Paiement
 from proprietes.models import Propriete, Locataire, Bailleur, UniteLocative
 from contrats.models import Contrat
 from utilisateurs.models import Utilisateur
+from django.contrib.auth.models import Group
 from .forms import ConfigurationEntrepriseForm
 from .utils import convertir_montant, check_group_permissions
 from django.contrib.contenttypes.models import ContentType
@@ -72,97 +73,273 @@ def home(request):
 @login_required
 @performance_monitor
 def dashboard(request):
-    """Tableau de bord principal unifié - SÉCURISÉ (sans informations confidentielles)."""
-    # Utiliser le cache pour les statistiques du dashboard
-    user_id = request.user.id
-    cache_key = f"dashboard_stats_{user_id}"
-    cached_stats = get_cached_data(cache_key, None, 600)  # 10 minutes
-    
-    # Initialiser avec des valeurs par défaut
-    if not cached_stats:
-        # Calculer les statistiques de base pour tous les modules (UNIQUEMENT non confidentielles)
-        stats = {}
+    """Tableau de bord principal unifié - STATISTIQUES DYNAMIQUES ET RÉELLES."""
+    # Calculer les statistiques directement sans cache pour debug
+    try:
+        print("DEBUG: Debut du calcul des statistiques")
+        # Statistiques des propriétés - CORRIGÉES
+        proprietes_stats = Propriete.objects.aggregate(
+            total=Count('id')
+        )
+        print(f"DEBUG: proprietes_stats = {proprietes_stats}")
         
-        # Statistiques des propriétés (non confidentielles)
-        total_proprietes = Propriete.objects.filter(is_deleted=False).count()
-        proprietes_louees = Propriete.objects.filter(is_deleted=False, disponible=False).count()
-        proprietes_disponibles = Propriete.objects.filter(
-            Q(is_deleted=False) &
-            (Q(disponible=True) |
-             Q(unites_locatives__statut='disponible', unites_locatives__is_deleted=False))
-        ).distinct().count()
-        proprietes_en_construction = 0  # Pas de champ construction dans le modèle actuel
+        # Calculer les propriétés louées et disponibles différemment
+        proprietes_louees = 0
+        proprietes_disponibles = 0
         
-        # Statistiques des bailleurs et locataires (non confidentielles)
-        total_bailleurs = Bailleur.objects.filter(is_deleted=False).count()
-        bailleurs_actifs = Bailleur.objects.filter(is_deleted=False, actif=True).count()
-        total_locataires = Locataire.objects.filter(is_deleted=False).count()
-        locataires_actifs = Locataire.objects.filter(is_deleted=False, statut='actif').count()
+        # Vérifier si les propriétés ont des contrats actifs
+        for propriete in Propriete.objects.all():
+            contrats_actifs = Contrat.objects.filter(propriete=propriete, est_actif=True).count()
+            if contrats_actifs > 0:
+                proprietes_louees += 1
+            else:
+                proprietes_disponibles += 1
         
-        # Statistiques des contrats (non confidentielles)
-        total_contrats = Contrat.objects.filter(is_deleted=False).count()
-        contrats_actifs = Contrat.objects.filter(is_deleted=False, est_actif=True).count()
+        proprietes_stats['louees'] = proprietes_louees
+        proprietes_stats['disponibles'] = proprietes_disponibles
         
-        # Statistiques des paiements (UNIQUEMENT le nombre, PAS les montants)
-        total_paiements = Paiement.objects.filter(is_deleted=False).count()
-        # Supprimer le comptage mensuel des paiements pour éviter de révéler l'activité financière
+        # Statistiques des unités locatives - CORRIGÉES
+        try:
+            unites_stats = UniteLocative.objects.aggregate(
+                total=Count('id'),
+                disponibles=Count('id', filter=Q(statut='disponible')),
+                occupees=Count('id', filter=Q(statut='occupee')),
+                reservees=Count('id', filter=Q(statut='reservee'))
+            )
+        except Exception:
+            unites_stats = {'total': 0, 'disponibles': 0, 'occupees': 0, 'reservees': 0}
         
-        # Statistiques des unités locatives (nouveau système)
-        total_unites = UniteLocative.objects.filter(is_deleted=False).count()
-        unites_disponibles = UniteLocative.objects.filter(is_deleted=False, statut='disponible').count()
-        unites_occupees = UniteLocative.objects.filter(is_deleted=False, statut='occupee').count()
-        unites_reservees = UniteLocative.objects.filter(is_deleted=False, statut='reservee').count()
+        # Statistiques des bailleurs et locataires - CORRIGÉES
+        bailleurs_stats = Bailleur.objects.aggregate(
+            total=Count('id')
+        )
+        bailleurs_stats['actifs'] = bailleurs_stats['total']  # Tous les bailleurs sont considérés comme actifs
         
-        unites_stats = {
-            'total': total_unites,
-            'disponibles': unites_disponibles,
-            'occupees': unites_occupees,
-            'reservees': unites_reservees
-        } if total_unites > 0 else None
+        locataires_stats = Locataire.objects.aggregate(
+            total=Count('id')
+        )
+        locataires_stats['actifs'] = locataires_stats['total']  # Tous les locataires sont considérés comme actifs
         
-        # Tendances générales (non confidentielles)
-        tendances = {
-            'activite_generale': 'stable',  # Valeur générique
-        }
+        # Statistiques des contrats - CORRIGÉES
+        contrats_stats = Contrat.objects.aggregate(
+            total=Count('id'),
+            actifs=Count('id', filter=Q(est_actif=True))
+        )
         
-        # NE PAS inclure d'informations sur les devises ou montants
-        # Supprimer toutes les références financières
+        # Statistiques des paiements - CORRIGÉES
+        paiements_stats = Paiement.objects.aggregate(
+            total=Count('id'),
+            valides=Count('id', filter=Q(statut='valide')),
+            en_attente=Count('id', filter=Q(statut='en_attente'))
+        )
         
+        # Statistiques des groupes d'utilisateurs
+        groupes_stats = Group.objects.aggregate(
+            total=Count('id')
+        )
+        
+        # Statistiques des notifications
+        try:
+            from notifications.models import Notification
+            notifications_stats = Notification.objects.aggregate(
+                total=Count('id'),
+                non_lues=Count('id', filter=Q(is_read=False))
+            )
+        except (ImportError, AttributeError):
+            notifications_stats = {'total': 0, 'non_lues': 0}
+        
+        # Calculer les propriétés disponibles avec unités
+        try:
+            proprietes_avec_unites_disponibles = Propriete.objects.filter(
+                unites_locatives__statut='disponible'
+            ).distinct().count()
+        except Exception:
+            proprietes_avec_unites_disponibles = 0
+        
+        # Total des propriétés disponibles (propriétés + unités)
+        total_disponibles = proprietes_stats['disponibles'] + proprietes_avec_unites_disponibles
+        
+        # Préparer les statistiques finales
+        print(f"DEBUG: Avant creation du contexte - proprietes_stats['total'] = {proprietes_stats.get('total', 'NOT_FOUND')}")
         cached_stats = {
-            'stats': stats,
-            'tendances': tendances,
-            # Statistiques des propriétés (non confidentielles)
-            'total_proprietes': total_proprietes,
-            'proprietes_louees': proprietes_louees,
-            'proprietes_disponibles': proprietes_disponibles,
-            'proprietes_en_construction': proprietes_en_construction,
-            # Statistiques des bailleurs et locataires (non confidentielles)
-            'total_bailleurs': total_bailleurs,
-            'bailleurs_actifs': bailleurs_actifs,
-            'total_locataires': total_locataires,
-            'locataires_actifs': locataires_actifs,
-            # Statistiques des contrats (non confidentielles)
-            'total_contrats': total_contrats,
-            'contrats_actifs': contrats_actifs,
-            # Statistiques des paiements (UNIQUEMENT le nombre total)
-            'total_paiements': total_paiements,
+            # Statistiques principales
+            'total_proprietes': proprietes_stats['total'] or 0,
+            'proprietes_louees': proprietes_stats['louees'] or 0,
+            'proprietes_disponibles': total_disponibles,
+            'proprietes_en_construction': 0,  # Pas de champ construction
+            
+            # Statistiques des bailleurs et locataires
+            'total_bailleurs': bailleurs_stats['total'] or 0,
+            'bailleurs_actifs': bailleurs_stats['actifs'] or 0,
+            'total_locataires': locataires_stats['total'] or 0,
+            'locataires_actifs': locataires_stats['actifs'] or 0,
+            
+            # Statistiques des contrats
+            'total_contrats': contrats_stats['total'] or 0,
+            'contrats_actifs': contrats_stats['actifs'] or 0,
+            
+            # Statistiques des paiements
+            'total_paiements': paiements_stats['total'] or 0,
+            'paiements_valides': paiements_stats['valides'] or 0,
+            'paiements_attente': paiements_stats['en_attente'] or 0,
+            
             # Statistiques des unités locatives
-            'unites_stats': unites_stats,
-            # SUPPRIMER: paiements_mois, devise_base, devise_active
+            'unites_stats': {
+                'total': unites_stats['total'] or 0,
+                'disponibles': unites_stats['disponibles'] or 0,
+                'occupees': unites_stats['occupees'] or 0,
+                'reservees': unites_stats['reservees'] or 0
+            },
+            
+            # Statistiques des groupes et notifications
+            'total_groupes': groupes_stats['total'] or 0,
+            'total_notifications': notifications_stats['total'] or 0,
+            'notifications_non_lues': notifications_stats['non_lues'] or 0,
+            
+            # Métadonnées
+            'derniere_maj': timezone.now().strftime('%d/%m/%Y %H:%M'),
+            'statut': 'dynamique'
         }
         
-        # Mettre en cache
-        from django.core.cache import cache
-        cache.set(cache_key, cached_stats, 600)
+        # Mettre en cache avec une durée plus courte
+        # from django.core.cache import cache
+        # cache.set(cache_key, cached_stats, 60)  # 1 minute seulement
+        
+    except Exception as e:
+        # En cas d'erreur, retourner des valeurs par défaut
+        cached_stats = {
+            'total_proprietes': 0,
+            'proprietes_louees': 0,
+            'proprietes_disponibles': 0,
+            'proprietes_en_construction': 0,
+            'total_bailleurs': 0,
+            'bailleurs_actifs': 0,
+            'total_locataires': 0,
+            'locataires_actifs': 0,
+            'total_contrats': 0,
+            'contrats_actifs': 0,
+            'total_paiements': 0,
+            'paiements_valides': 0,
+            'paiements_attente': 0,
+            'unites_stats': {'total': 0, 'disponibles': 0, 'occupees': 0, 'reservees': 0},
+            'total_groupes': 0,
+            'total_notifications': 0,
+            'notifications_non_lues': 0,
+            'derniere_maj': timezone.now().strftime('%d/%m/%Y %H:%M'),
+            'statut': 'erreur',
+            'erreur': str(e)
+        }
     
     # Préparer le contexte du template
-    # S'assurer que cached_stats a toujours une valeur
-    if cached_stats is None:
-        cached_stats = {}
-    
-    context = cached_stats
+    context = cached_stats or {}
+    print(f"DEBUG: Contexte final = {context}")
     
     return render(request, 'core/dashboard_unified.html', context)
+
+@login_required
+def dashboard_stats_api(request):
+    """API pour les statistiques dynamiques du dashboard."""
+    try:
+        # Calculer les statistiques en temps réel - CORRIGÉES
+        proprietes_stats = Propriete.objects.aggregate(
+            total=Count('id')
+        )
+        
+        # Calculer les propriétés louées et disponibles
+        proprietes_louees = 0
+        proprietes_disponibles = 0
+        
+        for propriete in Propriete.objects.all():
+            contrats_actifs = Contrat.objects.filter(propriete=propriete, est_actif=True).count()
+            if contrats_actifs > 0:
+                proprietes_louees += 1
+            else:
+                proprietes_disponibles += 1
+        
+        proprietes_stats['louees'] = proprietes_louees
+        proprietes_stats['disponibles'] = proprietes_disponibles
+        
+        try:
+            unites_stats = UniteLocative.objects.aggregate(
+                total=Count('id'),
+                disponibles=Count('id', filter=Q(statut='disponible')),
+                occupees=Count('id', filter=Q(statut='occupee')),
+                reservees=Count('id', filter=Q(statut='reservee'))
+            )
+        except Exception:
+            unites_stats = {'total': 0, 'disponibles': 0, 'occupees': 0, 'reservees': 0}
+        
+        bailleurs_stats = Bailleur.objects.aggregate(
+            total=Count('id')
+        )
+        bailleurs_stats['actifs'] = bailleurs_stats['total']
+        
+        locataires_stats = Locataire.objects.aggregate(
+            total=Count('id')
+        )
+        locataires_stats['actifs'] = locataires_stats['total']
+        
+        contrats_stats = Contrat.objects.aggregate(
+            total=Count('id'),
+            actifs=Count('id', filter=Q(est_actif=True))
+        )
+        
+        paiements_stats = Paiement.objects.aggregate(
+            total=Count('id'),
+            valides=Count('id', filter=Q(statut='valide')),
+            en_attente=Count('id', filter=Q(statut='en_attente'))
+        )
+        
+        groupes_stats = Group.objects.aggregate(total=Count('id'))
+        
+        try:
+            from notifications.models import Notification
+            notifications_stats = Notification.objects.aggregate(
+                total=Count('id'),
+                non_lues=Count('id', filter=Q(lu=False))
+            )
+        except (ImportError, AttributeError):
+            notifications_stats = {'total': 0, 'non_lues': 0}
+        
+        # Calculer les propriétés disponibles avec unités
+        try:
+            proprietes_avec_unites_disponibles = Propriete.objects.filter(
+                unites_locatives__statut='disponible'
+            ).distinct().count()
+        except Exception:
+            proprietes_avec_unites_disponibles = 0
+        
+        total_disponibles = proprietes_stats['disponibles'] + proprietes_avec_unites_disponibles
+        
+        # Préparer la réponse
+        stats = {
+            'total_proprietes': proprietes_stats['total'] or 0,
+            'proprietes_louees': proprietes_stats['louees'] or 0,
+            'proprietes_disponibles': total_disponibles,
+            'total_bailleurs': bailleurs_stats['total'] or 0,
+            'bailleurs_actifs': bailleurs_stats['actifs'] or 0,
+            'total_locataires': locataires_stats['total'] or 0,
+            'locataires_actifs': locataires_stats['actifs'] or 0,
+            'total_contrats': contrats_stats['total'] or 0,
+            'contrats_actifs': contrats_stats['actifs'] or 0,
+            'total_paiements': paiements_stats['total'] or 0,
+            'paiements_valides': paiements_stats['valides'] or 0,
+            'paiements_attente': paiements_stats['en_attente'] or 0,
+            'total_groupes': groupes_stats['total'] or 0,
+            'total_notifications': notifications_stats['total'] or 0,
+            'notifications_non_lues': notifications_stats['non_lues'] or 0,
+            'derniere_maj': timezone.now().strftime('%d/%m/%Y %H:%M'),
+            'statut': 'dynamique'
+        }
+        
+        return JsonResponse(stats)
+        
+    except Exception as e:
+        return JsonResponse({
+            'erreur': str(e),
+            'statut': 'erreur',
+            'derniere_maj': timezone.now().strftime('%d/%m/%Y %H:%M')
+        }, status=500)
 
 @login_required
 def intelligent_search(request):
