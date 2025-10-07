@@ -67,11 +67,34 @@ def monitoring_avances(request):
         context = {
             'erreur': f"Erreur lors du chargement du monitoring: {str(e)}",
             'date_actuelle': timezone.now(),
-            'rapport': {'total_avances': 0, 'message': 'Aucune avance trouvée'},
+            'rapport': {
+                'total_avances': 0, 
+                'message': 'Aucune avance trouvée',
+                'montant_total_avances': 0,
+                'montant_restant_total': 0,
+                'montant_consomme_total': 0,
+                'pourcentage_consomme': 0,
+                'progression_moyenne': 0,
+                'avances_critiques': 0,
+                'avances_actives': 0,
+                'avances_epuisees': 0,
+                'erreur': True
+            },
             'avances_critiques': [],
             'avances_recentes': [],
             'toutes_avances': [],
-            'stats_supplementaires': {'total_contrats_avec_avances': 0, 'montant_moyen_avance': 0, 'duree_moyenne_avance': 0},
+            'stats_supplementaires': {
+                'total_contrats_avec_avances': 0, 
+                'montant_moyen_avance': 0, 
+                'duree_moyenne_avance': 0
+            },
+            'alertes': [],
+            'filtres': {
+                'statut': 'tous',
+                'contrat': '',
+                'date_debut': '',
+                'date_fin': ''
+            }
         }
         return render(request, 'paiements/avances/monitoring_avances.html', context)
 
@@ -97,7 +120,7 @@ def detail_progression_avance(request, avance_id):
         stats_detaillees = {
             'montant_initial': avance.montant_avance,
             'montant_consomme': progression['montant_reel_consomme'] if progression else Decimal('0'),
-            'montant_restant': avance.montant_restant,
+            'montant_restant': progression['montant_restant'] if progression else avance.montant_avance,
             'pourcentage_consomme': progression['pourcentage_reel'] if progression else 0,
             'mois_ecoules': progression['mois_ecoules'] if progression else 0,
             'mois_restants_estimes': progression['mois_restants_estimes'] if progression else 0,
@@ -105,13 +128,39 @@ def detail_progression_avance(request, avance_id):
             'statut_progression': progression['statut_progression'] if progression else 'inconnu'
         }
         
+        # Préparer les données pour la timeline
+        mois_couverts_liste = avance.get_mois_couverts_liste()
+        mois_couverts_avec_statut = []
+        from datetime import date
+        mois_actuel = date.today().replace(day=1)
+        
+        for mois in mois_couverts_liste:
+            est_consomme = avance.est_mois_consomme(mois)
+            est_actuel = mois == mois_actuel
+            
+            # Déterminer le statut
+            if est_consomme:
+                statut = 'consomme'
+            elif est_actuel:
+                statut = 'en_cours'
+            else:
+                statut = 'futur'
+            
+            mois_couverts_avec_statut.append({
+                'mois': mois,
+                'est_consomme': est_consomme,
+                'est_actuel': est_actuel,
+                'statut': statut
+            })
+        
         context = {
             'avance': avance,
             'progression': progression,
             'consommations': consommations,
             'historique_paiements': historique_paiements[:12],  # 12 derniers mois
             'stats_detaillees': stats_detaillees,
-            'mois_couverts_liste': avance.get_mois_couverts_liste(),
+            'mois_couverts_liste': mois_couverts_liste,
+            'mois_couverts_avec_statut': mois_couverts_avec_statut,
         }
         
         return render(request, 'paiements/avances/detail_progression_avance.html', context)
@@ -133,15 +182,16 @@ def synchroniser_avances_ajax(request):
             # Synchroniser les consommations
             resultat = ServiceMonitoringAvance.synchroniser_consommations()
             
-            if resultat:
+            if resultat.get('success', False):
                 return JsonResponse({
                     'success': True,
-                    'message': 'Synchronisation réussie'
+                    'message': resultat.get('message', 'Synchronisation réussie'),
+                    'total_synchronise': resultat.get('total_synchronise', 0)
                 })
             else:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Erreur lors de la synchronisation'
+                    'message': resultat.get('erreur', 'Erreur lors de la synchronisation')
                 })
                 
         except Exception as e:

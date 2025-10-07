@@ -914,12 +914,18 @@ def recherche_intelligente_paiements(request):
             Q(contrat__locataire__nom__icontains=query) |
             Q(contrat__locataire__prenom__icontains=query) |
             Q(contrat__propriete__adresse__icontains=query) |
+            Q(contrat__propriete__titre__icontains=query) |
+            Q(contrat__propriete__ville__icontains=query) |
+            Q(contrat__numero_contrat__icontains=query) |
+            Q(reference_paiement__icontains=query) |
             Q(type_paiement__icontains=query) |
-            Q(statut__icontains=query)
+            Q(statut__icontains=query) |
+            Q(notes__icontains=query) |
+            Q(libelle__icontains=query)
         ).select_related(
             'contrat__locataire',
             'contrat__propriete'
-        )[:20]
+        ).order_by('-created_at')[:20]
     
     context = {
         'query': query,

@@ -751,7 +751,8 @@ class PaiementViewSet(viewsets.ModelViewSet):
         'contrat__numero_contrat',
         'contrat__locataire__nom',
         'contrat__locataire__prenom',
-        'commentaire'
+        'notes',
+        'libelle'
     ]
     
     ordering_fields = [
@@ -826,7 +827,7 @@ class PaiementViewSet(viewsets.ModelViewSet):
         motif_refus = request.data.get('motif_refus', '')
         
         paiement.statut = 'refuse'
-        paiement.commentaire = f"{paiement.commentaire}\n\nRefusé: {motif_refus}".strip()
+        paiement.notes = f"{paiement.notes}\n\nRefusé: {motif_refus}".strip()
         paiement.save()
         
         return Response({
@@ -1022,7 +1023,8 @@ class PaiementCautionAvanceViewSet(viewsets.ModelViewSet):
         'contrat__locataire__nom',
         'contrat__locataire__prenom',
         'contrat__propriete__titre',
-        'commentaire'
+        'notes',
+        'libelle'
     ]
     
     ordering_fields = [

@@ -42,12 +42,19 @@ class ServiceMonitoringAvance:
                 # Calculer les mois consommés
                 mois_consommes = ConsommationAvance.objects.filter(avance=avance).count()
                 
+                # *** CORRECTION : Calculer le montant réel consommé et restant ***
+                montant_consomme = sum(
+                    float(c.montant_consomme) for c in ConsommationAvance.objects.filter(avance=avance)
+                )
+                montant_restant = float(avance.montant_avance) - montant_consomme
+                montant_restant = max(0, montant_restant)  # Ne peut pas être négatif
+                
                 # Calculer la progression
                 progression = (mois_consommes / avance.nombre_mois_couverts * 100) if avance.nombre_mois_couverts > 0 else 0
                 
                 # Mettre à jour les totaux
                 resultats['montant_total_avances'] += float(avance.montant_avance)
-                resultats['montant_restant_total'] += float(avance.montant_restant)
+                resultats['montant_restant_total'] += montant_restant
                 resultats['mois_couverts_total'] += avance.nombre_mois_couverts
                 resultats['mois_consommes_total'] += mois_consommes
                 
@@ -60,7 +67,7 @@ class ServiceMonitoringAvance:
                 resultats['details_avances'].append({
                     'id': avance.id,
                     'montant_avance': float(avance.montant_avance),
-                    'montant_restant': float(avance.montant_restant),
+                    'montant_restant': montant_restant,
                     'mois_couverts': avance.nombre_mois_couverts,
                     'mois_consommes': mois_consommes,
                     'progression': round(progression, 2),
@@ -221,8 +228,10 @@ class ServiceMonitoringAvance:
                     'avances_epuisees': 0,
                     'montant_total_avances': 0,
                     'montant_restant_total': 0,
+                    'montant_consomme_total': 0,
                     'progression_moyenne': 0,
                     'avances_critiques': 0,
+                    'pourcentage_consomme': 0,
                     'message': 'Aucune avance trouvée'
                 }
             
@@ -232,7 +241,15 @@ class ServiceMonitoringAvance:
             avances_epuisees = avances.filter(statut='epuisee').count()
             
             montant_total_avances = sum(float(a.montant_avance) for a in avances)
-            montant_restant_total = sum(float(a.montant_restant) for a in avances)
+            
+            # *** CORRECTION : Calculer le montant restant total correctement ***
+            montant_restant_total = 0
+            for avance in avances:
+                montant_consomme = sum(
+                    float(c.montant_consomme) for c in ConsommationAvance.objects.filter(avance=avance)
+                )
+                montant_restant = float(avance.montant_avance) - montant_consomme
+                montant_restant_total += max(0, montant_restant)
             
             # Calculer la progression moyenne
             progressions = []
@@ -249,21 +266,33 @@ class ServiceMonitoringAvance:
             
             progression_moyenne = sum(progressions) / len(progressions) if progressions else 0
             
+            # Calculer le montant consommé
+            montant_consomme_total = montant_total_avances - montant_restant_total
+            
             return {
                 'total_avances': total_avances,
                 'avances_actives': avances_actives,
                 'avances_epuisees': avances_epuisees,
                 'montant_total_avances': round(montant_total_avances, 2),
                 'montant_restant_total': round(montant_restant_total, 2),
+                'montant_consomme_total': round(montant_consomme_total, 2),
                 'progression_moyenne': round(progression_moyenne, 2),
                 'avances_critiques': avances_critiques,
-                'pourcentage_consomme': round(((montant_total_avances - montant_restant_total) / montant_total_avances * 100) if montant_total_avances > 0 else 0, 2)
+                'pourcentage_consomme': round((montant_consomme_total / montant_total_avances * 100) if montant_total_avances > 0 else 0, 2)
             }
             
         except Exception as e:
             return {
                 'erreur': str(e),
-                'total_avances': 0
+                'total_avances': 0,
+                'avances_actives': 0,
+                'avances_epuisees': 0,
+                'montant_total_avances': 0,
+                'montant_restant_total': 0,
+                'montant_consomme_total': 0,
+                'progression_moyenne': 0,
+                'avances_critiques': 0,
+                'pourcentage_consomme': 0
             }
     
     @staticmethod
@@ -376,12 +405,17 @@ class ServiceMonitoringAvance:
             else:
                 statut_progression = 'debut'
 
+            # *** CORRECTION : Calculer le montant restant correctement ***
+            montant_restant = float(avance.montant_avance) - montant_reel_consomme
+            montant_restant = max(0, montant_restant)  # Ne peut pas être négatif
+
             return {
                 'progression': round(progression_reelle, 2),
                 'mois_consommes': mois_consommes_reels,
                 'mois_ecoules': mois_ecoules,
                 'mois_restants_estimes': mois_restants_estimes,
                 'montant_reel_consomme': round(montant_reel_consomme, 2),
+                'montant_restant': round(montant_restant, 2),
                 'pourcentage_reel': round(pourcentage_reel, 2),
                 'date_expiration_estimee': date_expiration_estimee,
                 'statut_progression': statut_progression

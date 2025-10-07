@@ -14,7 +14,7 @@ class ServiceGestionAvance:
     """
     
     @staticmethod
-    def creer_avance_loyer(contrat, montant_avance, date_avance, notes=""):
+    def creer_avance_loyer(contrat, montant_avance, date_avance, notes="", mois_effet_personnalise=None):
         """
         Crée une nouvelle avance de loyer avec calcul automatique des mois
         """
@@ -41,7 +41,8 @@ class ServiceGestionAvance:
                     montant_avance=montant_avance,
                     loyer_mensuel=loyer_mensuel_decimal,
                     date_avance=date_avance,
-                    notes=notes
+                    notes=notes,
+                    mois_effet_personnalise=mois_effet_personnalise
                 )
                 
                 # Le calcul des mois est fait automatiquement dans save()

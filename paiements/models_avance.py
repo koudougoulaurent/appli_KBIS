@@ -58,6 +58,14 @@ class AvanceLoyer(models.Model):
         verbose_name=_("Date de l'avance")
     )
     
+    # *** NOUVEAU : Mois d'effet personnalisé ***
+    mois_effet_personnalise = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name=_("Mois d'effet personnalisé"),
+        help_text=_("Laissez vide pour utiliser la logique automatique (15+ du mois)")
+    )
+    
     mois_debut_couverture = models.DateField(
         verbose_name=_("Mois de début de couverture")
     )
@@ -131,17 +139,24 @@ class AvanceLoyer(models.Model):
         
         self.nombre_mois_couverts = mois_complets
         
-        # Définir les dates de couverture
-        # LOGIQUE INTELLIGENTE : Si l'avance est versée en fin de mois, elle prend effet le mois suivant
-        mois_avance = self.date_avance.replace(day=1)
-        jour_avance = self.date_avance.day
-        
-        # Si l'avance est versée après le 15 du mois, elle prend effet le mois suivant
-        if jour_avance > 15:
-            self.mois_debut_couverture = mois_avance + relativedelta(months=1)
+        # *** LOGIQUE INTELLIGENTE : Mois d'effet personnalisé ou automatique ***
+        if self.mois_effet_personnalise:
+            # Utiliser le mois d'effet personnalisé
+            self.mois_debut_couverture = self.mois_effet_personnalise.replace(day=1)
         else:
-            self.mois_debut_couverture = mois_avance
+            # Logique automatique basée sur le jour du mois
+            # Si l'avance est versée après le 15 du mois, elle prend effet le mois suivant
+            # Sinon, elle prend effet le mois courant
+            mois_avance = self.date_avance.replace(day=1)
+            jour_avance = self.date_avance.day
             
+            # Règle du 15+ : après le 15 = mois suivant, sinon mois courant
+            if jour_avance > 15:
+                self.mois_debut_couverture = mois_avance + relativedelta(months=1)
+            else:
+                self.mois_debut_couverture = mois_avance
+        
+        # Calculer la fin de couverture
         if mois_complets > 0:
             self.mois_fin_couverture = self.mois_debut_couverture + relativedelta(months=mois_complets - 1)
         else:
@@ -222,35 +237,23 @@ class AvanceLoyer(models.Model):
         from datetime import datetime
         
         try:
-            # *** NOUVELLE LOGIQUE : Calculer les mois couverts par l'avance ***
-            # 1. Calculer le nombre de mois couverts par l'avance
-            nombre_mois = self.nombre_mois_couverts
-            
-            if nombre_mois <= 0:
+            # *** CORRECTION : Utiliser la même logique que calculer_mois_couverts() ***
+            # Utiliser directement les mois de couverture calculés
+            if not self.mois_debut_couverture or self.nombre_mois_couverts <= 0:
                 return "Aucun mois couvert"
             
-            # 2. Trouver le dernier mois de paiement (dernière quittance de loyer)
-            dernier_mois_paiement = self._get_dernier_mois_paiement()
-            
-            # 3. Commencer au mois suivant le dernier paiement
-            if dernier_mois_paiement:
-                mois_debut = dernier_mois_paiement + relativedelta(months=1)
-            else:
-                # Si pas de paiement précédent, commencer au mois suivant la date d'avance
-                mois_debut = self.date_avance.replace(day=1) + relativedelta(months=1)
-            
-            # 4. Générer la liste des mois couverts par l'avance
+            # Générer la liste des mois couverts par l'avance
             mois_regles = []
-            mois_courant = mois_debut
+            mois_courant = self.mois_debut_couverture
             
-            for i in range(nombre_mois):
+            for i in range(self.nombre_mois_couverts):
                 mois_regles.append(mois_courant.strftime('%B %Y'))
                 mois_courant = mois_courant + relativedelta(months=1)
             
-            # 5. Convertir les mois en français
+            # Convertir les mois en français
             mois_regles_fr = [self._convertir_mois_francais(mois) for mois in mois_regles]
             
-            # 6. Retourner la liste formatée des mois couverts
+            # Retourner la liste formatée des mois couverts
             return ', '.join(mois_regles_fr)
             
         except Exception as e:
@@ -378,6 +381,15 @@ class AvanceLoyer(models.Model):
         
         # Retourner le montant restant
         return max(self.montant_avance - montant_consomme, Decimal('0'))
+    
+    def est_mois_consomme(self, mois):
+        """Vérifie si un mois spécifique a été consommé"""
+        from .models_avance import ConsommationAvance
+        return ConsommationAvance.objects.filter(
+            avance=self,
+            mois_consomme__year=mois.year,
+            mois_consomme__month=mois.month
+        ).exists()
 
 
 class ConsommationAvance(models.Model):

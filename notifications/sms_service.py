@@ -186,11 +186,7 @@ class PaymentOverdueService:
         """
         Vérifier les paiements en retard et envoyer des notifications
         """
-        from paiements.models import Paiement
-        from contrats.models import Contrat
-        
         # Date limite pour considérer un paiement en retard (fin du mois + 5 jours)
-        today = timezone.now().date()
         overdue_date = self._get_overdue_date()
         
         # Trouver les contrats avec paiements en retard
@@ -203,9 +199,9 @@ class PaymentOverdueService:
                 self._send_overdue_notification(contrat, overdue_date)
                 notifications_sent += 1
             except Exception as e:
-                logger.error(f"Error sending overdue notification for contract {contrat.id}: {e}")
+                logger.error("Error sending overdue notification for contract %s: %s", contrat.id, e)
         
-        logger.info(f"Sent {notifications_sent} overdue payment notifications")
+        logger.info("Sent %d overdue payment notifications", notifications_sent)
         return notifications_sent
     
     def _get_overdue_date(self):
@@ -242,6 +238,7 @@ class PaymentOverdueService:
         """Obtenir les contrats avec paiements en retard"""
         from contrats.models import Contrat
         from paiements.models import Paiement
+        from dateutil.relativedelta import relativedelta
         
         # Trouver les contrats actifs
         active_contracts = Contrat.objects.filter(
@@ -250,27 +247,56 @@ class PaymentOverdueService:
         )
         
         overdue_contracts = []
+        today = timezone.now().date()
         
         for contrat in active_contracts:
-            # Vérifier si le paiement du mois est en retard
-            expected_payment_date = datetime(
-                overdue_date.year, 
-                overdue_date.month, 
-                contrat.jour_paiement or 1
-            ).date()
+            # Vérifier les retards pour le mois en cours ET les mois précédents
+            months_to_check = self._get_months_to_check(today, overdue_date)
             
-            # Chercher un paiement pour ce mois
-            payment_exists = Paiement.objects.filter(
-                contrat=contrat,
-                date_paiement__year=expected_payment_date.year,
-                date_paiement__month=expected_payment_date.month,
-                statut='valide'
-            ).exists()
-            
-            if not payment_exists:
-                overdue_contracts.append(contrat)
+            for check_date in months_to_check:
+                # Vérifier si le paiement du mois est en retard
+                expected_payment_date = datetime(
+                    check_date.year, 
+                    check_date.month, 
+                    contrat.jour_paiement or 1
+                ).date()
+                
+                # Chercher un paiement pour ce mois
+                payment_exists = Paiement.objects.filter(
+                    contrat=contrat,
+                    date_paiement__year=expected_payment_date.year,
+                    date_paiement__month=expected_payment_date.month,
+                    statut='valide'
+                ).exists()
+                
+                if not payment_exists and today > expected_payment_date:
+                    # Ajouter le contrat s'il n'est pas déjà dans la liste
+                    if contrat not in overdue_contracts:
+                        overdue_contracts.append(contrat)
+                    break  # Un seul retard par contrat suffit
         
         return overdue_contracts
+    
+    def _get_months_to_check(self, today, overdue_date):
+        """Déterminer quels mois vérifier pour les retards"""
+        months_to_check = []
+        
+        # Si on est dans les 5 premiers jours du mois, vérifier le mois précédent
+        if today.day <= 5:
+            # Ajouter le mois précédent
+            if today.month == 1:
+                previous_month = 12
+                previous_year = today.year - 1
+            else:
+                previous_month = today.month - 1
+                previous_year = today.year
+            
+            months_to_check.append(datetime(previous_year, previous_month, 1).date())
+        
+        # Toujours vérifier le mois en cours
+        months_to_check.append(datetime(today.year, today.month, 1).date())
+        
+        return months_to_check
     
     def _send_overdue_notification(self, contrat, overdue_date):
         """Envoyer une notification de retard pour un contrat"""

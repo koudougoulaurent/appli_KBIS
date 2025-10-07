@@ -935,62 +935,80 @@ def detection_anomalies(request):
     
     anomalies = []
     
-    # 1. Détecter les paiements en retard
+    # 1. Détecter les paiements en retard (mois en cours ET mois précédents)
     from datetime import date
     from calendar import monthrange
+    from dateutil.relativedelta import relativedelta
     
     paiements_retard = []
     contrats_actifs = Contrat.objects.filter(est_actif=True).select_related('locataire', 'propriete')
+    aujourd_hui = timezone.now().date()
+    
+    # Déterminer les mois à vérifier
+    mois_a_verifier = []
+    
+    # Si on est dans les 5 premiers jours du mois, vérifier le mois précédent
+    if aujourd_hui.day <= 5:
+        if aujourd_hui.month == 1:
+            mois_precedent = 12
+            annee_precedente = aujourd_hui.year - 1
+        else:
+            mois_precedent = aujourd_hui.month - 1
+            annee_precedente = aujourd_hui.year
+        mois_a_verifier.append((annee_precedente, mois_precedent))
+    
+    # Toujours vérifier le mois en cours
+    mois_a_verifier.append((aujourd_hui.year, aujourd_hui.month))
     
     for contrat in contrats_actifs:
-        # Calculer la date d'échéance pour le mois en cours
-        aujourd_hui = timezone.now().date()
-        annee = aujourd_hui.year
-        mois = aujourd_hui.month
-        
-        # Obtenir le dernier jour du mois
-        _, dernier_jour_mois = monthrange(annee, mois)
-        
-        # Date d'échéance = jour de paiement du contrat ou dernier jour du mois si le jour n'existe pas
-        jour_paiement = min(contrat.jour_paiement, dernier_jour_mois)
-        date_echeance = date(annee, mois, jour_paiement)
-        
-        # Vérifier si le paiement pour ce mois existe et est en retard
-        paiement_mois = Paiement.objects.filter(
-            contrat=contrat,
-            type_paiement='loyer',
-            date_paiement__year=annee,
-            date_paiement__month=mois,
-            statut='en_attente'
-        ).first()
-        
-        if paiement_mois:
-            # Paiement existe mais pas encore reçu
-            if aujourd_hui > date_echeance:
-                jours_retard = (aujourd_hui - date_echeance).days
-                paiements_retard.append(paiement_mois)
-                anomalies.append({
-                    'type': 'paiement_retard',
-                    'severite': 'warning' if jours_retard <= 7 else 'danger',
-                    'titre': f'Paiement en retard de {jours_retard} jours',
-                    'description': f'Paiement en retard pour {contrat.locataire.nom}',
-                    'date': date_echeance,
-                    'objet': paiement_mois,
-                    'url': f'/paiements/detail/{paiement_mois.id}/'
-                })
-        else:
-            # Aucun paiement enregistré pour ce mois
-            if aujourd_hui > date_echeance:
-                jours_retard = (aujourd_hui - date_echeance).days
-                anomalies.append({
-                    'type': 'paiement_manquant',
-                    'severite': 'warning' if jours_retard <= 7 else 'danger',
-                    'titre': f'Paiement manquant depuis {jours_retard} jours',
-                    'description': f'Loyer manquant pour {contrat.locataire.nom}',
-                    'date': date_echeance,
-                    'objet': contrat,
-                    'url': f'/contrats/detail/{contrat.id}/'
-                })
+        for annee, mois in mois_a_verifier:
+            # Obtenir le dernier jour du mois
+            _, dernier_jour_mois = monthrange(annee, mois)
+            
+            # Date d'échéance = jour de paiement du contrat ou dernier jour du mois si le jour n'existe pas
+            jour_paiement = min(contrat.jour_paiement, dernier_jour_mois)
+            date_echeance = date(annee, mois, jour_paiement)
+            
+            # Vérifier si le paiement pour ce mois existe et est en retard
+            paiement_mois = Paiement.objects.filter(
+                contrat=contrat,
+                type_paiement='loyer',
+                date_paiement__year=annee,
+                date_paiement__month=mois,
+                statut='en_attente'
+            ).first()
+            
+            if paiement_mois:
+                # Paiement existe mais pas encore reçu
+                if aujourd_hui > date_echeance:
+                    jours_retard = (aujourd_hui - date_echeance).days
+                    paiements_retard.append(paiement_mois)
+                    mois_nom = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                               'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][mois-1]
+                    anomalies.append({
+                        'type': 'paiement_retard',
+                        'severite': 'warning' if jours_retard <= 7 else 'danger',
+                        'titre': f'Paiement en retard de {jours_retard} jours ({mois_nom} {annee})',
+                        'description': f'Paiement en retard pour {contrat.locataire.nom}',
+                        'date': date_echeance,
+                        'objet': paiement_mois,
+                        'url': f'/paiements/detail/{paiement_mois.id}/'
+                    })
+            else:
+                # Aucun paiement enregistré pour ce mois
+                if aujourd_hui > date_echeance:
+                    jours_retard = (aujourd_hui - date_echeance).days
+                    mois_nom = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                               'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'][mois-1]
+                    anomalies.append({
+                        'type': 'paiement_manquant',
+                        'severite': 'warning' if jours_retard <= 7 else 'danger',
+                        'titre': f'Paiement manquant depuis {jours_retard} jours ({mois_nom} {annee})',
+                        'description': f'Loyer manquant pour {contrat.locataire.nom}',
+                        'date': date_echeance,
+                        'objet': contrat,
+                        'url': f'/contrats/detail/{contrat.id}/'
+                    })
     
     # 2. Détecter les contrats expirant bientôt
     date_limite = timezone.now().date() + timedelta(days=30)

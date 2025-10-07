@@ -239,7 +239,7 @@
                         <strong>Montant Total:</strong> {{ rapport.montant_total_avances|floatformat:0 }} F CFA
                     </div>
                     <div class="col-md-4">
-                        <strong>Consommé:</strong> {{ rapport.montant_total_avances|add:rapport.montant_restant_total|floatformat:0 }} F CFA
+                        <strong>Consommé:</strong> {{ rapport.montant_consomme_total|floatformat:0 }} F CFA
                     </div>
                     <div class="col-md-4">
                         <strong>Restant:</strong> {{ rapport.montant_restant_total|floatformat:0 }} F CFA
@@ -286,7 +286,7 @@
                             <small class="text-muted">Type: {{ alerte.type_alerte }}</small>
                         </div>
                         <div class="col-md-2 text-end">
-                            <a href="{% url 'paiements:detail_progression_avance' alerte.avance.id %}" class="btn btn-sm btn-outline-primary">
+                            <a href="/paiements/avances/progression/{{ alerte.avance.id }}/" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-eye"></i> Détails
                             </a>
                         </div>
@@ -334,7 +334,7 @@
                                 <small class="text-muted">Loyer: {{ avance.loyer_mensuel|floatformat:0 }} F CFA/mois</small>
                             </div>
                             <div class="col-md-2 text-end">
-                                <a href="{% url 'paiements:detail_progression_avance' avance.id %}" class="btn btn-sm btn-outline-primary">
+                                <a href="/paiements/avances/progression/{{ avance.id }}/" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-eye"></i> Détails
                                 </a>
                             </div>
@@ -361,30 +361,48 @@
 {% block extra_js %}
 <script>
     function synchroniserAvances() {
-        fetch('{% url "paiements:synchroniser_avances_ajax" %}', {
+        // Afficher un indicateur de chargement
+        const syncBtn = document.querySelector('button[onclick="synchroniserAvances()"]');
+        const originalText = syncBtn.innerHTML;
+        syncBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Synchronisation...';
+        syncBtn.disabled = true;
+        
+        fetch('/paiements/avances/synchroniser-ajax/', {
             method: 'POST',
             headers: {
                 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
                 'Content-Type': 'application/json',
             },
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
-                alert('Synchronisation réussie !');
+                const message = data.message || 'Synchronisation réussie !';
+                const totalSync = data.total_synchronise || 0;
+                alert(`${message}\n\n${totalSync} mois d'avance synchronisés.`);
                 location.reload();
             } else {
-                alert('Erreur: ' + data.message);
+                alert('Erreur: ' + (data.message || 'Erreur inconnue'));
             }
         })
         .catch(error => {
-            console.error('Erreur:', error);
-            alert('Erreur lors de la synchronisation');
+            console.error('Erreur détaillée:', error);
+            alert('Erreur lors de la synchronisation: ' + error.message);
+        })
+        .finally(() => {
+            // Restaurer le bouton
+            syncBtn.innerHTML = originalText;
+            syncBtn.disabled = false;
         });
     }
 
     function envoyerAlertes() {
-        fetch('{% url "paiements:envoyer_alertes_ajax" %}', {
+        fetch('/paiements/avances/envoyer-alertes/', {
             method: 'POST',
             headers: {
                 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
@@ -406,29 +424,91 @@
     }
 
     function genererRapport() {
-        fetch('{% url "paiements:rapport_progression_ajax" %}')
-        .then(response => response.json())
+        // Afficher un indicateur de chargement
+        const rapportBtn = document.querySelector('button[onclick="genererRapport()"]');
+        const originalText = rapportBtn.innerHTML;
+        rapportBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Génération...';
+        rapportBtn.disabled = true;
+        
+        fetch('/paiements/avances/rapport-progression-ajax/', {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 // Afficher le rapport dans une nouvelle fenêtre
                 const rapportWindow = window.open('', '_blank');
                 rapportWindow.document.write(`
                     <html>
-                        <head><title>Rapport de Progression des Avances</title></head>
+                        <head>
+                            <title>Rapport de Progression des Avances</title>
+                            <style>
+                                body { font-family: Arial, sans-serif; margin: 20px; }
+                                h1 { color: #333; }
+                                .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+                                .stat-card { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff; }
+                                .stat-value { font-size: 24px; font-weight: bold; color: #007bff; }
+                                .stat-label { color: #666; margin-top: 5px; }
+                            </style>
+                        </head>
                         <body>
-                            <h1>Rapport de Progression des Avances</h1>
-                            <p>Généré le: ${new Date().toLocaleString()}</p>
-                            <pre>${JSON.stringify(data.rapport, null, 2)}</pre>
+                            <h1>📊 Rapport de Progression des Avances</h1>
+                            <p><strong>Généré le:</strong> ${new Date().toLocaleString()}</p>
+                            
+                            <div class="stats">
+                                <div class="stat-card">
+                                    <div class="stat-value">${data.rapport.total_avances || 0}</div>
+                                    <div class="stat-label">Total Avances</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value">${data.rapport.avances_actives || 0}</div>
+                                    <div class="stat-label">Avances Actives</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value">${data.rapport.avances_epuisees || 0}</div>
+                                    <div class="stat-label">Avances Épuisées</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value">${(data.rapport.montant_total_avances || 0).toLocaleString()} F CFA</div>
+                                    <div class="stat-label">Montant Total</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value">${(data.rapport.montant_restant_total || 0).toLocaleString()} F CFA</div>
+                                    <div class="stat-label">Montant Restant</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value">${(data.rapport.progression_moyenne || 0).toFixed(1)}%</div>
+                                    <div class="stat-label">Progression Moyenne</div>
+                                </div>
+                            </div>
+                            
+                            <h2>Détails Techniques</h2>
+                            <pre style="background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto;">${JSON.stringify(data.rapport, null, 2)}</pre>
                         </body>
                     </html>
                 `);
+                rapportWindow.document.close();
             } else {
-                alert('Erreur: ' + data.message);
+                alert('Erreur: ' + (data.message || 'Erreur inconnue'));
             }
         })
         .catch(error => {
-            console.error('Erreur:', error);
-            alert('Erreur lors de la génération du rapport');
+            console.error('Erreur détaillée:', error);
+            alert('Erreur lors de la génération du rapport: ' + error.message);
+        })
+        .finally(() => {
+            // Restaurer le bouton
+            rapportBtn.innerHTML = originalText;
+            rapportBtn.disabled = false;
         });
     }
 

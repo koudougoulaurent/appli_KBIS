@@ -1127,9 +1127,18 @@ def contrats_orphelins(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
+    # Calculer les statistiques
+    total_contrats = contrats_orphelins.count()
+    
+    # Compter les locataires supprimés (uniques)
+    from django.db.models import Count
+    total_locataires = contrats_orphelins.values('locataire').distinct().count()
+    
     context = {
         'contrats_orphelins': page_obj,
         'page_obj': page_obj,
+        'total_contrats': total_contrats,
+        'total_locataires': total_locataires,
     }
     
     return render(request, 'contrats/orphelins.html', context)

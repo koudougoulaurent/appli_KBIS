@@ -192,10 +192,10 @@
                     <p class="text-muted mb-0">{{ avance.contrat.locataire.get_nom_complet }} - Contrat {{ avance.contrat.numero_contrat }}</p>
                 </div>
                 <div>
-                    <a href="{% url 'paiements:monitoring_avances' %}" class="btn-action btn-primary">
+                    <a href="/paiements/avances/monitoring/" class="btn-action btn-primary">
                         <i class="bi bi-arrow-left"></i> Retour
                     </a>
-                    <a href="{% url 'paiements:generer_recu_avance' avance.id %}" class="btn-action btn-warning">
+                    <a href="/paiements/avances/recu/{{ avance.id }}/" class="btn-action btn-warning">
                         <i class="bi bi-file-text"></i> Reçu
                     </a>
                 </div>
@@ -237,7 +237,7 @@
                         <p><strong>Montant avance:</strong> {{ avance.montant_avance|floatformat:0 }} F CFA</p>
                         <p><strong>Loyer mensuel:</strong> {{ avance.loyer_mensuel|floatformat:0 }} F CFA</p>
                         <p><strong>Mois couverts:</strong> {{ avance.nombre_mois_couverts }}</p>
-                        <p><strong>Montant restant:</strong> {{ avance.montant_restant|floatformat:0 }} F CFA</p>
+                        <p><strong>Montant restant:</strong> {{ progression.montant_restant|floatformat:0 }} F CFA</p>
                     </div>
                 </div>
             </div>
@@ -275,7 +275,7 @@
                     </div>
                     <div class="col-md-3">
                         <div class="info-card text-center">
-                            <h5 class="text-success">{{ avance.montant_restant|floatformat:0 }}</h5>
+                            <h5 class="text-success">{{ progression.montant_restant|floatformat:0 }}</h5>
                             <small class="text-muted">F CFA Restant</small>
                         </div>
                     </div>
@@ -319,15 +319,15 @@
                 </h4>
                 
                 <div class="timeline">
-                    {% for mois in avance.get_mois_couverts_liste %}
-                    <div class="timeline-item {% if mois < progression.mois_ecoules %}consomme{% elif mois > progression.mois_ecoules %}futur{% endif %}">
+                    {% for mois_data in mois_couverts_avec_statut %}
+                    <div class="timeline-item {{ mois_data.statut }}">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="mb-1">{{ mois|date:"F Y" }}</h6>
+                                <h6 class="mb-1">{{ mois_data.mois|date:"F Y" }}</h6>
                                 <small class="text-muted">
-                                    {% if mois < progression.mois_ecoules %}
+                                    {% if mois_data.statut == 'consomme' %}
                                         <i class="bi bi-check-circle text-success"></i> Consommé
-                                    {% elif mois == progression.mois_ecoules %}
+                                    {% elif mois_data.statut == 'en_cours' %}
                                         <i class="bi bi-clock text-warning"></i> En cours
                                     {% else %}
                                         <i class="bi bi-circle text-muted"></i> À venir
@@ -335,7 +335,7 @@
                                 </small>
                             </div>
                             <div class="text-end">
-                                <span class="badge {% if mois < progression.mois_ecoules %}bg-success{% elif mois == progression.mois_ecoules %}bg-warning{% else %}bg-secondary{% endif %}">
+                                <span class="badge {% if mois_data.statut == 'consomme' %}bg-success{% elif mois_data.statut == 'en_cours' %}bg-warning{% else %}bg-secondary{% endif %}">
                                     {{ avance.loyer_mensuel|floatformat:0 }} F CFA
                                 </span>
                             </div>
