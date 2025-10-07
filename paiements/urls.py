@@ -236,5 +236,5 @@ urlpatterns = [
     path('recapitulatifs/<int:recapitulatif_id>/kbis/', views_recapitulatifs.generer_recapitulatif_kbis, name='generer_recapitulatif_kbis'),
     
     # 🏠 SYSTÈME D'AVANCES DE LOYER - NOUVEAU !
-    path('avances/', include('paiements.urls_avance')),
+    path('avances/', include('paiements.urls_avance', namespace='avances')),
 ]
