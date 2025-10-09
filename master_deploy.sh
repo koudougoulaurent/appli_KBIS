@@ -10,7 +10,7 @@ echo "🚀 Script Maître de Déploiement KBIS IMMOBILIER"
 # Variables
 APP_NAME="kbis_immobilier"
 APP_DIR="/var/www/$APP_NAME"
-REPO_URL="<VOTRE_REPO_URL>"
+REPO_URL="https://github.com/koudougoulaurent/appli_KBIS.git"
 
 # Couleurs
 RED='\033[0;31m'

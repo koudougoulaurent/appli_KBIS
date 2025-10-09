@@ -20,7 +20,7 @@ Votre application est maintenant **100% prête** pour un déploiement profession
 ssh user@votre-vps
 
 # 2. Téléchargez l'application
-git clone <VOTRE_REPO_URL> /var/www/kbis_immobilier
+git clone https://github.com/koudougoulaurent/appli_KBIS.git /var/www/kbis_immobilier
 cd /var/www/kbis_immobilier
 
 # 3. Déploiement complet (nettoyage + déploiement + vérification)
