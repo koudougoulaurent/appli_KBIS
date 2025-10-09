@@ -103,6 +103,50 @@
         margin-bottom: 2rem;
         border-left: 4px solid #2196f3;
     }
+    
+    .timeline-container {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1.5rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    .timeline-item {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        border-left: 4px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+    
+    .timeline-item:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transform: translateX(5px);
+    }
+    
+    .timeline-month {
+        font-size: 1.1rem;
+        color: #2c3e50;
+    }
+    
+    .timeline-amount {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .badge-lg {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .stat-card.text-center {
+        text-align: center;
+    }
+    
+    .stat-card.text-center .stat-value {
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+    }
 </style>
 {% endblock %}
 
@@ -155,13 +199,19 @@
                 </div>
                 
                 <div class="row">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="stat-card">
                             <div class="stat-value">{{ avance.nombre_mois_couverts }} mois</div>
                             <div class="stat-label">Mois Couverts</div>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ stats.mois_consommes }}</div>
+                            <div class="stat-label">Mois Consommés</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
                         <div class="stat-card">
                             <div class="stat-value">
                                 {% if avance.statut == 'active' %}
@@ -177,6 +227,22 @@
                     </div>
                 </div>
                 
+                <!-- Période de couverture détaillée -->
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ stats.date_debut_couverture|date:"F Y" }}</div>
+                            <div class="stat-label">Début de Couverture</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ stats.date_fin_couverture|date:"F Y" }}</div>
+                            <div class="stat-label">Fin de Couverture</div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Barre de progression -->
                 <div class="mt-4">
                     <h6>Progression de la Consommation</h6>
@@ -187,14 +253,19 @@
                         </div>
                     </div>
                     <div class="row text-center">
-                        <div class="col-6">
+                        <div class="col-4">
                             <small class="text-muted">
                                 Consommé: {{ stats.montant_consomme|floatformat:0 }} F CFA
                             </small>
                         </div>
-                        <div class="col-6">
+                        <div class="col-4">
                             <small class="text-muted">
                                 Restant: {{ avance.montant_restant|floatformat:0 }} F CFA
+                            </small>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted">
+                                Mois: {{ stats.mois_consommes }}/{{ stats.mois_total }}
                             </small>
                         </div>
                     </div>
@@ -208,12 +279,14 @@
                     </h6>
                     <div class="row">
                         <div class="col-md-6">
-                            <p><strong>Locataire:</strong> {{ avance.contrat.locataire.nom_complet }}</p>
-                            <p><strong>Propriété:</strong> {{ avance.contrat.propriete.nom }}</p>
+                            <p><strong>Locataire:</strong> {{ avance.contrat.locataire.get_nom_complet }}</p>
+                            <p><strong>Propriété:</strong> {{ avance.contrat.propriete.titre }}</p>
+                            <p><strong>Contrat:</strong> {{ avance.contrat.numero_contrat }}</p>
                         </div>
                         <div class="col-md-6">
                             <p><strong>Loyer Mensuel:</strong> {{ avance.loyer_mensuel|floatformat:0 }} F CFA</p>
                             <p><strong>Date de l'Avance:</strong> {{ avance.date_avance|date:"d/m/Y" }}</p>
+                            <p><strong>Période:</strong> {{ stats.date_debut_couverture|date:"F Y" }} - {{ stats.date_fin_couverture|date:"F Y" }}</p>
                         </div>
                     </div>
                     {% if avance.notes %}
@@ -222,6 +295,95 @@
                         <p class="mb-0">{{ avance.notes }}</p>
                     </div>
                     {% endif %}
+                </div>
+            </div>
+            
+            <!-- Timeline des mois couverts -->
+            <div class="detail-card mt-4">
+                <div class="detail-header">
+                    <h4 class="mb-0">
+                        <i class="bi bi-calendar3"></i>
+                        Timeline des Mois Couverts
+                    </h4>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <div class="timeline-container">
+                            {% for mois in mois_detaille %}
+                            <div class="timeline-item mb-3">
+                                <div class="row align-items-center">
+                                    <div class="col-md-3">
+                                        <div class="timeline-month">
+                                            <strong>{{ mois.mois_formate_fr }}</strong>
+                                            <!-- Debug: {{ mois.mois_formate }} -->
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <span class="badge bg-{{ mois.statut_class }} badge-lg">
+                                            {{ mois.statut_label }}
+                                        </span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <span class="timeline-amount">
+                                            {{ avance.loyer_mensuel|floatformat:0 }} F CFA
+                                        </span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        {% if mois.est_consomme %}
+                                            <i class="bi bi-check-circle-fill text-success"></i>
+                                            <small class="text-success">Consommé</small>
+                                        {% elif mois.est_actuel %}
+                                            <i class="bi bi-clock-fill text-warning"></i>
+                                            <small class="text-warning">En cours</small>
+                                        {% elif mois.est_passe %}
+                                            <i class="bi bi-hourglass-split text-secondary"></i>
+                                            <small class="text-secondary">En attente</small>
+                                        {% else %}
+                                            <i class="bi bi-calendar text-info"></i>
+                                            <small class="text-info">Futur</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="text-center text-muted">
+                                <i class="bi bi-calendar-x"></i>
+                                <p>Aucun mois couvert trouvé</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Résumé de la timeline -->
+                <div class="row mt-4">
+                    <div class="col-md-3">
+                        <div class="stat-card text-center">
+                            <div class="stat-value text-success">{{ stats.mois_consommes }}</div>
+                            <div class="stat-label">Consommés</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card text-center">
+                            <div class="stat-value text-warning">
+                                {% if stats.mois_en_cours %}1{% else %}0{% endif %}
+                            </div>
+                            <div class="stat-label">En cours</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card text-center">
+                            <div class="stat-value text-secondary">{{ stats.mois_total|add:"-"|add:stats.mois_consommes|add:"-"|add:"1"|default:0 }}</div>
+                            <div class="stat-label">En attente</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card text-center">
+                            <div class="stat-value text-info">{{ stats.mois_futurs }}</div>
+                            <div class="stat-label">Futurs</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -235,7 +397,7 @@
                 </h5>
                 
                 <div class="d-grid gap-2">
-                    <a href="/paiements/historique/contrat/{{ avance.contrat.id }}/" 
+                    <a href="{% url 'paiements:avances:historique_contrat' avance.contrat.id %}" 
                        class="btn btn-primary btn-action">
                         <i class="bi bi-clock-history"></i> Historique des Paiements
                     </a>
@@ -255,14 +417,33 @@
                 
                 <h6 class="mb-3">Statistiques</h6>
                 <div class="stat-card">
-                    <div class="stat-value">{{ stats.nombre_mois_consommes }}</div>
+                    <div class="stat-value">{{ stats.mois_consommes }}</div>
                     <div class="stat-label">Mois Consommés</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-value">{{ stats.mois_total }}</div>
+                    <div class="stat-label">Total Mois Couverts</div>
                 </div>
                 
                 <div class="stat-card">
                     <div class="stat-value">{{ avance.loyer_mensuel|floatformat:0 }} F CFA</div>
                     <div class="stat-label">Montant par Mois</div>
                 </div>
+                
+                {% if stats.mois_en_cours %}
+                <div class="stat-card">
+                    <div class="stat-value text-warning">{{ stats.mois_en_cours|date:"F Y" }}</div>
+                    <div class="stat-label">Mois en Cours</div>
+                </div>
+                {% endif %}
+                
+                {% if stats.prochain_mois_paiement %}
+                <div class="stat-card">
+                    <div class="stat-value text-info">{{ stats.prochain_mois_paiement|date:"F Y" }}</div>
+                    <div class="stat-label">Prochain Paiement</div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -292,8 +473,8 @@
                             <tr>
                                 <td>{{ consommation.mois_consomme|date:"F Y" }}</td>
                                 <td>{{ consommation.montant_consomme|floatformat:0 }} F CFA</td>
-                                <td>{{ consommation.date_consommation|date:"d/m/Y" }}</td>
-                                <td>{{ consommation.solde_restant|floatformat:0 }} F CFA</td>
+                                <td>{{ consommation.created_at|date:"d/m/Y" }}</td>
+                                <td>{{ consommation.montant_restant_apres|floatformat:0 }} F CFA</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -346,7 +527,7 @@
                 </div>
                 
                 <div class="text-center mt-3">
-                    <a href="/paiements/historique/contrat/{{ avance.contrat.id }}/" 
+                    <a href="{% url 'paiements:avances:historique_contrat' avance.contrat.id %}" 
                        class="btn btn-outline-primary">
                         <i class="bi bi-eye"></i> Voir l'historique complet
                     </a>

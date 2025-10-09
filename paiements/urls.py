@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges
+from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges, views_retrait_ameliore, views_avance
 # from . import views_locataire_paiements
 
 app_name = 'paiements'
@@ -144,6 +144,8 @@ urlpatterns = [
     # URLs pour les retraits aux bailleurs (nouveau système)
     path('retraits-bailleurs/', views_retraits.liste_retraits, name='retraits_liste'),
     path('retraits-bailleurs/auto-create/', views_retraits.creer_retrait_automatique, name='retrait_auto_create'),
+    path('retraits-bailleurs/auto-create-ameliore/', views_retrait_ameliore.creer_retrait_automatique_ameliore, name='retrait_auto_create_ameliore'),
+    path('retraits-bailleurs/api/contrat-details/', views_retrait_ameliore.get_contrat_details_ajax, name='api_contrat_details'),
     path('retraits-bailleurs/<int:pk>/', views_retraits.detail_retrait, name='retrait_detail'),
     path('retraits-bailleurs/<int:pk>/valider/', views_retraits.valider_retrait, name='valider_retrait'),
     path('retraits-bailleurs/<int:pk>/marquer-paye/', views_retraits.marquer_paye, name='marquer_retrait_paye'),
@@ -237,4 +239,12 @@ urlpatterns = [
     
     # 🏠 SYSTÈME D'AVANCES DE LOYER - NOUVEAU !
     path('avances/', include(('paiements.urls_avance', 'avances'))),
+    
+    # Redirection pour compatibilité avec les anciens liens
+    path('historique/contrat/<int:contrat_id>/', views_avance.historique_paiements_contrat, name='historique_contrat_old'),
+    
+    # 📄 GÉNÉRATION PDF DES RETRAITS AVEC TEMPLATES
+    path('retraits/<int:retrait_id>/pdf/', views_retrait_ameliore.generer_pdf_retrait, name='generer_pdf_retrait'),
+    path('retraits/pdf-multiple/', views_retrait_ameliore.generer_pdf_retraits_multiple, name='generer_pdf_retraits_multiple'),
+    path('retraits/pdf-mois/', views_retrait_ameliore.generer_pdf_retraits_mois, name='generer_pdf_retraits_mois'),
 ]

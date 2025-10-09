@@ -17,8 +17,12 @@
             </a>
         {% endif %}
         <a href="{% url 'contrats:imprimer_document_contrat' contrat.id %}" 
-           class="btn btn-outline-info" target="_blank">
-            <i class="bi bi-file-pdf"></i> Document Contrat
+           class="btn btn-outline-success" target="_blank">
+            <i class="bi bi-file-pdf-fill"></i> Contrat Complet Unifié
+        </a>
+        <a href="{% url 'contrats:generer_documents_complets' contrat.id %}" 
+           class="btn btn-outline-primary" target="_blank">
+            <i class="bi bi-files"></i> Tous les Documents
         </a>
         <a href="{% url 'contrats:liste_contrats_caution' %}" class="btn btn-outline-primary">
             <i class="bi bi-arrow-left"></i> Retour à la liste
@@ -179,6 +183,27 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Information sur le contrat unifié -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle"></i> Contrat Complet Unifié
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-check-circle"></i> Le contrat unifié contient :</h6>
+                    <ul class="mb-0">
+                        <li><strong>Contrat de location</strong> avec toutes les clauses</li>
+                        <li><strong>État des lieux</strong> avec 25 points de contrôle</li>
+                        <li><strong>Garantie de paiement</strong> avec informations du garant</li>
+                        <li><strong>Image statique</strong> d'en-tête professionnel</li>
+                        <li><strong>Pied de page dynamique</strong> avec informations entreprise</li>
+                    </ul>
                 </div>
             </div>
         </div>

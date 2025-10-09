@@ -1004,35 +1004,26 @@ def creer_retrait_depuis_recap(request):
         montant_net_a_payer = request.POST.get('montant_net_a_payer')
         
         try:
+            from .services_retrait import ServiceGestionRetrait
+            from datetime import datetime
+            
             # Récupérer le bailleur
             bailleur = Bailleur.objects.get(id=bailleur_id)
             
-            # Créer le retrait
-            retrait = RetraitBailleur.objects.create(
-                bailleur=bailleur,
-                mois_retrait=mois_retrait,
-                montant_loyers_bruts=montant_loyers_bruts,
-                montant_charges_deductibles=montant_charges_deductibles,
-                montant_net_a_payer=montant_net_a_payer,
-                statut='en_attente',
-                type_retrait='mensuel',
-                mode_retrait='virement',
-                date_demande=timezone.now().date(),
-                cree_par=request.user
+            # Convertir la date du mois
+            mois_date = datetime.strptime(mois_retrait, '%Y-%m-%d').date()
+            
+            # Créer le retrait avec restrictions et calcul optimisé
+            resultat = ServiceGestionRetrait.creer_retrait_avec_restrictions(
+                bailleur, mois_date, request.user
             )
             
-            # Appliquer automatiquement les charges de bailleur
-            resultat_charges = retrait.appliquer_charges_automatiquement()
-            
-            if resultat_charges['success'] and resultat_charges['charges_appliquees'] > 0:
-                messages.success(request, 
-                    f'Retrait créé avec succès pour {retrait.bailleur.nom} {retrait.bailleur.prenom}. '
-                    f'{resultat_charges["message"]}'
-                )
+            if resultat['success']:
+                messages.success(request, resultat['message'])
+                if resultat.get('charges_appliquees', 0) > 0:
+                    messages.info(request, f"{resultat['charges_appliquees']} charge(s) appliquée(s) automatiquement")
             else:
-                messages.success(request, f'Retrait créé avec succès pour {retrait.bailleur.nom} {retrait.bailleur.prenom}')
-                if not resultat_charges['success']:
-                    messages.warning(request, f'Attention: {resultat_charges["message"]}')
+                messages.error(request, resultat['message'])
             
             return redirect('paiements:retraits_liste')
             
@@ -2592,8 +2583,16 @@ def generer_recap_mensuel_automatique(request):
             return redirect('paiements:generer_recap_mensuel_automatique')
         
         try:
+            from .services_retrait import ServiceGestionRetrait
+            
             # Convertir la date
             mois_date = datetime.strptime(mois_recap, '%Y-%m-%d').date()
+            
+            # Vérifier les restrictions de période
+            periode_ok, message_periode = ServiceGestionRetrait.verifier_periode_retrait()
+            if not periode_ok:
+                messages.error(request, message_periode)
+                return redirect('paiements:generer_recap_mensuel_automatique')
             
             # Récupérer les bailleurs selon la sélection
             if bailleur_id and bailleur_id != 'tous':

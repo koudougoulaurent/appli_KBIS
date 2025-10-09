@@ -160,13 +160,34 @@
                 <div class="form-header">
                     <h4 class="mb-0">
                         <i class="bi bi-calculator"></i>
-                        Création d'Avance avec Calcul Automatique
+                        Création d'Avance avec Gestion Intelligente
                     </h4>
-                    <p class="mb-0 mt-2">Le système calcule automatiquement le nombre de mois couverts</p>
+                    <p class="mb-0 mt-2">Sélectionnez le mode de calcul des mois couverts</p>
                 </div>
 
                 <form method="post" id="avanceForm">
                     {% csrf_token %}
+                    
+                    <!-- Champs cachés pour les nouveaux paramètres -->
+                    <input type="hidden" name="mode_selection_mois" value="automatique" id="id_mode_selection_mois">
+                    <input type="hidden" name="mois_couverts_manuels" value="[]" id="id_mois_couverts_manuels">
+                    
+                    <!-- *** NOUVELLE SECTION : Alerte pour avances existantes *** -->
+                    <div id="avancesExistantesAlert" class="alert alert-warning" style="display: none;">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            Avances existantes détectées
+                        </h6>
+                        <div id="avancesExistantesMessage"></div>
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-sm btn-warning" id="continuerAvecAvances">
+                                <i class="bi bi-plus-circle"></i> Continuer et ajouter une nouvelle avance
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary ms-2" id="annulerCreation">
+                                <i class="bi bi-x-circle"></i> Annuler
+                            </button>
+                        </div>
+                    </div>
                     
                     <div class="row">
                         <div class="col-md-6">
@@ -242,6 +263,71 @@
                         </div>
                     </div>
                     
+                    <!-- *** NOUVELLE SECTION : Mode de sélection des mois *** -->
+                    <div class="form-group">
+                        <label class="form-label required-field">
+                            <i class="bi bi-gear"></i> Mode de sélection des mois
+                        </label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="mode_selection_mois" 
+                                           id="mode_automatique" value="automatique" checked>
+                                    <label class="form-check-label" for="mode_automatique">
+                                        <strong>Calcul automatique</strong>
+                                        <br><small class="text-muted">Le système calcule automatiquement les mois couverts</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="mode_selection_mois" 
+                                           id="mode_manuel" value="manuel">
+                                    <label class="form-check-label" for="mode_manuel">
+                                        <strong>Sélection manuelle</strong>
+                                        <br><small class="text-muted">Choisissez manuellement les mois couverts</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- *** NOUVELLE SECTION : Sélection manuelle des mois *** -->
+                    <div id="selectionManuelleMois" class="form-group" style="display: none;">
+                        <label class="form-label">
+                            <i class="bi bi-calendar-check"></i> Mois couverts par l'avance
+                        </label>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div id="suggestionsMois" class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                                    <p class="text-muted text-center">
+                                        <i class="bi bi-hourglass-split"></i>
+                                        Sélectionnez un contrat et un montant pour voir les suggestions
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">Mois sélectionnés</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="moisSelectionnes" class="mb-2">
+                                            <p class="text-muted small">Aucun mois sélectionné</p>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" id="viderSelection" disabled>
+                                            <i class="bi bi-trash"></i> Vider
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="help-text">
+                            Cochez les mois que vous souhaitez couvrir avec cette avance. 
+                            Les suggestions sont basées sur l'historique des paiements du contrat.
+                        </div>
+                    </div>
+                    
                     <!-- Calcul automatique -->
                     <div class="calculation-card" id="calculationCard" style="display: none;">
                         <h5 class="mb-3">
@@ -270,6 +356,18 @@
                                 <div class="text-center">
                                     <div class="calculation-result" id="dateFinCouverture">-</div>
                                     <div class="small text-muted">Fin de couverture</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Mois couverts -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <h6 class="mb-2">
+                                    <i class="bi bi-calendar3"></i> Mois couverts par cette avance
+                                </h6>
+                                <div id="moisCouverts" class="border rounded p-2 bg-light">
+                                    <span class="text-muted">Aucun mois couvert</span>
                                 </div>
                             </div>
                         </div>
@@ -326,22 +424,82 @@ document.addEventListener('DOMContentLoaded', function() {
     const montantInput = document.getElementById('{{ form.montant_avance.id_for_label }}');
     const loyerInput = document.getElementById('loyer_mensuel');
     const calculationCard = document.getElementById('calculationCard');
+    const selectionManuelleMois = document.getElementById('selectionManuelleMois');
+    const suggestionsMois = document.getElementById('suggestionsMois');
+    const moisSelectionnes = document.getElementById('moisSelectionnes');
+    const viderSelection = document.getElementById('viderSelection');
+    const avancesExistantesAlert = document.getElementById('avancesExistantesAlert');
+    const avancesExistantesMessage = document.getElementById('avancesExistantesMessage');
     
-    // Données des contrats (en production, récupérer via AJAX)
+    // Données des contrats et mois sélectionnés
     const contratsData = {};
+    const moisSelectionnesList = [];
+    
+    // *** NOUVELLE FONCTIONNALITÉ : Gestion du mode de sélection ***
+    const modeAutomatique = document.getElementById('mode_automatique');
+    const modeManuel = document.getElementById('mode_manuel');
+    
+    modeAutomatique.addEventListener('change', function() {
+        if (this.checked) {
+            selectionManuelleMois.style.display = 'none';
+            calculationCard.style.display = 'block';
+            calculateAvance();
+            // Mettre à jour le champ caché
+            document.querySelector('input[name="mode_selection_mois"][value="automatique"]').checked = true;
+        }
+    });
+    
+    modeManuel.addEventListener('change', function() {
+        if (this.checked) {
+            selectionManuelleMois.style.display = 'block';
+            calculationCard.style.display = 'none';
+            chargerSuggestionsMois();
+            // Mettre à jour le champ caché
+            document.querySelector('input[name="mode_selection_mois"][value="manuel"]').checked = true;
+        }
+    });
     
     // Charger les données du contrat sélectionné
     contratSelect.addEventListener('change', function() {
         const contratId = this.value;
         if (contratId) {
             // Récupérer les données du contrat via AJAX
-            fetch(`/paiements/avances/contrat-details-ajax/?contrat_id=${contratId}`)
-                .then(response => response.json())
+            fetch(`/paiements/avances/contrat-details-ajax/?contrat_id=${contratId}`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin'
+            })
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    console.log('Response headers:', response.headers);
+                    if (!response.ok) {
+                        console.error('HTTP error:', response.status, response.statusText);
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    console.log('Response data:', data);
                     if (data.success) {
                         loyerInput.value = data.loyer_mensuel ? data.loyer_mensuel.toLocaleString() + ' F CFA' : 'Non défini';
                         contratsData[contratId] = data;
-                        calculateAvance();
+                        
+                        // *** NOUVELLE FONCTIONNALITÉ : Vérifier les avances existantes ***
+                        if (data.avances_existantes && data.avances_existantes.has_avances) {
+                            afficherAlerteAvancesExistantes(data.avances_existantes);
+                        } else {
+                            masquerAlerteAvancesExistantes();
+                        }
+                        
+                        // Calculer ou charger les suggestions selon le mode
+                        if (modeAutomatique.checked) {
+                            calculateAvance();
+                        } else if (modeManuel.checked) {
+                            chargerSuggestionsMois();
+                        }
                     } else {
                         console.error('Erreur:', data.error);
                         loyerInput.value = 'Erreur de chargement';
@@ -354,11 +512,240 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             loyerInput.value = '';
             calculationCard.style.display = 'none';
+            selectionManuelleMois.style.display = 'none';
+            masquerAlerteAvancesExistantes();
         }
     });
     
     // Calculer l'avance quand le montant change
-    montantInput.addEventListener('input', calculateAvance);
+    montantInput.addEventListener('input', function() {
+        if (modeAutomatique.checked) {
+            calculateAvance();
+        } else if (modeManuel.checked) {
+            chargerSuggestionsMois();
+        }
+    });
+    
+    // Écouter les changements de date
+    const dateInput = document.getElementById('{{ form.date_avance.id_for_label }}');
+    if (dateInput) {
+        dateInput.addEventListener('change', function() {
+            if (modeAutomatique.checked) {
+                calculateAvance();
+            }
+        });
+    }
+    
+    // *** NOUVELLE FONCTIONNALITÉ : Afficher l'alerte des avances existantes ***
+    function afficherAlerteAvancesExistantes(avancesInfo) {
+        avancesExistantesMessage.innerHTML = avancesInfo.message.replace(/\n/g, '<br>');
+        avancesExistantesAlert.style.display = 'block';
+    }
+    
+    // *** NOUVELLE FONCTIONNALITÉ : Afficher des messages d'erreur clairs ***
+    function showErrorMessage(titre, message) {
+        // Créer une alerte Bootstrap claire
+        const alertHtml = `
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <h6 class="alert-heading mb-2">${titre}</h6>
+                <p class="mb-0">${message}</p>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+            </div>
+        `;
+        
+        // Afficher l'alerte en haut du formulaire
+        const formCard = document.querySelector('.form-card');
+        const existingAlert = formCard.querySelector('.alert-danger');
+        if (existingAlert) {
+            existingAlert.remove();
+        }
+        
+        formCard.insertAdjacentHTML('afterbegin', alertHtml);
+        
+        // Faire défiler vers l'alerte
+        formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+        // Supprimer l'alerte après 10 secondes
+        setTimeout(() => {
+            const alert = formCard.querySelector('.alert-danger');
+            if (alert) {
+                alert.remove();
+            }
+        }, 10000);
+    }
+    
+    // *** NOUVELLE FONCTIONNALITÉ : Afficher des messages de succès ***
+    function showSuccessMessage(message) {
+        const alertHtml = `
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <h6 class="alert-heading mb-2">✅ Succès</h6>
+                <p class="mb-0">${message}</p>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+            </div>
+        `;
+        
+        const formCard = document.querySelector('.form-card');
+        const existingAlert = formCard.querySelector('.alert-success');
+        if (existingAlert) {
+            existingAlert.remove();
+        }
+        
+        formCard.insertAdjacentHTML('afterbegin', alertHtml);
+    }
+    
+    // *** NOUVELLE FONCTIONNALITÉ : Afficher l'indicateur de chargement ***
+    function showLoadingIndicator() {
+        const loadingHtml = `
+            <div class="alert alert-info alert-dismissible fade show" role="alert" id="loadingAlert">
+                <h6 class="alert-heading mb-2">⏳ Traitement en cours...</h6>
+                <p class="mb-0">Création de l'avance en cours, veuillez patienter.</p>
+                <div class="spinner-border spinner-border-sm me-2" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                </div>
+            </div>
+        `;
+        
+        const formCard = document.querySelector('.form-card');
+        const existingAlert = formCard.querySelector('.alert-info');
+        if (existingAlert) {
+            existingAlert.remove();
+        }
+        
+        formCard.insertAdjacentHTML('afterbegin', loadingHtml);
+        
+        // Désactiver le bouton de soumission
+        const submitBtn = document.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Création en cours...';
+        }
+    }
+    
+    function masquerAlerteAvancesExistantes() {
+        avancesExistantesAlert.style.display = 'none';
+    }
+    
+    // *** NOUVELLE FONCTIONNALITÉ : Charger les suggestions de mois ***
+    function chargerSuggestionsMois() {
+        const contratId = contratSelect.value;
+        const montant = parseFloat(montantInput.value) || 0;
+        
+        if (!contratId || montant <= 0 || !contratsData[contratId]) {
+            suggestionsMois.innerHTML = '<p class="text-muted text-center"><i class="bi bi-hourglass-split"></i> Sélectionnez un contrat et un montant pour voir les suggestions</p>';
+            return;
+        }
+        
+        const loyerMensuel = contratsData[contratId].loyer_mensuel;
+        
+        fetch('/paiements/avances/suggestions-mois-ajax/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                contrat_id: contratId,
+                montant_avance: montant,
+                loyer_mensuel: loyerMensuel
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                afficherSuggestionsMois(data.suggestions);
+            } else {
+                suggestionsMois.innerHTML = '<p class="text-danger text-center">Erreur lors du chargement des suggestions</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des suggestions:', error);
+            suggestionsMois.innerHTML = '<p class="text-danger text-center">Erreur lors du chargement des suggestions</p>';
+        });
+    }
+    
+    function afficherSuggestionsMois(suggestions) {
+        let html = '<div class="row">';
+        
+        suggestions.forEach((suggestion, index) => {
+            const isChecked = moisSelectionnesList.includes(suggestion.mois);
+            html += `
+                <div class="col-md-6 mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input mois-checkbox" type="checkbox" 
+                               value="${suggestion.mois}" id="mois_${index}" ${isChecked ? 'checked' : ''}>
+                        <label class="form-check-label" for="mois_${index}">
+                            <strong>${suggestion.mois_formate_fr}</strong>
+                            ${suggestion.recommandé ? '<span class="badge bg-primary ms-1">Recommandé</span>' : ''}
+                            <br><small class="text-muted">${suggestion.description}</small>
+                        </label>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        suggestionsMois.innerHTML = html;
+        
+        // Ajouter les événements aux checkboxes
+        document.querySelectorAll('.mois-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    if (!moisSelectionnesList.includes(this.value)) {
+                        moisSelectionnesList.push(this.value);
+                    }
+                } else {
+                    const index = moisSelectionnesList.indexOf(this.value);
+                    if (index > -1) {
+                        moisSelectionnesList.splice(index, 1);
+                    }
+                }
+                mettreAJourMoisSelectionnes();
+            });
+        });
+    }
+    
+    function mettreAJourMoisSelectionnes() {
+        if (moisSelectionnesList.length === 0) {
+            moisSelectionnes.innerHTML = '<p class="text-muted small">Aucun mois sélectionné</p>';
+            viderSelection.disabled = true;
+        } else {
+            let html = '';
+            moisSelectionnesList.forEach(mois => {
+                const date = new Date(mois);
+                const moisFormate = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+                html += `<span class="badge bg-primary me-1 mb-1">${moisFormate}</span>`;
+            });
+            moisSelectionnes.innerHTML = html;
+            viderSelection.disabled = false;
+        }
+        
+        // Mettre à jour le champ caché
+        document.getElementById('id_mois_couverts_manuels').value = JSON.stringify(moisSelectionnesList);
+    }
+    
+    // Vider la sélection
+    viderSelection.addEventListener('click', function() {
+        moisSelectionnesList.length = 0;
+        document.querySelectorAll('.mois-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        mettreAJourMoisSelectionnes();
+    });
+    
+    // Gestion des boutons d'alerte
+    document.getElementById('continuerAvecAvances').addEventListener('click', function() {
+        masquerAlerteAvancesExistantes();
+    });
+    
+    document.getElementById('annulerCreation').addEventListener('click', function() {
+        window.location.href = '/paiements/avances/liste/';
+    });
     
     function calculateAvance() {
         const montant = parseFloat(montantInput.value) || 0;
@@ -370,17 +757,49 @@ document.addEventListener('DOMContentLoaded', function() {
             if (loyerMensuel > 0) {
                 const moisComplets = Math.floor(montant / loyerMensuel);
                 const montantRestant = montant % loyerMensuel;
-                const statut = montantRestant === 0 ? 'Épuisée' : 'Active';
+                
+                // Logique corrigée : statut "Active" par défaut, "Épuisée" seulement si montant = 0
+                const statut = montantRestant === 0 && moisComplets > 0 ? 'Complète' : 'Active';
                 
                 // Calculer la date de fin de couverture
-                const dateAvance = new Date(document.getElementById('{{ form.date_avance.id_for_label }}').value);
-                const dateFin = new Date(dateAvance);
-                dateFin.setMonth(dateFin.getMonth() + moisComplets);
+                const dateAvanceStr = document.getElementById('{{ form.date_avance.id_for_label }}').value;
+                let dateFin = 'Non définie';
+                let moisCouverts = [];
+                
+                if (dateAvanceStr) {
+                    const dateAvance = new Date(dateAvanceStr);
+                    const dateFinObj = new Date(dateAvance);
+                    dateFinObj.setMonth(dateFinObj.getMonth() + moisComplets);
+                    dateFin = dateFinObj.toLocaleDateString('fr-FR');
+                    
+                    // Générer la liste des mois couverts
+                    for (let i = 0; i < moisComplets; i++) {
+                        const moisDate = new Date(dateAvance);
+                        moisDate.setMonth(moisDate.getMonth() + i);
+                        const moisFormate = moisDate.toLocaleDateString('fr-FR', { 
+                            month: 'long', 
+                            year: 'numeric' 
+                        });
+                        moisCouverts.push(moisFormate);
+                    }
+                }
                 
                 document.getElementById('moisComplets').textContent = moisComplets;
                 document.getElementById('montantRestant').textContent = montantRestant.toLocaleString() + ' F CFA';
                 document.getElementById('statutAvance').textContent = statut;
-                document.getElementById('dateFinCouverture').textContent = dateFin.toLocaleDateString('fr-FR');
+                document.getElementById('dateFinCouverture').textContent = dateFin;
+                
+                // Afficher les mois couverts
+                const moisCouvertsElement = document.getElementById('moisCouverts');
+                if (moisCouvertsElement) {
+                    if (moisCouverts.length > 0) {
+                        moisCouvertsElement.innerHTML = moisCouverts.map(mois => 
+                            `<span class="badge bg-info me-1 mb-1">${mois}</span>`
+                        ).join('');
+                    } else {
+                        moisCouvertsElement.innerHTML = '<span class="text-muted">Aucun mois couvert</span>';
+                    }
+                }
                 
                 calculationCard.style.display = 'block';
             }
@@ -403,26 +822,59 @@ document.addEventListener('DOMContentLoaded', function() {
     // Validation en temps réel
     const form = document.getElementById('avanceForm');
     form.addEventListener('submit', function(e) {
+        console.log('=== VALIDATION FORMULAIRE ===');
+        
         const montant = parseFloat(montantInput.value) || 0;
         const contratId = contratSelect.value;
+        const dateAvance = document.getElementById('{{ form.date_avance.id_for_label }}').value;
+        
+        console.log('Montant:', montant);
+        console.log('Contrat ID:', contratId);
+        console.log('Date avance:', dateAvance);
+        console.log('Mode manuel:', modeManuel.checked);
+        console.log('Mois sélectionnés:', moisSelectionnesList.length);
         
         if (!contratId) {
             e.preventDefault();
-            alert('Veuillez sélectionner un contrat.');
+            showErrorMessage('⚠️ Contrat manquant', 'Veuillez sélectionner un contrat dans la liste déroulante.');
             return;
         }
         
         if (montant <= 0) {
             e.preventDefault();
-            alert('Le montant de l\'avance doit être positif.');
+            showErrorMessage('💰 Montant invalide', 'Le montant de l\'avance doit être supérieur à 0 F CFA.');
+            return;
+        }
+        
+        if (!dateAvance) {
+            e.preventDefault();
+            showErrorMessage('📅 Date manquante', 'Veuillez sélectionner la date à laquelle l\'avance a été versée.');
             return;
         }
         
         if (contratsData[contratId] && montant < contratsData[contratId].loyer_mensuel) {
             e.preventDefault();
-            alert(`L'avance doit être au moins égale au loyer mensuel (${contratsData[contratId].loyer_mensuel.toLocaleString()} F CFA).`);
+            showErrorMessage('💸 Montant insuffisant', 
+                `L'avance doit être au moins égale au loyer mensuel de ${contratsData[contratId].loyer_mensuel.toLocaleString()} F CFA.`);
             return;
         }
+        
+        // *** NOUVELLE VALIDATION : Mode manuel ***
+        if (modeManuel.checked && moisSelectionnesList.length === 0) {
+            e.preventDefault();
+            showErrorMessage('📆 Aucun mois sélectionné', 
+                'En mode sélection manuelle, vous devez cocher au moins un mois à couvrir.');
+            return;
+        }
+        
+        console.log('Validation OK - Soumission du formulaire');
+        
+        // Mettre à jour les champs cachés avant soumission
+        document.getElementById('id_mode_selection_mois').value = modeAutomatique.checked ? 'automatique' : 'manuel';
+        document.getElementById('id_mois_couverts_manuels').value = JSON.stringify(moisSelectionnesList);
+        
+        // Afficher l'indicateur de chargement
+        showLoadingIndicator();
     });
 });
 </script>

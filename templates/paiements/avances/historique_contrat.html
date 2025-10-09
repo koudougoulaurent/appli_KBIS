@@ -231,7 +231,7 @@
                         <button type="submit" class="btn btn-primary me-2">
                             <i class="bi bi-search"></i> Filtrer
                         </button>
-                        <a href="/paiements/historique/contrat/{{ contrat.id }}/" class="btn btn-outline-secondary">
+                        <a href="{% url 'paiements:avances:historique_contrat' contrat.id %}" class="btn btn-outline-secondary">
                             <i class="bi bi-arrow-clockwise"></i> Réinitialiser
                         </a>
                     </div>

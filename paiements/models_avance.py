@@ -66,6 +66,28 @@ class AvanceLoyer(models.Model):
         help_text=_("Laissez vide pour utiliser la logique automatique (15+ du mois)")
     )
     
+    # *** NOUVEAU : Sélection manuelle des mois couverts ***
+    mois_couverts_manuels = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name=_("Mois couverts sélectionnés manuellement"),
+        help_text=_("Liste des mois sélectionnés manuellement pour cette avance")
+    )
+    
+    # *** NOUVEAU : Mode de sélection des mois ***
+    MODE_SELECTION_CHOICES = [
+        ('automatique', 'Calcul automatique'),
+        ('manuel', 'Sélection manuelle'),
+    ]
+    
+    mode_selection_mois = models.CharField(
+        max_length=20,
+        choices=MODE_SELECTION_CHOICES,
+        default='automatique',
+        verbose_name=_("Mode de sélection des mois"),
+        help_text=_("Choisissez comment déterminer les mois couverts par cette avance")
+    )
+    
     mois_debut_couverture = models.DateField(
         verbose_name=_("Mois de début de couverture")
     )
@@ -84,6 +106,16 @@ class AvanceLoyer(models.Model):
         verbose_name=_("Statut")
     )
     
+    # *** NOUVEAU : Lien avec le paiement ***
+    paiement = models.ForeignKey(
+        'Paiement',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='avance_loyer',
+        verbose_name=_("Paiement associé")
+    )
+    
     # Métadonnées
     notes = models.TextField(
         blank=True,
@@ -99,8 +131,8 @@ class AvanceLoyer(models.Model):
         verbose_name_plural = _("Avances de loyer")
         ordering = ['-date_avance']
     
-    def get_mois_couverts_liste(self):
-        """Retourne la liste des mois couverts par l'avance"""
+    def get_mois_couverts_liste_original(self):
+        """Retourne la liste des mois couverts par l'avance (version originale)"""
         if not self.mois_debut_couverture or not self.nombre_mois_couverts:
             return []
         
@@ -131,11 +163,22 @@ class AvanceLoyer(models.Model):
             self.statut = 'annulee'
             return
         
+        # *** NOUVELLE LOGIQUE : Gestion de la sélection manuelle vs automatique ***
+        if self.mode_selection_mois == 'manuel' and self.mois_couverts_manuels:
+            # Mode manuel : utiliser les mois sélectionnés
+            self._calculer_mois_manuels()
+        else:
+            # Mode automatique : calculer normalement
+            self._calculer_mois_automatiques()
+        
+        # Mettre à jour le statut et le montant restant
+        self.statut = 'active'  # Toutes les avances commencent comme actives
+        self.montant_restant = self.montant_avance  # Le montant restant commence avec le montant total
+    
+    def _calculer_mois_automatiques(self):
+        """Calcule les mois couverts en mode automatique"""
         # Calculer le nombre de mois complets
         mois_complets = int(self.montant_avance // self.loyer_mensuel)
-        
-        # Calculer le reste
-        reste = self.montant_avance % self.loyer_mensuel
         
         self.nombre_mois_couverts = mois_complets
         
@@ -161,11 +204,72 @@ class AvanceLoyer(models.Model):
             self.mois_fin_couverture = self.mois_debut_couverture + relativedelta(months=mois_complets - 1)
         else:
             self.mois_fin_couverture = self.mois_debut_couverture
+    
+    def _calculer_mois_manuels(self):
+        """Calcule les mois couverts en mode manuel"""
+        if not self.mois_couverts_manuels:
+            # Si pas de mois sélectionnés, revenir au mode automatique
+            self.mode_selection_mois = 'automatique'
+            self._calculer_mois_automatiques()
+            return
         
-        # Mettre à jour le statut et le montant restant
-        # *** CORRECTION : Une avance est toujours active au début, même si elle couvre exactement des mois complets ***
-        self.statut = 'active'  # Toutes les avances commencent comme actives
-        self.montant_restant = self.montant_avance  # Le montant restant commence avec le montant total
+        # Trier les mois sélectionnés
+        mois_dates = []
+        for mois_str in self.mois_couverts_manuels:
+            try:
+                # Convertir la chaîne en date (format YYYY-MM-DD)
+                mois_date = datetime.strptime(mois_str, '%Y-%m-%d').date()
+                mois_dates.append(mois_date)
+            except ValueError:
+                continue
+        
+        if not mois_dates:
+            # Si aucun mois valide, revenir au mode automatique
+            self.mode_selection_mois = 'automatique'
+            self._calculer_mois_automatiques()
+            return
+        
+        mois_dates.sort()
+        
+        # Définir les mois de début et fin
+        self.mois_debut_couverture = mois_dates[0]
+        self.mois_fin_couverture = mois_dates[-1]
+        self.nombre_mois_couverts = len(mois_dates)
+        
+        # Vérifier que le montant de l'avance est suffisant
+        montant_requis = self.loyer_mensuel * self.nombre_mois_couverts
+        if self.montant_avance < montant_requis:
+            # Ajuster le nombre de mois si le montant est insuffisant
+            mois_possibles = int(self.montant_avance // self.loyer_mensuel)
+            if mois_possibles > 0:
+                self.nombre_mois_couverts = mois_possibles
+                self.mois_fin_couverture = self.mois_debut_couverture + relativedelta(months=mois_possibles - 1)
+                # Mettre à jour la liste des mois sélectionnés
+                self.mois_couverts_manuels = [mois.strftime('%Y-%m-%d') for mois in mois_dates[:mois_possibles]]
+    
+    def get_mois_couverts_liste(self):
+        """Retourne la liste des mois couverts par l'avance"""
+        if self.mode_selection_mois == 'manuel' and self.mois_couverts_manuels:
+            # Mode manuel : retourner les mois sélectionnés
+            mois_liste = []
+            for mois_str in self.mois_couverts_manuels:
+                try:
+                    mois_date = datetime.strptime(mois_str, '%Y-%m-%d').date()
+                    mois_liste.append(mois_date)
+                except ValueError:
+                    continue
+            return sorted(mois_liste)
+        else:
+            # Mode automatique : calculer normalement
+            if not self.mois_debut_couverture or not self.nombre_mois_couverts:
+                return []
+            
+            mois_liste = []
+            for i in range(self.nombre_mois_couverts):
+                mois = self.mois_debut_couverture + relativedelta(months=i)
+                mois_liste.append(mois)
+            
+            return mois_liste
     
     def generer_recu_avance_kbis(self):
         """Génère un reçu d'avance avec le système KBIS unifié"""
@@ -289,7 +393,7 @@ class AvanceLoyer(models.Model):
             return None
 
     def _convertir_mois_francais(self, mois_anglais):
-        """Convertit un mois anglais en français"""
+        """Convertit un mois anglais en français et corrige le format des années"""
         mois_francais = {
             'January': 'Janvier',
             'February': 'Février', 
@@ -309,6 +413,12 @@ class AvanceLoyer(models.Model):
         resultat = mois_anglais
         for mois_en, mois_fr in mois_francais.items():
             resultat = resultat.replace(mois_en, mois_fr)
+        
+        # Corriger le format des années (0225 -> 2025, 0226 -> 2026, etc.)
+        import re
+        # Chercher les années au format 0XXX et les convertir en 20XX
+        # Pattern plus simple et plus robuste
+        resultat = re.sub(r'\b0(\d{2})\b', r'20\1', resultat)
         
         return resultat
 

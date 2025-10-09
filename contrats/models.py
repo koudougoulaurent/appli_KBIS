@@ -116,6 +116,94 @@ class Contrat(models.Model):
         verbose_name=_("Motif de résiliation")
     )
     
+    # Informations du garant
+    garant_nom = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_("Nom du garant")
+    )
+    garant_profession = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_("Profession du garant")
+    )
+    garant_adresse = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name=_("Adresse du garant")
+    )
+    garant_telephone = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name=_("Téléphone du garant")
+    )
+    garant_cnib = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name=_("Numéro CNIB du garant")
+    )
+    
+    # Informations de la propriété pour le contrat
+    numero_maison = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name=_("Numéro de la maison")
+    )
+    secteur = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_("Secteur de la propriété")
+    )
+    
+    # Informations financières formatées
+    loyer_mensuel_texte = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_("Loyer mensuel en lettres")
+    )
+    loyer_mensuel_numerique = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name=_("Loyer mensuel en chiffres")
+    )
+    depot_garantie_texte = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_("Dépôt de garantie en lettres")
+    )
+    depot_garantie_numerique = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name=_("Dépôt de garantie en chiffres")
+    )
+    nombre_mois_caution = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_("Nombre de mois de caution")
+    )
+    montant_garantie_max = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name=_("Montant maximum de garantie")
+    )
+    montant_garantie_max_texte = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_("Montant maximum de garantie en lettres")
+    )
+    
+    # Informations de paiement
+    mois_debut_paiement = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_("Mois de début de paiement")
+    )
+    jour_remise_cles = models.CharField(
+        max_length=10,
+        default="01",
+        verbose_name=_("Jour de remise des clés")
+    )
+    
     # Métadonnées
     date_creation = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de création"))
     date_modification = models.DateTimeField(auto_now=True, verbose_name=_("Date de modification"))

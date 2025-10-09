@@ -884,7 +884,42 @@
                     </div>
                 </div>
 
-                <!-- Section 4: Notes -->
+                <!-- Section 4: Informations du garant -->
+                <div class="form-section">
+                    <h3><i class="bi bi-person-shield me-2"></i>Informations du garant</h3>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Important :</strong> 
+                        Le garant doit être une personne différente du locataire. 
+                        Remplissez toutes les informations du garant qui se portera garant du paiement des loyers.
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.garant_nom|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.garant_profession|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.garant_adresse|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.garant_telephone|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.garant_cnib|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            <!-- Champ vide pour l'alignement -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 5: Notes -->
                 <div class="form-section">
                     <h3><i class="bi bi-chat-text me-2"></i>Notes additionnelles</h3>
                     {{ form.notes|as_crispy_field }}

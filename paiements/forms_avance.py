@@ -9,8 +9,28 @@ from contrats.models import Contrat
 
 class AvanceLoyerForm(forms.ModelForm):
     """
-    Formulaire pour créer une avance de loyer
+    Formulaire pour créer une avance de loyer avec sélection manuelle des mois
     """
+    
+    # *** NOUVEAUX CHAMPS POUR LA SÉLECTION MANUELLE ***
+    mode_selection_mois = forms.ChoiceField(
+        choices=AvanceLoyer.MODE_SELECTION_CHOICES,
+        initial='automatique',
+        widget=forms.RadioSelect(attrs={
+            'class': 'form-check-input',
+            'id': 'id_mode_selection'
+        }),
+        label="Mode de sélection des mois",
+        help_text="Choisissez comment déterminer les mois couverts par cette avance"
+    )
+    
+    mois_couverts_manuels = forms.CharField(
+        required=False,
+        widget=forms.HiddenInput(attrs={
+            'id': 'id_mois_couverts_manuels'
+        }),
+        label="Mois couverts sélectionnés"
+    )
     
     class Meta:
         model = AvanceLoyer
@@ -61,6 +81,8 @@ class AvanceLoyerForm(forms.ModelForm):
         cleaned_data = super().clean()
         contrat = cleaned_data.get('contrat')
         montant_avance = cleaned_data.get('montant_avance')
+        mode_selection = cleaned_data.get('mode_selection_mois')
+        mois_couverts_manuels = cleaned_data.get('mois_couverts_manuels')
         
         if contrat and montant_avance:
             # Convertir le loyer mensuel en Decimal pour la comparaison
@@ -81,6 +103,38 @@ class AvanceLoyerForm(forms.ModelForm):
                 raise ValidationError(
                     f"L'avance doit être au moins égale au loyer mensuel ({loyer_mensuel} F CFA)."
                 )
+            
+            # *** NOUVELLE VALIDATION : Mode de sélection manuelle ***
+            if mode_selection == 'manuel':
+                if not mois_couverts_manuels:
+                    raise ValidationError("Veuillez sélectionner au moins un mois en mode manuel.")
+                
+                # Parser les mois sélectionnés
+                try:
+                    import json
+                    mois_liste = json.loads(mois_couverts_manuels) if mois_couverts_manuels else []
+                    
+                    if not mois_liste:
+                        raise ValidationError("Aucun mois sélectionné.")
+                    
+                    # Vérifier que le montant est suffisant pour tous les mois sélectionnés
+                    montant_requis = loyer_mensuel * len(mois_liste)
+                    if montant_avance < montant_requis:
+                        raise ValidationError(
+                            f"Le montant de l'avance ({montant_avance:,.0f} F CFA) est insuffisant pour couvrir "
+                            f"{len(mois_liste)} mois. Montant requis : {montant_requis:,.0f} F CFA."
+                        )
+                    
+                    # Valider le format des dates
+                    for mois_str in mois_liste:
+                        try:
+                            from datetime import datetime
+                            datetime.strptime(mois_str, '%Y-%m-%d')
+                        except ValueError:
+                            raise ValidationError(f"Format de date invalide : {mois_str}")
+                    
+                except json.JSONDecodeError:
+                    raise ValidationError("Format des mois sélectionnés invalide.")
         
         return cleaned_data
 

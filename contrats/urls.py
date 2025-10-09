@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views
+from . import views, api_views, views_contrat_pdf_updated
 from .views import contrat_list, quittance_list, etat_lieux_list
 
 app_name = 'contrats'
@@ -71,4 +71,11 @@ urlpatterns = [
     path('generer-pdf/<int:pk>/', views.generer_contrat_pdf, name='generer_contrat_pdf'),
     path('resiliations/generer-pdf/<int:pk>/', views.generer_resiliation_pdf, name='generer_resiliation_pdf'),
     path('generer-resiliation-pdf/<int:pk>/', views.generer_resiliation_contrat_pdf, name='generer_resiliation_contrat_pdf'),
+    
+    # URLs pour la génération PDF avec templates mis à jour
+    path('generer-pdf-updated/<int:pk>/', views_contrat_pdf_updated.generer_contrat_pdf_updated, name='generer_contrat_pdf_updated'),
+    path('generer-etat-lieux-pdf/<int:pk>/', views_contrat_pdf_updated.generer_etat_lieux_pdf, name='generer_etat_lieux_pdf'),
+    path('generer-garantie-pdf/<int:pk>/', views_contrat_pdf_updated.generer_garantie_pdf, name='generer_garantie_pdf'),
+    path('generer-documents-complets/<int:pk>/', views_contrat_pdf_updated.generer_documents_complets, name='generer_documents_complets'),
+    path('auto-remplir/<int:pk>/', views_contrat_pdf_updated.auto_remplir_contrat, name='auto_remplir_contrat'),
 ] 

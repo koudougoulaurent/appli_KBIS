@@ -231,9 +231,11 @@ def ajouter_contrat(request):
             
             if telecharger_pdf:
                 try:
-                    # Générer le PDF du contrat
-                    from .services import ContratPDFService
-                    pdf_service = ContratPDFService(contrat)
+                    # Générer le PDF du contrat avec le nouveau service
+                    from .services_contrat_pdf_updated import ContratPDFServiceUpdated
+                    pdf_service = ContratPDFServiceUpdated(contrat)
+                    # Remplir automatiquement les champs manquants
+                    contrat = pdf_service.auto_remplir_champs_contrat()
                     pdf_buffer = pdf_service.generate_contrat_pdf()
                     
                     # Créer la réponse HTTP avec le PDF
@@ -358,9 +360,11 @@ def modifier_contrat(request, pk):
             
             if telecharger_pdf:
                 try:
-                    # Régénérer le PDF du contrat
-                    from .services import ContratPDFService
-                    pdf_service = ContratPDFService(contrat)
+                    # Régénérer le PDF du contrat avec le nouveau service
+                    from .services_contrat_pdf_updated import ContratPDFServiceUpdated
+                    pdf_service = ContratPDFServiceUpdated(contrat)
+                    # Remplir automatiquement les champs manquants
+                    contrat = pdf_service.auto_remplir_champs_contrat()
                     pdf_buffer = pdf_service.generate_contrat_pdf()
                     
                     # Créer la réponse HTTP avec le PDF
@@ -1500,11 +1504,9 @@ def marquer_avance_payee(request, contrat_id):
 def detail_contrat_caution(request, contrat_id):
     """Détail d'un contrat avec gestion des cautions."""
     
-    # Vérification des permissions : PRIVILEGE, ADMINISTRATION, CONTROLES, CAISSE peuvent voir les détails
-    from core.utils import check_group_permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
+    # Vérification des permissions simplifiée pour les superutilisateurs
+    if not (request.user.is_superuser or request.user.is_staff):
+        messages.error(request, 'Accès refusé. Permissions insuffisantes.')
         return redirect('contrats:liste_contrats_caution')
     
     try:
@@ -1566,13 +1568,11 @@ def imprimer_recu_caution(request, contrat_id):
 
 @login_required
 def imprimer_document_contrat(request, contrat_id):
-    """Imprimer le document de contrat."""
+    """Imprimer le document de contrat avec le nouveau contenu unifié."""
     
-    # Vérification des permissions : PRIVILEGE, ADMINISTRATION, CAISSE peuvent imprimer les contrats
-    from core.utils import check_group_permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CAISSE'], 'view')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
+    # Vérification des permissions simplifiée pour les superutilisateurs
+    if not (request.user.is_superuser or request.user.is_staff):
+        messages.error(request, 'Accès refusé. Permissions insuffisantes.')
         return redirect('contrats:detail_contrat_caution', contrat_id=contrat_id)
     
     try:
@@ -1587,87 +1587,31 @@ def imprimer_document_contrat(request, contrat_id):
     # Marquer comme imprimé
     document.marquer_imprime(request.user)
     
-    # Générer le PDF
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="contrat_{contrat.numero_contrat}.pdf"'
-    
-    # Créer le PDF avec ReportLab
-    p = canvas.Canvas(response, pagesize=A4)
-    
     # Récupérer la configuration de l'entreprise
     from core.models import ConfigurationEntreprise
-    from core.utils import ajouter_en_tete_entreprise, ajouter_pied_entreprise
     config = ConfigurationEntreprise.get_configuration_active()
     
-    # En-tête de l'entreprise (en haut de page)
-    ajouter_en_tete_entreprise(p, config, y_position=800)
-    
-    # Ligne de séparation après l'en-tête
-    p.setStrokeColorRGB(0.7, 0.7, 0.7)
-    p.line(50, 750, 550, 750)
-    p.setStrokeColorRGB(0, 0, 0)
-    
-    # Titre du document (bien séparé de l'en-tête)
-    p.setFont("Helvetica-Bold", 18)
-    p.drawString(50, 720, f"CONTRAT DE LOCATION")
-    p.setFont("Helvetica", 12)
-    p.drawString(50, 700, f"Numéro: {contrat.numero_contrat}")
-    p.drawString(50, 680, f"Date de signature: {contrat.date_signature.strftime('%d/%m/%Y')}")
-    
-    # Informations des parties
-    p.setFont("Helvetica-Bold", 14)
-    p.drawString(50, 650, "BAILLEUR")
-    p.setFont("Helvetica", 10)
-    p.drawString(50, 630, f"Nom: {contrat.propriete.bailleur.nom} {contrat.propriete.bailleur.prenom}")
-    p.drawString(50, 610, f"Adresse: {contrat.propriete.bailleur.adresse}")
-    p.drawString(50, 590, f"Téléphone: {contrat.propriete.bailleur.telephone}")
-    
-    p.setFont("Helvetica-Bold", 14)
-    p.drawString(50, 550, "LOCATAIRE")
-    p.setFont("Helvetica", 10)
-    p.drawString(50, 530, f"Nom: {contrat.locataire.nom} {contrat.locataire.prenom}")
-    p.drawString(50, 510, f"Adresse: {contrat.locataire.adresse}")
-    p.drawString(50, 490, f"Téléphone: {contrat.locataire.telephone}")
-    
-    # Informations de la propriété
-    p.setFont("Helvetica-Bold", 14)
-    p.drawString(50, 450, "PROPRIETE LOUE")
-    p.setFont("Helvetica", 10)
-    p.drawString(50, 430, f"Titre: {contrat.propriete.titre}")
-    p.drawString(50, 410, f"Adresse: {contrat.propriete.adresse}")
-    p.drawString(50, 390, f"Ville: {contrat.propriete.ville}")
-    
-    # Conditions du contrat
-    p.setFont("Helvetica-Bold", 14)
-    p.drawString(50, 350, "CONDITIONS DU CONTRAT")
-    p.setFont("Helvetica", 10)
-    p.drawString(50, 330, f"Date de début: {contrat.date_debut.strftime('%d/%m/%Y')}")
-    p.drawString(50, 310, f"Date de fin: {contrat.date_fin.strftime('%d/%m/%Y') if contrat.date_fin else 'Non définie'}")
-    p.drawString(50, 290, f"Durée: {contrat.get_duree_mois()}")
-    p.drawString(50, 270, f"Loyer mensuel: {contrat.get_loyer_mensuel_formatted()}")
-    p.drawString(50, 250, f"Charges mensuelles: {contrat.get_charges_mensuelles_formatted()}")
-    p.drawString(50, 230, f"Dépôt de garantie: {contrat.get_depot_garantie_formatted()}")
-    p.drawString(50, 210, f"Avance de loyer: {contrat.get_avance_loyer_formatted()}")
-    
-    # Ligne de séparation avant la signature
-    p.setStrokeColorRGB(0.7, 0.7, 0.7)
-    p.line(50, 180, 550, 180)
-    p.setStrokeColorRGB(0, 0, 0)
-    
-    # Signature
-    p.setFont("Helvetica", 10)
-    p.drawString(50, 150, "Signature du locataire:")
-    p.line(50, 140, 200, 140)
-    p.drawString(50, 100, "Signature de l'agent immobilier:")
-    p.line(50, 90, 200, 90)
-    
-    # Pied de page avec informations de l'entreprise (bien séparé)
-    ajouter_pied_entreprise(p, config, y_position=60)
-    
-    p.showPage()
-    p.save()
-    
-    return response
+    try:
+        # Utiliser le nouveau service avec le contenu unifié
+        from .services_contrat_pdf_updated import ContratPDFServiceUpdated
+        service = ContratPDFServiceUpdated(contrat)
+        
+        # Remplir automatiquement les champs manquants
+        contrat = service.auto_remplir_champs_contrat()
+        
+        # Générer le PDF du contrat avec le nouveau contenu
+        pdf_buffer = service.generate_contrat_pdf()
+        
+        # Créer la réponse HTTP avec le PDF
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="contrat_{contrat.numero_contrat}_unifie.pdf"'
+        
+        messages.success(request, f'Document de contrat {contrat.numero_contrat} généré avec le nouveau contenu unifié!')
+        return response
+        
+    except Exception as e:
+        messages.error(request, f'Erreur lors de la génération du document: {str(e)}')
+        return redirect('contrats:detail_contrat_caution', contrat_id=contrat_id)
 
 
 # Vues pour la gestion des résiliations
@@ -2173,9 +2117,11 @@ def generer_contrat_pdf(request, pk):
     contrat = get_object_or_404(Contrat, pk=pk)
     
     try:
-        # Générer le PDF du contrat
-        from .services import ContratPDFService
-        pdf_service = ContratPDFService(contrat)
+        # Générer le PDF du contrat avec le nouveau service
+        from .services_contrat_pdf_updated import ContratPDFServiceUpdated
+        pdf_service = ContratPDFServiceUpdated(contrat)
+        # Remplir automatiquement les champs manquants
+        contrat = pdf_service.auto_remplir_champs_contrat()
         pdf_buffer = pdf_service.generate_contrat_pdf()
         
         # Créer la réponse HTTP avec le PDF

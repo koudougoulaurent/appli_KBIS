@@ -4,7 +4,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Configuration
     const REFRESH_INTERVAL = 60000; // 1 minute
-    const API_ENDPOINT = '/core/api/dashboard-stats/';
+    const API_ENDPOINT = '/api/dashboard-stats/';
     
     // Éléments du DOM
     const elements = {

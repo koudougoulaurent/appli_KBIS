@@ -108,6 +108,8 @@ class ContratForm(forms.ModelForm):
             'date_debut', 'date_fin', 'date_signature', 'loyer_mensuel',
             'charges_mensuelles', 'depot_garantie', 'avance_loyer',
             'jour_paiement', 'mode_paiement', 'notes',
+            'garant_nom', 'garant_profession', 'garant_adresse', 
+            'garant_telephone', 'garant_cnib',
             'creer_paiement_caution', 'creer_paiement_avance',
             'date_paiement_caution', 'date_paiement_avance'
         ]
@@ -162,6 +164,26 @@ class ContratForm(forms.ModelForm):
                 'class': 'form-control',
                 'rows': 4,
                 'placeholder': 'Notes additionnelles...'
+            }),
+            'garant_nom': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nom complet du garant'
+            }),
+            'garant_profession': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Profession du garant'
+            }),
+            'garant_adresse': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Adresse du garant'
+            }),
+            'garant_telephone': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Téléphone du garant'
+            }),
+            'garant_cnib': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Numéro CNIB du garant'
             }),
         }
     

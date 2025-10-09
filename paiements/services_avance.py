@@ -14,9 +14,9 @@ class ServiceGestionAvance:
     """
     
     @staticmethod
-    def creer_avance_loyer(contrat, montant_avance, date_avance, notes="", mois_effet_personnalise=None):
+    def creer_avance_loyer(contrat, montant_avance, date_avance, notes="", mois_effet_personnalise=None, mode_selection_mois='automatique', mois_couverts_manuels=None):
         """
-        Crée une nouvelle avance de loyer avec calcul automatique des mois
+        Crée une nouvelle avance de loyer avec gestion intelligente des mois
         """
         try:
             with transaction.atomic():
@@ -35,6 +35,9 @@ class ServiceGestionAvance:
                 if not loyer_mensuel or loyer_mensuel_decimal <= 0:
                     raise ValueError("Le loyer mensuel du contrat n'est pas défini ou invalide. Veuillez définir un loyer mensuel pour ce contrat avant de créer une avance.")
                 
+                # *** NOUVELLE LOGIQUE : Vérifier les avances existantes ***
+                avances_existantes = ServiceGestionAvance.verifier_avances_existantes(contrat)
+                
                 # Créer l'avance
                 avance = AvanceLoyer.objects.create(
                     contrat=contrat,
@@ -42,18 +45,72 @@ class ServiceGestionAvance:
                     loyer_mensuel=loyer_mensuel_decimal,
                     date_avance=date_avance,
                     notes=notes,
-                    mois_effet_personnalise=mois_effet_personnalise
+                    mois_effet_personnalise=mois_effet_personnalise,
+                    mode_selection_mois=mode_selection_mois,
+                    mois_couverts_manuels=mois_couverts_manuels or []
                 )
                 
                 # Le calcul des mois est fait automatiquement dans save()
                 
-                # Gérer les avances multiples si nécessaire
-                avance = ServiceGestionAvance.gerer_avances_multiples(contrat, avance)
+                # *** NOUVELLE LOGIQUE : Gérer les avances multiples et la prolongation ***
+                if avances_existantes['has_avances']:
+                    avance = ServiceGestionAvance.gerer_prolongation_avances(contrat, avance, avances_existantes)
+                else:
+                    avance = ServiceGestionAvance.gerer_avances_multiples(contrat, avance)
                 
                 return avance
                 
         except Exception as e:
             raise Exception(f"Erreur lors de la création de l'avance: {str(e)}")
+    
+    @staticmethod
+    def gerer_prolongation_avances(contrat, nouvelle_avance, avances_existantes):
+        """
+        Gère la prolongation des avances existantes avec la nouvelle avance
+        """
+        try:
+            # Calculer le total des mois couverts par toutes les avances
+            total_mois_existants = sum(avance['nombre_mois_couverts'] for avance in avances_existantes['avances'])
+            mois_nouvelle_avance = nouvelle_avance.nombre_mois_couverts
+            
+            # Calculer la date de fin de la dernière avance existante
+            derniere_avance = avances_existantes['derniere_avance']
+            date_fin_derniere_avance = datetime.strptime(derniere_avance['date_avance'], '%Y-%m-%d').date()
+            
+            # Calculer la date de début de la nouvelle avance
+            if nouvelle_avance.mode_selection_mois == 'manuel' and nouvelle_avance.mois_couverts_manuels:
+                # En mode manuel, utiliser le premier mois sélectionné
+                premier_mois = min(nouvelle_avance.mois_couverts_manuels)
+                date_debut_nouvelle_avance = datetime.strptime(premier_mois, '%Y-%m-%d').date()
+            else:
+                # En mode automatique, commencer après la dernière avance
+                from dateutil.relativedelta import relativedelta
+                date_debut_nouvelle_avance = date_fin_derniere_avance + relativedelta(months=1)
+            
+            # Mettre à jour les dates de la nouvelle avance
+            nouvelle_avance.mois_debut_couverture = date_debut_nouvelle_avance
+            
+            # Recalculer la fin de couverture
+            if nouvelle_avance.mode_selection_mois == 'manuel' and nouvelle_avance.mois_couverts_manuels:
+                # En mode manuel, utiliser le dernier mois sélectionné
+                dernier_mois = max(nouvelle_avance.mois_couverts_manuels)
+                nouvelle_avance.mois_fin_couverture = datetime.strptime(dernier_mois, '%Y-%m-%d').date()
+            else:
+                # En mode automatique, calculer normalement
+                nouvelle_avance.mois_fin_couverture = date_debut_nouvelle_avance + relativedelta(months=mois_nouvelle_avance - 1)
+            
+            # Mettre à jour les notes pour indiquer la prolongation
+            notes_originales = nouvelle_avance.notes or ""
+            nouvelle_avance.notes = f"{notes_originales} (Prolongation - Avances multiples: {len(avances_existantes['avances']) + 1} avances, {total_mois_existants + mois_nouvelle_avance} mois couverts total)"
+            
+            # Sauvegarder les modifications
+            nouvelle_avance.save()
+            
+            return nouvelle_avance
+            
+        except Exception as e:
+            print(f"Erreur lors de la gestion de la prolongation des avances: {str(e)}")
+            return nouvelle_avance
     
     @staticmethod
     def traiter_paiement_avance(paiement):
@@ -83,6 +140,151 @@ class ServiceGestionAvance:
         except Exception as e:
             raise Exception(f"Erreur lors du traitement du paiement d'avance: {str(e)}")
     
+    @staticmethod
+    def verifier_avances_existantes(contrat):
+        """
+        Vérifie si un contrat a déjà des avances actives
+        Retourne les informations sur les avances existantes
+        """
+        try:
+            avances_actives = AvanceLoyer.objects.filter(
+                contrat=contrat,
+                statut='active',
+                montant_restant__gt=0
+            ).order_by('-date_avance')
+            
+            if not avances_actives.exists():
+                return {
+                    'has_avances': False,
+                    'message': None,
+                    'avances': []
+                }
+            
+            # Calculer les statistiques des avances existantes
+            montant_total_restant = sum(avance.montant_restant for avance in avances_actives)
+            mois_couverts_restants = sum(avance.nombre_mois_couverts for avance in avances_actives)
+            
+            # Récupérer la dernière avance
+            derniere_avance = avances_actives.first()
+            
+            message = f"⚠️ Ce contrat a déjà {avances_actives.count()} avance(s) active(s) :\n"
+            message += f"• Montant restant total : {montant_total_restant:,.0f} F CFA\n"
+            message += f"• Mois couverts restants : {mois_couverts_restants}\n"
+            message += f"• Dernière avance : {derniere_avance.montant_avance:,.0f} F CFA du {derniere_avance.date_avance.strftime('%d/%m/%Y')}\n\n"
+            message += "Voulez-vous ajouter une nouvelle avance pour prolonger la couverture ?"
+            
+            return {
+                'has_avances': True,
+                'message': message,
+                'avances': list(avances_actives.values(
+                    'id', 'montant_avance', 'montant_restant', 'date_avance', 
+                    'nombre_mois_couverts', 'mois_debut_couverture', 'mois_fin_couverture'
+                )),
+                'montant_total_restant': float(montant_total_restant),
+                'mois_couverts_restants': mois_couverts_restants,
+                'derniere_avance': {
+                    'id': derniere_avance.id,
+                    'montant_avance': float(derniere_avance.montant_avance),
+                    'date_avance': derniere_avance.date_avance.strftime('%Y-%m-%d'),
+                    'nombre_mois_couverts': derniere_avance.nombre_mois_couverts
+                }
+            }
+            
+        except Exception as e:
+            return {
+                'has_avances': False,
+                'message': f"Erreur lors de la vérification des avances : {str(e)}",
+                'avances': []
+            }
+    
+    @staticmethod
+    def get_suggestions_mois_couverts(contrat, montant_avance, loyer_mensuel):
+        """
+        Génère des suggestions dynamiques pour les mois couverts basées sur l'historique des paiements
+        """
+        try:
+            from .models import Paiement
+            from dateutil.relativedelta import relativedelta
+            
+            # Récupérer les 12 derniers mois de paiements
+            date_actuelle = date.today()
+            date_debut = date_actuelle - relativedelta(months=12)
+            
+            paiements_recents = Paiement.objects.filter(
+                contrat=contrat,
+                date_paiement__gte=date_debut,
+                type_paiement__in=['loyer', 'paiement_partiel']
+            ).order_by('-date_paiement')
+            
+            # Calculer le nombre de mois que peut couvrir cette avance
+            mois_complets_possibles = int(montant_avance // loyer_mensuel)
+            
+            # Générer les suggestions de mois
+            suggestions = []
+            
+            # Option 1: Mois suivant le dernier paiement
+            if paiements_recents.exists():
+                dernier_paiement = paiements_recents.first()
+                mois_suivant = dernier_paiement.date_paiement.replace(day=1) + relativedelta(months=1)
+                
+                for i in range(min(mois_complets_possibles, 12)):  # Limiter à 12 mois max
+                    mois_suggestion = mois_suivant + relativedelta(months=i)
+                    suggestions.append({
+                        'mois': mois_suggestion,
+                        'mois_formate': mois_suggestion.strftime('%B %Y'),
+                        'mois_formate_fr': ServiceGestionAvance._convertir_mois_francais(mois_suggestion.strftime('%B %Y')),
+                        'description': f"Mois suivant le dernier paiement + {i} mois" if i > 0 else "Mois suivant le dernier paiement",
+                        'recommandé': i == 0
+                    })
+            else:
+                # Si pas de paiements récents, commencer à partir du mois actuel
+                mois_actuel = date_actuelle.replace(day=1)
+                
+                for i in range(min(mois_complets_possibles, 12)):
+                    mois_suggestion = mois_actuel + relativedelta(months=i)
+                    suggestions.append({
+                        'mois': mois_suggestion,
+                        'mois_formate': mois_suggestion.strftime('%B %Y'),
+                        'mois_formate_fr': ServiceGestionAvance._convertir_mois_francais(mois_suggestion.strftime('%B %Y')),
+                        'description': f"Mois actuel + {i} mois" if i > 0 else "Mois actuel",
+                        'recommandé': i == 0
+                    })
+            
+            return {
+                'suggestions': suggestions,
+                'mois_complets_possibles': mois_complets_possibles,
+                'montant_par_mois': float(loyer_mensuel),
+                'montant_total': float(montant_avance)
+            }
+            
+        except Exception as e:
+            return {
+                'suggestions': [],
+                'mois_complets_possibles': 0,
+                'montant_par_mois': float(loyer_mensuel),
+                'montant_total': float(montant_avance),
+                'erreur': str(e)
+            }
+    
+    @staticmethod
+    def _convertir_mois_francais(mois_anglais):
+        """Convertit un mois anglais en français et corrige le format des années"""
+        traductions = {
+            'January': 'Janvier', 'February': 'Février', 'March': 'Mars',
+            'April': 'Avril', 'May': 'Mai', 'June': 'Juin',
+            'July': 'Juillet', 'August': 'Août', 'September': 'Septembre',
+            'October': 'Octobre', 'November': 'Novembre', 'December': 'Décembre'
+        }
+        
+        for en, fr in traductions.items():
+            mois_anglais = mois_anglais.replace(en, fr)
+        
+        # Corriger le format des années (0225 -> 2025, 0226 -> 2026, etc.)
+        import re
+        mois_anglais = re.sub(r'\b0(\d{2})\b', r'20\1', mois_anglais)
+        
+        return mois_anglais
+
     @staticmethod
     def gerer_avances_multiples(contrat, nouvelle_avance):
         """

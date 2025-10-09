@@ -174,11 +174,93 @@ def detail_avance(request, avance_id):
         'montant_par_mois': avance.loyer_mensuel,
     }
     
+    # *** NOUVELLES DONNÉES DÉTAILLÉES ***
+    # Les imports sont déjà en haut du fichier
+    
+    # Récupérer la liste des mois couverts avec leur statut
+    mois_couverts_liste = avance.get_mois_couverts_liste()
+    mois_actuel = date.today().replace(day=1)
+    
+    # Analyser chaque mois couvert
+    mois_detaille = []
+    mois_consommes = 0
+    mois_en_cours = None
+    mois_futurs = 0
+    
+    for mois in mois_couverts_liste:
+        est_consomme = avance.est_mois_consomme(mois)
+        # Comparer les mois normalisés (1er du mois)
+        mois_normalise = mois.replace(day=1)
+        est_actuel = mois_normalise == mois_actuel
+        est_passe = mois_normalise < mois_actuel
+        
+        # *** LOGIQUE CORRIGÉE : Un mois n'est consommé que s'il y a un enregistrement ***
+        if est_consomme:
+            # Il y a un enregistrement de consommation pour ce mois
+            mois_consommes += 1
+            statut = 'consomme'
+            statut_label = 'Consommé'
+            statut_class = 'danger'  # Rouge pour "Consommé"
+        elif est_actuel:
+            # Mois actuel : toujours "en cours" s'il n'est pas encore consommé
+            mois_en_cours = mois
+            statut = 'en_cours'
+            statut_label = 'En cours'
+            statut_class = 'warning'  # Jaune pour "En cours"
+        elif est_passe:
+            # Mois passé mais pas encore consommé = en attente
+            statut = 'en_attente'
+            statut_label = 'En attente'
+            statut_class = 'secondary'  # Gris pour "En attente"
+        else:
+            # Mois futur
+            statut = 'futur'
+            statut_label = 'En attente'
+            statut_class = 'secondary'  # Gris pour "En attente"
+        
+        mois_detaille.append({
+            'mois': mois,
+            'mois_formate': mois.strftime('%B %Y'),
+            'mois_formate_fr': avance._convertir_mois_francais(mois.strftime('%B %Y')),  # pylint: disable=protected-access
+            'est_consomme': est_consomme,
+            'est_actuel': est_actuel,
+            'est_passe': est_passe,
+            'statut': statut,
+            'statut_label': statut_label,
+            'statut_class': statut_class
+        })
+    
+    # Calculer la date de fin estimée
+    date_fin_estimee = None
+    if avance.mois_fin_couverture:
+        date_fin_estimee = avance.mois_fin_couverture
+    
+    # Calculer le prochain mois de paiement après l'avance
+    prochain_mois_paiement = None
+    if avance.mois_fin_couverture:
+        prochain_mois_paiement = avance.mois_fin_couverture + relativedelta(months=1)
+    
+    # Statistiques enrichies
+    stats_enrichies = {
+        **stats,
+        'mois_consommes': mois_consommes,
+        'mois_en_cours': mois_en_cours,
+        'mois_futurs': mois_futurs,
+        'mois_total': len(mois_couverts_liste),
+        'date_debut_couverture': avance.mois_debut_couverture,
+        'date_fin_couverture': avance.mois_fin_couverture,
+        'date_fin_estimee': date_fin_estimee,
+        'prochain_mois_paiement': prochain_mois_paiement,
+        'pourcentage_mois_consommes': (mois_consommes / len(mois_couverts_liste) * 100) if mois_couverts_liste else 0,
+    }
+    
     context = {
         'avance': avance,
         'consommations': consommations,
         'historique': historique[:12],  # 12 derniers mois
-        'stats': stats,
+        'stats': stats_enrichies,
+        'mois_detaille': mois_detaille,
+        'mois_actuel': mois_actuel,
     }
     
     return render(request, 'paiements/avances/detail_avance.html', context)
@@ -187,10 +269,31 @@ def detail_avance(request, avance_id):
 @login_required
 def creer_avance(request):
     """
-    Créer une nouvelle avance de loyer
+    Créer une nouvelle avance de loyer avec vérification des avances existantes
     """
     if request.method == 'POST':
+        print("=== SOUMISSION FORMULAIRE ===")
+        print("POST data:", request.POST)
+        print("User:", request.user)
+        
         form = AvanceLoyerForm(request.POST)
+        print("Form valid:", form.is_valid())
+        if not form.is_valid():
+            print("Form errors:", form.errors)
+            # Messages d'erreur clairs pour chaque champ
+            for field, errors in form.errors.items():
+                for error in errors:
+                    if field == 'contrat':
+                        messages.error(request, "❌ Contrat : Veuillez sélectionner un contrat valide.")
+                    elif field == 'montant_avance':
+                        messages.error(request, "❌ Montant : Le montant doit être un nombre positif.")
+                    elif field == 'date_avance':
+                        messages.error(request, "❌ Date : Veuillez sélectionner une date valide.")
+                    elif field == 'notes':
+                        messages.error(request, f"❌ Notes : {error}")
+                    else:
+                        messages.error(request, f"❌ {field} : {error}")
+        
         if form.is_valid():
             try:
                 # Utiliser le service au lieu du formulaire pour une gestion robuste
@@ -199,19 +302,86 @@ def creer_avance(request):
                 date_avance = form.cleaned_data['date_avance']
                 notes = form.cleaned_data.get('notes', '')
                 
-                # Créer l'avance via le service
+                # Récupérer les paramètres depuis la requête POST
+                mode_selection = request.POST.get('mode_selection_mois', 'automatique')
+                mois_couverts_manuels = request.POST.get('mois_couverts_manuels', '[]')
+                
+                print(f"Mode sélection: {mode_selection}")
+                print(f"Mois couverts manuels: {mois_couverts_manuels}")
+                
+                # *** NOUVELLE LOGIQUE : Gestion des mois sélectionnés manuellement ***
+                mois_effet_personnalise = None
+                if mode_selection == 'manuel' and mois_couverts_manuels:
+                    try:
+                        import json
+                        mois_liste = json.loads(mois_couverts_manuels)
+                        if mois_liste:
+                            # Utiliser le premier mois sélectionné comme mois d'effet
+                            from datetime import datetime
+                            mois_effet_personnalise = datetime.strptime(mois_liste[0], '%Y-%m-%d').date()
+                    except (json.JSONDecodeError, ValueError):
+                        pass
+                
+                # *** NOUVELLE LOGIQUE : Parser les mois sélectionnés manuellement ***
+                mois_couverts_liste = []
+                if mode_selection == 'manuel' and mois_couverts_manuels:
+                    try:
+                        import json
+                        mois_couverts_liste = json.loads(mois_couverts_manuels)
+                    except (json.JSONDecodeError, ValueError):
+                        pass
+                
+                # Créer l'avance via le service avec tous les paramètres
                 avance = ServiceGestionAvance.creer_avance_loyer(
                     contrat=contrat,
                     montant_avance=montant_avance,
                     date_avance=date_avance,
-                    notes=notes
+                    notes=notes,
+                    mois_effet_personnalise=mois_effet_personnalise,
+                    mode_selection_mois=mode_selection,
+                    mois_couverts_manuels=mois_couverts_liste
                 )
                 
-                messages.success(request, f"Avance de {avance.montant_avance} F CFA créée avec succès. "
-                                        f"Elle couvre {avance.nombre_mois_couverts} mois.")
+                # *** CRITIQUE : Créer automatiquement le paiement correspondant ***
+                from .models import Paiement
+                from .id_generator import IDGenerator
+                
+                # Générer un numéro de paiement unique
+                numero_paiement = IDGenerator.generate_id('paiement', date_paiement=date_avance)
+                
+                # Créer le paiement d'avance
+                paiement = Paiement.objects.create(
+                    contrat=contrat,
+                    montant=montant_avance,
+                    date_paiement=date_avance,
+                    type_paiement='avance_loyer',
+                    statut='valide',
+                    numero_paiement=numero_paiement,
+                    notes=f"Paiement d'avance automatique - {avance.nombre_mois_couverts} mois couverts",
+                    created_by=request.user
+                )
+                
+                # Lier l'avance au paiement
+                avance.paiement = paiement
+                avance.save()
+                
+                messages.success(request, f"✅ Avance de {avance.montant_avance:,.0f} F CFA créée et intégrée au système de paiement ! "
+                                        f"Elle couvre {avance.nombre_mois_couverts} mois de loyer.")
                 return redirect('paiements:detail_avance', avance_id=avance.id)
             except Exception as e:
-                messages.error(request, f"Erreur lors de la création de l'avance: {str(e)}")
+                print(f"Erreur lors de la création de l'avance: {e}")
+                import traceback
+                traceback.print_exc()
+                
+                # Messages d'erreur plus clairs selon le type d'erreur
+                if "contrat" in str(e).lower():
+                    messages.error(request, "❌ Erreur de contrat : Le contrat sélectionné n'est pas valide.")
+                elif "montant" in str(e).lower():
+                    messages.error(request, "❌ Erreur de montant : Le montant saisi n'est pas valide.")
+                elif "date" in str(e).lower():
+                    messages.error(request, "❌ Erreur de date : La date sélectionnée n'est pas valide.")
+                else:
+                    messages.error(request, f"❌ Erreur inattendue : {str(e)}")
     else:
         form = AvanceLoyerForm()
     
@@ -278,11 +448,14 @@ def generer_recu_avance(request, avance_id):
         return redirect('paiements:liste_avances')
 
 
-@login_required
 def get_contrat_details_ajax(request):
     """
     Récupérer les détails d'un contrat via AJAX (loyer mensuel, etc.)
     """
+    # Vérifier l'authentification manuellement
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentification requise'}, status=401)
+    
     if request.method == 'GET':
         try:
             contrat_id = request.GET.get('contrat_id')
@@ -295,6 +468,14 @@ def get_contrat_details_ajax(request):
                 est_resilie=False
             )
             
+            # *** NOUVELLE FONCTIONNALITÉ : Vérifier les avances existantes ***
+            avances_info = {'has_avances': False, 'message': None, 'avances': []}
+            try:
+                avances_info = ServiceGestionAvance.verifier_avances_existantes(contrat)
+            except Exception as e:
+                print(f"Erreur lors de la vérification des avances: {e}")
+                # En cas d'erreur, on continue sans les informations d'avances
+            
             return JsonResponse({
                 'success': True,
                 'loyer_mensuel': float(contrat.loyer_mensuel or 0),
@@ -306,11 +487,14 @@ def get_contrat_details_ajax(request):
                 'propriete_titre': contrat.propriete.titre,
                 'date_debut': contrat.date_debut.strftime('%Y-%m-%d') if contrat.date_debut else None,
                 'date_fin': contrat.date_fin.strftime('%Y-%m-%d') if contrat.date_fin else None,
+                # *** NOUVELLES DONNÉES : Informations sur les avances existantes ***
+                'avances_existantes': avances_info
             })
             
         except Contrat.DoesNotExist:
             return JsonResponse({'error': 'Contrat non trouvé'}, status=404)
         except Exception as e:
+            print(f"Erreur dans get_contrat_details_ajax: {e}")
             return JsonResponse({'error': str(e)}, status=400)
     
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
@@ -341,6 +525,47 @@ def calculer_avance_ajax(request):
                 'montant_total': float(montant_avance)
             })
             
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    
+    return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+
+
+@login_required
+def get_suggestions_mois_ajax(request):
+    """
+    Récupérer les suggestions de mois couverts via AJAX
+    """
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            contrat_id = data.get('contrat_id')
+            montant_avance = Decimal(str(data.get('montant_avance', 0)))
+            loyer_mensuel = Decimal(str(data.get('loyer_mensuel', 0)))
+            
+            if not contrat_id:
+                return JsonResponse({'error': 'ID du contrat requis'}, status=400)
+            
+            if loyer_mensuel <= 0:
+                return JsonResponse({'error': 'Loyer mensuel invalide'}, status=400)
+            
+            contrat = Contrat.objects.get(id=contrat_id)
+            
+            # *** NOUVELLE FONCTIONNALITÉ : Obtenir les suggestions de mois ***
+            suggestions_info = ServiceGestionAvance.get_suggestions_mois_couverts(
+                contrat, montant_avance, loyer_mensuel
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'suggestions': suggestions_info['suggestions'],
+                'mois_complets_possibles': suggestions_info['mois_complets_possibles'],
+                'montant_par_mois': suggestions_info['montant_par_mois'],
+                'montant_total': suggestions_info['montant_total']
+            })
+            
+        except Contrat.DoesNotExist:
+            return JsonResponse({'error': 'Contrat non trouvé'}, status=404)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
     

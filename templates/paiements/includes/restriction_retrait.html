@@ -1,0 +1,79 @@
+{% load static %}
+
+<!-- Alerte de restriction des retraits -->
+<div class="alert alert-info alert-dismissible fade show" role="alert">
+    <div class="d-flex align-items-center">
+        <i class="bi bi-calendar-check me-3 fs-4"></i>
+        <div>
+            <h6 class="alert-heading mb-1">
+                <i class="bi bi-info-circle"></i>
+                Période de Génération des Retraits
+            </h6>
+            <p class="mb-0">
+                Les retraits ne peuvent être générés que du <strong>25 de chaque mois au 5 du mois suivant</strong>.
+                {% if periode_autorisee %}
+                    <span class="text-success">
+                        <i class="bi bi-check-circle"></i> 
+                        Période actuelle autorisée
+                    </span>
+                {% else %}
+                    <span class="text-warning">
+                        <i class="bi bi-exclamation-triangle"></i> 
+                        Période actuelle non autorisée
+                    </span>
+                {% endif %}
+            </p>
+            <small class="text-muted">
+                Aujourd'hui : {{ date_actuelle|date:"d/m/Y" }}
+            </small>
+        </div>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+
+<!-- Informations sur les améliorations -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <h6 class="mb-0">
+                    <i class="bi bi-lightning-charge"></i>
+                    Mise à Jour Automatique
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="card-text small">
+                    Les retraits sont automatiquement mis à jour lorsque des charges sont ajoutées au cours du mois.
+                </p>
+                <ul class="list-unstyled small mb-0">
+                    <li><i class="bi bi-check text-success"></i> Charges déductibles</li>
+                    <li><i class="bi bi-check text-success"></i> Charges bailleur</li>
+                    <li><i class="bi bi-check text-success"></i> Calcul en temps réel</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">
+                    <i class="bi bi-calculator"></i>
+                    Calcul Optimisé
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="card-text small">
+                    Sommation automatique des loyers et charges pour un calcul précis des retraits.
+                </p>
+                <ul class="list-unstyled small mb-0">
+                    <li><i class="bi bi-check text-primary"></i> Loyers bruts</li>
+                    <li><i class="bi bi-check text-primary"></i> Charges déductibles</li>
+                    <li><i class="bi bi-check text-primary"></i> Charges bailleur</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+

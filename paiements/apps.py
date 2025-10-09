@@ -10,3 +10,5 @@ class PaiementsConfig(AppConfig):
         """Configuration lors du démarrage de l'application"""
         # Importer les modèles pour qu'ils soient reconnus par Django
         from . import models
+        # Importer les signaux quand l'application est prête
+        from . import signals_retrait
