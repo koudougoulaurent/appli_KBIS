@@ -1,6 +1,0 @@
-# Commandes à exécuter sur Render
-# Copiez et collez ces commandes dans le shell Render
-
-python manage.py migrate
-python manage.py shell -c "from core.models import ConfigurationEntreprise; config, created = ConfigurationEntreprise.objects.get_or_create(nom_entreprise='KBIS IMMOBILIER', defaults={'adresse': '123 Rue de l\'Immobilier', 'ville': 'Ouagadougou', 'code_postal': '01 BP 1234', 'telephone': '+226 25 12 34 56', 'email': 'contact@kbis.bf', 'actif': True}); config.nom_entreprise = 'KBIS IMMOBILIER'; config.save(); print('Configuration mise à jour')"
-python manage.py collectstatic --noinput

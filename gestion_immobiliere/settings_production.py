@@ -1,44 +1,141 @@
 """
-Settings optimisés pour la production
+Configuration de production pour KBIS IMMOBILIER
+Optimisée pour VPS avec Nginx et Gunicorn
 """
-from .settings_minimal import *
+import os
+from pathlib import Path
+from decouple import config
 
-# Mode production
-DEBUG = False
-ALLOWED_HOSTS = ['*']  # À configurer selon votre domaine
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Base de données optimisée
+# Configuration de sécurité
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production')
+DEBUG = config('DEBUG', default=False, cast=bool)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+
+# Configuration de la base de données PostgreSQL
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'gestion_immobiliere'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+        'NAME': config('DB_NAME', default='kbis_immobilier'),
+        'USER': config('DB_USER', default='kbis_user'),
+        'PASSWORD': config('DB_PASSWORD', default=''),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432'),
         'OPTIONS': {
-            'MAX_CONNS': 20,
-            'CONN_MAX_AGE': 600,
-        }
+            'sslmode': 'prefer',
+        },
     }
 }
 
-# Cache Redis pour la production
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/1'),
+# Configuration des applications
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'django.contrib.humanize',
+    'rest_framework',
+    'django_filters',
+    'dal',
+    'crispy_forms',
+    'crispy_bootstrap5',
+    'django_select2',
+    'corsheaders',
+    'axes',
+    'core',
+    'utilisateurs',
+    'proprietes.apps.ProprietesConfig',
+    'contrats.apps.ContratsConfig',
+    'paiements.apps.PaiementsConfig',
+    'notifications',
+]
+
+# Middleware avec sécurité renforcée
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'axes.middleware.AxesMiddleware',
+]
+
+ROOT_URLCONF = 'gestion_immobiliere.urls'
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / 'templates'],
+        'APP_DIRS': True,
         'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+                'core.context_processors.entreprise_config',
+                'core.context_processors.dynamic_navigation',
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = 'gestion_immobiliere.wsgi.application'
+
+# Configuration de sécurité des mots de passe
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 8,
         }
-    }
-}
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
 
-# Sessions optimisées
-SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
-SESSION_CACHE_ALIAS = 'default'
+# Configuration internationale
+LANGUAGE_CODE = 'fr-fr'
+TIME_ZONE = 'Africa/Dakar'
+USE_I18N = True
+USE_TZ = True
 
-# Sécurité
+# Configuration des fichiers statiques
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+
+# Configuration des fichiers média
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Configuration du modèle d'utilisateur
+AUTH_USER_MODEL = 'utilisateurs.Utilisateur'
+
+# Configuration des URLs d'authentification
+LOGIN_URL = '/utilisateurs/connexion-groupes/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/utilisateurs/connexion-groupes/'
+
+# Configuration de Crispy Forms
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+# Configuration de sécurité
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
@@ -46,7 +143,36 @@ SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
-# Logging optimisé
+# Configuration des cookies sécurisés
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+
+# Configuration CORS
+CORS_ALLOWED_ORIGINS = [
+    "https://votre-domaine.com",
+    "https://www.votre-domaine.com",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+# Configuration de cache Redis (optionnel)
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/1'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
+
+# Configuration de session avec cache
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'default'
+
+# Configuration des logs
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -55,183 +181,77 @@ LOGGING = {
             'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
             'style': '{',
         },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
     },
     'handlers': {
         'file': {
-            'level': 'ERROR',
+            'level': 'INFO',
             'class': 'logging.FileHandler',
-            'filename': '/var/log/django/error.log',
+            'filename': '/var/log/django/kbis_immobilier.log',
             'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
         },
     },
     'root': {
-        'handlers': ['file'],
-        'level': 'ERROR',
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'kbis_immobilier': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
     },
 }
 
-# Optimisations de performance
-MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.middleware.cache.UpdateCacheMiddleware',  # Cache middleware
-    'django.middleware.cache.FetchFromCacheMiddleware',  # Cache middleware
-]
+# Configuration de l'email (à configurer selon votre fournisseur)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = config('EMAIL_HOST', default='localhost')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@votre-domaine.com')
 
-# Cache global
-CACHE_MIDDLEWARE_ALIAS = 'default'
-CACHE_MIDDLEWARE_SECONDS = 300  # 5 minutes
-CACHE_MIDDLEWARE_KEY_PREFIX = 'gestion_immobiliere'
-
-# Optimisations de base de données
-DATABASE_ROUTERS = []
-
-# Compression des réponses
-MIDDLEWARE.insert(0, 'django.middleware.gzip.GZipMiddleware')
-
-# Optimisations de fichiers statiques
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
-
-# Optimisations de templates
-TEMPLATES[0]['OPTIONS']['loaders'] = [
-    ('django.template.loaders.cached.Loader', [
-        'django.template.loaders.filesystem.Loader',
-        'django.template.loaders.app_directories.Loader',
-    ]),
-]
-
-# Optimisations de requêtes
-DATABASES['default']['CONN_MAX_AGE'] = 600
-
-# Optimisations de mémoire
-DATA_UPLOAD_MAX_MEMORY_SIZE = 1048576  # 1MB
-FILE_UPLOAD_MAX_MEMORY_SIZE = 1048576  # 1MB
-
-# Optimisations de sessions
-SESSION_COOKIE_AGE = 3600  # 1 heure
-SESSION_SAVE_EVERY_REQUEST = False
-
-# Optimisations de cache
-CACHE_TIMEOUT = 300  # 5 minutes
-
-# Optimisations de pagination
-PAGINATE_BY = 20
-
-# Optimisations de requêtes
+# Configuration de la base de données par défaut
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Optimisations de sécurité
-SECURE_SSL_REDIRECT = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# Configuration WhiteNoise pour les fichiers statiques
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Optimisations de performance
-USE_TZ = True
-TIME_ZONE = 'UTC'
+# Configuration de rate limiting
+AXES_ENABLED = True
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = 1  # 1 heure
+AXES_LOCKOUT_CALLABLE = 'axes.lockout.database_lockout'
 
-# Optimisations de fichiers
-MEDIA_ROOT = '/var/www/media/'
-STATIC_ROOT = '/var/www/static/'
-
-# Optimisations de cache pour les vues
-CACHE_TTL = 300  # 5 minutes
-
-# Optimisations de requêtes
-CONN_MAX_AGE = 600
-
-# Optimisations de mémoire
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-
-# Optimisations de performance
-USE_I18N = True
-USE_L10N = True
-
-# Optimisations de sécurité
-SECURE_HSTS_SECONDS = 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
-
-# Optimisations de cache
-CACHE_MIDDLEWARE_ALIAS = 'default'
-CACHE_MIDDLEWARE_SECONDS = 300
-CACHE_MIDDLEWARE_KEY_PREFIX = 'gestion_immobiliere'
-
-# Optimisations de performance
-MIDDLEWARE.append('django.middleware.cache.UpdateCacheMiddleware')
-MIDDLEWARE.insert(0, 'django.middleware.cache.FetchFromCacheMiddleware')
-
-# Optimisations de base de données
-DATABASES['default']['OPTIONS']['MAX_CONNS'] = 20
-DATABASES['default']['OPTIONS']['CONN_MAX_AGE'] = 600
-
-# Optimisations de cache
-CACHES['default']['OPTIONS']['CONNECTION_POOL_KWARGS'] = {
-    'max_connections': 20,
-    'retry_on_timeout': True,
-}
-
-# Optimisations de performance
-MIDDLEWARE.append('django.middleware.gzip.GZipMiddleware')
-
-# Optimisations de sécurité
-SECURE_BROWSER_XSS_FILTER = True
-SECURE_CONTENT_TYPE_NOSNIFF = True
-X_FRAME_OPTIONS = 'DENY'
-
-# Optimisations de cache
-CACHE_MIDDLEWARE_ALIAS = 'default'
-CACHE_MIDDLEWARE_SECONDS = 300
-CACHE_MIDDLEWARE_KEY_PREFIX = 'gestion_immobiliere'
-
-# Optimisations de performance
-MIDDLEWARE.append('django.middleware.cache.UpdateCacheMiddleware')
-MIDDLEWARE.insert(0, 'django.middleware.cache.FetchFromCacheMiddleware')
-
-# Optimisations de base de données
-DATABASES['default']['OPTIONS']['MAX_CONNS'] = 20
-DATABASES['default']['OPTIONS']['CONN_MAX_AGE'] = 600
-
-# Optimisations de cache
-CACHES['default']['OPTIONS']['CONNECTION_POOL_KWARGS'] = {
-    'max_connections': 20,
-    'retry_on_timeout': True,
-}
-
-# Optimisations de performance
-MIDDLEWARE.append('django.middleware.gzip.GZipMiddleware')
-
-# Optimisations de sécurité
-SECURE_BROWSER_XSS_FILTER = True
-SECURE_CONTENT_TYPE_NOSNIFF = True
-X_FRAME_OPTIONS = 'DENY'
-
-# Optimisations de cache
-CACHE_MIDDLEWARE_ALIAS = 'default'
-CACHE_MIDDLEWARE_SECONDS = 300
-CACHE_MIDDLEWARE_KEY_PREFIX = 'gestion_immobiliere'
-
-# Optimisations de performance
-MIDDLEWARE.append('django.middleware.cache.UpdateCacheMiddleware')
-MIDDLEWARE.insert(0, 'django.middleware.cache.FetchFromCacheMiddleware')
-
-# Optimisations de base de données
-DATABASES['default']['OPTIONS']['MAX_CONNS'] = 20
-DATABASES['default']['OPTIONS']['CONN_MAX_AGE'] = 600
-
-# Optimisations de cache
-CACHES['default']['OPTIONS']['CONNECTION_POOL_KWARGS'] = {
-    'max_connections': 20,
-    'retry_on_timeout': True,
-}
-
-# Optimisations de performance
-MIDDLEWARE.append('django.middleware.gzip.GZipMiddleware')
-
-# Optimisations de sécurité
-SECURE_BROWSER_XSS_FILTER = True
-SECURE_CONTENT_TYPE_NOSNIFF = True
-X_FRAME_OPTIONS = 'DENY'
+# Configuration de Sentry pour le monitoring (optionnel)
+if config('SENTRY_DSN', default=None):
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
+    
+    sentry_logging = LoggingIntegration(
+        level=logging.INFO,        # Capture info and above as breadcrumbs
+        event_level=logging.ERROR  # Send errors as events
+    )
+    
+    sentry_sdk.init(
+        dsn=config('SENTRY_DSN'),
+        integrations=[DjangoIntegration(), sentry_logging],
+        traces_sample_rate=0.1,
+        send_default_pii=True
+    )
