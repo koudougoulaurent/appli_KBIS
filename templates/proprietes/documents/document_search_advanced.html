@@ -108,9 +108,9 @@
                 <a href="{% url 'proprietes:document_search_advanced' %}" class="btn btn-outline-secondary">
                     <i class="fas fa-times me-2"></i>Réinitialiser
                 </a>
-                <button type="button" class="btn btn-outline-info" onclick="exportResults()">
+                <a href="{% url 'proprietes:document_export' %}" class="btn btn-outline-info">
                     <i class="fas fa-download me-2"></i>Exporter
-                </button>
+                </a>
             </div>
         </form>
     </div>
@@ -389,8 +389,11 @@
     }
 
     function exportResults() {
-        // Fonctionnalité d'export à implémenter
-        alert('Fonctionnalité d\'export en cours de développement');
+        // Rediriger vers la page d'export avec les paramètres actuels
+        const form = document.querySelector('form');
+        const formData = new FormData(form);
+        const params = new URLSearchParams(formData);
+        window.location.href = '{% url "proprietes:document_export" %}?' + params.toString();
     }
 
     // Auto-submit du formulaire lors du changement des filtres

@@ -266,21 +266,37 @@ def document_search_advanced(request):
         type_document = form.cleaned_data.get('type_document')
         statut = form.cleaned_data.get('statut')
         propriete = form.cleaned_data.get('propriete')
+        bailleur = form.cleaned_data.get('bailleur')
+        locataire = form.cleaned_data.get('locataire')
+        confidentiel = form.cleaned_data.get('confidentiel')
+        taille_min = form.cleaned_data.get('taille_min')
+        taille_max = form.cleaned_data.get('taille_max')
+        tags = form.cleaned_data.get('tags')
         date_debut = form.cleaned_data.get('date_debut')
         date_fin = form.cleaned_data.get('date_fin')
+        date_expiration_debut = form.cleaned_data.get('date_expiration_debut')
+        date_expiration_fin = form.cleaned_data.get('date_expiration_fin')
         
+        # Recherche textuelle étendue
         if search:
             documents = documents.filter(
                 Q(nom__icontains=search) |
                 Q(description__icontains=search) |
                 Q(tags__icontains=search) |
                 Q(propriete__titre__icontains=search) |
+                Q(propriete__numero_propriete__icontains=search) |
                 Q(bailleur__nom__icontains=search) |
                 Q(bailleur__prenom__icontains=search) |
+                Q(bailleur__numero_bailleur__icontains=search) |
                 Q(locataire__nom__icontains=search) |
-                Q(locataire__prenom__icontains=search)
+                Q(locataire__prenom__icontains=search) |
+                Q(locataire__numero_locataire__icontains=search) |
+                Q(cree_par__username__icontains=search) |
+                Q(cree_par__first_name__icontains=search) |
+                Q(cree_par__last_name__icontains=search)
             )
         
+        # Filtres de base
         if type_document:
             documents = documents.filter(type_document=type_document)
         
@@ -290,33 +306,94 @@ def document_search_advanced(request):
         if propriete:
             documents = documents.filter(propriete=propriete)
         
+        if bailleur:
+            documents = documents.filter(bailleur=bailleur)
+        
+        if locataire:
+            documents = documents.filter(locataire=locataire)
+        
+        # Filtre de confidentialité
+        if confidentiel == 'true':
+            documents = documents.filter(confidentiel=True)
+        elif confidentiel == 'false':
+            documents = documents.filter(confidentiel=False)
+        
+        # Filtres de taille
+        if taille_min:
+            documents = documents.filter(taille_fichier__gte=taille_min * 1024)
+        
+        if taille_max:
+            documents = documents.filter(taille_fichier__lte=taille_max * 1024)
+        
+        # Filtre par tags
+        if tags:
+            tag_list = [tag.strip() for tag in tags.split(',') if tag.strip()]
+            for tag in tag_list:
+                documents = documents.filter(tags__icontains=tag)
+        
+        # Filtres de dates
         if date_debut:
             documents = documents.filter(date_creation__date__gte=date_debut)
         
         if date_fin:
             documents = documents.filter(date_creation__date__lte=date_fin)
+        
+        # Filtres de date d'expiration
+        if date_expiration_debut:
+            documents = documents.filter(date_expiration__gte=date_expiration_debut)
+        
+        if date_expiration_fin:
+            documents = documents.filter(date_expiration__lte=date_expiration_fin)
+    
+    # Tri intelligent
+    sort_by = request.GET.get('sort', 'date_creation')
+    sort_order = request.GET.get('order', 'desc')
+    
+    if sort_order == 'asc':
+        sort_field = sort_by
+    else:
+        sort_field = f'-{sort_by}'
+    
+    documents = documents.order_by(sort_field)
     
     # Pagination
-    paginator = Paginator(documents.order_by('-date_creation'), 30)
+    paginator = Paginator(documents, 30)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Statistiques de recherche
+    # Statistiques de recherche avancées
     stats = {
         'total_results': documents.count(),
-        'par_type': documents.values('type_document').annotate(count=Count('id')),
+        'par_type': documents.values('type_document').annotate(count=Count('id')).order_by('-count'),
+        'par_statut': documents.values('statut').annotate(count=Count('id')).order_by('-count'),
         'par_entite': {
             'proprietes': documents.filter(propriete__isnull=False).count(),
             'bailleurs': documents.filter(bailleur__isnull=False).count(),
             'locataires': documents.filter(locataire__isnull=False).count(),
-        }
+        },
+        'taille_totale': sum(doc.taille_fichier or 0 for doc in documents),
+        'confidentiels': documents.filter(confidentiel=True).count(),
+        'expires': documents.filter(date_expiration__lt=timezone.now().date()).count(),
     }
+    
+    # Options de tri
+    sort_options = [
+        {'value': 'date_creation', 'label': 'Date de création'},
+        {'value': 'date_modification', 'label': 'Date de modification'},
+        {'value': 'nom', 'label': 'Nom du document'},
+        {'value': 'type_document', 'label': 'Type de document'},
+        {'value': 'statut', 'label': 'Statut'},
+        {'value': 'taille_fichier', 'label': 'Taille du fichier'},
+    ]
     
     context = {
         'page_obj': page_obj,
         'search_form': form,
         'stats': stats,
         'is_privilege_user': is_privilege_user,
+        'sort_options': sort_options,
+        'current_sort': sort_by,
+        'current_order': sort_order,
     }
     
     return render(request, 'proprietes/documents/document_search_advanced.html', context)

@@ -1614,13 +1614,14 @@ class DocumentForm(forms.ModelForm):
 
 
 class DocumentSearchForm(forms.Form):
-    """Formulaire de recherche pour les documents."""
+    """Formulaire de recherche avancée pour les documents."""
     
     search = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Rechercher un document...'
+            'placeholder': 'Rechercher un document...',
+            'autocomplete': 'off'
         })
     )
     
@@ -1649,11 +1650,71 @@ class DocumentSearchForm(forms.Form):
         })
     )
     
+    bailleur = forms.ModelChoiceField(
+        queryset=Bailleur.objects.none(),  # Sera rempli dans __init__
+        required=False,
+        empty_label="Tous les bailleurs",
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
+    
+    locataire = forms.ModelChoiceField(
+        queryset=Locataire.objects.none(),  # Sera rempli dans __init__
+        required=False,
+        empty_label="Tous les locataires",
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
+    
+    confidentiel = forms.ChoiceField(
+        choices=[
+            ('', 'Tous les documents'),
+            ('true', 'Documents confidentiels seulement'),
+            ('false', 'Documents publics seulement')
+        ],
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
+    
+    taille_min = forms.IntegerField(
+        required=False,
+        min_value=0,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Taille min (KB)',
+            'min': '0'
+        })
+    )
+    
+    taille_max = forms.IntegerField(
+        required=False,
+        min_value=0,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Taille max (KB)',
+            'min': '0'
+        })
+    )
+    
+    tags = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Tags séparés par des virgules...'
+        })
+    )
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Utiliser la logique de filtrage des propriétés disponibles
         from core.property_utils import get_proprietes_disponibles_global
         self.fields['propriete'].queryset = get_proprietes_disponibles_global()
+        self.fields['bailleur'].queryset = Bailleur.objects.filter(is_deleted=False).order_by('nom', 'prenom')
+        self.fields['locataire'].queryset = Locataire.objects.filter(is_deleted=False).order_by('nom', 'prenom')
     
     date_debut = forms.DateField(
         required=False,
@@ -1670,6 +1731,44 @@ class DocumentSearchForm(forms.Form):
             'type': 'date'
         })
     )
+    
+    date_expiration_debut = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        })
+    )
+    
+    date_expiration_fin = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        })
+    )
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        taille_min = cleaned_data.get('taille_min')
+        taille_max = cleaned_data.get('taille_max')
+        date_debut = cleaned_data.get('date_debut')
+        date_fin = cleaned_data.get('date_fin')
+        date_expiration_debut = cleaned_data.get('date_expiration_debut')
+        date_expiration_fin = cleaned_data.get('date_expiration_fin')
+        
+        # Validation de la taille
+        if taille_min and taille_max and taille_min > taille_max:
+            raise forms.ValidationError("La taille minimale ne peut pas être supérieure à la taille maximale.")
+        
+        # Validation des dates
+        if date_debut and date_fin and date_debut > date_fin:
+            raise forms.ValidationError("La date de début ne peut pas être postérieure à la date de fin.")
+        
+        if date_expiration_debut and date_expiration_fin and date_expiration_debut > date_expiration_fin:
+            raise forms.ValidationError("La date d'expiration de début ne peut pas être postérieure à la date d'expiration de fin.")
+        
+        return cleaned_data
 
 
 class UniteRechercheForm(forms.Form):

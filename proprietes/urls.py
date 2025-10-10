@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views, views_unites, document_views, views_charges_bailleur
+from . import views, api_views, views_unites, document_views, views_charges_bailleur, document_export_views
 from .views import ajouter_charge_bailleur_rapide
 
 # Router pour l'API
@@ -95,6 +95,12 @@ urlpatterns = [
     path('documents/bailleur/<int:bailleur_id>/', document_views.document_list_by_bailleur, name='document_list_by_bailleur'),
     path('documents/locataire/<int:locataire_id>/', document_views.document_list_by_locataire, name='document_list_by_locataire'),
     path('documents/api/stats/', document_views.document_stats_api, name='document_stats_api'),
+    
+    # URLs pour l'export des documents
+    path('documents/export/', document_export_views.document_export, name='document_export'),
+    path('documents/export/preview/', document_export_views.document_export_preview, name='document_export_preview'),
+    path('documents/export/statistics/', document_export_views.document_export_statistics, name='document_export_statistics'),
+    path('documents/export/bulk/', document_export_views.document_bulk_export, name='document_bulk_export'),
     
     # URLs pour le visualiseur universel
     path('documents/<int:pk>/viewer/', views.DocumentViewerView.as_view(), name='document_viewer'),
