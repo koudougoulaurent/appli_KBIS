@@ -116,3 +116,4 @@ echo ""
 echo "Pour créer un superuser :"
 echo "cd /var/www/kbis_immobilier && source venv/bin/activate && python3 manage.py createsuperuser"
 
+

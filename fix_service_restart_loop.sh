@@ -155,3 +155,4 @@ echo "Votre application devrait maintenant être stable et accessible sur:"
 echo "http://78.138.58.185"
 echo "Interface d'administration: http://78.138.58.185/admin/"
 
+

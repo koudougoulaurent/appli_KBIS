@@ -97,3 +97,4 @@ echo -e "\n${BLUE}💡 SOLUTION RAPIDE:${NC}"
 echo "sudo systemctl restart $SERVICE_NAME"
 echo "sudo systemctl restart nginx"
 
+

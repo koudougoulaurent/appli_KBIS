@@ -144,3 +144,4 @@ echo -e "\n${YELLOW}État final des services:${NC}"
 sudo systemctl status $SERVICE_NAME --no-pager -l
 sudo systemctl status nginx --no-pager -l
 
+

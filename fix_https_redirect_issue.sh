@@ -157,3 +157,4 @@ echo "1. Obtenir un certificat SSL"
 echo "2. Configurer nginx pour HTTPS"
 echo "3. Réactiver les paramètres de sécurité dans settings.py"
 
+

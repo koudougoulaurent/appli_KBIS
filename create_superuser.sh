@@ -57,3 +57,4 @@ for user in superusers:
     print(f'- {user.username} ({user.email}) - Dernière connexion: {user.last_login}')
 "
 
+

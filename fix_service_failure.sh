@@ -186,3 +186,4 @@ echo -e "\n${GREEN}🎉 CORRECTION TERMINÉE !${NC}"
 echo "Votre application devrait maintenant être accessible sur:"
 echo "http://78.138.58.185"
 
+

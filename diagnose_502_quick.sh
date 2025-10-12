@@ -105,3 +105,4 @@ fi
 echo -e "\n${BLUE}💡 SOLUTION RAPIDE:${NC}"
 echo "Exécutez: bash fix_services_after_restore.sh"
 
+
