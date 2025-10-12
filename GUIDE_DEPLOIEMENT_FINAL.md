@@ -1,218 +1,312 @@
-# Guide de Déploiement Final - KBIS IMMOBILIER
+# Guide de Déploiement Final - KBIS Immobilier
 
-## 🚀 Déploiement Complet VPS avec Nettoyage et Rollback
+## 🚀 Déploiement VPS avec PostgreSQL
 
-Votre application est maintenant **100% prête** pour un déploiement professionnel sur votre VPS LWS.
+### Prérequis
+- VPS Ubuntu 20.04+ ou Debian 11+
+- Accès root ou utilisateur avec privilèges sudo
+- Nom de domaine (optionnel pour HTTPS)
 
-## 📦 **Commits Finaux**
+### Méthode 1: Déploiement Automatique (Recommandé)
 
-- **`082b274`** - Script maître de déploiement complet
-- **`b25af85`** - Scripts de nettoyage VPS avec rollback
-- **`67b345a`** - Guide de réparation VPS
-- **`d5a4167`** - Scripts de réparation et diagnostic
-- **`158cb4d`** - Application nettoyée et prête pour production
-
-## 🎯 **Déploiement Recommandé**
-
-### **Option 1: Déploiement Complet Automatique (Recommandé)**
-```bash
-# 1. Connectez-vous à votre VPS
-ssh user@votre-vps
-
-# 2. Téléchargez l'application
-git clone https://github.com/koudougoulaurent/appli_KBIS.git /var/www/kbis_immobilier
-cd /var/www/kbis_immobilier
-
-# 3. Déploiement complet (nettoyage + déploiement + vérification)
-sudo ./master_deploy.sh full
+#### Sur Windows (PowerShell)
+```powershell
+# Exécuter le script PowerShell
+.\deploy_vps_windows.ps1 -VpsIp "VOTRE_IP_VPS" -Domain "votre-domaine.com"
 ```
 
-### **Option 2: Déploiement Étape par Étape**
+#### Sur Linux/Mac
 ```bash
-# 1. Nettoyage complet du VPS
-sudo ./master_deploy.sh clean
+# Rendre les scripts exécutables
+chmod +x deploy_vps_postgresql.sh setup_https.sh maintenance_vps.sh test_deployment.sh
 
-# 2. Vérification du nettoyage
-sudo ./master_deploy.sh verify
-
-# 3. Déploiement de l'application
-sudo ./master_deploy.sh deploy
-
-# 4. Vérification finale
-sudo ./master_deploy.sh verify
+# Exécuter le déploiement
+./deploy_vps_postgresql.sh
 ```
 
-## 🛠️ **Scripts Disponibles**
+### Méthode 2: Déploiement Manuel
 
-### **Script Maître : `master_deploy.sh`**
-- **`clean`** - Nettoyage complet avec rollback
-- **`deploy`** - Déploiement de l'application
-- **`verify`** - Vérification du système
-- **`full`** - Nettoyage + Déploiement complet
-- **`rollback`** - Restauration depuis sauvegarde
-- **`status`** - Statut des services
-
-### **Scripts Spécialisés**
-- **`clean_vps_with_rollback.sh`** - Nettoyage avec sauvegarde
-- **`verify_clean_vps.sh`** - Vérification post-nettoyage
-- **`deploy_vps.sh`** - Déploiement automatique
-- **`fix_vps_deployment.sh`** - Réparation VPS existant
-- **`diagnose_vps.sh`** - Diagnostic des problèmes
-
-## 🔧 **Configuration Post-Déploiement**
-
-### 1. **Configuration de l'environnement**
+#### 1. Préparation du VPS
 ```bash
-# Éditez le fichier de configuration
-sudo nano /var/www/kbis_immobilier/.env
+# Connexion au VPS
+ssh root@VOTRE_IP_VPS
 
-# Variables importantes à configurer:
-SECRET_KEY=votre-clé-secrète-très-longue
-DEBUG=False
-ALLOWED_HOSTS=votre-domaine.com,www.votre-domaine.com
-DB_PASSWORD=votre-mot-de-passe-base-de-données
-EMAIL_HOST=smtp.votre-fournisseur.com
-EMAIL_HOST_USER=votre-email@votre-domaine.com
+# Création de l'utilisateur application
+adduser kbis
+usermod -aG sudo kbis
+su - kbis
 ```
 
-### 2. **Configuration SSL (Recommandé)**
+#### 2. Installation des Dépendances
 ```bash
-# Installation de Certbot
-sudo apt install certbot python3-certbot-nginx
+# Mise à jour du système
+sudo apt update && sudo apt upgrade -y
 
-# Génération du certificat SSL
-sudo certbot --nginx -d votre-domaine.com -d www.votre-domaine.com
+# Installation des paquets requis
+sudo apt install -y \
+    python3 \
+    python3-pip \
+    python3-venv \
+    python3-dev \
+    postgresql \
+    postgresql-contrib \
+    nginx \
+    git \
+    curl \
+    wget \
+    build-essential \
+    libpq-dev \
+    supervisor \
+    certbot \
+    python3-certbot-nginx
 ```
 
-### 3. **Création d'un superutilisateur**
+#### 3. Configuration PostgreSQL
 ```bash
-cd /var/www/kbis_immobilier
+# Démarrage de PostgreSQL
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+
+# Création de la base de données
+sudo -u postgres psql
+CREATE USER kbis WITH PASSWORD 'votre-mot-de-passe-securise';
+CREATE DATABASE kbis_immobilier OWNER kbis;
+GRANT ALL PRIVILEGES ON DATABASE kbis_immobilier TO kbis;
+\q
+```
+
+#### 4. Configuration de l'Application
+```bash
+# Clonage du code
+git clone -b modifications-octobre-2025 https://github.com/koudougoulaurent/appli_KBIS.git
+cd appli_KBIS
+
+# Création de l'environnement virtuel
+python3 -m venv venv
 source venv/bin/activate
+
+# Installation des dépendances
+pip install -r requirements.txt
+
+# Configuration de l'environnement
+cp .env.production .env
+# Éditer .env avec vos paramètres
+```
+
+#### 5. Configuration Django
+```bash
+# Migration de la base de données
+export DJANGO_SETTINGS_MODULE=gestion_immobiliere.settings_production
+python manage.py migrate
+
+# Collecte des fichiers statiques
+python manage.py collectstatic --noinput
+
+# Création du superutilisateur
 python manage.py createsuperuser
 ```
 
-## 📊 **Vérification du Déploiement**
-
-### **Vérification Automatique**
+#### 6. Configuration des Services
 ```bash
-# Vérification complète
-sudo ./master_deploy.sh verify
+# Configuration du service systemd
+sudo cp kbis-immobilier.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable kbis-immobilier
+sudo systemctl start kbis-immobilier
 
-# Statut des services
-sudo ./master_deploy.sh status
-```
-
-### **Vérification Manuelle**
-```bash
-# Test de l'application
-curl http://votre-domaine.com
-curl https://votre-domaine.com
-
-# Vérification des services
-systemctl status kbis_immobilier
-systemctl status nginx
-
-# Vérification des logs
-journalctl -u kbis_immobilier -f
-tail -f /var/log/nginx/kbis_immobilier_error.log
-```
-
-## 🔄 **Gestion Post-Déploiement**
-
-### **Mise à Jour de l'Application**
-```bash
-cd /var/www/kbis_immobilier
-git pull origin modifications-octobre-2025
-source venv/bin/activate
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py collectstatic --noinput
-sudo systemctl restart kbis_immobilier
-```
-
-### **Sauvegarde de la Base de Données**
-```bash
-# Sauvegarde manuelle
-sudo -u postgres pg_dump kbis_immobilier > backup_$(date +%Y%m%d_%H%M%S).sql
-
-# Restauration
-sudo -u postgres psql kbis_immobilier < backup_YYYYMMDD_HHMMSS.sql
-```
-
-### **Rollback en Cas de Problème**
-```bash
-# Listez les sauvegardes disponibles
-ls -la /var/backups/ | grep rollback
-
-# Exécutez le rollback
-sudo /var/backups/rollback_YYYYMMDD_HHMMSS.sh
-```
-
-## 🎉 **Fonctionnalités de Production**
-
-### ✅ **Sécurité Renforcée**
-- HTTPS avec SSL/TLS
-- Headers de sécurité
-- Cookies sécurisés
-- Rate limiting
-- Protection CSRF
-
-### ✅ **Performance Optimisée**
-- Gunicorn avec workers multiples
-- Nginx comme reverse proxy
-- Cache Redis
-- Compression des fichiers statiques
-- Optimisation des requêtes
-
-### ✅ **Monitoring et Logs**
-- Logs centralisés
-- Monitoring des services
-- Alertes automatiques
-- Rotation des logs
-
-### ✅ **Base de Données Production**
-- PostgreSQL optimisé
-- Sauvegardes automatiques
-- Connexions sécurisées
-- Index optimisés
-
-## 📞 **Support et Dépannage**
-
-### **Commandes Utiles**
-```bash
-# Redémarrage des services
-sudo systemctl restart kbis_immobilier
+# Configuration Nginx
+sudo cp nginx.conf /etc/nginx/sites-available/kbis-immobilier
+sudo ln -s /etc/nginx/sites-available/kbis-immobilier /etc/nginx/sites-enabled/
+sudo rm /etc/nginx/sites-enabled/default
+sudo nginx -t
 sudo systemctl restart nginx
-
-# Logs en temps réel
-journalctl -u kbis_immobilier -f
-tail -f /var/log/nginx/kbis_immobilier_error.log
-
-# Diagnostic complet
-sudo ./diagnose_vps.sh
-
-# Vérification de l'espace disque
-df -h
-du -sh /var/www/kbis_immobilier
 ```
 
-### **Problèmes Courants**
-1. **Erreur 502** → Vérifiez Gunicorn
-2. **Erreur 500** → Consultez les logs Django
-3. **Fichiers statiques** → Vérifiez la configuration Nginx
-4. **Base de données** → Vérifiez PostgreSQL
+### Configuration HTTPS (Optionnel)
 
-## 🎯 **Résumé**
+```bash
+# Configuration du domaine et certificat SSL
+./setup_https.sh
+```
 
-Votre application KBIS IMMOBILIER est maintenant :
+### Vérification du Déploiement
 
-- ✅ **100% nettoyée** et optimisée
-- ✅ **Prête pour production** avec sécurité renforcée
-- ✅ **Configurée** pour PostgreSQL et Nginx
-- ✅ **Documentée** avec guides complets
-- ✅ **Sécurisée** avec possibilité de rollback
-- ✅ **Monitored** avec logs et diagnostics
+```bash
+# Test complet de l'installation
+./test_deployment.sh
 
-**Déploiement recommandé : `sudo ./master_deploy.sh full`** 🚀
+# Vérification manuelle
+curl http://VOTRE_IP_VPS
+curl http://VOTRE_IP_VPS/admin
+```
 
-Votre application est prête pour un hébergement professionnel définitif ! 🎉
+## 🔧 Maintenance
+
+### Script de Maintenance
+```bash
+# Commandes disponibles
+./maintenance_vps.sh update          # Mise à jour
+./maintenance_vps.sh backup          # Sauvegarde
+./maintenance_vps.sh restore         # Restauration
+./maintenance_vps.sh status          # Statut des services
+./maintenance_vps.sh logs            # Logs en temps réel
+./maintenance_vps.sh restart         # Redémarrage
+```
+
+### Sauvegardes Automatiques
+```bash
+# Ajouter à la crontab
+crontab -e
+
+# Sauvegarde quotidienne à 2h du matin
+0 2 * * * /home/kbis/appli_KBIS/maintenance_vps.sh backup
+```
+
+## 📊 Monitoring
+
+### Vérification des Services
+```bash
+# Statut des services
+sudo systemctl status kbis-immobilier
+sudo systemctl status nginx
+sudo systemctl status postgresql
+
+# Logs
+sudo journalctl -u kbis-immobilier -f
+sudo tail -f /var/log/nginx/kbis_error.log
+```
+
+### Métriques de Performance
+```bash
+# Utilisation des ressources
+htop
+df -h
+free -h
+
+# Connexions actives
+sudo netstat -tlnp | grep :8000
+sudo netstat -tlnp | grep :80
+```
+
+## 🛠️ Dépannage
+
+### Problèmes Courants
+
+#### 1. Erreur 502 Bad Gateway
+```bash
+# Vérifier que Gunicorn fonctionne
+sudo systemctl status kbis-immobilier
+
+# Vérifier les logs
+sudo journalctl -u kbis-immobilier -f
+```
+
+#### 2. Erreur de Base de Données
+```bash
+# Vérifier PostgreSQL
+sudo systemctl status postgresql
+
+# Tester la connexion
+sudo -u postgres psql -c "SELECT 1;"
+```
+
+#### 3. Fichiers Statiques Non Servis
+```bash
+# Vérifier les permissions
+ls -la /home/kbis/appli_KBIS/staticfiles/
+
+# Recollecter les statiques
+python manage.py collectstatic --noinput
+```
+
+### Logs Importants
+- Application Django : `sudo journalctl -u kbis-immobilier`
+- Nginx : `/var/log/nginx/kbis_error.log`
+- PostgreSQL : `/var/log/postgresql/postgresql-*.log`
+
+## 🔒 Sécurité
+
+### Configuration du Pare-feu
+```bash
+# Configuration UFW
+sudo ufw allow 22    # SSH
+sudo ufw allow 80    # HTTP
+sudo ufw allow 443   # HTTPS
+sudo ufw enable
+```
+
+### Mise à Jour Régulière
+```bash
+# Mise à jour du système
+sudo apt update && sudo apt upgrade -y
+
+# Mise à jour de l'application
+./maintenance_vps.sh update
+```
+
+## 📱 URLs d'Accès
+
+- **Application** : `http://VOTRE_IP` ou `https://votre-domaine`
+- **Admin Django** : `http://VOTRE_IP/admin` ou `https://votre-domaine/admin`
+- **API** : `http://VOTRE_IP/api/` ou `https://votre-domaine/api/`
+
+## 🔑 Informations de Connexion par Défaut
+
+- **Utilisateur Admin** : `admin`
+- **Mot de Passe** : `admin123`
+- **Base de Données** : `kbis_immobilier`
+- **Utilisateur DB** : `kbis`
+
+## 📞 Support
+
+En cas de problème :
+
+1. Vérifiez les logs avec `./maintenance_vps.sh logs`
+2. Consultez le statut avec `./maintenance_vps.sh status`
+3. Redémarrez avec `./maintenance_vps.sh restart`
+4. Exécutez le test complet avec `./test_deployment.sh`
+
+## 🎯 Architecture Finale
+
+```
+Internet → Nginx (Port 80/443) → Gunicorn (Port 8000) → Django → PostgreSQL
+```
+
+### Composants
+- **Nginx** : Serveur web et reverse proxy
+- **Gunicorn** : Serveur WSGI pour Django
+- **Django** : Framework web Python
+- **PostgreSQL** : Base de données relationnelle
+- **Systemd** : Gestionnaire de services
+- **Let's Encrypt** : Certificats SSL (optionnel)
+
+### Fichiers de Configuration
+- `gestion_immobiliere/settings_production.py` : Configuration Django production
+- `nginx.conf` : Configuration Nginx
+- `gunicorn.conf.py` : Configuration Gunicorn
+- `.env.production` : Variables d'environnement
+- `deploy_vps_postgresql.sh` : Script de déploiement automatique
+- `maintenance_vps.sh` : Script de maintenance
+- `test_deployment.sh` : Script de test
+
+## ✅ Checklist de Déploiement
+
+- [ ] VPS configuré avec Ubuntu/Debian
+- [ ] Utilisateur `kbis` créé
+- [ ] PostgreSQL installé et configuré
+- [ ] Nginx installé et configuré
+- [ ] Code de l'application déployé
+- [ ] Environnement virtuel Python créé
+- [ ] Dépendances installées
+- [ ] Base de données migrée
+- [ ] Fichiers statiques collectés
+- [ ] Services systemd configurés
+- [ ] Pare-feu configuré
+- [ ] Test de l'application réussi
+- [ ] HTTPS configuré (optionnel)
+- [ ] Sauvegardes automatiques configurées
+- [ ] Monitoring en place
+
+## 🎉 Félicitations !
+
+Votre application KBIS Immobilier est maintenant déployée et prête à être utilisée !

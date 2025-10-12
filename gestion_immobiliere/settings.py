@@ -103,9 +103,9 @@ LOGOUT_REDIRECT_URL = '/utilisateurs/connexion-groupes/'
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
-# Configuration pour Render
-if os.environ.get('RENDER'):
-    # Configuration de base de données pour Render
+# Configuration pour la production (Render, VPS, etc.)
+if os.environ.get('RENDER') or os.environ.get('DJANGO_SETTINGS_MODULE') == 'gestion_immobiliere.settings_production':
+    # Configuration de base de données pour la production
     try:
         import dj_database_url
         DATABASE_URL = os.environ.get('DATABASE_URL')
@@ -142,17 +142,18 @@ if os.environ.get('RENDER'):
             }
         }
     
-    # Configuration statique pour Render
+    # Configuration statique pour la production
     STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
     STATICFILES_DIRS = [
         os.path.join(BASE_DIR, 'static'),
     ]
     
     # Configuration de sécurité pour production
-    # DEBUG = False  # Commenté pour le développement
-    ALLOWED_HOSTS = ['appli-kbis.onrender.com', '.onrender.com', 'localhost', '127.0.0.1']
-    
-    # Configuration de session
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_SSL_REDIRECT = True
+    if os.environ.get('RENDER'):
+        DEBUG = False
+        ALLOWED_HOSTS = ['appli-kbis.onrender.com', '.onrender.com', 'localhost', '127.0.0.1']
+        
+        # Configuration de session
+        SESSION_COOKIE_SECURE = True
+        CSRF_COOKIE_SECURE = True
+        SECURE_SSL_REDIRECT = True

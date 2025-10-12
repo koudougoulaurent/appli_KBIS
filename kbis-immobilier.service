@@ -1,0 +1,17 @@
+[Unit]
+Description=KBIS Immobilier Django App
+After=network.target postgresql.service
+
+[Service]
+Type=notify
+User=kbis
+Group=kbis
+WorkingDirectory=/home/kbis/appli_KBIS
+Environment=DJANGO_SETTINGS_MODULE=gestion_immobiliere.settings_production
+ExecStart=/home/kbis/appli_KBIS/venv/bin/gunicorn --config /home/kbis/appli_KBIS/gunicorn.conf.py gestion_immobiliere.wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
