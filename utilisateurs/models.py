@@ -37,7 +37,18 @@ class GroupeTravail(models.Model):
     
     def get_permissions_list(self):
         """Retourne la liste des permissions du groupe"""
-        return self.permissions.get('modules', [])
+        # Gestion robuste des permissions
+        if isinstance(self.permissions, dict):
+            return self.permissions.get('modules', [])
+        elif isinstance(self.permissions, str):
+            try:
+                import json
+                permissions_dict = json.loads(self.permissions)
+                return permissions_dict.get('modules', [])
+            except (json.JSONDecodeError, AttributeError):
+                return []
+        else:
+            return []
 
 
 # Manager personnalisé pour les utilisateurs - Version corrigée

@@ -62,7 +62,15 @@ def liste_paiements(request, locataire_id=None):
         messages.error(request, permissions['message'])
         return redirect('core:dashboard')
     
-    paiements = Paiement.objects.all().order_by('-date_paiement')
+    # Filtrer les paiements en excluant les cautions/avances non marquées comme payées
+    from django.db.models import Q
+    paiements = Paiement.objects.filter(is_deleted=False).exclude(
+        # Exclure les paiements de caution qui ne sont pas marqués comme payés
+        Q(type_paiement='depot_garantie') & Q(contrat__caution_payee=False)
+    ).exclude(
+        # Exclure les paiements d'avance qui ne sont pas marqués comme payés
+        Q(type_paiement='avance') & Q(contrat__avance_loyer_payee=False)
+    ).order_by('-date_paiement')
     locataire_obj = None
     
     # Filtre par locataire si spécifié via URL ou GET

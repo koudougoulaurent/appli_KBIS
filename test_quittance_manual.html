@@ -1,0 +1,234 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QUITTANCE KBIS IMMOBILIER</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        .document-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 20px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        .company-name {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .company-tagline {
+            font-size: 14px;
+            color: #666;
+        }
+        .document-title {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .document-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        .info-left, .info-right {
+            flex: 1;
+        }
+        .info-item {
+            margin-bottom: 10px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .amount-box {
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .amount-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+        .amount-words {
+            font-size: 16px;
+            color: #555;
+        }
+        .payment-details {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #495057;
+        }
+        .detail-value {
+            color: #6c757d;
+        }
+        .highlight {
+            background: #d4edda;
+            color: #155724;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .signature-area {
+            margin-top: 40px;
+            text-align: center;
+        }
+        .signature-box {
+            border: 2px dashed #ccc;
+            height: 80px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            font-size: 12px;
+            color: #6c757d;
+            text-align: center;
+        }
+        .contact-info {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+        }
+        .contact-item {
+            text-align: center;
+        }
+        .contact-label {
+            font-weight: bold;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <div class="document-container">
+        <!-- En-tête -->
+        <div class="header">
+            <div class="logo">🏠 KBIS</div>
+            <div class="company-name">KBIS Immobilier & Construction</div>
+            <div class="company-tagline">Achat & Vente • Location • Gestion • Nettoyage</div>
+        </div>
+        
+        <!-- Titre du document -->
+        <div class="document-title">
+            QUITTANCE DE PAIEMENT N° QUI-20251013154032-18
+        </div>
+        
+        <!-- Informations du document -->
+        <div class="document-info">
+            <div class="info-left">
+                <div class="info-item">
+                    <span class="info-label">Date :</span> 08-Oct-25
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Code location :</span> CTR-9EA0FA58
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Reçu de :</span> M laurenzo kdg
+                </div>
+            </div>
+            <div class="info-right">
+                <div class="info-item">
+                    <span class="info-label">Mois réglé :</span> octobre 2025
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Type :</span> Dépôt de garantie
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Mode :</span> Espèces
+                </div>
+            </div>
+        </div>
+        
+        <!-- Montant principal -->
+        <div class="amount-box">
+            <div class="amount-value">150 000.00 F CFA</div>
+            <div class="amount-words">150000 francs CFA</div>
+        </div>
+        
+        <!-- Détails du paiement -->
+        <div class="payment-details">
+            <div class="detail-row"><span class="detail-label">Type de paiement :</span> <span class="detail-value highlight">Dépôt de garantie - 150,000.00 F CFA</span></div><div class="detail-row"><span class="detail-label">Mode de paiement :</span> <span class="detail-value">Espèces</span></div>
+        </div>
+        
+        <!-- Zone de signature -->
+        <div class="signature-area">
+            <div class="signature-box">
+                Cachet et signature de l'Agence
+            </div>
+        </div>
+        
+        <!-- Pied de page -->
+        <div class="footer">
+            <div><strong>KBIS Immobilier & Construction</strong></div>
+            <div class="contact-info">
+                <div class="contact-item">
+                    <div class="contact-label">Adresse</div>
+                    <div>Pissy 10050 Ouagadougou, Burkina Faso</div>
+                    <div>Quartier Centre-Ville, BP 440 Ouagadougou</div>
+                </div>
+                <div class="contact-item">
+                    <div class="contact-label">Téléphone</div>
+                    <div>+226 70 20 54 91</div>
+                    <div>79183939</div>
+                </div>
+                <div class="contact-item">
+                    <div class="contact-label">Email</div>
+                    <div>kbissarl2022@gmail.com</div>
+                    <div>Web: https://omnicom-bf.com/</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+        
