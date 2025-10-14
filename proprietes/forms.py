@@ -2341,3 +2341,27 @@ class ContratPiecesForm(forms.Form):
 
 # Import des formulaires pour les unités locatives
 # from .forms_unites import UniteLocativeForm, ReservationUniteForm, UniteLocativeSearchForm
+
+# Formulaires simples pour les unités locatives
+class UniteLocativeForm(forms.ModelForm):
+    class Meta:
+        model = UniteLocative
+        fields = ['nom', 'type_unite', 'surface', 'loyer', 'charges', 'description']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 3}),
+        }
+
+class ReservationUniteForm(forms.ModelForm):
+    class Meta:
+        model = ReservationUnite
+        fields = ['unite', 'locataire', 'date_debut', 'date_fin', 'montant_caution', 'statut']
+        widgets = {
+            'date_debut': forms.DateInput(attrs={'type': 'date'}),
+            'date_fin': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+class UniteRechercheForm(forms.Form):
+    nom = forms.CharField(max_length=100, required=False)
+    type_unite = forms.ChoiceField(choices=[('', 'Tous')] + UniteLocative.TYPE_UNITE_CHOICES, required=False)
+    loyer_min = forms.DecimalField(max_digits=10, decimal_places=2, required=False)
+    loyer_max = forms.DecimalField(max_digits=10, decimal_places=2, required=False)
