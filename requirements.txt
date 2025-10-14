@@ -1,33 +1,10 @@
-# Requirements pour KBIS IMMOBILIER - Production VPS
-# Base de données PostgreSQL avec Nginx et Gunicorn
-
-# Django et extensions
 Django==4.2.24
-django-extensions==3.2.3
-django-crispy-forms==2.1
-crispy-bootstrap5==0.7
-
-# Base de données PostgreSQL
 psycopg2-binary==2.9.9
 dj-database-url==2.1.0
-
-# Serveur web et statiques
 gunicorn==21.2.0
 whitenoise==6.6.0
-
-# Configuration et environnement
-python-decouple==3.8
-
-# Utilitaires et traitement de fichiers
 Pillow==10.4.0
-openpyxl==3.1.2
 reportlab==4.0.7
-python-dateutil==2.8.2
-
-# API REST
 djangorestframework==3.14.0
-django-filter==23.5
-django-autocomplete-light==3.9.1
-
-# Monitoring et logs (optionnel)
-sentry-sdk[django]==1.40.0
+django-crispy-forms==2.1
+crispy-bootstrap5==0.7
