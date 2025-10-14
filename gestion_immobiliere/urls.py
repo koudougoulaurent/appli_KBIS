@@ -19,6 +19,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.shortcuts import redirect
+from django.contrib.auth.views import LogoutView
 
 def redirect_to_dashboard(request):
     """Redirige vers le tableau de bord principal"""
@@ -33,6 +34,9 @@ urlpatterns = [
     path('contrats/', include('contrats.urls')),
     path('paiements/', include('paiements.urls')),
     path('notifications/', include('notifications.urls')),
+    
+    # Authentification
+    path('logout/', LogoutView.as_view(next_page='utilisateurs:connexion_groupes'), name='logout'),
 ]
 
 # Servir les fichiers statiques en mode développement
