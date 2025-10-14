@@ -7,7 +7,7 @@ import os
 import django
 
 # Configuration Django pour Render
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings_render')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings')
 django.setup()
 
 from utilisateurs.models import GroupeTravail, Utilisateur
