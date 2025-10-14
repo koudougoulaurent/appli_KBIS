@@ -6,10 +6,10 @@ services:
     plan: free
     buildCommand: |
       pip install -r requirements_render.txt
-      python manage.py collectstatic --noinput --settings=gestion_immobiliere.settings_render
-      python manage.py migrate --settings=gestion_immobiliere.settings_render
+      python manage.py collectstatic --noinput
+      python manage.py migrate
       python commande_rapide_render.py
-    startCommand: gunicorn gestion_immobiliere.wsgi:application
+    startCommand: gunicorn --bind 0.0.0.0:$PORT gestion_immobiliere.wsgi:application
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: gestion_immobiliere.settings_render

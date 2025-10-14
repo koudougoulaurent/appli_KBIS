@@ -7,7 +7,7 @@ import os
 import django
 
 # Configuration Django pour Render
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings_render')
 django.setup()
 
 from utilisateurs.models import GroupeTravail, Utilisateur
@@ -17,12 +17,13 @@ from django.contrib.auth.hashers import make_password
 print("🚀 INITIALISATION RAPIDE RENDER")
 print("=" * 40)
 
-# 1. Groupes
-print("🏢 Création des groupes...")
-groupes_data = [('CAISSE', 'Gestion des paiements'), ('CONTROLES', 'Contrôle et audit'), ('ADMINISTRATION', 'Gestion administrative'), ('PRIVILEGE', 'Accès complet')]
-for nom, desc in groupes_data:
-    groupe, created = GroupeTravail.objects.update_or_create(nom=nom, defaults={'description': desc, 'actif': True, 'permissions': {}})
-    print(f"✅ {nom}")
+try:
+    # 1. Groupes
+    print("🏢 Création des groupes...")
+    groupes_data = [('CAISSE', 'Gestion des paiements'), ('CONTROLES', 'Contrôle et audit'), ('ADMINISTRATION', 'Gestion administrative'), ('PRIVILEGE', 'Accès complet')]
+    for nom, desc in groupes_data:
+        groupe, created = GroupeTravail.objects.update_or_create(nom=nom, defaults={'description': desc, 'actif': True, 'permissions': {}})
+        print(f"✅ {nom}")
 
 # 2. Types de biens
 print("🏠 Création des types de biens...")
@@ -58,10 +59,14 @@ for username, email, first, last, groupe_nom, staff, superuser in users_data:
     )
     print(f"✅ {username}")
 
-print("=" * 40)
-print("🎉 INITIALISATION TERMINÉE !")
-print(f"📊 Groupes: {GroupeTravail.objects.count()}")
-print(f"📊 Types: {TypeBien.objects.count()}")
-print(f"📊 Utilisateurs: {Utilisateur.objects.count()}")
-print("🔑 Mot de passe: password123")
-print("🌐 Rechargez votre page maintenant !")
+    print("=" * 40)
+    print("🎉 INITIALISATION TERMINÉE !")
+    print(f"📊 Groupes: {GroupeTravail.objects.count()}")
+    print(f"📊 Types: {TypeBien.objects.count()}")
+    print(f"📊 Utilisateurs: {Utilisateur.objects.count()}")
+    print("🔑 Mot de passe: password123")
+    print("🌐 Rechargez votre page maintenant !")
+
+except Exception as e:
+    print(f"❌ Erreur lors de l'initialisation: {e}")
+    print("⚠️ L'application peut fonctionner sans les données de test")
