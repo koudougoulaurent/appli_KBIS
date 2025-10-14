@@ -18,12 +18,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.humanize',  # Pour les filtres de formatage des nombres
-    'rest_framework',  # Pour l'API REST
-    'django_filters',  # Pour les filtres d'API
-    'dal',  # Pour l'autocomplétion
-    'crispy_forms',  # Pour les formulaires stylés
-    'crispy_bootstrap5',  # Pour l'intégration Bootstrap 5
+    'django.contrib.humanize',
     'core',
     'utilisateurs',
     'proprietes.apps.ProprietesConfig',

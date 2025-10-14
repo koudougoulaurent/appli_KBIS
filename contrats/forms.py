@@ -6,7 +6,7 @@ from django.db import models
 from .models import Contrat, DocumentContrat, ResiliationContrat
 from proprietes.models import Propriete, Bailleur, Locataire, UniteLocative, Piece
 from datetime import date
-from django_select2.forms import ModelSelect2Widget
+# from django_select2.forms import ModelSelect2Widget
 
 class ContratForm(forms.ModelForm):
     """Formulaire pour créer/modifier un contrat de bail"""

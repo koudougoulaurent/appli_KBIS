@@ -43,7 +43,7 @@ urlpatterns = [
     path('contrats/', include('contrats.urls')),
     path('paiements/', include('paiements.urls')),
     path('notifications/', include('notifications.urls')),
-    path('select2/', include('django_select2.urls')),
+    # path('select2/', include('django_select2.urls')),
     
     # URLs de sécurité
     path('security/', include([
