@@ -15,16 +15,15 @@ def init_database():
     print("🔧 Initialisation de la base de données...")
     
     try:
-        # Créer les migrations pour les apps principales
-        print("📋 Création des migrations...")
-        execute_from_command_line(['manage.py', 'makemigrations', 'utilisateurs'])
-        execute_from_command_line(['manage.py', 'makemigrations', 'proprietes'])
-        execute_from_command_line(['manage.py', 'makemigrations', 'contrats'])
-        execute_from_command_line(['manage.py', 'makemigrations', 'paiements'])
-        execute_from_command_line(['manage.py', 'makemigrations', 'notifications'])
+        # Supprimer le fichier de base de données s'il existe
+        import os
+        db_path = os.path.join(os.path.dirname(__file__), 'db.sqlite3')
+        if os.path.exists(db_path):
+            print("🗑️ Suppression de l'ancienne base de données...")
+            os.remove(db_path)
         
-        # Appliquer les migrations
-        print("🚀 Application des migrations...")
+        # Utiliser --run-syncdb pour créer les tables directement
+        print("🚀 Création des tables avec --run-syncdb...")
         execute_from_command_line(['manage.py', 'migrate', '--run-syncdb'])
         
         # Créer un superutilisateur par défaut

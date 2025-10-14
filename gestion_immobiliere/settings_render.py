@@ -12,9 +12,14 @@ DATABASES = {
     }
 }
 
-# Désactiver les migrations problématiques seulement
+# Désactiver toutes les migrations pour utiliser --run-syncdb
 MIGRATION_MODULES = {
-    'core': None,  # Désactiver les migrations core qui causent des conflits
+    'core': None,
+    'utilisateurs': None,
+    'proprietes': None,
+    'contrats': None,
+    'paiements': None,
+    'notifications': None,
 }
 
 # Configuration pour Render
