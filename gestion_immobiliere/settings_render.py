@@ -12,11 +12,19 @@ DATABASES = {
     }
 }
 
-# Désactiver les migrations automatiques pour éviter les conflits
+# Désactiver toutes les migrations pour éviter les conflits
 MIGRATION_MODULES = {
     'paiements': None,
     'proprietes': None,
     'contrats': None,
     'utilisateurs': None,
     'notifications': None,
+    'core': None,
+    'admin': None,
+    'auth': None,
+    'contenttypes': None,
+    'sessions': None,
+    'messages': None,
+    'staticfiles': None,
+    'humanize': None,
 }

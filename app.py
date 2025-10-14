@@ -6,12 +6,7 @@ from django.core.wsgi import get_wsgi_application
 os.environ['DJANGO_SETTINGS_MODULE'] = 'gestion_immobiliere.settings_render'
 django.setup()
 
-# Exécuter le script de migration
-try:
-    from fix_migration import fix_migrations
-    fix_migrations()
-except Exception as e:
-    print(f"⚠️ Erreur lors de la résolution des migrations: {e}")
-    print("⚠️ L'application peut fonctionner sans les migrations")
+# Pas de migrations - toutes désactivées dans settings_render.py
+print("✅ Migrations désactivées - Application prête à démarrer")
 
 app = get_wsgi_application()
