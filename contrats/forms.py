@@ -82,12 +82,7 @@ class ContratForm(forms.ModelForm):
         required=False,
         label=_("Unité locative"),
         help_text=_("Sélectionnez une unité locative spécifique si vous louez une partie de la propriété"),
-        widget=ModelSelect2Widget(
-            model=UniteLocative,
-            search_fields=['numero__icontains', 'nom__icontains'],
-            attrs={'data-placeholder': 'Rechercher une unité locative', 'class': 'form-select'},
-            dependent_fields={}
-        )
+        widget=forms.Select(attrs={'class': 'form-select'})
     )
     
     # Champ pour sélectionner une pièce spécifique
