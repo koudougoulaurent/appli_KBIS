@@ -14,8 +14,28 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from django.shortcuts import redirect
+
+def redirect_to_dashboard(request):
+    """Redirige vers le tableau de bord principal"""
+    return redirect('core:dashboard')
 
 urlpatterns = [
-    path('', include('core.urls_simple')),
+    path('admin/', admin.site.urls),
+    path('', redirect_to_dashboard, name='home'),
+    path('core/', include('core.urls')),
+    path('utilisateurs/', include('utilisateurs.urls')),
+    path('proprietes/', include('proprietes.urls')),
+    path('contrats/', include('contrats.urls')),
+    path('paiements/', include('paiements.urls')),
+    path('notifications/', include('notifications.urls')),
 ]
+
+# Servir les fichiers statiques en mode développement
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
