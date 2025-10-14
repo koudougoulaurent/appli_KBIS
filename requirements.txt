@@ -25,6 +25,7 @@ python-dateutil==2.8.2
 djangorestframework==3.14.0
 django-filter==23.5
 django-autocomplete-light==3.9.1
+django-select2==8.1.4
 
 # Monitoring et logs (optionnel)
 sentry-sdk[django]==1.40.0

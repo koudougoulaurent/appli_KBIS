@@ -2340,4 +2340,4 @@ class ContratPiecesForm(forms.Form):
 
 
 # Import des formulaires pour les unités locatives
-from .forms_unites import UniteLocativeForm, ReservationUniteForm, UniteLocativeSearchForm
+# from .forms_unites import UniteLocativeForm, ReservationUniteForm, UniteLocativeSearchForm
