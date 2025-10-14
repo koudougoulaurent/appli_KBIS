@@ -2346,7 +2346,7 @@ class ContratPiecesForm(forms.Form):
 class UniteLocativeForm(forms.ModelForm):
     class Meta:
         model = UniteLocative
-        fields = ['nom', 'type_unite', 'surface', 'loyer', 'charges', 'description']
+        fields = ['nom', 'type_unite', 'surface', 'loyer_mensuel', 'charges_mensuelles', 'description']
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),
         }
@@ -2354,14 +2354,14 @@ class UniteLocativeForm(forms.ModelForm):
 class ReservationUniteForm(forms.ModelForm):
     class Meta:
         model = ReservationUnite
-        fields = ['unite', 'locataire', 'date_debut', 'date_fin', 'montant_caution', 'statut']
+        fields = ['unite_locative', 'locataire_potentiel', 'date_debut_souhaitee', 'date_fin_prevue', 'montant_reservation', 'statut']
         widgets = {
-            'date_debut': forms.DateInput(attrs={'type': 'date'}),
-            'date_fin': forms.DateInput(attrs={'type': 'date'}),
+            'date_debut_souhaitee': forms.DateInput(attrs={'type': 'date'}),
+            'date_fin_prevue': forms.DateInput(attrs={'type': 'date'}),
         }
 
 class UniteRechercheForm(forms.Form):
     nom = forms.CharField(max_length=100, required=False)
     type_unite = forms.ChoiceField(choices=[('', 'Tous')] + UniteLocative.TYPE_UNITE_CHOICES, required=False)
-    loyer_min = forms.DecimalField(max_digits=10, decimal_places=2, required=False)
-    loyer_max = forms.DecimalField(max_digits=10, decimal_places=2, required=False)
+    loyer_mensuel_min = forms.DecimalField(max_digits=10, decimal_places=2, required=False)
+    loyer_mensuel_max = forms.DecimalField(max_digits=10, decimal_places=2, required=False)
