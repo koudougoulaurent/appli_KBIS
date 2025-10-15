@@ -1,1 +1,0 @@
-# Module hotspot vide
