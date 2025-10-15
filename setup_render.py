@@ -33,21 +33,48 @@ def create_superuser():
 def create_groups():
     """Créer les groupes de travail"""
     try:
-        from django.contrib.auth.models import Group
+        from utilisateurs.models import GroupeTravail
         
         groups = [
-            {'name': 'ADMINISTRATION', 'permissions': []},
-            {'name': 'CAISSE', 'permissions': []},
-            {'name': 'CONTROLES', 'permissions': []},
-            {'name': 'PRIVILEGE', 'permissions': []},
+            {
+                'nom': 'ADMINISTRATION', 
+                'description': 'Gestion administrative',
+                'permissions': {'modules': ['proprietes', 'contrats', 'utilisateurs']},
+                'actif': True
+            },
+            {
+                'nom': 'CAISSE', 
+                'description': 'Gestion des paiements et retraits',
+                'permissions': {'modules': ['paiements', 'retraits']},
+                'actif': True
+            },
+            {
+                'nom': 'CONTROLES', 
+                'description': 'Contrôle et audit',
+                'permissions': {'modules': ['rapports', 'audit']},
+                'actif': True
+            },
+            {
+                'nom': 'PRIVILEGE', 
+                'description': 'Accès complet',
+                'permissions': {'modules': ['paiements', 'retraits', 'proprietes', 'contrats', 'utilisateurs', 'rapports', 'audit']},
+                'actif': True
+            },
         ]
         
         for group_data in groups:
-            group, created = Group.objects.get_or_create(name=group_data['name'])
+            groupe, created = GroupeTravail.objects.get_or_create(
+                nom=group_data['nom'],
+                defaults={
+                    'description': group_data['description'],
+                    'permissions': group_data['permissions'],
+                    'actif': group_data['actif']
+                }
+            )
             if created:
-                print(f"OK Groupe cree: {group_data['name']}")
+                print(f"OK GroupeTravail cree: {group_data['nom']}")
             else:
-                print(f"INFO Groupe existe deja: {group_data['name']}")
+                print(f"INFO GroupeTravail existe deja: {group_data['nom']}")
                 
     except Exception as e:
         print(f"ERREUR creation groupes: {e}")
