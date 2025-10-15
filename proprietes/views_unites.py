@@ -198,7 +198,7 @@ def unite_create(request, propriete_id=None):
         'from_property': request.GET.get('from_property') == '1',
     }
     
-    return render(request, 'proprietes/unites/form.html', context)
+    return render(request, 'proprietes/unites/form_simple.html', context)
 
 
 @login_required
@@ -224,7 +224,7 @@ def unite_edit(request, pk):
         'title': f'Modifier {unite.numero_unite}'
     }
     
-    return render(request, 'proprietes/unites/form.html', context)
+    return render(request, 'proprietes/unites/form_simple.html', context)
 
 
 @login_required

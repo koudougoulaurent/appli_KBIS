@@ -5,12 +5,22 @@ from django import forms
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from datetime import timedelta
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Layout, Field, Row, Column
 
 from .models import UniteLocative, ReservationUnite, Propriete, Locataire, Bailleur
 
 
 class UniteLocativeForm(forms.ModelForm):
     """Formulaire pour créer/modifier une unité locative."""
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.form_class = 'needs-validation'
+        self.helper.form_show_labels = True
+        self.helper.form_show_errors = True
     
     class Meta:
         model = UniteLocative

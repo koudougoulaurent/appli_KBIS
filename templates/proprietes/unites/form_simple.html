@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}{{ title }} - Gestion Immobilière{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-section {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-left: 4px solid #007bff;
+}
+
+.form-section h5 {
+    color: #007bff;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.required-field {
+    border-left: 3px solid #dc3545;
+}
+
+.optional-field {
+    border-left: 3px solid #28a745;
+}
+
+.form-help {
+    background: #e3f2fd;
+    border: 1px solid #bbdefb;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    transition: all 0.2s;
+}
+
+.checkbox-item:hover {
+    background: #f8f9fa;
+    border-color: #007bff;
+}
+
+.btn-group-custom {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 30px;
+    padding: 20px 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="fas fa-{% if unite %}edit{% else %}plus{% endif %}"></i> 
+                {{ title }}
+            </h2>
+            <p class="text-muted mb-0">
+                {% if unite %}
+                    Modification de l'unité {{ unite.numero_unite }}
+                {% else %}
+                    Création d'une nouvelle unité locative
+                {% endif %}
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'proprietes:unites_liste' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Retour à la liste
+            </a>
+        </div>
+    </div>
+
+    <!-- Aide contextuelle -->
+    <div class="form-help">
+        <i class="fas fa-info-circle"></i>
+        <strong>Aide :</strong>
+        {% if unite %}
+            Modifiez les informations de l'unité locative. Les champs marqués en rouge sont obligatoires.
+        {% else %}
+            Créez une nouvelle unité locative en remplissant les informations ci-dessous. 
+            Les champs marqués en rouge sont obligatoires.
+        {% endif %}
+        {% if propriete %}
+            Cette unité sera créée dans la propriété <strong>{{ propriete.titre }}</strong>.
+        {% endif %}
+    </div>
+
+    <!-- Suggestions intelligentes -->
+    {% if suggestion %}
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <i class="fas fa-lightbulb"></i>
+        <strong>Suggestion intelligente :</strong> {{ suggestion }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <!-- Affichage des erreurs de validation -->
+    {% if form.errors %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>Erreurs de validation :</strong>
+        <ul class="mb-0 mt-2">
+            {% for field, errors in form.errors.items %}
+                {% for error in errors %}
+                    <li><strong>{{ field|title }}:</strong> {{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    <form method="post" class="needs-validation" novalidate>
+        {% csrf_token %}
+        
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Section Identification -->
+                <div class="form-section required-field">
+                    <h5><i class="fas fa-id-card"></i> Identification</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.propriete.id_for_label }}" class="form-label">{{ form.propriete.label }}</label>
+                                {{ form.propriete }}
+                                {% if form.propriete.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.propriete.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.bailleur.id_for_label }}" class="form-label">{{ form.bailleur.label }}</label>
+                                {{ form.bailleur }}
+                                {% if form.bailleur.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.bailleur.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-info-circle"></i> 
+                                    Optionnel. Si non spécifié, le bailleur de la propriété sera utilisé.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.type_unite.id_for_label }}" class="form-label">{{ form.type_unite.label }}</label>
+                                {{ form.type_unite }}
+                                {% if form.type_unite.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.type_unite.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.numero_unite.id_for_label }}" class="form-label">{{ form.numero_unite.label }}</label>
+                                {{ form.numero_unite }}
+                                {% if form.numero_unite.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.numero_unite.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label for="{{ form.nom.id_for_label }}" class="form-label">{{ form.nom.label }}</label>
+                                {{ form.nom }}
+                                {% if form.nom.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.nom.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Caractéristiques physiques -->
+                <div class="form-section optional-field">
+                    <h5><i class="fas fa-ruler-combined"></i> Caractéristiques Physiques</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.etage.id_for_label }}" class="form-label">{{ form.etage.label }}</label>
+                                {{ form.etage }}
+                                {% if form.etage.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.etage.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.surface.id_for_label }}" class="form-label">{{ form.surface.label }}</label>
+                                {{ form.surface }}
+                                {% if form.surface.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.surface.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.nombre_pieces.id_for_label }}" class="form-label">{{ form.nombre_pieces.label }}</label>
+                                {{ form.nombre_pieces }}
+                                {% if form.nombre_pieces.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.nombre_pieces.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Informations Financières -->
+                <div class="form-section required-field">
+                    <h5><i class="fas fa-euro-sign"></i> Informations Financières</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.loyer_mensuel.id_for_label }}" class="form-label">{{ form.loyer_mensuel.label }}</label>
+                                {{ form.loyer_mensuel }}
+                                {% if form.loyer_mensuel.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.loyer_mensuel.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.charges_mensuelles.id_for_label }}" class="form-label">{{ form.charges_mensuelles.label }}</label>
+                                {{ form.charges_mensuelles }}
+                                {% if form.charges_mensuelles.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.charges_mensuelles.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.caution_demandee.id_for_label }}" class="form-label">{{ form.caution_demandee.label }}</label>
+                                {{ form.caution_demandee }}
+                                {% if form.caution_demandee.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.caution_demandee.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section État et Disponibilité -->
+                <div class="form-section optional-field">
+                    <h5><i class="fas fa-info-circle"></i> État et Disponibilité</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.statut.id_for_label }}" class="form-label">{{ form.statut.label }}</label>
+                                {{ form.statut }}
+                                {% if form.statut.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.statut.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.date_disponibilite.id_for_label }}" class="form-label">{{ form.date_disponibilite.label }}</label>
+                                {{ form.date_disponibilite }}
+                                {% if form.date_disponibilite.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.date_disponibilite.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Descriptions -->
+                <div class="form-section optional-field">
+                    <h5><i class="fas fa-file-alt"></i> Descriptions</h5>
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.description.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ form.notes_privees.id_for_label }}" class="form-label">{{ form.notes_privees.label }}</label>
+                        {{ form.notes_privees }}
+                        {% if form.notes_privees.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.notes_privees.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Boutons d'action -->
+        <div class="btn-group-custom">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save"></i> 
+                {% if unite %}Mettre à jour{% else %}Créer l'unité{% endif %}
+            </button>
+            
+            <a href="{% if propriete %}{% url 'proprietes:detail' propriete.pk %}{% else %}{% url 'proprietes:unites_liste' %}{% endif %}" class="btn btn-secondary btn-lg">
+                <i class="fas fa-times"></i> 
+                {% if propriete %}Retour à la propriété{% else %}Annuler{% endif %}
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

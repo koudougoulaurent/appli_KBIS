@@ -193,12 +193,24 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-floating mb-3">
-                                {{ form.propriete|as_crispy_field }}
+                                {{ form.propriete }}
+                                <label for="{{ form.propriete.id_for_label }}">{{ form.propriete.label }}</label>
+                                {% if form.propriete.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.propriete.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-floating mb-3">
-                                {{ form.bailleur|as_crispy_field }}
+                                {{ form.bailleur }}
+                                <label for="{{ form.bailleur.id_for_label }}">{{ form.bailleur.label }}</label>
+                                {% if form.bailleur.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.bailleur.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
                                 <small class="form-text text-muted">
                                     <i class="fas fa-info-circle"></i> 
                                     Optionnel. Si non spécifié, le bailleur de la propriété sera utilisé.
@@ -209,19 +221,37 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-floating mb-3">
-                                {{ form.type_unite|as_crispy_field }}
+                                {{ form.type_unite }}
+                                <label for="{{ form.type_unite.id_for_label }}">{{ form.type_unite.label }}</label>
+                                {% if form.type_unite.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.type_unite.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-floating mb-3">
-                                {{ form.numero_unite|as_crispy_field }}
+                                {{ form.numero_unite }}
+                                <label for="{{ form.numero_unite.id_for_label }}">{{ form.numero_unite.label }}</label>
+                                {% if form.numero_unite.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.numero_unite.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-12">
                             <div class="form-floating mb-3">
-                                {{ form.nom|as_crispy_field }}
+                                {{ form.nom }}
+                                <label for="{{ form.nom.id_for_label }}">{{ form.nom.label }}</label>
+                                {% if form.nom.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.nom.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -233,29 +263,29 @@
                     <div class="row">
                         <div class="col-md-4">
                             <div class="form-floating mb-3">
-                                {{ form.etage|as_crispy_field }}
+                                {{ form.etage|as_crispy_field_old }}
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-floating mb-3">
-                                {{ form.surface|as_crispy_field }}
+                                {{ form.surface|as_crispy_field_old }}
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-floating mb-3">
-                                {{ form.nombre_pieces|as_crispy_field }}
+                                {{ form.nombre_pieces|as_crispy_field_old }}
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-floating mb-3">
-                                {{ form.nombre_chambres|as_crispy_field }}
+                                {{ form.nombre_chambres|as_crispy_field_old }}
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-floating mb-3">
-                                {{ form.nombre_salles_bain|as_crispy_field }}
+                                {{ form.nombre_salles_bain|as_crispy_field_old }}
                             </div>
                         </div>
                     </div>
@@ -304,17 +334,17 @@
                     <div class="row">
                         <div class="col-md-4">
                             <div class="form-floating mb-3 currency-input">
-                                {{ form.loyer_mensuel|as_crispy_field }}
+                                {{ form.loyer_mensuel|as_crispy_field_old }}
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-floating mb-3 currency-input">
-                                {{ form.charges_mensuelles|as_crispy_field }}
+                                {{ form.charges_mensuelles|as_crispy_field_old }}
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-floating mb-3 currency-input">
-                                {{ form.caution_demandee|as_crispy_field }}
+                                {{ form.caution_demandee|as_crispy_field_old }}
                             </div>
                         </div>
                     </div>
@@ -326,12 +356,12 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-floating mb-3">
-                                {{ form.statut|as_crispy_field }}
+                                {{ form.statut|as_crispy_field_old }}
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-floating mb-3">
-                                {{ form.date_disponibilite|as_crispy_field }}
+                                {{ form.date_disponibilite|as_crispy_field_old }}
                             </div>
                         </div>
                     </div>
@@ -341,10 +371,10 @@
                 <div class="form-section optional-field">
                     <h5><i class="fas fa-file-alt"></i> Descriptions</h5>
                     <div class="mb-3">
-                        {{ form.description|as_crispy_field }}
+                        {{ form.description|as_crispy_field_old }}
                     </div>
                     <div class="mb-3">
-                        {{ form.notes_privees|as_crispy_field }}
+                        {{ form.notes_privees|as_crispy_field_old }}
                     </div>
                 </div>
             </div>
