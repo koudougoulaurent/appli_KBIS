@@ -6,7 +6,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-test-key-for-local-development-only')
+SECRET_KEY = os.environ.get('SECRET_KEY', '%g+gmad@&-r4yyp4ss+y1^1ktigscq&!mtno^c#_$%sa9&p)a=')
 DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'appli-kbis.onrender.com', '.onrender.com', '*', '0.0.0.0']
 ROOT_URLCONF = 'gestion_immobiliere.urls'
@@ -19,6 +19,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
+    'crispy_forms',
+    'crispy_bootstrap5',
     'core',
     'utilisateurs',
     'proprietes.apps.ProprietesConfig',
@@ -98,6 +100,21 @@ LOGOUT_REDIRECT_URL = '/utilisateurs/connexion-groupes/'
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
+# Configuration de sécurité pour le développement
+if DEBUG:
+    # En développement, on peut désactiver certaines vérifications de sécurité
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+    SECURE_SSL_REDIRECT = False
+else:
+    # En production, activer toutes les mesures de sécurité
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 an
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
 # Configuration pour la production (Render, VPS, etc.)
 if os.environ.get('RENDER') or os.environ.get('DJANGO_SETTINGS_MODULE') == 'gestion_immobiliere.settings_production':
     # Configuration de base de données pour la production
@@ -143,12 +160,15 @@ if os.environ.get('RENDER') or os.environ.get('DJANGO_SETTINGS_MODULE') == 'gest
         os.path.join(BASE_DIR, 'static'),
     ]
     
-    # Configuration de sécurité pour production
-    if os.environ.get('RENDER'):
-        DEBUG = False
-        ALLOWED_HOSTS = ['appli-kbis.onrender.com', '.onrender.com', 'localhost', '127.0.0.1']
-        
-        # Configuration de session
-        SESSION_COOKIE_SECURE = True
-        CSRF_COOKIE_SECURE = True
-        SECURE_SSL_REDIRECT = True
+# Configuration de sécurité pour production
+if os.environ.get('RENDER'):
+    DEBUG = False
+    ALLOWED_HOSTS = ['appli-kbis.onrender.com', '.onrender.com', 'localhost', '127.0.0.1']
+    
+    # Configuration de session
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 an
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
