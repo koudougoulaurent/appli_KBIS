@@ -19,6 +19,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
+    'crispy_forms',
+    'crispy_bootstrap5',
     'core',
     'utilisateurs',
     'proprietes',
@@ -94,6 +96,10 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # Configuration par défaut
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Configuration crispy_forms
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 # Désactiver les migrations
 MIGRATION_MODULES = {
