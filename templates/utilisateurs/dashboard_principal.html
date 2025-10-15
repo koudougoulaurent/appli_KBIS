@@ -325,10 +325,17 @@
                                     <tr class="action-item">
                                         <td>
                                             <div class="d-flex align-items-center">
+                                                {% if action.user %}
                                                 <div class="user-avatar me-2" style="width: 30px; height: 30px; font-size: 0.9rem;">
                                                     {{ action.user.first_name|first|upper }}{{ action.user.last_name|first|upper }}
                                                 </div>
                                                 <span>{{ action.user.get_full_name|default:action.user.username }}</span>
+                                                {% else %}
+                                                <div class="user-avatar me-2" style="width: 30px; height: 30px; font-size: 0.9rem;">
+                                                    ??
+                                                </div>
+                                                <span>Utilisateur supprimé</span>
+                                                {% endif %}
                                             </div>
                                         </td>
                                         <td>
