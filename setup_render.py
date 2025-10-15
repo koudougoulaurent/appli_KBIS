@@ -36,10 +36,10 @@ def create_groups():
         from django.contrib.auth.models import Group
         
         groups = [
+            {'name': 'ADMINISTRATION', 'permissions': []},
+            {'name': 'CAISSE', 'permissions': []},
+            {'name': 'CONTROLES', 'permissions': []},
             {'name': 'PRIVILEGE', 'permissions': []},
-            {'name': 'MANAGER', 'permissions': []},
-            {'name': 'AGENT', 'permissions': []},
-            {'name': 'TENANT', 'permissions': []},
         ]
         
         for group_data in groups:
