@@ -11,12 +11,12 @@ os.environ.setdefault('GUNICORN_GROUP', '')
 
 django.setup()
 
-# Initialiser la base de données
+# Initialiser la base de données et créer les groupes
 try:
-    from init_database import init_database
-    init_database()
+    from setup_render import setup_database
+    setup_database()
 except Exception as e:
-    print(f"⚠️ Erreur lors de l'initialisation de la DB: {e}")
+    print(f"⚠️ Erreur lors de l'initialisation: {e}")
     print("⚠️ L'application peut fonctionner sans initialisation complète")
 
 app = get_wsgi_application()
