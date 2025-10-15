@@ -3,7 +3,7 @@ import django
 from django.core.wsgi import get_wsgi_application
 
 # Force le bon settings module
-os.environ['DJANGO_SETTINGS_MODULE'] = 'gestion_immobiliere.settings_render'
+os.environ['DJANGO_SETTINGS_MODULE'] = 'gestion_immobiliere.settings_render_minimal'
 
 # Configuration pour éviter les problèmes d'utilisateur
 os.environ.setdefault('GUNICORN_USER', '')
