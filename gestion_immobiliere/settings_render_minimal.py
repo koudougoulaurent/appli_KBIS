@@ -101,6 +101,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
+# Configuration admin Django
+ADMIN_SITE_HEADER = "KBIS IMMOBILIER - Administration"
+ADMIN_SITE_TITLE = "KBIS Admin"
+ADMIN_INDEX_TITLE = "Administration du système"
+
 # Désactiver les migrations
 MIGRATION_MODULES = {
     'core': None,
