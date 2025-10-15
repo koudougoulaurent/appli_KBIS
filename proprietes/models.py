@@ -694,38 +694,47 @@ class Propriete(models.Model):
         Détermine si cette propriété nécessite des unités locatives.
         Basé sur le type de bien et les caractéristiques de la propriété.
         """
-        # Vérifier d'abord le type de bien
-        if self.type_bien.necessite_unites_locatives():
-            return True
-        
-        # Vérifier les caractéristiques de la propriété
-        # Grande surface ou nombreuses pièces peuvent indiquer plusieurs unités
-        if self.surface and self.surface > 200:  # Plus de 200m²
-            return True
-        
-        if self.nombre_pieces > 8:  # Plus de 8 pièces
-            return True
+        try:
+            # Vérifier d'abord le type de bien
+            if self.type_bien and self.type_bien.necessite_unites_locatives():
+                return True
+            
+            # Vérifier les caractéristiques de la propriété
+            # Grande surface ou nombreuses pièces peuvent indiquer plusieurs unités
+            if self.surface and self.surface > 200:  # Plus de 200m²
+                return True
+            
+            if self.nombre_pieces and self.nombre_pieces > 8:  # Plus de 8 pièces
+                return True
+        except Exception as e:
+            # En cas d'erreur, retourner False par défaut
+            return False
         
         return False
     
     def get_suggestion_creation_unites(self):
         """Retourne un message de suggestion personnalisé pour cette propriété."""
-        if self.necessite_unites_locatives():
-            suggestions = []
-            
-            # Suggestion basée sur le type
-            type_suggestion = self.type_bien.get_suggestion_unites()
-            if type_suggestion:
-                suggestions.append(type_suggestion)
-            
-            # Suggestions basées sur les caractéristiques
-            if self.surface and self.surface > 200:
-                suggestions.append(f"Avec {self.surface}m², cette propriété pourrait être divisée en plusieurs unités.")
-            
-            if self.nombre_pieces > 8:
-                suggestions.append(f"Avec {self.nombre_pieces} pièces, vous pourriez créer plusieurs unités locatives.")
-            
-            return " ".join(suggestions)
+        try:
+            if self.necessite_unites_locatives():
+                suggestions = []
+                
+                # Suggestion basée sur le type
+                if self.type_bien:
+                    type_suggestion = self.type_bien.get_suggestion_unites()
+                    if type_suggestion:
+                        suggestions.append(type_suggestion)
+                
+                # Suggestions basées sur les caractéristiques
+                if self.surface and self.surface > 200:
+                    suggestions.append(f"Avec {self.surface}m², cette propriété pourrait être divisée en plusieurs unités.")
+                
+                if self.nombre_pieces and self.nombre_pieces > 8:
+                    suggestions.append(f"Avec {self.nombre_pieces} pièces, vous pourriez créer plusieurs unités locatives.")
+                
+                return " ".join(suggestions)
+        except Exception as e:
+            # En cas d'erreur, retourner None pour éviter de casser la page
+            return None
         
         return None
     

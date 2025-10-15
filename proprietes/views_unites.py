@@ -182,11 +182,19 @@ def unite_create(request, propriete_id=None):
         form = UniteLocativeForm(initial=initial)
     
     # Ajouter des informations contextuelles
+    suggestion = None
+    if propriete:
+        try:
+            suggestion = propriete.get_suggestion_creation_unites()
+        except Exception as e:
+            # En cas d'erreur, on continue sans suggestion
+            suggestion = None
+    
     context = {
         'form': form,
         'propriete': propriete,
         'title': 'Créer une unité locative',
-        'suggestion': propriete.get_suggestion_creation_unites() if propriete else None,
+        'suggestion': suggestion,
         'from_property': request.GET.get('from_property') == '1',
     }
     
