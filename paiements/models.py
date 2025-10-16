@@ -830,8 +830,11 @@ class Paiement(models.Model):
         from datetime import datetime
         
         try:
-            # Utiliser le système unifié
-            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            # Utiliser le système unifié - corriger le chemin vers SCRIPTS
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            scripts_path = os.path.join(project_root, 'SCRIPTS')
+            if scripts_path not in sys.path:
+                sys.path.append(scripts_path)
             from document_kbis_unifie import DocumentKBISUnifie
             
             # Déterminer le type de quittance selon le type de paiement
@@ -998,8 +1001,11 @@ class Paiement(models.Model):
         from datetime import datetime
         
         try:
-            # Utiliser le système unifié
-            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            # Utiliser le système unifié - corriger le chemin vers SCRIPTS
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            scripts_path = os.path.join(project_root, 'SCRIPTS')
+            if scripts_path not in sys.path:
+                sys.path.append(scripts_path)
             from document_kbis_unifie import DocumentKBISUnifie
             
             # Déterminer le type de récépissé selon le type de paiement
@@ -1459,8 +1465,11 @@ class RetraitBailleur(models.Model):
         from datetime import datetime
         
         try:
-            # Utiliser le système unifié
-            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            # Utiliser le système unifié - corriger le chemin vers SCRIPTS
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            scripts_path = os.path.join(project_root, 'SCRIPTS')
+            if scripts_path not in sys.path:
+                sys.path.append(scripts_path)
             from document_kbis_unifie import DocumentKBISUnifie
             
             # Récupérer les informations de base de manière sécurisée
