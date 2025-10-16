@@ -78,3 +78,28 @@ def valider_coherence_propriete_apres_sauvegarde(sender, instance, created, **kw
         instance.disponible = disponibilite_correcte
         # Éviter la récursion en utilisant update
         Propriete.objects.filter(pk=instance.pk).update(disponible=disponibilite_correcte)
+
+
+@receiver(post_save, sender=Contrat)
+def creer_avance_loyer_automatique(sender, instance, created, **kwargs):
+    """
+    Signal pour créer automatiquement une avance de loyer quand elle est marquée comme payée.
+    """
+    # Ne traiter que les mises à jour (pas les créations)
+    if created:
+        return
+    
+    # Vérifier si l'avance est marquée comme payée
+    if not instance.avance_loyer_payee:
+        return
+    
+    # Vérifier si une avance existe déjà
+    from paiements.models_avance import AvanceLoyer
+    if AvanceLoyer.objects.filter(contrat=instance).exists():
+        return
+    
+    # Créer l'avance automatiquement
+    try:
+        instance._creer_avance_loyer_automatique()
+    except Exception as e:
+        print(f"Erreur lors de la création automatique de l'avance: {str(e)}")

@@ -461,7 +461,11 @@ class Contrat(models.Model):
         # Gérer la disponibilité de la propriété
         self._gestion_disponibilite_propriete()
         
+        # Sauvegarder d'abord le contrat
         super().save(*args, **kwargs)
+        
+        # Créer automatiquement l'avance de loyer si elle est payée
+        self._creer_avance_loyer_automatique()
     
     def _gestion_disponibilite_propriete(self):
         """Gère automatiquement la disponibilité de la propriété associée."""
@@ -676,6 +680,63 @@ class Contrat(models.Model):
         
         # Si les deux sont requis
         return self.get_caution_payee_dynamique() and self.get_avance_payee_dynamique()
+    
+    def _creer_avance_loyer_automatique(self):
+        """Crée automatiquement une avance de loyer si elle est marquée comme payée."""
+        from decimal import Decimal
+        from paiements.models_avance import AvanceLoyer
+        from datetime import date
+        
+        # Vérifier si une avance est requise et payée
+        try:
+            avance_requise = Decimal(self.avance_loyer) if self.avance_loyer else Decimal('0')
+            loyer_mensuel = Decimal(self.loyer_mensuel) if self.loyer_mensuel else Decimal('0')
+        except (ValueError, TypeError):
+            return
+        
+        # Si pas d'avance requise, ne rien faire
+        if avance_requise <= 0 or loyer_mensuel <= 0:
+            return
+        
+        # Vérifier si l'avance est marquée comme payée
+        if not self.avance_loyer_payee:
+            return
+        
+        # Vérifier si une avance existe déjà pour ce contrat
+        if AvanceLoyer.objects.filter(contrat=self).exists():
+            return
+        
+        # Créer l'avance de loyer
+        try:
+            avance = AvanceLoyer.objects.create(
+                contrat=self,
+                montant_avance=avance_requise,
+                loyer_mensuel=loyer_mensuel,
+                date_avance=self.date_paiement_avance or self.date_signature,
+                mois_debut_couverture=self.date_debut.replace(day=1),
+                statut='active',
+                notes=f'Avance créée automatiquement lors de la validation du contrat {self.numero_contrat}'
+            )
+            
+            # Créer le paiement associé si nécessaire
+            if self.date_paiement_avance:
+                from paiements.models import Paiement
+                paiement = Paiement.objects.create(
+                    contrat=self,
+                    montant=avance_requise,
+                    type_paiement='avance_loyer',
+                    mode_paiement='especes',  # Mode par défaut
+                    date_paiement=self.date_paiement_avance,
+                    statut='valide',
+                    notes=f'Paiement d\'avance automatique pour le contrat {self.numero_contrat}'
+                )
+                
+                # Lier le paiement à l'avance
+                avance.paiement = paiement
+                avance.save()
+                
+        except Exception as e:
+            print(f"Erreur lors de la création de l'avance automatique: {str(e)}")
 
 
 class Quittance(models.Model):
