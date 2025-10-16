@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY', '%g+gmad@&-r4yyp4ss+y1^1ktigscq&!mtno^c#_$%sa9&p)a=')
 DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'appli-kbis.onrender.com', '.onrender.com', '*', '0.0.0.0']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'appli-kbis.onrender.com', 'appli-kbis-3.onrender.com', '.onrender.com', '*', '0.0.0.0']
 ROOT_URLCONF = 'gestion_immobiliere.urls'
 
 INSTALLED_APPS = [
@@ -163,7 +163,7 @@ if os.environ.get('RENDER') or os.environ.get('DJANGO_SETTINGS_MODULE') == 'gest
 # Configuration de sécurité pour production
 if os.environ.get('RENDER'):
     DEBUG = False
-    ALLOWED_HOSTS = ['appli-kbis.onrender.com', '.onrender.com', 'localhost', '127.0.0.1']
+    ALLOWED_HOSTS = ['appli-kbis.onrender.com', 'appli-kbis-3.onrender.com', '.onrender.com', 'localhost', '127.0.0.1']
     
     # Configuration de session
     SESSION_COOKIE_SECURE = True
