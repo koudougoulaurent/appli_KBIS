@@ -482,7 +482,11 @@
                     {% elif document_type == 'recap_quittance' %}
                         Quittance de récapitulatif - Montant versé au bailleur
                     {% else %}
-                        Document généré en bonne et due forme
+                        {% if mois_couverts %}
+                            Avance de loyer - Couvre {{ mois_couverts.nombre }} mois de loyer ({{ mois_couverts.mois_texte }})
+                        {% else %}
+                            Document généré en bonne et due forme
+                        {% endif %}
                     {% endif %}
                 </span>
             </div>
