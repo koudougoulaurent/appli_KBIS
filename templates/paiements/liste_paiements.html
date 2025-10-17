@@ -143,7 +143,12 @@
                                     <option value="loyer" {% if type_filter == 'loyer' %}selected{% endif %}>Loyer</option>
                                     <option value="caution" {% if type_filter == 'caution' %}selected{% endif %}>Caution</option>
                                     <option value="avance" {% if type_filter == 'avance' %}selected{% endif %}>Avance</option>
+                                    <option value="avance_loyer" {% if type_filter == 'avance_loyer' %}selected{% endif %}>Avance de loyer</option>
+                                    <option value="depot_garantie" {% if type_filter == 'depot_garantie' %}selected{% endif %}>Dépôt de garantie</option>
                                     <option value="charges" {% if type_filter == 'charges' %}selected{% endif %}>Charges</option>
+                                    <option value="regularisation" {% if type_filter == 'regularisation' %}selected{% endif %}>Régularisation</option>
+                                    <option value="paiement_partiel" {% if type_filter == 'paiement_partiel' %}selected{% endif %}>Paiement partiel</option>
+                                    <option value="autre" {% if type_filter == 'autre' %}selected{% endif %}>Autre</option>
                                 </select>
                                 <button type="submit" class="btn btn-outline-primary">Filtrer</button>
                                 {% if query or statut_filter or type_filter %}

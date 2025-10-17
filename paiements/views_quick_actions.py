@@ -68,7 +68,10 @@ def liste_paiements(request, locataire_id=None):
         # Exclure les paiements de caution qui ne sont pas marqués comme payés
         Q(type_paiement='depot_garantie') & Q(contrat__caution_payee=False)
     ).exclude(
-        # Exclure les paiements d'avance qui ne sont pas marqués comme payés
+        # Exclure les paiements d'avance de loyer qui ne sont pas marqués comme payés
+        Q(type_paiement='avance_loyer') & Q(contrat__avance_loyer_payee=False)
+    ).exclude(
+        # Exclure aussi les anciens paiements 'avance' pour compatibilité
         Q(type_paiement='avance') & Q(contrat__avance_loyer_payee=False)
     ).order_by('-date_paiement')
     locataire_obj = None
