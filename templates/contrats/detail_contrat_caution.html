@@ -177,7 +177,7 @@
                                 {% endif %}
                             </div>
                             <div>
-                                {% if contrat.avance_loyer_payee %}
+                                {% if contrat.avance_loyer_payee or contrat.avance_loyer == 0 %}
                                     <span class="badge bg-success">
                                         <i class="bi bi-check-circle"></i> Payée
                                     </span>

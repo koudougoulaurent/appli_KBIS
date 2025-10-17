@@ -568,15 +568,20 @@ class Contrat(models.Model):
     
     def peut_commencer_location(self):
         """Vérifie si le locataire peut commencer la location (caution + avance payées)."""
-        return self.caution_payee and self.avance_loyer_payee
+        # Si l'avance est de 0, elle est considérée comme "payée" automatiquement
+        avance_ok = self.avance_loyer_payee or self.avance_loyer == 0
+        return self.caution_payee and avance_ok
     
     def get_statut_paiements(self):
         """Retourne le statut des paiements de caution et avance."""
-        if self.caution_payee and self.avance_loyer_payee:
+        # Si l'avance est de 0, elle est considérée comme "payée" automatiquement
+        avance_ok = self.avance_loyer_payee or self.avance_loyer == 0
+        
+        if self.caution_payee and avance_ok:
             return "Complet"
         elif self.caution_payee:
             return "Caution payée, avance en attente"
-        elif self.avance_loyer_payee:
+        elif avance_ok:
             return "Avance payée, caution en attente"
         else:
             return "En attente de paiement"

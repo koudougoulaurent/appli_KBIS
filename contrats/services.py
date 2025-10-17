@@ -1003,7 +1003,7 @@ class RecuCautionPDFService:
         data = [
             ['Type de paiement', 'Statut'],
             ['Caution:', '✓ Payée' if self.contrat.caution_payee else '✗ En attente'],
-            ['Avance:', '✓ Payée' if self.contrat.avance_loyer_payee else '✗ En attente'],
+            ['Avance:', '✓ Payée' if (self.contrat.avance_loyer_payee or self.contrat.avance_loyer == 0) else '✗ En attente'],
         ]
         
         table = Table(data, colWidths=[6*cm, 6*cm])
