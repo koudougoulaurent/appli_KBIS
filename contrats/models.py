@@ -572,12 +572,14 @@ class Contrat(models.Model):
         caution_ok = self.get_caution_payee_dynamique()
         avance_ok = self.get_avance_payee_dynamique()
         
-        # Si pas de caution/avance requise, considérer comme OK
+        # Logique stricte : "Complet" seulement si les deux sont payés
+        # Si pas de caution/avance requise (None), considérer comme OK
         if caution_ok is None:
             caution_ok = True
         if avance_ok is None:
             avance_ok = True
             
+        # Les deux doivent être payés pour commencer la location
         return caution_ok and avance_ok
     
     def get_statut_paiements(self):

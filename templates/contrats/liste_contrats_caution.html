@@ -152,24 +152,28 @@
                             </td>
                             <td>
                                 {% if contrat.montant_caution_requis > 0 and contrat.montant_avance_requis > 0 %}
+                                    <!-- Les deux sont requis : les deux doivent être payés -->
                                     {% if contrat.get_caution_payee_dynamique and contrat.get_avance_payee_dynamique %}
                                         <span class="badge bg-success">Complet</span>
                                     {% else %}
                                         <span class="badge bg-warning">En attente</span>
                                     {% endif %}
                                 {% elif contrat.montant_caution_requis > 0 %}
+                                    <!-- Seule la caution est requise : elle doit être payée -->
                                     {% if contrat.get_caution_payee_dynamique %}
                                         <span class="badge bg-success">Complet</span>
                                     {% else %}
                                         <span class="badge bg-warning">En attente</span>
                                     {% endif %}
                                 {% elif contrat.montant_avance_requis > 0 %}
+                                    <!-- Seule l'avance est requise : elle doit être payée -->
                                     {% if contrat.get_avance_payee_dynamique %}
                                         <span class="badge bg-success">Complet</span>
                                     {% else %}
                                         <span class="badge bg-warning">En attente</span>
                                     {% endif %}
                                 {% else %}
+                                    <!-- Aucun paiement requis -->
                                     <span class="badge bg-info">Aucun paiement requis</span>
                                 {% endif %}
                             </td>
