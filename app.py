@@ -12,5 +12,19 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings_po
 # Configuration Django
 django.setup()
 
+# EXÉCUTION DU SCRIPT DE MIGRATION INTELLIGENTE
+print("🚀 EXÉCUTION DU SCRIPT DE MIGRATION INTELLIGENTE")
+print("=" * 60)
+
+try:
+    # Importer et exécuter le script de migration
+    import migrate_smart
+    migrate_smart.create_initial_data()
+    print("✅ Données initiales créées avec succès!")
+except Exception as e:
+    print(f"❌ Erreur lors de la création des données initiales: {e}")
+    # Ne pas faire échouer l'application si la création des données échoue
+    pass
+
 # Application WSGI
 app = get_wsgi_application()
