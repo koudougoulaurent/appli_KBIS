@@ -6,11 +6,15 @@ from django.db import migrations, models, connection
 def add_statut_column_if_not_exists(schema_editor):
     """Add statut column if it doesn't exist"""
     with connection.cursor() as cursor:
-        # Check if column exists
-        cursor.execute("PRAGMA table_info(paiements_retraitbailleur)")
-        columns = [row[1] for row in cursor.fetchall()]
+        # Check if column exists (PostgreSQL syntax)
+        cursor.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'paiements_retraitbailleur' 
+            AND column_name = 'statut'
+        """)
         
-        if 'statut' not in columns:
+        if not cursor.fetchone():
             cursor.execute("""
                 ALTER TABLE paiements_retraitbailleur 
                 ADD COLUMN statut VARCHAR(20) DEFAULT 'en_attente'
@@ -24,8 +28,13 @@ def remove_statut_column(schema_editor):
 def create_statut_index_if_not_exists(schema_editor):
     """Create statut index if it doesn't exist"""
     with connection.cursor() as cursor:
-        # Check if index exists
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='index' AND name='paiements_r_statut_123456_idx'")
+        # Check if index exists (PostgreSQL syntax)
+        cursor.execute("""
+            SELECT indexname 
+            FROM pg_indexes 
+            WHERE tablename = 'paiements_retraitbailleur' 
+            AND indexname = 'paiements_r_statut_123456_idx'
+        """)
         if not cursor.fetchone():
             cursor.execute("CREATE INDEX paiements_r_statut_123456_idx ON paiements_retraitbailleur (statut)")
 
