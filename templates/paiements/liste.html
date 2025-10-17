@@ -164,7 +164,7 @@
                                             <a href="{% url 'paiements:generer_quittance_manuelle' paiement.pk %}" class="btn btn-sm btn-success" title="Quittance KBIS">
                                                 <i class="bi bi-file-earmark-text"></i>
                                             </a>
-                                            <a href="{% url 'paiements:generer_recu_kbis_dynamique' paiement.pk %}" class="btn btn-sm btn-info" title="Récépissé KBIS dynamique">
+                                            <a href="{% url 'paiements:generer_recu_unifie_a5' paiement.pk %}" class="btn btn-sm btn-primary" title="Récépissé A5 unifié" target="_blank">
                                                 <i class="bi bi-receipt"></i>
                                             </a>
                                             {% endif %}

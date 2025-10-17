@@ -16,3 +16,5 @@ class Migration(migrations.Migration):
             field=models.BooleanField(default=False, help_text='Cocher pour convertir immédiatement cette réservation en contrat de bail', verbose_name='Convertir en contrat'),
         ),
     ]
+
+

@@ -516,12 +516,22 @@
                         {% if paiement.statut == 'valide' %}
                         <div class="text-center">
                             <div class="d-flex gap-2 justify-content-center flex-wrap">
-                                <a href="{% url 'paiements:generer_quittance_manuelle' paiement.pk %}" class="btn btn-success">
-                                    <i class="bi bi-file-earmark-text me-2"></i>Générer quittance KBIS
+                                <a href="{% url 'paiements:generer_quittance_unifie_a5' paiement.pk %}" class="btn btn-success" target="_blank">
+                                    <i class="bi bi-file-earmark-text me-2"></i>Quittance A5
                                 </a>
-                                <a href="{% url 'paiements:generer_recu_kbis_dynamique' paiement.pk %}" class="btn btn-info">
-                                    <i class="bi bi-receipt me-2"></i>Générer récépissé KBIS
+                                <a href="{% url 'paiements:generer_recu_unifie_a5' paiement.pk %}" class="btn btn-primary" target="_blank">
+                                    <i class="bi bi-receipt me-2"></i>Récépissé A5
                                 </a>
+                                {% if paiement.type_paiement == 'avance' %}
+                                <a href="{% url 'paiements:generer_avance_unifie_a5' paiement.pk %}" class="btn btn-warning" target="_blank">
+                                    <i class="bi bi-cash-coin me-2"></i>Avance A5
+                                </a>
+                                {% endif %}
+                                {% if paiement.type_paiement == 'caution' %}
+                                <a href="{% url 'paiements:generer_caution_unifie_a5' paiement.pk %}" class="btn btn-info" target="_blank">
+                                    <i class="bi bi-shield-check me-2"></i>Caution A5
+                                </a>
+                                {% endif %}
                             </div>
                         </div>
                         {% else %}
@@ -602,12 +612,22 @@
         {% endif %}
         
         {% if paiement.statut == 'valide' %}
-        <a href="{% url 'paiements:generer_quittance_manuelle' paiement.pk %}" class="btn-action btn-primary">
-            <i class="bi bi-file-earmark-text me-2"></i>Générer Quittance
+        <a href="{% url 'paiements:generer_quittance_unifie_a5' paiement.pk %}" class="btn-action btn-success" target="_blank">
+            <i class="bi bi-file-earmark-text me-2"></i>Quittance A5
         </a>
-        <a href="{% url 'paiements:generer_recu_kbis_dynamique' paiement.pk %}" class="btn-action btn-info">
-            <i class="bi bi-receipt me-2"></i>Générer Récépissé
+        <a href="{% url 'paiements:generer_recu_unifie_a5' paiement.pk %}" class="btn-action btn-primary" target="_blank">
+            <i class="bi bi-receipt me-2"></i>Récépissé A5
         </a>
+        {% if paiement.type_paiement == 'avance' %}
+        <a href="{% url 'paiements:generer_avance_unifie_a5' paiement.pk %}" class="btn-action btn-warning" target="_blank">
+            <i class="bi bi-cash-coin me-2"></i>Avance A5
+        </a>
+        {% endif %}
+        {% if paiement.type_paiement == 'caution' %}
+        <a href="{% url 'paiements:generer_caution_unifie_a5' paiement.pk %}" class="btn-action btn-info" target="_blank">
+            <i class="bi bi-shield-check me-2"></i>Caution A5
+        </a>
+        {% endif %}
         {% endif %}
     </div>
 </div>

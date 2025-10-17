@@ -276,7 +276,7 @@ def generer_quittance(request, pk):
         messages.info(request, 'Quittance déjà existante')
     
     # Rediriger vers la génération de quittance KBIS dynamique
-    return redirect('paiements:generer_quittance_retrait_kbis', retrait_pk=pk)
+    return redirect('paiements:generer_quittance_retrait_kbis', retrait_id=pk)
 
 
 @login_required
@@ -292,7 +292,7 @@ def telecharger_quittance(request, pk):
     retrait = get_object_or_404(RetraitBailleur, pk=pk, is_deleted=False)
     
     # Rediriger vers la génération de quittance KBIS dynamique
-    return redirect('paiements:generer_quittance_retrait_kbis', retrait_pk=pk)
+    return redirect('paiements:generer_quittance_retrait_kbis', retrait_id=pk)
 
 
 @login_required

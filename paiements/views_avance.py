@@ -429,23 +429,37 @@ def paiement_avance(request):
 
 @login_required
 def generer_recu_avance(request, avance_id):
-    """Génère un reçu d'avance avec le système KBIS unifié"""
+    """Génère un récépissé d'avance avec le système A5 unifié"""
     try:
-        avance = get_object_or_404(AvanceLoyer, pk=avance_id)
+        # Récupérer le paiement d'avance correspondant
+        from .models import Paiement
         
-        # Générer le reçu avec le système KBIS unifié
-        html_recu = avance.generer_recu_avance_kbis()
+        # Essayer d'abord avec type_paiement='avance'
+        try:
+            paiement_avance = Paiement.objects.get(pk=avance_id, type_paiement='avance')
+        except Paiement.DoesNotExist:
+            # Si pas trouvé, essayer avec type_paiement='avance_loyer'
+            try:
+                paiement_avance = Paiement.objects.get(pk=avance_id, type_paiement='avance_loyer')
+            except Paiement.DoesNotExist:
+                # Si toujours pas trouvé, chercher n'importe quel paiement avec cet ID
+                try:
+                    paiement_avance = Paiement.objects.get(pk=avance_id)
+                except Paiement.DoesNotExist:
+                    messages.error(request, f'Aucun paiement trouvé avec l\'ID {avance_id}')
+                    return redirect('paiements:liste')
         
-        if html_recu:
-            # Retourner directement le HTML (format A5 prêt pour impression)
-            return HttpResponse(html_recu, content_type='text/html')
-        else:
-            messages.error(request, 'Erreur lors de la génération du reçu d\'avance')
-            return redirect('paiements:liste_avances')
+        # Utiliser le nouveau système A5 unifié
+        from .services_document_unifie_complet import DocumentUnifieA5ServiceComplet
+        
+        service = DocumentUnifieA5ServiceComplet()
+        html_content = service.generer_document_unifie('paiement_avance', paiement_id=paiement_avance.id)
+        
+        return HttpResponse(html_content, content_type='text/html')
             
     except Exception as e:
-        messages.error(request, f'Erreur lors de la génération du reçu: {str(e)}')
-        return redirect('paiements:liste_avances')
+        messages.error(request, f'Erreur lors de la génération du récépissé: {str(e)}')
+        return redirect('paiements:liste')
 
 
 def get_contrat_details_ajax(request):

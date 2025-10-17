@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges, views_retrait_ameliore, views_avance
+from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges, views_retrait_ameliore, views_avance, views_document_unifie, views_document_unifie_complet
 # from . import views_locataire_paiements
 
 app_name = 'paiements'
@@ -228,8 +228,8 @@ urlpatterns = [
     # 📄 RÉCÉPISSÉS KBIS DYNAMIQUES
     path('paiement/<int:paiement_pk>/recu-kbis/', views_kbis_recus.generer_recu_kbis_dynamique, name='generer_recu_kbis_dynamique'),
     
-    # 📄 QUITTANCES DE RETRAIT KBIS DYNAMIQUES
-    path('retrait/<int:retrait_pk>/quittance-kbis/', views_kbis_recus.generer_quittance_retrait_kbis, name='generer_quittance_retrait_kbis'),
+    # 📄 QUITTANCES DE RETRAIT KBIS DYNAMIQUES - REDIRIGÉES VERS A5 UNIFIÉ
+    path('retrait/<int:retrait_id>/quittance-kbis/', views_document_unifie_complet.generer_recu_retrait_a5, name='generer_quittance_retrait_kbis'),
     
     # 🔧 VUE DE TEST POUR RÉCAPITULATIFS
     path('recaps-mensuels/creer-test/', views_recapitulatifs.creer_recapitulatif_test, name='creer_recapitulatif_test'),
@@ -247,4 +247,27 @@ urlpatterns = [
     path('retraits/<int:retrait_id>/pdf/', views_retrait_ameliore.generer_pdf_retrait, name='generer_pdf_retrait'),
     path('retraits/pdf-multiple/', views_retrait_ameliore.generer_pdf_retraits_multiple, name='generer_pdf_retraits_multiple'),
     path('retraits/pdf-mois/', views_retrait_ameliore.generer_pdf_retraits_mois, name='generer_pdf_retraits_mois'),
+    
+    # 📄 SYSTÈME UNIFIÉ A5 COMPLET - TOUS LES DOCUMENTS
+    # Documents de paiements
+    path('document-a5/recu-paiement/<int:paiement_id>/', views_document_unifie_complet.generer_recu_paiement_a5, name='generer_recu_paiement_a5'),
+    path('document-a5/quittance-paiement/<int:paiement_id>/', views_document_unifie_complet.generer_quittance_paiement_a5, name='generer_quittance_paiement_a5'),
+    path('document-a5/avance-paiement/<int:paiement_id>/', views_document_unifie_complet.generer_avance_paiement_a5, name='generer_avance_paiement_a5'),
+    path('document-a5/caution-paiement/<int:paiement_id>/', views_document_unifie_complet.generer_caution_paiement_a5, name='generer_caution_paiement_a5'),
+    
+    # Documents de retraits
+    path('document-a5/quittance-retrait/<int:retrait_id>/', views_document_unifie_complet.generer_quittance_retrait_a5, name='generer_quittance_retrait_a5'),
+    path('document-a5/recu-retrait/<int:retrait_id>/', views_document_unifie_complet.generer_recu_retrait_a5, name='generer_recu_retrait_a5'),
+    
+    # Documents de récapitulatifs
+    path('document-a5/quittance-recap/<int:recapitulatif_id>/', views_document_unifie_complet.generer_quittance_recap_a5, name='generer_quittance_recap_a5'),
+    
+    # Vue générique
+    path('document-a5/<str:document_type>/<int:object_id>/', views_document_unifie_complet.generer_document_generique_a5, name='generer_document_generique_a5'),
+    
+    # Aliases pour compatibilité avec l'ancien système
+    path('recu-unifie-a5/<int:paiement_id>/', views_document_unifie_complet.generer_recu_paiement_a5, name='generer_recu_unifie_a5'),
+    path('quittance-unifie-a5/<int:paiement_id>/', views_document_unifie_complet.generer_quittance_paiement_a5, name='generer_quittance_unifie_a5'),
+    path('avance-unifie-a5/<int:paiement_id>/', views_document_unifie_complet.generer_avance_paiement_a5, name='generer_avance_unifie_a5'),
+    path('caution-unifie-a5/<int:paiement_id>/', views_document_unifie_complet.generer_caution_paiement_a5, name='generer_caution_unifie_a5'),
 ]

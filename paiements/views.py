@@ -2134,7 +2134,7 @@ def tableau_bord_list(request):
 # Vues pour les quittances de paiement
 @login_required
 def quittance_detail(request, pk):
-    """Afficher le détail d'une quittance de paiement avec le même format que recu-kbis."""
+    """Afficher le détail d'une quittance de paiement avec le nouveau système A5 unifié."""
     # Vérification des permissions
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
@@ -2151,16 +2151,13 @@ def quittance_detail(request, pk):
     )
     
     try:
-        # Utiliser la même méthode de génération que recu-kbis
-        paiement = quittance.paiement
-        html_recu = paiement.generer_quittance_kbis_dynamique()
+        # Utiliser le nouveau système A5 unifié
+        from .services_document_unifie_complet import DocumentUnifieA5ServiceComplet
         
-        if html_recu:
-            # Retourner directement le HTML (même format que recu-kbis)
-            return HttpResponse(html_recu, content_type='text/html')
-        else:
-            messages.error(request, 'Erreur lors de la génération du récépissé')
-            return redirect('paiements:quittance_list')
+        service = DocumentUnifieA5ServiceComplet()
+        html_content = service.generer_document_unifie('paiement_quittance', paiement_id=quittance.paiement.id)
+        
+        return HttpResponse(html_content, content_type='text/html')
             
     except Exception as e:
         messages.error(request, f'Erreur lors de la génération: {str(e)}')
@@ -2299,7 +2296,7 @@ def marquer_quittance_archivee(request, pk):
 
 @login_required
 def generer_quittance_manuelle(request, paiement_pk):
-    """Générer manuellement une quittance pour un paiement existant."""
+    """Générer manuellement une quittance pour un paiement existant avec le système A5 unifié."""
     # Vérification des permissions
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'add')
     if not permissions['allowed']:
@@ -2309,33 +2306,16 @@ def generer_quittance_manuelle(request, paiement_pk):
     try:
         paiement = get_object_or_404(Paiement, pk=paiement_pk)
         
-        # Vérifier si une quittance existe déjà
-        if hasattr(paiement, 'quittance'):
-            messages.warning(request, 'Une quittance existe déjà pour ce paiement')
-            return redirect('paiements:quittance_detail', pk=paiement.quittance.pk)
+        # Utiliser le nouveau système A5 unifié directement
+        from .services_document_unifie_complet import DocumentUnifieA5ServiceComplet
         
-        # Générer la quittance
-        quittance = QuittancePaiement.objects.create(
-            paiement=paiement,
-            cree_par=request.user
-        )
+        service = DocumentUnifieA5ServiceComplet()
+        html_content = service.generer_document_unifie('paiement_quittance', paiement_id=paiement.id)
         
-        # Log d'audit
-        AuditLog.objects.create(
-            content_type=ContentType.objects.get_for_model(QuittancePaiement),
-            object_id=quittance.pk,
-            action='CREATE',
-            old_data=None,
-            new_data={f.name: getattr(quittance, f.name) for f in quittance._meta.fields},
-            user=request.user,
-            ip_address=request.META.get('REMOTE_ADDR'),
-            user_agent=request.META.get('HTTP_USER_AGENT', '')
-        )
+        return HttpResponse(html_content, content_type='text/html')
         
-        messages.success(request, f'Récépissé {quittance.numero_quittance} généré avec succès')
-        return redirect('paiements:quittance_detail', pk=quittance.pk)
     except Exception as e:
-        messages.error(request, f'Erreur lors de la génération du récépissé: {str(e)}')
+        messages.error(request, f'Erreur lors de la génération de la quittance: {str(e)}')
         return redirect('paiements:detail', pk=paiement_pk)
 
 
