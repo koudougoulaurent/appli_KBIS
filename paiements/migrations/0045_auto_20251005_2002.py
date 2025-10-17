@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('paiements', '0044_add_created_updated_at_fields'),
+        ('paiements', '0035_add_created_updated_fields'),
     ]
 
     operations = [
