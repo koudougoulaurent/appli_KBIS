@@ -1000,10 +1000,17 @@ class RecuCautionPDFService:
         elements.append(Paragraph("STATUT DES PAIEMENTS", self.styles['CustomHeading']))
         
         # Tableau du statut des paiements
+        # Utiliser les méthodes dynamiques basées sur les vrais paiements
+        caution_ok = self.contrat.get_caution_payee_dynamique()
+        avance_ok = self.contrat.get_avance_payee_dynamique()
+        
+        caution_statut = '✓ Payée' if caution_ok else ('Non requise' if caution_ok is None else '✗ En attente')
+        avance_statut = '✓ Payée' if avance_ok else ('Non requise' if avance_ok is None else '✗ En attente')
+        
         data = [
             ['Type de paiement', 'Statut'],
-            ['Caution:', '✓ Payée' if self.contrat.caution_payee else '✗ En attente'],
-            ['Avance:', '✓ Payée' if (self.contrat.avance_loyer_payee or self.contrat.avance_loyer == 0) else '✗ En attente'],
+            ['Caution:', caution_statut],
+            ['Avance:', avance_statut],
         ]
         
         table = Table(data, colWidths=[6*cm, 6*cm])

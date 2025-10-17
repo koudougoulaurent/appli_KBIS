@@ -155,9 +155,13 @@
                                 {% endif %}
                             </div>
                             <div>
-                                {% if contrat.caution_payee %}
+                                {% if contrat.get_caution_payee_dynamique %}
                                     <span class="badge bg-success">
                                         <i class="bi bi-check-circle"></i> Payée
+                                    </span>
+                                {% elif contrat.get_caution_payee_dynamique is None %}
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-dash-circle"></i> Non requise
                                     </span>
                                 {% else %}
                                     <span class="badge bg-danger">
@@ -177,9 +181,13 @@
                                 {% endif %}
                             </div>
                             <div>
-                                {% if contrat.avance_loyer_payee or contrat.avance_loyer == 0 %}
+                                {% if contrat.get_avance_payee_dynamique %}
                                     <span class="badge bg-success">
                                         <i class="bi bi-check-circle"></i> Payée
+                                    </span>
+                                {% elif contrat.get_avance_payee_dynamique is None %}
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-dash-circle"></i> Non requise
                                     </span>
                                 {% else %}
                                     <span class="badge bg-danger">
