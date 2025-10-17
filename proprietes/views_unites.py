@@ -404,7 +404,7 @@ def reservation_create(request, unite_id):
                 for error in errors:
                     messages.error(request, f"{form.fields[field].label}: {error}")
     else:
-        form = ReservationUniteForm(unite_locative=unite)
+        form = ReservationUniteForm()
         # Pré-remplir l'unité locative
         form.fields['unite_locative'].initial = unite
         form.fields['unite_locative'].widget.attrs['readonly'] = True
