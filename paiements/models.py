@@ -996,11 +996,21 @@ class Paiement(models.Model):
     
     def _generer_recu_kbis_dynamique(self):
         """Génère un récépissé KBIS dynamique avec le format correct."""
-        from django.template.loader import render_to_string
-        from django.template import Context, Template
+        import sys
+        import os
         from datetime import datetime
         
         try:
+            # Utiliser le système unifié - corriger le chemin vers SCRIPTS
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            scripts_path = os.path.join(project_root, 'SCRIPTS')
+            if scripts_path not in sys.path:
+                sys.path.append(scripts_path)
+            from document_kbis_unifie import DocumentKBISUnifie
+            
+            # Déterminer le type de récépissé selon le type de paiement
+            type_recu = self._determiner_type_recu_paiement()
+            
             # Récupérer les informations de base de manière sécurisée
             try:
                 code_location = self.contrat.numero_contrat if self.contrat and self.contrat.numero_contrat else 'N/A'
@@ -1020,191 +1030,10 @@ class Paiement(models.Model):
             # Générer un numéro de récépissé unique au format KBIS
             numero_recu = f"REC-{datetime.now().strftime('%Y%m%d%H%M%S')}-{self.id if self.id else 'X1DZ'}"
             
-            # Template HTML simple pour le récépissé
-            html_template = """
-            <!DOCTYPE html>
-            <html lang="fr">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Récépissé de Paiement - {{ numero }}</title>
-                <style>
-                    body {
-                        font-family: Arial, sans-serif;
-                        margin: 0;
-                        padding: 20px;
-                        background-color: #f5f5f5;
-                    }
-                    .container {
-                        max-width: 800px;
-                        margin: 0 auto;
-                        background: white;
-                        padding: 30px;
-                        border-radius: 10px;
-                        box-shadow: 0 0 20px rgba(0,0,0,0.1);
-                    }
-                    .header {
-                        text-align: center;
-                        border-bottom: 3px solid #007bff;
-                        padding-bottom: 20px;
-                        margin-bottom: 30px;
-                    }
-                    .header h1 {
-                        color: #007bff;
-                        margin: 0;
-                        font-size: 28px;
-                    }
-                    .header h2 {
-                        color: #666;
-                        margin: 10px 0 0 0;
-                        font-size: 18px;
-                        font-weight: normal;
-                    }
-                    .info-section {
-                        margin-bottom: 25px;
-                    }
-                    .info-section h3 {
-                        color: #333;
-                        border-bottom: 2px solid #007bff;
-                        padding-bottom: 5px;
-                        margin-bottom: 15px;
-                    }
-                    .info-grid {
-                        display: grid;
-                        grid-template-columns: 1fr 1fr;
-                        gap: 20px;
-                    }
-                    .info-item {
-                        display: flex;
-                        justify-content: space-between;
-                        padding: 8px 0;
-                        border-bottom: 1px solid #eee;
-                    }
-                    .info-label {
-                        font-weight: bold;
-                        color: #555;
-                    }
-                    .info-value {
-                        color: #333;
-                    }
-                    .amount-section {
-                        background: #f8f9fa;
-                        padding: 20px;
-                        border-radius: 8px;
-                        text-align: center;
-                        margin: 20px 0;
-                    }
-                    .amount {
-                        font-size: 32px;
-                        font-weight: bold;
-                        color: #28a745;
-                        margin: 10px 0;
-                    }
-                    .footer {
-                        text-align: center;
-                        margin-top: 40px;
-                        padding-top: 20px;
-                        border-top: 2px solid #007bff;
-                        color: #666;
-                    }
-                    .signature-section {
-                        display: grid;
-                        grid-template-columns: 1fr 1fr;
-                        gap: 40px;
-                        margin-top: 40px;
-                    }
-                    .signature-box {
-                        text-align: center;
-                        border-top: 2px solid #333;
-                        padding-top: 10px;
-                        margin-top: 60px;
-                    }
-                    @media print {
-                        body { background: white; }
-                        .container { box-shadow: none; }
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <h1>RÉCÉPISSÉ DE PAIEMENT</h1>
-                        <h2>GESTIMMOB - Gestion Immobilière</h2>
-                    </div>
-                    
-                    <div class="info-section">
-                        <h3>Informations du Récépissé</h3>
-                        <div class="info-grid">
-                            <div class="info-item">
-                                <span class="info-label">Numéro:</span>
-                                <span class="info-value">{{ numero }}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Date:</span>
-                                <span class="info-value">{{ date }}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Type:</span>
-                                <span class="info-value">{{ type_paiement }}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Mode:</span>
-                                <span class="info-value">{{ mode_paiement }}</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="info-section">
-                        <h3>Informations du Contrat</h3>
-                        <div class="info-grid">
-                            <div class="info-item">
-                                <span class="info-label">Contrat:</span>
-                                <span class="info-value">{{ code_location }}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Locataire:</span>
-                                <span class="info-value">{{ recu_de }}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Adresse:</span>
-                                <span class="info-value">{{ quartier }}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Période:</span>
-                                <span class="info-value">{{ mois_regle }}</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="amount-section">
-                        <h3>Montant Reçu</h3>
-                        <div class="amount">{{ montant|floatformat:0 }} F CFA</div>
-                    </div>
-                    
-                    <div class="signature-section">
-                        <div class="signature-box">
-                            <p><strong>Reçu par:</strong></p>
-                            <p>GESTIMMOB</p>
-                        </div>
-                        <div class="signature-box">
-                            <p><strong>Payé par:</strong></p>
-                            <p>{{ recu_de }}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="footer">
-                        <p>Ce récépissé certifie que le paiement ci-dessus a été reçu en bonne et due forme.</p>
-                        <p><strong>GESTIMMOB</strong> - Gestion Immobilière Professionnelle</p>
-                    </div>
-                </div>
-            </body>
-            </html>
-            """
-            
             # Données du récépissé
-            context = {
+            donnees_recu = {
                 'numero': numero_recu,
-                'date': self.date_paiement.strftime('%d/%m/%Y') if self.date_paiement else datetime.now().strftime('%d/%m/%Y'),
+                'date': self.date_paiement.strftime('%d-%b-%y') if self.date_paiement else datetime.now().strftime('%d-%b-%y'),
                 'code_location': code_location,
                 'recu_de': recu_de,
                 'montant': float(self.montant),
@@ -1214,9 +1043,11 @@ class Paiement(models.Model):
                 'quartier': quartier,
             }
             
-            # Générer le HTML
-            template = Template(html_template)
-            return template.render(Context(context))
+            # Ajouter des données spécialisées selon le type
+            donnees_recu.update(self._ajouter_donnees_specialisees_recu(type_recu))
+            
+            # Générer le document unifié
+            return DocumentKBISUnifie.generer_document_unifie(donnees_recu, type_recu)
             
         except Exception as e:
             print(f"Erreur génération récépissé KBIS: {e}")
