@@ -663,12 +663,16 @@ body {
                             </label>
                             <input type="number" name="charges_mensuelles" id="id_charges_mensuelles" 
                                    class="field-input" value="{{ form.charges_mensuelles.value|default:'' }}" 
-                                   placeholder="Ex: 15000" min="0" step="1000">
+                                   placeholder="Ex: 15000 (optionnel)" min="0" step="1000">
                             {% if form.charges_mensuelles.errors %}
                                 {% for error in form.charges_mensuelles.errors %}
                                     <div class="field-error">{{ error }}</div>
                                 {% endfor %}
                             {% endif %}
+                            <div class="field-help">
+                                <i class="fas fa-info-circle"></i>
+                                Optionnel. Laissez vide si pas de charges.
+                            </div>
                         </div>
                         
                         <div class="field-group">

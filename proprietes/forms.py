@@ -2346,10 +2346,51 @@ class ContratPiecesForm(forms.Form):
 class UniteLocativeForm(forms.ModelForm):
     class Meta:
         model = UniteLocative
-        fields = ['nom', 'type_unite', 'surface', 'loyer_mensuel', 'charges_mensuelles', 'description']
+        fields = [
+            'propriete', 'bailleur', 'numero_unite', 'nom', 'type_unite',
+            'etage', 'surface', 'nombre_pieces', 'nombre_chambres', 'nombre_salles_bain',
+            'meuble', 'balcon', 'parking_inclus', 'climatisation', 'internet_inclus',
+            'loyer_mensuel', 'charges_mensuelles', 'caution_demandee', 'date_disponibilite',
+            'description', 'notes_privees'
+        ]
         widgets = {
-            'description': forms.Textarea(attrs={'rows': 3}),
+            'propriete': forms.Select(attrs={'class': 'form-control'}),
+            'bailleur': forms.Select(attrs={'class': 'form-control'}),
+            'numero_unite': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: A1, T2-1, Studio-3'}),
+            'nom': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nom descriptif de l\'unité'}),
+            'type_unite': forms.Select(attrs={'class': 'form-control'}),
+            'etage': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 2'}),
+            'surface': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 45.5', 'step': '0.01'}),
+            'nombre_pieces': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 3', 'min': '0'}),
+            'nombre_chambres': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 2', 'min': '0'}),
+            'nombre_salles_bain': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 1', 'min': '0'}),
+            'meuble': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'balcon': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'parking_inclus': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'climatisation': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'internet_inclus': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'loyer_mensuel': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 150000', 'min': '0', 'step': '1000'}),
+            'charges_mensuelles': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 15000 (optionnel)', 'min': '0', 'step': '1000'}),
+            'caution_demandee': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 300000', 'min': '0', 'step': '1000'}),
+            'date_disponibilite': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Décrivez l\'unité, ses caractéristiques particulières...'}),
+            'notes_privees': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Notes internes, observations, remarques...'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Rendre les champs optionnels
+        self.fields['charges_mensuelles'].required = False
+        self.fields['caution_demandee'].required = False
+        self.fields['date_disponibilite'].required = False
+        self.fields['description'].required = False
+        self.fields['notes_privees'].required = False
+        self.fields['surface'].required = False
+        self.fields['etage'].required = False
+        self.fields['nombre_pieces'].required = False
+        self.fields['nombre_chambres'].required = False
+        self.fields['nombre_salles_bain'].required = False
+        self.fields['bailleur'].required = False
 
 class ReservationUniteForm(forms.ModelForm):
     class Meta:
