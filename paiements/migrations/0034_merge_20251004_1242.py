@@ -6,8 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('paiements', '0032_add_retrait_models'),
-        ('paiements', '0033_create_retrait_models'),
+        ('paiements', '0031_add_total_charges_bailleur_column'),
     ]
 
     operations = [
