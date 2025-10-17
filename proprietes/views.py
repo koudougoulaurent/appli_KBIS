@@ -25,11 +25,11 @@ from .models import Photo
 from .forms import PhotoForm, PhotoMultipleForm
 from proprietes.models import Document
 from proprietes.forms import DocumentSearchForm, DocumentForm
-from proprietes.specialized_forms import DiagnosticForm, AssuranceForm, EtatLieuxForm
+# from proprietes.specialized_forms import DiagnosticForm, AssuranceForm, EtatLieuxForm  # Module supprimé
 from django.http import HttpResponse
-from .document_viewer import DocumentViewerView, document_content_view, document_pdf_viewer, document_secure_proxy
-from .document_debug import document_debug_info, document_test_download
-from .simple_download import simple_document_download, simple_document_view
+# from .document_viewer import DocumentViewerView, document_content_view, document_pdf_viewer, document_secure_proxy  # Module supprimé
+# from .document_debug import document_debug_info, document_test_download  # Module supprimé
+# from .simple_download import simple_document_download, simple_document_view  # Module supprimé
 
 @login_required
 def document_test_page(request):

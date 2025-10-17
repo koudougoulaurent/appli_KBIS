@@ -1,0 +1,400 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if unite %}
+        Modifier l'unité {{ unite.numero_unite }}
+    {% else %}
+        Créer une unité locative
+    {% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        padding: 2rem;
+    }
+    
+    .form-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .form-header h2 {
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-header p {
+        color: #6c757d;
+        margin: 0;
+    }
+    
+    .form-section {
+        margin-bottom: 2rem;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 10px;
+        border-left: 4px solid #007bff;
+    }
+    
+    .form-section h5 {
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+    
+    .form-floating {
+        margin-bottom: 1rem;
+    }
+    
+    .form-floating label {
+        color: #495057;
+        font-weight: 500;
+    }
+    
+    .form-control {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+    }
+    
+    .btn-secondary {
+        border-radius: 8px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+    }
+    
+    .help-text {
+        background: #e3f2fd;
+        border: 1px solid #bbdefb;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .help-text i {
+        color: #1976d2;
+        margin-right: 0.5rem;
+    }
+    
+    .suggestion-box {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .suggestion-box i {
+        color: #f39c12;
+        margin-right: 0.5rem;
+    }
+    
+    .required-field::after {
+        content: " *";
+        color: #dc3545;
+    }
+    
+    .form-actions {
+        text-align: center;
+        padding-top: 2rem;
+        border-top: 2px solid #e9ecef;
+    }
+    
+    .form-actions .btn {
+        margin: 0 0.5rem;
+        min-width: 150px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="form-container">
+        <!-- En-tête -->
+        <div class="form-header">
+            <h2>
+                <i class="fas fa-{% if unite %}edit{% else %}plus-circle{% endif %}"></i>
+                {% if unite %}
+                    Modifier l'unité {{ unite.numero_unite }}
+                {% else %}
+                    Créer une unité locative
+                {% endif %}
+            </h2>
+            <p>
+                {% if unite %}
+                    Modifiez les informations de l'unité
+                {% else %}
+                    Ajoutez une nouvelle unité à votre propriété
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Aide contextuelle -->
+        <div class="help-text">
+            <i class="fas fa-info-circle"></i>
+            <strong>Conseil :</strong>
+            {% if unite %}
+                Modifiez les informations ci-dessous. Les champs marqués d'un astérisque (*) sont obligatoires.
+            {% else %}
+                Remplissez les informations essentielles. Les champs marqués d'un astérisque (*) sont obligatoires.
+            {% endif %}
+            {% if propriete %}
+                Cette unité sera ajoutée à la propriété <strong>{{ propriete.titre }}</strong>.
+            {% endif %}
+        </div>
+
+        <!-- Suggestions intelligentes -->
+        {% if suggestion %}
+        <div class="suggestion-box">
+            <i class="fas fa-lightbulb"></i>
+            <strong>Suggestion :</strong> {{ suggestion }}
+        </div>
+        {% endif %}
+
+        <!-- Affichage des erreurs -->
+        {% if form.errors %}
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Erreurs détectées :</strong>
+            <ul class="mb-0 mt-2">
+                {% for field, errors in form.errors.items %}
+                    {% for error in errors %}
+                        <li><strong>{{ field|title }}:</strong> {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <form method="post" class="needs-validation" novalidate>
+            {% csrf_token %}
+            
+            <!-- Informations de base -->
+            <div class="form-section">
+                <h5><i class="fas fa-home"></i> Informations de base</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ form.type_unite }}
+                            <label for="{{ form.type_unite.id_for_label }}">Type d'unité *</label>
+                            {% if form.type_unite.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.type_unite.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ form.numero_unite }}
+                            <label for="{{ form.numero_unite.id_for_label }}">Numéro d'unité *</label>
+                            {% if form.numero_unite.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.numero_unite.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Caractéristiques physiques -->
+            <div class="form-section">
+                <h5><i class="fas fa-ruler-combined"></i> Caractéristiques physiques</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ form.surface }}
+                            <label for="{{ form.surface.id_for_label }}">Surface (m²)</label>
+                            {% if form.surface.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.surface.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ form.nombre_pieces }}
+                            <label for="{{ form.nombre_pieces.id_for_label }}">Nombre de pièces</label>
+                            {% if form.nombre_pieces.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.nombre_pieces.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations financières -->
+            <div class="form-section">
+                <h5><i class="fas fa-euro-sign"></i> Informations financières</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ form.loyer_mensuel }}
+                            <label for="{{ form.loyer_mensuel.id_for_label }}">Loyer mensuel (F CFA) *</label>
+                            {% if form.loyer_mensuel.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.loyer_mensuel.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            {{ form.charges_mensuelles }}
+                            <label for="{{ form.charges_mensuelles.id_for_label }}">Charges mensuelles (F CFA)</label>
+                            {% if form.charges_mensuelles.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.charges_mensuelles.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="form-section">
+                <h5><i class="fas fa-align-left"></i> Description</h5>
+                <div class="form-floating">
+                    {{ form.description }}
+                    <label for="{{ form.description.id_for_label }}">Description de l'unité</label>
+                    {% if form.description.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.description.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Champs cachés pour la propriété et le bailleur -->
+            {% if propriete %}
+                <input type="hidden" name="propriete" value="{{ propriete.id }}">
+            {% else %}
+                <div class="form-section">
+                    <h5><i class="fas fa-building"></i> Propriété et bailleur</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                {{ form.propriete }}
+                                <label for="{{ form.propriete.id_for_label }}">Propriété *</label>
+                                {% if form.propriete.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.propriete.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                {{ form.bailleur }}
+                                <label for="{{ form.bailleur.id_for_label }}">Bailleur</label>
+                                {% if form.bailleur.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.bailleur.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-info-circle"></i> 
+                                    Optionnel. Si non spécifié, le bailleur de la propriété sera utilisé.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Actions -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-{% if unite %}save{% else %}plus{% endif %}"></i>
+                    {% if unite %}
+                        Modifier l'unité
+                    {% else %}
+                        Créer l'unité
+                    {% endif %}
+                </button>
+                <a href="{% if propriete %}{% url 'proprietes:detail' propriete.id %}{% else %}{% url 'proprietes:unites_liste' %}{% endif %}" 
+                   class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i>
+                    {% if propriete %}
+                        Retour à la propriété
+                    {% else %}
+                        Retour à la liste
+                    {% endif %}
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Validation côté client
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+
+// Auto-remplissage du numéro d'unité
+document.addEventListener('DOMContentLoaded', function() {
+    const typeUniteSelect = document.getElementById('id_type_unite');
+    const numeroUniteInput = document.getElementById('id_numero_unite');
+    
+    if (typeUniteSelect && numeroUniteInput && !numeroUniteInput.value) {
+        typeUniteSelect.addEventListener('change', function() {
+            const type = this.value.toLowerCase();
+            if (type && !numeroUniteInput.value) {
+                numeroUniteInput.value = type + '1';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+
+
+
+
