@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('contrats', '0029_add_convertir_en_contrat'),
+        ('contrats', '0010_merge_20251008_1344'),
     ]
 
     operations = [
