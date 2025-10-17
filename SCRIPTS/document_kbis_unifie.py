@@ -311,14 +311,25 @@ class DocumentKBISUnifie:
             html_final = html_template
             for key, value in donnees_template.items():
                 if key == 'donnees_speciales':
-                    # Gérer les données spéciales avec une boucle Jinja2 simple
+                    # Gérer les données spéciales
                     if value:
                         speciales_html = ""
                         for k, v in value.items():
-                            speciales_html += f'<div class="info-row"><span class="info-label">{k.title()}:</span><span class="info-value">{v}</span></div>'
-                        html_final = html_final.replace('{% for key, value in donnees_speciales.items %}\n                                <div class="info-row">\n                                    <span class="info-label">{{ key|title }}:</span>\n                                    <span class="info-value">{{ value }}</span>\n                                </div>\n                                {% endfor %}', speciales_html)
+                            speciales_html += f'<div class="info-row"><span class="info-label">{k.replace("_", " ").title()}:</span><span class="info-value">{v}</span></div>'
+                        # Remplacer la section conditionnelle des données spéciales
+                        html_final = html_final.replace('{% if donnees_speciales %}\n                        <div class="info-section">\n                            <h3>Détails Spécifiques</h3>\n                            <div class="info-grid">\n                                {% for key, value in donnees_speciales.items %}\n                                <div class="info-row">\n                                    <span class="info-label">{{ key|title }}:</span>\n                                    <span class="info-value">{{ value }}</span>\n                                </div>\n                                {% endfor %}\n                            </div>\n                        </div>\n                        {% endif %}', 
+                        f'<div class="info-section"><h3>Détails Spécifiques</h3><div class="info-grid">{speciales_html}</div></div>' if speciales_html else '')
+                    else:
+                        # Supprimer la section si pas de données spéciales
+                        html_final = html_final.replace('{% if donnees_speciales %}\n                        <div class="info-section">\n                            <h3>Détails Spécifiques</h3>\n                            <div class="info-grid">\n                                {% for key, value in donnees_speciales.items %}\n                                <div class="info-row">\n                                    <span class="info-label">{{ key|title }}:</span>\n                                    <span class="info-value">{{ value }}</span>\n                                </div>\n                                {% endfor %}\n                            </div>\n                        </div>\n                        {% endif %}', '')
                 else:
+                    # Remplacer les variables simples
                     html_final = html_final.replace('{{ ' + key + ' }}', str(value))
+                    # Gérer les filtres Django
+                    if '|floatformat:0' in html_final:
+                        html_final = html_final.replace('{{ ' + key + '|floatformat:0 }}', f"{float(value):.0f}")
+                    if '|title' in html_final:
+                        html_final = html_final.replace('{{ ' + key + '|title }}', str(value).title())
             
             return html_final
             
