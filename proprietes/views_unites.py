@@ -198,7 +198,7 @@ def unite_create(request, propriete_id=None):
         'from_property': request.GET.get('from_property') == '1',
     }
     
-    return render(request, 'proprietes/unites/form_clean.html', context)
+    return render(request, 'proprietes/unites/form_optimized.html', context)
 
 
 @login_required
