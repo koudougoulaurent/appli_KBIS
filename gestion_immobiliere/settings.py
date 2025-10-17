@@ -162,7 +162,7 @@ if os.environ.get('RENDER') or os.environ.get('DJANGO_SETTINGS_MODULE') == 'gest
     
 # Configuration de sécurité pour production
 if os.environ.get('RENDER'):
-    DEBUG = False
+    DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
     ALLOWED_HOSTS = ['appli-kbis.onrender.com', 'appli-kbis-3.onrender.com', '.onrender.com', 'localhost', '127.0.0.1']
     
     # Configuration de session
