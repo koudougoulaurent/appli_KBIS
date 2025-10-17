@@ -72,6 +72,13 @@ def main():
             except Exception as e:
                 print(f"ERREUR bailleur.telephone_mobile: {e}")
             
+            # CORRECTION CRITIQUE: numero_locataire
+            try:
+                cursor.execute("ALTER TABLE proprietes_locataire ALTER COLUMN numero_locataire TYPE VARCHAR(50)")
+                print("OK: proprietes_locataire.numero_locataire modifie (20 -> 50)")
+            except Exception as e:
+                print(f"ERREUR numero_locataire: {e}")
+            
             print("\nVerification finale...")
             
             # Vérification finale
@@ -79,7 +86,7 @@ def main():
                 SELECT table_name, column_name, character_maximum_length 
                 FROM information_schema.columns 
                 WHERE table_name IN ('proprietes_locataire', 'proprietes_bailleur')
-                AND column_name IN ('telephone', 'telephone_mobile', 'garant_telephone')
+                AND column_name IN ('telephone', 'telephone_mobile', 'garant_telephone', 'numero_locataire')
                 ORDER BY table_name, column_name
             """)
             
