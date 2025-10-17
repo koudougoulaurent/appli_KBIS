@@ -89,14 +89,29 @@ class DocumentUnifieA5ServiceComplet:
             'contrat__propriete__bailleur'
         ).get(id=paiement_id)
         
+        # CORRECTION CRITIQUE : Calculer le bon montant selon le type de document
+        montant_a_afficher = paiement.montant
+        
+        if document_type == 'paiement_avance':
+            # Pour un récépissé d'avance, utiliser le montant de l'avance du contrat
+            try:
+                montant_avance_contrat = float(paiement.contrat.avance_loyer) if paiement.contrat.avance_loyer else 0
+                if montant_avance_contrat > 0:
+                    montant_a_afficher = montant_avance_contrat
+            except (ValueError, TypeError, AttributeError):
+                pass
+        
         # Calculer les mois couverts par l'avance (pour avance et caution)
         mois_couverts = None
-        if document_type in ['paiement_avance', 'paiement_caution'] and paiement.montant and paiement.contrat.loyer_mensuel:
+        if document_type in ['paiement_avance', 'paiement_caution'] and montant_a_afficher and paiement.contrat.loyer_mensuel:
             try:
-                montant_float = float(paiement.montant)
+                montant_float = float(montant_a_afficher)
                 loyer_float = float(paiement.contrat.loyer_mensuel)
                 if montant_float > 0 and loyer_float > 0:
-                    mois_couverts = self._calculer_mois_couverts_avance(paiement)
+                    # Utiliser le montant correct pour le calcul
+                    paiement_temp = paiement
+                    paiement_temp.montant = montant_a_afficher
+                    mois_couverts = self._calculer_mois_couverts_avance(paiement_temp)
             except (ValueError, TypeError):
                 pass
         
@@ -107,12 +122,12 @@ class DocumentUnifieA5ServiceComplet:
             'date_paiement': paiement.date_paiement,
             'numero_cheque': paiement.numero_cheque,
             'reference_virement': paiement.reference_virement,
-            'montant_total': paiement.montant,
-            'montant_lettres': self._convertir_en_lettres(paiement.montant),
+            'montant_total': montant_a_afficher,  # CORRECTION : Utiliser le bon montant
+            'montant_lettres': self._convertir_en_lettres(montant_a_afficher),
             'montant_loyer': paiement.contrat.loyer_mensuel,
             'montant_charges_deduites': getattr(paiement, 'montant_charges_deduites', 0),
-            'montant_net_paye': getattr(paiement, 'montant_net_paye', paiement.montant),
-            'montant_net_lettres': self._convertir_en_lettres(getattr(paiement, 'montant_net_paye', paiement.montant)),
+            'montant_net_paye': getattr(paiement, 'montant_net_paye', montant_a_afficher),
+            'montant_net_lettres': self._convertir_en_lettres(getattr(paiement, 'montant_net_paye', montant_a_afficher)),
             'mois_couverts': mois_couverts,
             'mois_couverts_lettres': self._convertir_mois_couverts_en_lettres(mois_couverts) if mois_couverts else None,
             'locataire': paiement.contrat.locataire,

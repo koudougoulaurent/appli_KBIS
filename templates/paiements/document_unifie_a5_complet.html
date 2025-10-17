@@ -451,7 +451,15 @@
                 <span class="detail-value">{{ mode_paiement }}</span>
             </div>
             <div class="detail-row">
-                <span class="detail-label">Montant de la {{ type_paiement|lower }}:</span>
+                <span class="detail-label">
+                    {% if document_type == 'paiement_avance' %}
+                        Montant de l'avance de loyer:
+                    {% elif document_type == 'paiement_caution' %}
+                        Montant de la caution:
+                    {% else %}
+                        Montant de la {{ type_paiement|lower }}:
+                    {% endif %}
+                </span>
                 <span class="detail-value">{{ montant_total|floatformat:0 }} F CFA</span>
             </div>
             {% if document_type == 'paiement_caution' and mois_couverts %}
