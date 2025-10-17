@@ -327,7 +327,14 @@ class DocumentKBISUnifie:
                     html_final = html_final.replace('{{ ' + key + ' }}', str(value))
                     # Gérer les filtres Django
                     if '|floatformat:0' in html_final:
-                        html_final = html_final.replace('{{ ' + key + '|floatformat:0 }}', f"{float(value):.0f}")
+                        try:
+                            # Essayer de convertir en float seulement si c'est un nombre
+                            if isinstance(value, (int, float)) or (isinstance(value, str) and value.replace('.', '').replace('-', '').isdigit()):
+                                html_final = html_final.replace('{{ ' + key + '|floatformat:0 }}', f"{float(value):.0f}")
+                            else:
+                                html_final = html_final.replace('{{ ' + key + '|floatformat:0 }}', str(value))
+                        except (ValueError, TypeError):
+                            html_final = html_final.replace('{{ ' + key + '|floatformat:0 }}', str(value))
                     if '|title' in html_final:
                         html_final = html_final.replace('{{ ' + key + '|title }}', str(value).title())
             
