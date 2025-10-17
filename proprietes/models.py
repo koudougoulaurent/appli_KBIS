@@ -85,8 +85,8 @@ class Bailleur(DuplicatePreventionMixin, models.Model):
     
     # Contact
     email = models.EmailField(blank=True, null=True, verbose_name=_("Email"))
-    telephone = models.CharField(max_length=20, verbose_name=_("Téléphone"))
-    telephone_mobile = models.CharField(max_length=20, blank=True, verbose_name=_("Mobile"))
+    telephone = models.CharField(max_length=30, verbose_name=_("Téléphone"))
+    telephone_mobile = models.CharField(max_length=30, blank=True, verbose_name=_("Mobile"))
     
     # Adresse
     adresse = models.TextField(blank=True, null=True, verbose_name=_("Adresse"))
@@ -209,8 +209,8 @@ class Locataire(DuplicatePreventionMixin, models.Model):
     
     # Contact
     email = models.EmailField(blank=True, null=True, verbose_name=_("Email"))
-    telephone = models.CharField(max_length=20, verbose_name=_("Téléphone"))
-    telephone_mobile = models.CharField(max_length=20, blank=True, verbose_name=_("Mobile"))
+    telephone = models.CharField(max_length=30, verbose_name=_("Téléphone"))
+    telephone_mobile = models.CharField(max_length=30, blank=True, verbose_name=_("Mobile"))
     
     # Adresse
     adresse = models.TextField(blank=True, null=True, verbose_name=_("Adresse"))
@@ -238,7 +238,7 @@ class Locataire(DuplicatePreventionMixin, models.Model):
     )
     garant_nom = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Nom du garant"))
     garant_prenom = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Prénom du garant"))
-    garant_telephone = models.CharField(max_length=20, blank=True, null=True, verbose_name=_("Téléphone du garant"))
+    garant_telephone = models.CharField(max_length=30, blank=True, null=True, verbose_name=_("Téléphone du garant"))
     garant_email = models.EmailField(blank=True, null=True, verbose_name=_("Email du garant"))
     garant_profession = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Profession du garant"))
     garant_employeur = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Employeur du garant"))
