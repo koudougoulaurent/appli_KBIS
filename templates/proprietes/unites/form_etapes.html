@@ -108,9 +108,10 @@
 .step-section {
     background: #f8f9fa;
     border-radius: 15px;
-    padding: 2rem;
-    margin-bottom: 1.5rem;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
     border: 1px solid #e9ecef;
+    min-height: 300px;
 }
 
 .step-section h3 {
@@ -130,15 +131,18 @@
 
 /* Champs de formulaire */
 .form-floating {
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
+    min-height: 60px;
 }
 
 .form-control {
     border: 2px solid #e9ecef;
     border-radius: 10px;
-    padding: 0.75rem 1rem;
+    padding: 1rem 1.25rem;
     font-size: 1rem;
     transition: all 0.3s ease;
+    min-height: 50px;
+    height: auto;
 }
 
 .form-control:focus {
@@ -149,7 +153,46 @@
 .form-floating > label {
     color: #495057;
     font-weight: 500;
-    padding: 0.75rem 1rem;
+    padding: 1rem 1.25rem;
+    font-size: 0.95rem;
+}
+
+/* Correction pour les champs tronqués */
+.form-floating .form-control {
+    padding-top: 1.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.form-floating > label {
+    transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
+    transform-origin: 0 0;
+}
+
+/* Correction spécifique pour les champs select */
+.form-floating select.form-control {
+    padding-top: 1.5rem;
+    padding-bottom: 0.5rem;
+    height: auto;
+    min-height: 50px;
+}
+
+/* Correction pour les champs input */
+.form-floating input.form-control {
+    padding-top: 1.5rem;
+    padding-bottom: 0.5rem;
+    height: auto;
+    min-height: 50px;
+}
+
+/* Assurer que les champs ne sont pas coupés */
+.form-floating {
+    overflow: visible;
+    position: relative;
+}
+
+.form-floating .form-control {
+    position: relative;
+    z-index: 2;
 }
 
 /* Groupes d'équipements */
@@ -737,3 +780,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+
