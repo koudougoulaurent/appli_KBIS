@@ -38,9 +38,10 @@ class Contrat(models.Model):
     date_signature = models.DateField(verbose_name=_("Date de signature"))
     
     # Informations financières
-    loyer_mensuel = models.CharField(
-        max_length=20,
-        default='0',
+    loyer_mensuel = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
         verbose_name=_("Loyer mensuel"),
         help_text=_("Sera automatiquement rempli à partir de la propriété ou unité locative sélectionnée")
     )
@@ -51,14 +52,16 @@ class Contrat(models.Model):
     )
     
     # Gestion des cautions et avances
-    depot_garantie = models.CharField(
-        max_length=20,
-        default='0',
+    depot_garantie = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
         verbose_name=_("Dépôt de garantie ou Caution")
     )
-    avance_loyer = models.CharField(
-        max_length=20,
-        default='0',
+    avance_loyer = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
         verbose_name=_("Avance de loyer")
     )
     
