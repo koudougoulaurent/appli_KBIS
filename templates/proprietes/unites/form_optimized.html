@@ -803,32 +803,97 @@ document.addEventListener('DOMContentLoaded', function() {
     // Validation en temps réel
     const form = document.getElementById('uniteForm');
     if (form) {
+        // Validation à la soumission
         form.addEventListener('submit', function(e) {
             const requiredFields = form.querySelectorAll('[required]');
             let hasErrors = false;
+            let errorMessages = [];
             
             requiredFields.forEach(field => {
                 if (!field.value.trim()) {
                     field.classList.add('error');
                     hasErrors = true;
+                    const label = field.previousElementSibling;
+                    if (label) {
+                        errorMessages.push(`- ${label.textContent.replace(' *', '')} est obligatoire`);
+                    }
                 } else {
                     field.classList.remove('error');
                 }
             });
             
+            // Validation des champs numériques
+            const numberFields = form.querySelectorAll('input[type="number"]');
+            numberFields.forEach(field => {
+                if (field.value && (isNaN(field.value) || parseFloat(field.value) < 0)) {
+                    field.classList.add('error');
+                    hasErrors = true;
+                    const label = field.previousElementSibling;
+                    if (label) {
+                        errorMessages.push(`- ${label.textContent.replace(' *', '')} doit être un nombre valide`);
+                    }
+                }
+            });
+            
             if (hasErrors) {
                 e.preventDefault();
-                alert('Veuillez remplir tous les champs obligatoires.');
+                alert('Erreurs détectées :\n\n' + errorMessages.join('\n'));
             }
+        });
+        
+        // Validation en temps réel
+        const allInputs = form.querySelectorAll('input, select, textarea');
+        allInputs.forEach(input => {
+            input.addEventListener('blur', function() {
+                if (this.hasAttribute('required') && !this.value.trim()) {
+                    this.classList.add('error');
+                } else {
+                    this.classList.remove('error');
+                }
+            });
+            
+            input.addEventListener('input', function() {
+                if (this.classList.contains('error') && this.value.trim()) {
+                    this.classList.remove('error');
+                }
+            });
         });
     }
     
-    // Animation des checkboxes
+    // Gestion des checkboxes
     const checkboxes = document.querySelectorAll('.checkbox-item');
     checkboxes.forEach(item => {
-        item.addEventListener('click', function() {
-            const checkbox = this.querySelector('input[type="checkbox"]');
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        const label = item.querySelector('label');
+        
+        // Clic sur l'élément entier
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
             checkbox.checked = !checkbox.checked;
+            checkbox.dispatchEvent(new Event('change'));
+        });
+        
+        // Clic sur le label
+        label.addEventListener('click', function(e) {
+            e.preventDefault();
+            checkbox.checked = !checkbox.checked;
+            checkbox.dispatchEvent(new Event('change'));
+        });
+        
+        // Clic sur la checkbox (ne pas interférer)
+        checkbox.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+        
+        // Changement de la checkbox
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                item.style.borderColor = '#667eea';
+                item.style.background = '#f0f4ff';
+            } else {
+                item.style.borderColor = '#e5e7eb';
+                item.style.background = 'white';
+            }
         });
     });
 });
