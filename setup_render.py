@@ -1,14 +1,40 @@
 #!/usr/bin/env python3
 """
-Script de configuration initiale pour Render
+Script de configuration initiale pour Render avec support PostgreSQL progressif
 """
 import os
 import django
 from django.core.management import execute_from_command_line
 
 # Configuration Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings_render_minimal')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings_render')
 django.setup()
+
+def get_database_info():
+    """Récupère les informations sur la base de données"""
+    from django.conf import settings
+    db_config = settings.DATABASES['default']
+    engine = db_config['ENGINE']
+    
+    if 'postgresql' in engine:
+        return "PostgreSQL", db_config.get('NAME', 'N/A')
+    elif 'sqlite' in engine:
+        return "SQLite", db_config.get('NAME', 'N/A')
+    else:
+        return "Autre", db_config.get('NAME', 'N/A')
+
+def test_database_connection():
+    """Teste la connexion à la base de données"""
+    try:
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            result = cursor.fetchone()
+            print(f"✅ Connexion base de données réussie: {result}")
+            return True
+    except Exception as e:
+        print(f"❌ Erreur connexion base de données: {e}")
+        return False
 
 def create_superuser():
     """Créer le superutilisateur"""
@@ -177,13 +203,24 @@ def create_configuration_entreprise():
         print(f"ERREUR creation configuration: {e}")
 
 def setup_database():
-    """Configuration complète de la base de données"""
+    """Configuration complète de la base de données avec support PostgreSQL progressif"""
     try:
-        print("Configuration de la base de donnees...")
+        print("🚀 CONFIGURATION DE LA BASE DE DONNÉES")
+        print("=" * 50)
+        
+        # Afficher les informations de la base de données
+        db_type, db_name = get_database_info()
+        print(f"📊 Base de données: {db_type} - {db_name}")
+        
+        # Tester la connexion
+        if not test_database_connection():
+            print("❌ Impossible de se connecter à la base de données")
+            return False
         
         # Synchroniser la base de données
+        print("🔄 Synchronisation de la base de données...")
         execute_from_command_line(['manage.py', 'migrate', '--run-syncdb', '--noinput'])
-        print("OK Base de donnees synchronisee")
+        print("✅ Base de données synchronisée")
         
         # Créer les groupes
         print("Creation des groupes de travail...")
