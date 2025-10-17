@@ -475,7 +475,7 @@ class ChargeDeductible(models.Model):
     )
     
     # Métadonnées
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_deleted = models.BooleanField(default=False)
     
