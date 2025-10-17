@@ -1925,6 +1925,11 @@ class ReservationUnite(models.Model):
         verbose_name=_("Notes"),
         help_text=_("Notes sur la réservation")
     )
+    convertir_en_contrat = models.BooleanField(
+        default=False,
+        verbose_name=_("Convertir en contrat"),
+        help_text=_("Cocher pour convertir immédiatement cette réservation en contrat de bail")
+    )
     
     # Métadonnées
     date_creation = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de création"))

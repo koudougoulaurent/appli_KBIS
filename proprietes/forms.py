@@ -2425,12 +2425,13 @@ class UniteLocativeForm(forms.ModelForm):
 class ReservationUniteForm(forms.ModelForm):
     class Meta:
         model = ReservationUnite
-        fields = ['unite_locative', 'locataire_potentiel', 'date_debut_souhaitee', 'date_fin_prevue', 'date_expiration', 'montant_reservation', 'statut', 'notes']
+        fields = ['unite_locative', 'locataire_potentiel', 'date_debut_souhaitee', 'date_fin_prevue', 'date_expiration', 'montant_reservation', 'statut', 'notes', 'convertir_en_contrat']
         widgets = {
             'date_debut_souhaitee': forms.DateInput(attrs={'type': 'date'}),
             'date_fin_prevue': forms.DateInput(attrs={'type': 'date'}),
             'date_expiration': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'convertir_en_contrat': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
 class UniteRechercheForm(forms.Form):
