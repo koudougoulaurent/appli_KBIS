@@ -1,0 +1,1 @@
+# Settings de développement hotspot

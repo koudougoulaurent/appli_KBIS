@@ -485,16 +485,16 @@ def liste_paiements(request):
         # Base QuerySet avec annotations optimisées
         from django.db.models import Sum, Count, F, Case, When, DecimalField, Q
         
-        # Filtrer les paiements en excluant les cautions/avances non marquées comme payées
+        # Filtrer les paiements en excluant les doublons et en affichant la propriété
         paiements = Paiement.objects.filter(is_deleted=False).select_related(
-            'contrat__locataire', 'contrat__propriete', 'cree_par'
+            'contrat__locataire', 'contrat__propriete', 'contrat__propriete__bailleur', 'cree_par'
         ).exclude(
             # Exclure les paiements de caution qui ne sont pas marqués comme payés
             Q(type_paiement='depot_garantie') & Q(contrat__caution_payee=False)
         ).exclude(
             # Exclure les paiements d'avance qui ne sont pas marqués comme payés
             Q(type_paiement='avance') & Q(contrat__avance_loyer_payee=False)
-        ).annotate(
+        ).distinct().annotate(  # Éviter les doublons
             # Montant total formaté
             montant_total_formatted=Case(
                 When(montant__isnull=False, then='montant'),

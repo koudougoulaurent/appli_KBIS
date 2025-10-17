@@ -161,6 +161,7 @@
                                     <th>Référence</th>
                                     <th>Contrat</th>
                                     <th>Locataire</th>
+                                    <th>Propriété</th>
                                     <th>Montant</th>
                                     <th>Type</th>
                                     <th>Statut</th>
@@ -186,6 +187,13 @@
                                         {{ paiement.contrat.locataire.get_nom_complet }}
                                         {% else %}
                                         <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if paiement.contrat and paiement.contrat.propriete %}
+                                        <small>{{ paiement.contrat.propriete.titre|default:"N/A"|truncatechars:30 }}</small>
+                                        {% else %}
+                                        <span class="text-muted">N/A</span>
                                         {% endif %}
                                     </td>
                                     <td>
