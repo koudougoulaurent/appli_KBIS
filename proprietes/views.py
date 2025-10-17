@@ -25,11 +25,11 @@ from .models import Photo
 from .forms import PhotoForm, PhotoMultipleForm
 from proprietes.models import Document
 from proprietes.forms import DocumentSearchForm, DocumentForm
-from proprietes.specialized_forms import DiagnosticForm, AssuranceForm, EtatLieuxForm
+# from proprietes.specialized_forms import DiagnosticForm, AssuranceForm, EtatLieuxForm  # Fichier supprimé
 from django.http import HttpResponse
-from .document_viewer import DocumentViewerView, document_content_view, document_pdf_viewer, document_secure_proxy
-from .document_debug import document_debug_info, document_test_download
-from .simple_download import simple_document_download, simple_document_view
+# from .document_viewer import DocumentViewerView, document_content_view, document_pdf_viewer, document_secure_proxy  # Fichier supprimé
+# from .document_debug import document_debug_info, document_test_download  # Fichier supprimé
+# from .simple_download import simple_document_download, simple_document_view  # Fichier supprimé
 
 @login_required
 def document_test_page(request):
@@ -2623,86 +2623,23 @@ def document_download(request, pk):
 
 @login_required
 def diagnostic_form_view(request):
-    """Vue pour le formulaire de diagnostics."""
-    from core.utils import check_group_permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
-        return redirect('proprietes:liste')
-    
-    if request.method == 'POST':
-        form = DiagnosticForm(request.POST, request.FILES)
-        if form.is_valid():
-            form.save_diagnostics(user=request.user)
-            messages.success(
-                request, 
-                f'Diagnostics enregistrés avec succès pour la propriété "{form.cleaned_data["propriete"]}"!'
-            )
-            return redirect('proprietes:detail', pk=form.cleaned_data['propriete'].pk)
-    else:
-        form = DiagnosticForm()
-    
-    context = {
-        'form': form,
-        'title': 'Formulaire de Diagnostics Immobiliers'
-    }
-    return render(request, 'proprietes/formulaires_specialises/diagnostic_form.html', context)
+    """Vue pour le formulaire de diagnostics - DÉSACTIVÉ (formulaire supprimé)"""
+    messages.error(request, "Cette fonctionnalité est temporairement désactivée.")
+    return redirect('proprietes:liste')
 
 
 @login_required
 def assurance_form_view(request):
-    """Vue pour le formulaire d'assurances."""
-    from core.utils import check_group_permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
-        return redirect('proprietes:liste')
-    
-    if request.method == 'POST':
-        form = AssuranceForm(request.POST, request.FILES)
-        if form.is_valid():
-            form.save_assurances(user=request.user)
-            messages.success(
-                request, 
-                f'Assurances enregistrées avec succès pour la propriété "{form.cleaned_data["propriete"]}"!'
-            )
-            return redirect('proprietes:detail', pk=form.cleaned_data['propriete'].pk)
-    else:
-        form = AssuranceForm()
-    
-    context = {
-        'form': form,
-        'title': 'Formulaire d\'Assurances Immobilières'
-    }
-    return render(request, 'proprietes/formulaires_specialises/assurance_form.html', context)
+    """Vue pour le formulaire d'assurances - DÉSACTIVÉ (formulaire supprimé)"""
+    messages.error(request, "Cette fonctionnalité est temporairement désactivée.")
+    return redirect('proprietes:liste')
 
 
 @login_required
 def etat_lieux_form_view(request):
-    """Vue pour le formulaire d'état des lieux."""
-    from core.utils import check_group_permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
-        return redirect('proprietes:liste')
-    
-    if request.method == 'POST':
-        form = EtatLieuxForm(request.POST, request.FILES)
-        if form.is_valid():
-            form.save_etat_lieux(user=request.user)
-            messages.success(
-                request, 
-                f'État des lieux enregistré avec succès pour la propriété "{form.cleaned_data["propriete"]}"!'
-            )
-            return redirect('proprietes:detail', pk=form.cleaned_data['propriete'].pk)
-    else:
-        form = EtatLieuxForm()
-    
-    context = {
-        'form': form,
-        'title': 'Formulaire d\'État des Lieux'
-    }
-    return render(request, 'proprietes/formulaires_specialises/etat_lieux_form.html', context)
+    """Vue pour le formulaire d'état des lieux - DÉSACTIVÉ (formulaire supprimé)"""
+    messages.error(request, "Cette fonctionnalité est temporairement désactivée.")
+    return redirect('proprietes:liste')
 
 def proprietes_dashboard(request):
     """
