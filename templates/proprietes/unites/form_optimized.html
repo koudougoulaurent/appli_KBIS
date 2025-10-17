@@ -498,20 +498,21 @@ body {
                         </div>
                     </div>
                     
-                    {% if not propriete %}
                     <div class="field-grid">
                         <div class="field-group">
                             <label class="field-label required" for="id_propriete">
                                 Propriété
                             </label>
-                            <select name="propriete" id="id_propriete" class="field-input field-select" required>
-                                <option value="">Sélectionnez une propriété</option>
-                                {% for choice in form.propriete.field.queryset %}
-                                    <option value="{{ choice.pk }}" {% if form.propriete.value == choice.pk %}selected{% endif %}>
-                                        {{ choice.titre }} - {{ choice.adresse }}
-                                    </option>
-                                {% endfor %}
-                            </select>
+                            {% if propriete %}
+                                <!-- Si on vient d'une propriété spécifique, afficher le nom et cacher le champ -->
+                                <div class="field-input" style="background-color: #f8f9fa; color: #6c757d; cursor: not-allowed;">
+                                    {{ propriete.titre }} - {{ propriete.adresse }}
+                                </div>
+                                <input type="hidden" name="propriete" value="{{ propriete.pk }}">
+                            {% else %}
+                                <!-- Si pas de propriété pré-sélectionnée, afficher le select -->
+                                {{ form.propriete }}
+                            {% endif %}
                             {% if form.propriete.errors %}
                                 {% for error in form.propriete.errors %}
                                     <div class="field-error">{{ error }}</div>
@@ -523,14 +524,7 @@ body {
                             <label class="field-label" for="id_bailleur">
                                 Bailleur
                             </label>
-                            <select name="bailleur" id="id_bailleur" class="field-input field-select">
-                                <option value="">Sélectionnez un bailleur</option>
-                                {% for choice in form.bailleur.field.queryset %}
-                                    <option value="{{ choice.pk }}" {% if form.bailleur.value == choice.pk %}selected{% endif %}>
-                                        {{ choice.nom }} {{ choice.prenom }}
-                                    </option>
-                                {% endfor %}
-                            </select>
+                            {{ form.bailleur }}
                             {% if form.bailleur.errors %}
                                 {% for error in form.bailleur.errors %}
                                     <div class="field-error">{{ error }}</div>
@@ -542,7 +536,6 @@ body {
                             </div>
                         </div>
                     </div>
-                    {% endif %}
                 </div>
 
                 <!-- CARACTÉRISTIQUES PHYSIQUES -->
