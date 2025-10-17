@@ -462,7 +462,7 @@
                 </span>
                 <span class="detail-value">{{ montant_total|floatformat:0 }} F CFA</span>
             </div>
-            {% if document_type in ['paiement_avance', 'paiement_caution'] and mois_couverts %}
+            {% if document_type == 'paiement_avance' and mois_couverts or document_type == 'paiement_caution' and mois_couverts %}
             <div class="detail-row">
                 <span class="detail-label">Mois couverts:</span>
                 <span class="detail-value">{{ mois_couverts.nombre }} mois ({{ mois_couverts.mois_texte }})</span>
