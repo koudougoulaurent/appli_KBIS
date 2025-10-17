@@ -101,9 +101,15 @@
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="stat-card success">
+                        <div class="stat-card {% if contrat.avance_loyer > 0 %}success{% else %}secondary{% endif %}">
                             <div class="stat-number">{{ contrat.get_avance_loyer_formatted }}</div>
-                            <div class="stat-label">Avance de Loyer (1 mois)</div>
+                            <div class="stat-label">
+                                {% if contrat.avance_loyer > 0 %}
+                                    Avance de Loyer (1 mois)
+                                {% else %}
+                                    Aucune somme versée
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-3">
