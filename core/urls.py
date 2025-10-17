@@ -46,7 +46,7 @@ from .views_ajax_validation import (
     get_suggested_property_number,
     get_suggested_contract_number
 )
-from .demo_views import demo_kbis_design
+# from .demo_views import demo_kbis_design  # Fichier supprimé
 
 app_name = 'core'
 
@@ -112,6 +112,6 @@ urlpatterns = [
     path('ajax/suggested-property-number/', get_suggested_property_number, name='suggested_property_number'),
     path('ajax/suggested-contract-number/', get_suggested_contract_number, name='suggested_contract_number'),
     
-    # Démonstration du design KBIS
-    path('demo-kbis-design/', demo_kbis_design, name='demo_kbis_design'),
+    # Démonstration du design KBIS - supprimée
+    # path('demo-kbis-design/', demo_kbis_design, name='demo_kbis_design'),
 ]
