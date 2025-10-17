@@ -394,6 +394,36 @@ class ServiceContexteIntelligent:
                 'priorite': 'normale'
             })
         
+        # *** SUGGESTIONS POUR LES AVANCES DE LOYER ***
+        # Suggestion d'avance de loyer si pas d'avances actives
+        if calculs['montant_avances_disponible'] == 0 and data['contrat']['avance_loyer'] and Decimal(data['contrat']['avance_loyer']) > 0:
+            suggestions.append({
+                'type': 'avance_loyer',
+                'montant': data['contrat']['avance_loyer'],
+                'libelle': f'Paiement de l\'avance de loyer ({data["contrat"]["avance_loyer"]} F CFA)',
+                'priorite': 'normale'
+            })
+        
+        # Suggestion de complément d'avance si avances insuffisantes
+        elif calculs['montant_avances_disponible'] > 0 and calculs['mois_couverts_par_avances'] <= 1:
+            montant_complement = Decimal(data['contrat']['loyer_mensuel']) - calculs['montant_avances_disponible']
+            if montant_complement > 0:
+                suggestions.append({
+                    'type': 'complement_avance',
+                    'montant': str(montant_complement),
+                    'libelle': f'Complément d\'avance pour couvrir un mois supplémentaire ({montant_complement} F CFA)',
+                    'priorite': 'normale'
+                })
+        
+        # Suggestion de paiement normal si avances suffisantes
+        elif calculs['montant_avances_disponible'] > 0 and calculs['mois_couverts_par_avances'] > 1:
+            suggestions.append({
+                'type': 'loyer_avec_avance',
+                'montant': data['contrat']['loyer_mensuel'],
+                'libelle': f'Paiement loyer (avances disponibles: {calculs["montant_avances_disponible"]:,.0f} F CFA)',
+                'priorite': 'normale'
+            })
+        
         return {
             'success': True,
             'suggestions': suggestions

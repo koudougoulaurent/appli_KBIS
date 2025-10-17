@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .suggestion-card {
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .suggestion-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .suggestion-card.priorite-haute {
+        border-left: 4px solid #dc3545;
+        background-color: #fff5f5;
+    }
+    
+    .suggestion-card.priorite-normale {
+        border-left: 4px solid #28a745;
+        background-color: #f8fff9;
+    }
+    
+    .suggestion-card.priorite-basse {
+        border-left: 4px solid #ffc107;
+        background-color: #fffdf5;
+    }
+    
+    .montant-suggestion {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    
+    .type-suggestion {
+        font-size: 0.9rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .contexte-avances {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .info-avance {
+        background-color: rgba(255,255,255,0.1);
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+    }
+    
+    .btn-appliquer {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-appliquer:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-lightbulb text-warning"></i>
+                        {{ title }}
+                    </h1>
+                    <p class="text-muted mb-0">{{ subtitle }}</p>
+                </div>
+                <div>
+                    <a href="{% url 'paiements:dashboard' %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Retour au dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contexte des avances -->
+    {% if contexte and contexte.calculs_automatiques.montant_avances_disponible > 0 %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="contexte-avances">
+                <h5 class="mb-3">
+                    <i class="bi bi-piggy-bank"></i>
+                    Avances de Loyer Disponibles
+                </h5>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="info-avance">
+                            <h6 class="mb-1">Montant Disponible</h6>
+                            <h4 class="mb-0">{{ contexte.calculs_automatiques.montant_avances_disponible|floatformat:0 }} F CFA</h4>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="info-avance">
+                            <h6 class="mb-1">Mois Couverts</h6>
+                            <h4 class="mb-0">{{ contexte.calculs_automatiques.mois_couverts_par_avances }} mois</h4>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="info-avance">
+                            <h6 class="mb-1">Avances Actives</h6>
+                            <h4 class="mb-0">{{ contexte.calculs_automatiques.avances_actives }} avance(s)</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Suggestions de paiement -->
+    <div class="row">
+        <div class="col-lg-8">
+            <h5 class="mb-3">
+                <i class="bi bi-list-check"></i>
+                Suggestions Intelligentes
+            </h5>
+            
+            {% if suggestions %}
+                {% for suggestion in suggestions %}
+                <div class="suggestion-card priorite-{{ suggestion.priorite }}" onclick="appliquerSuggestion('{{ suggestion.type }}', '{{ suggestion.montant }}', '{{ suggestion.libelle }}')">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="type-suggestion">{{ suggestion.type|title }}</div>
+                            <h6 class="mb-2">{{ suggestion.libelle }}</h6>
+                            <div class="montant-suggestion">{{ suggestion.montant|floatformat:0 }} F CFA</div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <span class="badge bg-{% if suggestion.priorite == 'haute' %}danger{% elif suggestion.priorite == 'normale' %}success{% else %}warning{% endif %}">
+                                {{ suggestion.priorite|title }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    Aucune suggestion de paiement disponible pour ce contrat.
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Informations du contrat -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-file-text"></i>
+                        Informations du Contrat
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Contrat:</strong> {{ contrat.numero_contrat }}</p>
+                    <p><strong>Locataire:</strong> {{ contrat.locataire.nom }} {{ contrat.locataire.prenom }}</p>
+                    <p><strong>Propriété:</strong> {{ contrat.propriete.titre }}</p>
+                    <p><strong>Loyer:</strong> {{ contrat.loyer_mensuel|floatformat:0 }} F CFA</p>
+                    <p><strong>Charges:</strong> {{ contrat.charges_mensuelles|floatformat:0 }} F CFA</p>
+                    {% if contrat.avance_loyer %}
+                    <p><strong>Avance requise:</strong> {{ contrat.avance_loyer|floatformat:0 }} F CFA</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Actions rapides -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-lightning"></i>
+                        Actions Rapides
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'paiements:ajouter' %}?contrat={{ contrat.id }}" class="btn btn-primary btn-sm w-100 mb-2">
+                        <i class="bi bi-plus-circle"></i> Créer un Paiement
+                    </a>
+                    <a href="{% url 'paiements:avances:creer' %}?contrat={{ contrat.id }}" class="btn btn-success btn-sm w-100 mb-2">
+                        <i class="bi bi-piggy-bank"></i> Créer une Avance
+                    </a>
+                    <a href="{% url 'paiements:contexte_contrat_rapide' contrat.id %}" class="btn btn-info btn-sm w-100">
+                        <i class="bi bi-eye"></i> Voir le Contexte
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function appliquerSuggestion(type, montant, libelle) {
+    // Rediriger vers la création de paiement avec les paramètres pré-remplis
+    const url = new URL('{% url "paiements:ajouter" %}', window.location.origin);
+    url.searchParams.set('contrat', '{{ contrat.id }}');
+    url.searchParams.set('montant', montant);
+    url.searchParams.set('type', type);
+    url.searchParams.set('libelle', libelle);
+    
+    window.location.href = url.toString();
+}
+
+// Animation des cartes
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.suggestion-card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+</script>
+{% endblock %}
