@@ -118,31 +118,87 @@ def run_smart_migrations():
         print(f"❌ Erreur migration: {e}")
         return False
 
-def create_superuser():
-    """Crée un superutilisateur"""
-    print("\nCRÉATION DU SUPERUTILISATEUR")
+def create_initial_data():
+    """Crée les données initiales essentielles"""
+    print("\nCRÉATION DES DONNÉES INITIALES")
     print("=" * 50)
     
     try:
+        from utilisateurs.models import GroupeTravail
+        from proprietes.models import TypeBien
+        from core.models import Devise, ConfigurationEntreprise
         from django.contrib.auth import get_user_model
+        from django.contrib.auth.models import Group
+
+        print("Création des groupes de travail...")
+        groupes = ["ADMINISTRATION", "CAISSE", "CONTROLES", "PRIVILEGE"]
+        for nom_groupe in groupes:
+            if not GroupeTravail.objects.filter(nom=nom_groupe).exists():
+                GroupeTravail.objects.create(nom=nom_groupe)
+                print(f"✅ GroupeTravail créé: {nom_groupe}")
+            else:
+                print(f"ℹ️ GroupeTravail {nom_groupe} existe déjà")
+
+        print("Création des types de biens...")
+        types_biens = ["Appartement", "Maison", "Studio", "T1", "T2", "T3", "T4", "T5+", "Bureau", "Local commercial", "Entrepôt", "Parking", "Cave", "Grenier", "Terrain", "Immeuble", "Résidence", "Villa", "Duplex", "Loft"]
+        for nom_type in types_biens:
+            if not TypeBien.objects.filter(nom=nom_type).exists():
+                TypeBien.objects.create(nom=nom_type)
+                print(f"✅ TypeBien créé: {nom_type}")
+            else:
+                print(f"ℹ️ TypeBien {nom_type} existe déjà")
+
+        print("Création des devises...")
+        try:
+            if not Devise.objects.filter(code="XOF").exists():
+                Devise.objects.create(nom="Franc CFA", code="XOF", symbole="CFA", taux_change=1.0, actif=True)
+                print("✅ Devise XOF créée")
+            else:
+                print("ℹ️ Devise XOF existe déjà")
+        except Exception as e:
+            print(f"⚠️ Erreur création devises: {e}")
+
+        print("Création de la configuration entreprise...")
+        try:
+            if not ConfigurationEntreprise.objects.exists():
+                # Créer une instance minimale
+                config = ConfigurationEntreprise.objects.create(
+                    nom_entreprise="Ma Société Immobilière",
+                    email_contact="contact@example.com",
+                    telephone_contact="+22500000000",
+                    adresse_siege="Abidjan, Côte d'Ivoire",
+                    code_postal="00000",
+                    ville="Abidjan",
+                    pays="Côte d'Ivoire",
+                    registre_commerce="RC-XXXX",
+                    numero_fiscal="SN-XXXX",
+                    devise_principale=Devise.objects.get(code="XOF") # Assurez-vous que XOF existe
+                )
+                print("✅ ConfigurationEntreprise créée")
+            else:
+                print("ℹ️ ConfigurationEntreprise existe déjà")
+        except Exception as e:
+            print(f"⚠️ Erreur création configuration: {e}")
+
+        print("Création du superutilisateur...")
         User = get_user_model()
-        
         if not User.objects.filter(username='admin').exists():
-            User.objects.create_superuser(
-                username='admin',
-                email='admin@kbis-immobilier.com',
-                password='admin123',
-                first_name='Admin',
-                last_name='KBIS'
-            )
+            User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
             print("✅ Superutilisateur créé: admin/admin123")
         else:
-            print("ℹ️ Superutilisateur 'admin' existe déjà")
-        
+            print("ℹ️ Superutilisateur admin existe déjà")
+
+        print("✅ Configuration terminée avec succès!")
+        print("✅ Toutes les données des champs select sont maintenant disponibles!")
         return True
+        
     except Exception as e:
-        print(f"❌ Erreur superutilisateur: {e}")
+        print(f"❌ Erreur création données initiales: {e}")
         return False
+
+def create_superuser():
+    """Crée un superutilisateur (fonction de compatibilité)"""
+    return create_initial_data()
 
 def main():
     """Fonction principale"""
