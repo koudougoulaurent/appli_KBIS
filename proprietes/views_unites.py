@@ -321,7 +321,7 @@ def reservation_create(request, unite_id):
         post_data = request.POST.copy()
         post_data['unite_locative'] = unite.pk
         
-        form = ReservationUniteForm(post_data, unite_locative=unite)
+        form = ReservationUniteForm(post_data)
         print(f"DEBUG - Formulaire valide: {form.is_valid()}")
         if not form.is_valid():
             print(f"DEBUG - Erreurs du formulaire: {form.errors}")
