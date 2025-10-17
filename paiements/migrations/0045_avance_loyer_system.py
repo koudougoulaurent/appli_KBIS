@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('contrats', '0001_initial'),
-        ('paiements', '0044_add_created_updated_at_fields'),
+        ('paiements', '0036_auto_20251004_1310'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
