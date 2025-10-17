@@ -218,6 +218,22 @@
                                             <a href="{% url 'paiements:modifier_paiement' paiement.pk %}" class="btn btn-sm btn-outline-warning" title="Modifier">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
+                                            {% if paiement.statut == 'valide' %}
+                                                <!-- Bouton Quittance -->
+                                                {% if paiement.quittance %}
+                                                    <a href="{% url 'paiements:quittance_detail' paiement.quittance.pk %}" class="btn btn-sm btn-success" title="Voir Quittance">
+                                                        <i class="bi bi-receipt"></i> Quittance
+                                                    </a>
+                                                {% else %}
+                                                    <a href="{% url 'paiements:generer_quittance_manuelle' paiement.pk %}" class="btn btn-sm btn-outline-success" title="Générer Quittance">
+                                                        <i class="bi bi-receipt"></i> Quittance
+                                                    </a>
+                                                {% endif %}
+                                                <!-- Bouton Récépissé -->
+                                                <a href="{% url 'paiements:generer_recu_kbis_dynamique' paiement.pk %}" class="btn btn-sm btn-info" title="Générer Récépissé">
+                                                    <i class="bi bi-file-text"></i> Récépissé
+                                                </a>
+                                            {% endif %}
                                         </div>
                                     </td>
                                 </tr>
