@@ -217,10 +217,13 @@ def setup_database():
             print("❌ Impossible de se connecter à la base de données")
             return False
         
-        # Synchroniser la base de données
-        print("🔄 Synchronisation de la base de données...")
+        # *** SYNCHRONISATION FORCÉE AVEC --run-syncdb UNIQUEMENT ***
+        print("🔄 Synchronisation de la base de données avec --run-syncdb...")
+        print("⚠️ IMPORTANT: Utilisation de --run-syncdb, pas de migrations!")
+        
+        # FORCER l'utilisation de --run-syncdb
         execute_from_command_line(['manage.py', 'migrate', '--run-syncdb', '--noinput'])
-        print("✅ Base de données synchronisée")
+        print("✅ Base de données synchronisée avec --run-syncdb")
         
         # Créer les groupes
         print("Creation des groupes de travail...")

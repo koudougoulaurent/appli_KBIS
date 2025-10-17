@@ -164,7 +164,8 @@ DATABASES = {
     'default': get_database_config()
 }
 
-# Désactiver toutes les migrations pour utiliser --run-syncdb
+# *** DÉSACTIVER TOUTES LES MIGRATIONS POUR UTILISER --run-syncdb ***
+# IMPORTANT: Pas de migrations, seulement syncdb pour créer les tables
 MIGRATION_MODULES = {
     'core': None,
     'utilisateurs': None,
@@ -173,6 +174,9 @@ MIGRATION_MODULES = {
     'paiements': None,
     'notifications': None,
 }
+
+# Désactiver complètement les migrations
+USE_MIGRATIONS = False
 
 # Configuration pour Render
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'appli-kbis.onrender.com', '.onrender.com', '*', '0.0.0.0']
