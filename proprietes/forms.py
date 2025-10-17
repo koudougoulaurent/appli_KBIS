@@ -2391,6 +2391,19 @@ class UniteLocativeForm(forms.ModelForm):
         self.fields['nombre_chambres'].required = False
         self.fields['nombre_salles_bain'].required = False
         self.fields['bailleur'].required = False
+        
+        # Ajouter les choix manquants pour type_unite
+        self.fields['type_unite'].choices = [
+            ('', 'Sélectionnez un type'),
+            ('appartement', 'Appartement'),
+            ('studio', 'Studio'),
+            ('bureau', 'Bureau'),
+            ('local_commercial', 'Local commercial'),
+            ('chambre', 'Chambre meublée'),
+            ('parking', 'Place de parking'),
+            ('cave', 'Cave/Débarras'),
+            ('autre', 'Autre'),
+        ]
 
 class ReservationUniteForm(forms.ModelForm):
     class Meta:

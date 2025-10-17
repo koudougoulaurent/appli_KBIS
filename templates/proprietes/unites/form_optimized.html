@@ -465,29 +465,7 @@ body {
                             <label class="field-label required" for="id_type_unite">
                                 Type d'unité
                             </label>
-                            <select name="type_unite" id="id_type_unite" class="field-input field-select" required>
-                                <option value="">Sélectionnez un type</option>
-                                <option value="appartement" {% if form.type_unite.value == 'appartement' %}selected{% endif %}>Appartement</option>
-                                <option value="maison" {% if form.type_unite.value == 'maison' %}selected{% endif %}>Maison</option>
-                                <option value="studio" {% if form.type_unite.value == 'studio' %}selected{% endif %}>Studio</option>
-                                <option value="t1" {% if form.type_unite.value == 't1' %}selected{% endif %}>T1</option>
-                                <option value="t2" {% if form.type_unite.value == 't2' %}selected{% endif %}>T2</option>
-                                <option value="t3" {% if form.type_unite.value == 't3' %}selected{% endif %}>T3</option>
-                                <option value="t4" {% if form.type_unite.value == 't4' %}selected{% endif %}>T4</option>
-                                <option value="t5+" {% if form.type_unite.value == 't5+' %}selected{% endif %}>T5+</option>
-                                <option value="bureau" {% if form.type_unite.value == 'bureau' %}selected{% endif %}>Bureau</option>
-                                <option value="local_commercial" {% if form.type_unite.value == 'local_commercial' %}selected{% endif %}>Local commercial</option>
-                                <option value="entrepot" {% if form.type_unite.value == 'entrepot' %}selected{% endif %}>Entrepôt</option>
-                                <option value="parking" {% if form.type_unite.value == 'parking' %}selected{% endif %}>Parking</option>
-                                <option value="cave" {% if form.type_unite.value == 'cave' %}selected{% endif %}>Cave</option>
-                                <option value="grenier" {% if form.type_unite.value == 'grenier' %}selected{% endif %}>Grenier</option>
-                                <option value="terrain" {% if form.type_unite.value == 'terrain' %}selected{% endif %}>Terrain</option>
-                                <option value="immeuble" {% if form.type_unite.value == 'immeuble' %}selected{% endif %}>Immeuble</option>
-                                <option value="residence" {% if form.type_unite.value == 'residence' %}selected{% endif %}>Résidence</option>
-                                <option value="villa" {% if form.type_unite.value == 'villa' %}selected{% endif %}>Villa</option>
-                                <option value="duplex" {% if form.type_unite.value == 'duplex' %}selected{% endif %}>Duplex</option>
-                                <option value="loft" {% if form.type_unite.value == 'loft' %}selected{% endif %}>Loft</option>
-                            </select>
+                            {{ form.type_unite }}
                             {% if form.type_unite.errors %}
                                 {% for error in form.type_unite.errors %}
                                     <div class="field-error">{{ error }}</div>
@@ -499,11 +477,21 @@ body {
                             <label class="field-label required" for="id_numero_unite">
                                 Numéro d'unité
                             </label>
-                            <input type="text" name="numero_unite" id="id_numero_unite" 
-                                   class="field-input" value="{{ form.numero_unite.value|default:'' }}" 
-                                   placeholder="Ex: A1, T2-1, Studio-3" required>
+                            {{ form.numero_unite }}
                             {% if form.numero_unite.errors %}
                                 {% for error in form.numero_unite.errors %}
+                                    <div class="field-error">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="field-group">
+                            <label class="field-label required" for="id_nom">
+                                Nom de l'unité
+                            </label>
+                            {{ form.nom }}
+                            {% if form.nom.errors %}
+                                {% for error in form.nom.errors %}
                                     <div class="field-error">{{ error }}</div>
                                 {% endfor %}
                             {% endif %}
