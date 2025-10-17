@@ -1,6 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views, views_unites, document_views, views_charges_bailleur, document_export_views
+from . import views, api_views, views_unites, views_charges_bailleur
+# from . import document_views, document_export_views  # Fichiers supprimés
 from .views import ajouter_charge_bailleur_rapide
 
 # Router pour l'API
@@ -87,33 +88,33 @@ urlpatterns = [
     path('documents/<int:pk>/supprimer/', views.document_delete, name='document_delete'),
     path('documents/<int:pk>/telecharger/', views.document_download, name='document_download'),
     
-    # URLs pour l'archivage des documents par entité
-    path('documents/archivage/', document_views.document_archive_by_entity, name='document_archive'),
-    path('documents/recherche-avancee/', document_views.document_search_advanced, name='document_search_advanced'),
-    path('documents/upload-rapide/', document_views.document_quick_upload, name='document_quick_upload'),
-    path('documents/propriete/<int:propriete_id>/', document_views.document_list_by_propriete, name='document_list_by_propriete'),
-    path('documents/bailleur/<int:bailleur_id>/', document_views.document_list_by_bailleur, name='document_list_by_bailleur'),
-    path('documents/locataire/<int:locataire_id>/', document_views.document_list_by_locataire, name='document_list_by_locataire'),
-    path('documents/api/stats/', document_views.document_stats_api, name='document_stats_api'),
+    # URLs pour l'archivage des documents par entité - DÉSACTIVÉES (modules supprimés)
+    # path('documents/archivage/', document_views.document_archive_by_entity, name='document_archive'),
+    # path('documents/recherche-avancee/', document_views.document_search_advanced, name='document_search_advanced'),
+    # path('documents/upload-rapide/', document_views.document_quick_upload, name='document_quick_upload'),
+    # path('documents/propriete/<int:propriete_id>/', document_views.document_list_by_propriete, name='document_list_by_propriete'),
+    # path('documents/bailleur/<int:bailleur_id>/', document_views.document_list_by_bailleur, name='document_list_by_bailleur'),
+    # path('documents/locataire/<int:locataire_id>/', document_views.document_list_by_locataire, name='document_list_by_locataire'),
+    # path('documents/api/stats/', document_views.document_stats_api, name='document_stats_api'),
     
-    # URLs pour l'export des documents
-    path('documents/export/', document_export_views.document_export, name='document_export'),
-    path('documents/export/preview/', document_export_views.document_export_preview, name='document_export_preview'),
-    path('documents/export/statistics/', document_export_views.document_export_statistics, name='document_export_statistics'),
-    path('documents/export/bulk/', document_export_views.document_bulk_export, name='document_bulk_export'),
+    # URLs pour l'export des documents - DÉSACTIVÉES (modules supprimés)
+    # path('documents/export/', document_export_views.document_export, name='document_export'),
+    # path('documents/export/preview/', document_export_views.document_export_preview, name='document_export_preview'),
+    # path('documents/export/statistics/', document_export_views.document_export_statistics, name='document_export_statistics'),
+    # path('documents/export/bulk/', document_export_views.document_bulk_export, name='document_bulk_export'),
     
-    # URLs pour le visualiseur universel
-    path('documents/<int:pk>/viewer/', views.DocumentViewerView.as_view(), name='document_viewer'),
-    path('documents/<int:pk>/viewer/<str:viewer_type>/', views.DocumentViewerView.as_view(), name='document_viewer_typed'),
-    path('documents/<int:pk>/content/', views.document_content_view, name='document_content_view'),
-    path('documents/<int:pk>/pdf-viewer/', views.document_pdf_viewer, name='document_pdf_viewer'),
-    path('documents/<int:pk>/proxy/', views.document_secure_proxy, name='document_secure_proxy'),
+    # URLs pour le visualiseur universel - DÉSACTIVÉES (modules supprimés)
+    # path('documents/<int:pk>/viewer/', views.DocumentViewerView.as_view(), name='document_viewer'),
+    # path('documents/<int:pk>/viewer/<str:viewer_type>/', views.DocumentViewerView.as_view(), name='document_viewer_typed'),
+    # path('documents/<int:pk>/content/', views.document_content_view, name='document_content_view'),
+    # path('documents/<int:pk>/pdf-viewer/', views.document_pdf_viewer, name='document_pdf_viewer'),  # DÉSACTIVÉ
+    # path('documents/<int:pk>/proxy/', views.document_secure_proxy, name='document_secure_proxy'),  # DÉSACTIVÉ
     
-    # URLs de debug et vues simplifiées
-    path('documents/<int:pk>/debug/', views.document_debug_info, name='document_debug_info'),
-    path('documents/<int:pk>/test-download/', views.document_test_download, name='document_test_download'),
-    path('documents/<int:pk>/simple-download/', views.simple_document_download, name='simple_document_download'),
-    path('documents/<int:pk>/simple-view/', views.simple_document_view, name='simple_document_view'),
+    # URLs de debug et vues simplifiées - DÉSACTIVÉES (modules supprimés)
+    # path('documents/<int:pk>/debug/', views.document_debug_info, name='document_debug_info'),
+    # path('documents/<int:pk>/test-download/', views.document_test_download, name='document_test_download'),  # DÉSACTIVÉ
+    # path('documents/<int:pk>/simple-download/', views.simple_document_download, name='simple_document_download'),  # DÉSACTIVÉ
+    # path('documents/<int:pk>/simple-view/', views.simple_document_view, name='simple_document_view'),  # DÉSACTIVÉ
     path('documents/test-page/', views.document_test_page, name='document_test_page'),
     
     # URLs pour les formulaires spécialisés
