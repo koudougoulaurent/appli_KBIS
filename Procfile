@@ -1,1 +1,1 @@
-web: python migrate_smart.py && gunicorn gestion_immobiliere.wsgi:application --bind 0.0.0.0:$PORT
+web: python migrate_smart.py && gunicorn --bind 0.0.0.0:$PORT gestion_immobiliere.wsgi:application
