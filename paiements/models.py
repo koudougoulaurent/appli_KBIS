@@ -499,8 +499,7 @@ class Paiement(models.Model):
     TYPE_PAIEMENT_CHOICES = [
         ('loyer', 'Loyer'),
         ('caution', 'Caution'),
-        ('avance', 'Avance'),
-        ('avance_loyer', 'Avance de loyer'),
+        ('avance', 'Avance de loyer'),
         ('depot_garantie', 'Dépôt de garantie'),
         ('charges', 'Charges'),
         ('regularisation', 'Régularisation'),

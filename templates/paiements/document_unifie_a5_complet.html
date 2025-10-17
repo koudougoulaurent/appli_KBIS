@@ -507,7 +507,8 @@
             <div class="footer-legal">{{ config_entreprise.get_informations_legales }}</div>
             <div class="footer-generation">
                 Ce document est généré automatiquement par le système {{ config_entreprise.nom_entreprise }}<br>
-                {{ document_title }} émis le {{ generation_date|date:"d/m/Y à H:i" }}
+                {{ document_title }} émis le {{ generation_date|date:"d/m/Y à H:i" }}<br>
+                <strong>Type de paiement : {{ type_paiement }}</strong>
             </div>
         </div>
     </div>

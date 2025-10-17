@@ -42,9 +42,9 @@ class DocumentUnifieA5ServiceComplet:
             # Déterminer le type de document et le titre
             document_titles = {
                 'paiement_recu': 'RÉCÉPISSÉ DE PAIEMENT',
-                'paiement_quittance': 'QUITTANCE DE LOYER',
-                'paiement_avance': 'RÉCÉPISSÉ D\'AVANCE DE LOYER',
-                'paiement_caution': 'RÉCÉPISSÉ D\'AVANCE DE LOYER',
+                'paiement_quittance': 'QUITTANCE DE PAIEMENT',
+                'paiement_avance': 'RÉCÉPISSÉ DE PAIEMENT D\'AVANCE',
+                'paiement_caution': 'RÉCÉPISSÉ DE PAIEMENT DE CAUTION',
                 'retrait_quittance': 'RÉCÉPISSÉ DE RETRAIT',
                 'retrait_recu': 'RÉCÉPISSÉ DE RETRAIT',
                 'recap_quittance': 'QUITTANCE DE RÉCAPITULATIF'
@@ -92,7 +92,7 @@ class DocumentUnifieA5ServiceComplet:
         # CORRECTION CRITIQUE : Calculer le bon montant selon le type de document
         montant_a_afficher = paiement.montant
         
-        if document_type == 'paiement_avance':
+        if document_type == 'paiement_avance' or paiement.type_paiement == 'avance':
             # Pour un récépissé d'avance, utiliser le montant de l'avance du contrat
             try:
                 montant_avance_contrat = float(paiement.contrat.avance_loyer) if paiement.contrat.avance_loyer else 0
@@ -103,7 +103,7 @@ class DocumentUnifieA5ServiceComplet:
         
         # Calculer les mois couverts par l'avance (pour avance et caution)
         mois_couverts = None
-        if document_type in ['paiement_avance', 'paiement_caution'] and montant_a_afficher and paiement.contrat.loyer_mensuel:
+        if (document_type in ['paiement_avance', 'paiement_caution'] or paiement.type_paiement == 'avance') and montant_a_afficher and paiement.contrat.loyer_mensuel:
             try:
                 montant_float = float(montant_a_afficher)
                 loyer_float = float(paiement.contrat.loyer_mensuel)
