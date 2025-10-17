@@ -2404,6 +2404,23 @@ class UniteLocativeForm(forms.ModelForm):
             ('cave', 'Cave/Débarras'),
             ('autre', 'Autre'),
         ]
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # S'assurer que les champs numériques ont des valeurs par défaut
+        if not cleaned_data.get('nombre_pieces'):
+            cleaned_data['nombre_pieces'] = 1
+        if not cleaned_data.get('nombre_chambres'):
+            cleaned_data['nombre_chambres'] = 0
+        if not cleaned_data.get('nombre_salles_bain'):
+            cleaned_data['nombre_salles_bain'] = 0
+        if not cleaned_data.get('charges_mensuelles'):
+            cleaned_data['charges_mensuelles'] = 0
+        if not cleaned_data.get('caution_demandee'):
+            cleaned_data['caution_demandee'] = 0
+            
+        return cleaned_data
 
 class ReservationUniteForm(forms.ModelForm):
     class Meta:
