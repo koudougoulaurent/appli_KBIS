@@ -10,6 +10,12 @@ SECRET_KEY = 'test-key-for-development'
 DEBUG = True
 ALLOWED_HOSTS = ['*']
 
+# Configuration de sécurité
+SECURITY_RESPONSE_JSON = True
+SQL_MONITORING_ENABLED = True
+SQL_MONITORING_RAISE_ON_SUSPICIOUS = False
+MAX_INPUT_LENGTH = 1000
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -30,6 +36,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'core.security_middleware.SecurityMiddleware',  # Protection SQL injection
+    'core.security_middleware.XSSProtectionMiddleware',  # Protection XSS
+    'core.security_middleware.SQLInjectionMiddleware',  # Protection SQL spécialisée
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
