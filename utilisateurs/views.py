@@ -394,13 +394,28 @@ def ajouter_utilisateur(request):
         form = UtilisateurForm(post_data, request.FILES)
         if form.is_valid():
             utilisateur = form.save(commit=False)
+            
+            # DEBUG: Vérifier les champs first_name et last_name
+            print(f"DEBUG - first_name: '{form.cleaned_data.get('first_name')}'")
+            print(f"DEBUG - last_name: '{form.cleaned_data.get('last_name')}'")
+            
+            # S'assurer que les champs sont bien définis
+            if 'first_name' in form.cleaned_data:
+                utilisateur.first_name = form.cleaned_data['first_name']
+            if 'last_name' in form.cleaned_data:
+                utilisateur.last_name = form.cleaned_data['last_name']
+            
             utilisateur.set_password(form.cleaned_data['password'])
             utilisateur.save()
+            
+            print(f"DEBUG - Utilisateur sauvegardé - first_name: '{utilisateur.first_name}', last_name: '{utilisateur.last_name}'")
+            
             messages.success(request, f"Utilisateur {utilisateur.username} créé avec succès.")
             return redirect('utilisateurs:detail_utilisateur', pk=utilisateur.pk)
         else:
             print(f"DEBUG - Erreurs de validation du formulaire:")
             print(f"  {form.errors}")
+            print(f"DEBUG - Données POST: {post_data}")
     else:
         form = UtilisateurForm()
     
