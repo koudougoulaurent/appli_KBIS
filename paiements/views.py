@@ -277,6 +277,9 @@ class PaiementEnhancedListView(LoginRequiredMixin, EnhancedSearchMixin, ListView
         ).order_by('-created_at')
     
     def get_context_data(self, **kwargs):
+        # S'assurer que object_list est défini
+        if not hasattr(self, 'object_list'):
+            self.object_list = self.get_queryset()
         context = super().get_context_data(**kwargs)
         
         # Configuration des colonnes
