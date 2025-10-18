@@ -908,7 +908,7 @@ def api_paiements_data(request):
 def recherche_intelligente_paiements(request):
     """Recherche intelligente des paiements."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('core:dashboard')
@@ -956,7 +956,7 @@ def liste_retraits(request):
 def ajouter_retrait(request):
     """Ajouter un retrait bailleur avec déduction automatique des charges."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste')
@@ -1004,7 +1004,7 @@ def ajouter_retrait(request):
 def creer_retrait_depuis_recap(request):
     """Crée le retrait depuis le récapitulatif avec déduction automatique des charges."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste')
@@ -1051,7 +1051,7 @@ def creer_retrait_depuis_recap(request):
 def recap_retrait_bailleur(request, bailleur_id):
     """Affiche le récapitulatif avant création du retrait avec les charges à déduire."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste')
@@ -1132,7 +1132,7 @@ def recap_retrait_bailleur(request, bailleur_id):
 def detail_retrait(request, pk):
     """Afficher le détail d'un retrait bailleur SÉCURISÉ."""
     # Vérification des permissions avec fallback pour PRIVILEGE
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -1423,7 +1423,7 @@ def liste_recus(request):
 def liste_recaps_mensuels(request):
     """Liste des récapitulatifs mensuels."""
     # Vérification des permissions avec fallback pour PRIVILEGE
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -1478,7 +1478,7 @@ def liste_recaps_mensuels(request):
 def creer_recap_mensuel(request):
     """Créer un nouveau récapitulatif mensuel."""
     # Vérification des permissions avec fallback pour PRIVILEGE
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'add')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'add')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste_recaps_mensuels_auto')
@@ -1541,7 +1541,7 @@ def creer_recap_mensuel(request):
 def detail_recap_mensuel(request, recap_id):
     """Afficher le détail complet d'un récapitulatif mensuel."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste_recaps_mensuels')
@@ -1703,7 +1703,7 @@ def marquer_recap_paye(request, recap_id):
 def imprimer_recap_mensuel(request, recap_id):
     """Imprimer un récapitulatif mensuel en PDF."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
@@ -2023,7 +2023,7 @@ def imprimer_recap_mensuel(request, recap_id):
 def liste_retraits_bailleur(request):
     """Liste des retraits bailleur SÉCURISÉE."""
     # Vérification des permissions avec fallback pour PRIVILEGE
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -2108,7 +2108,7 @@ def paiement_caution_avance_list(request):
 def tableau_bord_list(request):
     """Liste des tableaux de bord financiers."""
     # Vérification des permissions avec fallback pour PRIVILEGE
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -2334,7 +2334,7 @@ def generer_quittance_manuelle(request, paiement_pk):
 def tableau_bord_detail(request, pk):
     """Afficher le détail d'un tableau de bord financier."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:tableau_bord_list')
@@ -2500,7 +2500,7 @@ def tableau_bord_delete(request, pk):
 def tableau_bord_export_pdf(request, pk):
     """Exporter un tableau de bord en PDF."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:tableau_bord_list')
@@ -2527,7 +2527,7 @@ def tableau_bord_export_pdf(request, pk):
 def tableau_bord_dashboard(request):
     """Dashboard principal des tableaux de bord financiers."""
     # Vérification des permissions avec fallback pour PRIVILEGE
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -2561,7 +2561,7 @@ def tableau_bord_dashboard(request):
 def generer_recap_mensuel_automatique(request):
     """Génère automatiquement les récapitulatifs mensuels pour tous les bailleurs actifs."""
     # Vérification des permissions avec fallback pour PRIVILEGE
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
@@ -2724,7 +2724,7 @@ def get_calculation_preview(request):
         return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
     
     # Vérification des permissions avec fallback pour PRIVILEGE
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     
     if not permissions['allowed']:
         return JsonResponse({'error': permissions['message']}, status=403)
@@ -2838,7 +2838,7 @@ def get_calculation_preview(request):
 def tableau_bord_recaps_mensuels(request):
     """Tableau de bord spécialisé pour les récapitulatifs mensuels."""
     # Vérification des permissions avec fallback pour PRIVILEGE
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
@@ -3266,7 +3266,7 @@ def generer_pdf_recap_detaille_paysage(request, recap_id):
         recap = get_object_or_404(RecapMensuel, id=recap_id, is_deleted=False)
         
         # Vérification des permissions
-        permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+        permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
         if not permissions['allowed']:
             messages.error(request, permissions['message'])
             return redirect('paiements:tableau_bord_recaps_mensuels')
