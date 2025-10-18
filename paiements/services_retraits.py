@@ -238,6 +238,19 @@ class ServiceCalculRetraits:
         """
         Crée automatiquement tous les retraits mensuels
         """
+        # Vérifier la période autorisée pour les retraits
+        from .services_retrait import ServiceGestionRetrait
+        periode_ok, message_periode = ServiceGestionRetrait.verifier_periode_retrait()
+        if not periode_ok:
+            return {
+                'success': False,
+                'message': message_periode,
+                'retraits_crees': 0,
+                'retraits_existants': 0,
+                'cautions_manquantes': 0,
+                'loyers_manquants': 0
+            }
+        
         # Récupérer tous les bailleurs actifs avec des propriétés
         bailleurs = Bailleur.objects.filter(
             actif=True,

@@ -961,6 +961,13 @@ def ajouter_retrait(request):
         messages.error(request, permissions['message'])
         return redirect('paiements:liste')
     
+    # Vérifier la période autorisée pour les retraits (du 25 au 5 du mois suivant)
+    from .services_retrait import ServiceGestionRetrait
+    periode_ok, message_periode = ServiceGestionRetrait.verifier_periode_retrait()
+    if not periode_ok:
+        messages.error(request, message_periode)
+        return redirect('paiements:liste')
+    
     if request.method == 'POST':
         form = RetraitBailleurForm(request.POST)
         if form.is_valid():

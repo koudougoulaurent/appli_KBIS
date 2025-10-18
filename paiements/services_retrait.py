@@ -137,6 +137,20 @@ class ServiceGestionRetrait:
                 'message': message_periode
             }
         
+        # Vérifier s'il existe déjà un retrait pour ce bailleur et ce mois
+        retrait_existant = RetraitBailleur.objects.filter(
+            bailleur=bailleur,
+            mois_retrait__year=mois_retrait.year,
+            mois_retrait__month=mois_retrait.month,
+            is_deleted=False
+        ).first()
+        
+        if retrait_existant:
+            return {
+                'success': False,
+                'message': f'Un retrait existe déjà pour {bailleur.get_nom_complet()} pour le mois de {mois_retrait.strftime("%B %Y")}'
+            }
+        
         # Calculer le retrait optimisé
         calcul = ServiceGestionRetrait.calculer_retrait_optimise(bailleur, mois_retrait)
         
