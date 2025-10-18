@@ -101,9 +101,9 @@ class DocumentUnifieA5ServiceComplet:
             except (ValueError, TypeError, AttributeError):
                 pass
         
-        # Calculer les mois couverts par l'avance (pour avance et caution)
+        # Calculer les mois couverts par l'avance (UNIQUEMENT pour les avances, PAS pour les cautions)
         mois_couverts = None
-        if (document_type in ['paiement_avance', 'paiement_caution'] or paiement.type_paiement == 'avance') and montant_a_afficher and paiement.contrat.loyer_mensuel:
+        if (document_type == 'paiement_avance' or paiement.type_paiement == 'avance') and montant_a_afficher and paiement.contrat.loyer_mensuel:
             try:
                 montant_float = float(montant_a_afficher)
                 loyer_float = float(paiement.contrat.loyer_mensuel)

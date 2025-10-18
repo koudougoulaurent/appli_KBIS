@@ -462,7 +462,7 @@
                 </span>
                 <span class="detail-value">{{ montant_total|floatformat:0 }} F CFA</span>
             </div>
-            {% if document_type == 'paiement_avance' and mois_couverts or document_type == 'paiement_caution' and mois_couverts %}
+            {% if document_type == 'paiement_avance' and mois_couverts %}
             <div class="detail-row">
                 <span class="detail-label">Mois couverts:</span>
                 <span class="detail-value">{{ mois_couverts.nombre }} mois ({{ mois_couverts.mois_texte }})</span>
@@ -472,7 +472,7 @@
                 <span class="detail-label">Note:</span>
                 <span class="detail-value">
                     {% if document_type == 'paiement_caution' %}
-                        Avance de loyer - Couvre {% if mois_couverts %}{{ mois_couverts.nombre }} mois de loyer ({{ mois_couverts.mois_texte }}){% else %}plusieurs mois de loyer{% endif %}
+                        Dépôt de garantie - Garantie remboursable en fin de contrat
                     {% elif document_type == 'paiement_avance' %}
                         Avance de loyer - Couvre {% if mois_couverts %}{{ mois_couverts.nombre }} mois de loyer ({{ mois_couverts.mois_texte }}){% else %}plusieurs mois de loyer{% endif %}
                     {% elif document_type == 'paiement_quittance' %}
@@ -482,11 +482,7 @@
                     {% elif document_type == 'recap_quittance' %}
                         Quittance de récapitulatif - Montant versé au bailleur
                     {% else %}
-                        {% if mois_couverts %}
-                            Avance de loyer - Couvre {{ mois_couverts.nombre }} mois de loyer ({{ mois_couverts.mois_texte }})
-                        {% else %}
-                            Document généré en bonne et due forme
-                        {% endif %}
+                        Document généré en bonne et due forme
                     {% endif %}
                 </span>
             </div>
