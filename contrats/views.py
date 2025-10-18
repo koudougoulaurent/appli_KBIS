@@ -9,6 +9,7 @@ from django.db.models import ProtectedError
 from core.models import AuditLog, ConfigurationEntreprise
 from django.contrib.contenttypes.models import ContentType
 from core.intelligent_views import IntelligentListView
+from core.enhanced_list_view import EnhancedSearchMixin
 from core.utils import get_context_with_entreprise_config
 from utilisateurs.mixins import PrivilegeButtonsMixin
 from utilisateurs.mixins_suppression import SuppressionGeneriqueView
@@ -24,7 +25,7 @@ from .forms import ResiliationContratForm, ContratForm
 from django.db.models import Count, Q
 
 
-class ContratListView(PrivilegeButtonsMixin, IntelligentListView):
+class ContratListView(PrivilegeButtonsMixin, EnhancedSearchMixin, IntelligentListView):
     model = Contrat
     template_name = 'base_liste_intelligente.html'
     paginate_by = 20

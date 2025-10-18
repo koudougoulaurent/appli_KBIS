@@ -38,12 +38,13 @@ def document_test_page(request):
 
 
 from core.intelligent_views import IntelligentListView
+from core.enhanced_list_view import EnhancedSearchMixin
 from .models import TypeBien
 from utilisateurs.mixins import PrivilegeButtonsMixin
 from utilisateurs.mixins_suppression import SuppressionGeneriqueView
 
 
-class ProprieteListView(PrivilegeButtonsMixin, IntelligentListView):
+class ProprieteListView(PrivilegeButtonsMixin, EnhancedSearchMixin, IntelligentListView):
     model = Propriete
     template_name = 'base_liste_intelligente.html'
     paginate_by = 20
@@ -576,7 +577,7 @@ def marquer_charge_remboursee(request, pk):
 
 
 # Vues pour les bailleurs
-class BailleurListView(PrivilegeButtonsMixin, IntelligentListView):
+class BailleurListView(PrivilegeButtonsMixin, EnhancedSearchMixin, IntelligentListView):
     model = Bailleur
     template_name = 'base_liste_intelligente.html'
     paginate_by = 20
@@ -945,7 +946,7 @@ def supprimer_bailleur(request, pk):
 
 
 # Vues pour les locataires
-class LocataireListView(PrivilegeButtonsMixin, IntelligentListView):
+class LocataireListView(PrivilegeButtonsMixin, EnhancedSearchMixin, IntelligentListView):
     model = Locataire
     template_name = 'base_liste_intelligente.html'
     paginate_by = 20

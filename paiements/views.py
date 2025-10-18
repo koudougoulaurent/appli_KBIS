@@ -26,6 +26,7 @@ from contrats.models import Contrat
 from proprietes.models import Propriete, Locataire, Bailleur
 from core.models import AuditLog, ConfigurationEntreprise
 from core.utils import check_group_permissions, check_group_permissions_with_fallback, get_context_with_entreprise_config
+from core.enhanced_list_view import EnhancedSearchMixin
 from django.views.generic import ListView
 # from .models import TableauBordFinancier  # Modèle supprimé
 # from .forms import TableauBordFinancierForm  # Formulaire supprimé
@@ -100,6 +101,7 @@ from contrats.models import Contrat
 from proprietes.models import Propriete, Locataire, Bailleur
 from core.models import AuditLog, ConfigurationEntreprise
 from core.utils import check_group_permissions, check_group_permissions_with_fallback, get_context_with_entreprise_config
+from core.enhanced_list_view import EnhancedSearchMixin
 from django.views.generic import ListView
 # from .models import TableauBordFinancier  # Modèle supprimé
 # from .forms import TableauBordFinancierForm  # Formulaire supprimé
@@ -253,6 +255,76 @@ class PaiementListView(LoginRequiredMixin, ListView):
 
 
 paiement_list = PaiementListView.as_view()
+
+
+class PaiementEnhancedListView(LoginRequiredMixin, EnhancedSearchMixin, ListView):
+    """
+    Vue de liste améliorée pour les paiements avec recherche intelligente
+    """
+    model = Paiement
+    template_name = 'base_liste_enhanced.html'
+    context_object_name = 'paiements'
+    paginate_by = 20
+    page_title = 'Paiements'
+    page_icon = 'credit-card'
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.select_related(
+            'contrat__locataire',
+            'contrat__propriete',
+            'contrat__propriete__bailleur'
+        ).order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Configuration des colonnes
+        context['columns'] = [
+            {'field': 'numero_paiement', 'label': 'N° Paiement', 'sortable': True},
+            {'field': 'contrat__locataire', 'label': 'Locataire', 'sortable': True},
+            {'field': 'contrat__propriete', 'label': 'Propriété', 'sortable': True},
+            {'field': 'type_paiement', 'label': 'Type', 'sortable': True},
+            {'field': 'montant', 'label': 'Montant', 'sortable': True},
+            {'field': 'mode_paiement', 'label': 'Mode', 'sortable': True},
+            {'field': 'date_paiement', 'label': 'Date', 'sortable': True},
+            {'field': 'statut', 'label': 'Statut', 'sortable': True},
+        ]
+        
+        # Actions
+        context['actions'] = [
+            {'url_name': 'paiements:detail', 'icon': 'eye', 'style': 'outline-primary', 'title': 'Voir'},
+            {'url_name': 'paiements:modifier', 'icon': 'pencil', 'style': 'outline-warning', 'title': 'Modifier'},
+        ]
+        
+        # Filtres disponibles
+        context['available_filters'] = {
+            'statut': [
+                ('valide', 'Validé'),
+                ('en_attente', 'En attente'),
+                ('refuse', 'Refusé'),
+            ],
+            'type_paiement': [
+                ('loyer', 'Loyer'),
+                ('caution', 'Caution'),
+                ('avance', 'Avance'),
+            ],
+            'mode_paiement': [
+                ('especes', 'Espèces'),
+                ('virement', 'Virement'),
+                ('cheque', 'Chèque'),
+                ('mobile_money', 'Mobile Money'),
+            ]
+        }
+        
+        # Statistiques
+        context['total_count'] = Paiement.objects.count()
+        context['filtered_count'] = self.get_queryset().count()
+        
+        return context
+
+
+paiement_enhanced_list = PaiementEnhancedListView.as_view()
 
 
 class PaiementDetailView(LoginRequiredMixin, DetailView):

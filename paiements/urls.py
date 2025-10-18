@@ -18,6 +18,7 @@ urlpatterns = [
     path('dashboard/', views.paiements_dashboard, name='dashboard'),
     # path('dashboard-recaps/', views.dashboard_recaps_simple, name='dashboard_recaps_simple'),  # Fonction non disponible
     path('liste/', views.paiement_list, name='liste'),  # Alias principal pour compatibilité
+    path('liste-enhanced/', views.paiement_enhanced_list, name='liste_enhanced'),  # Liste améliorée
     path('detail/<int:pk>/', views.paiement_detail, name='detail'),  # Alias principal pour compatibilité
     path('ajouter/', views.ajouter_paiement, name='ajouter'),  # Alias principal pour compatibilité
     

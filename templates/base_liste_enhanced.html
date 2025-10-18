@@ -1,0 +1,678 @@
+{% extends "base.html" %}
+{% load static %}
+{% load list_filters %}
+
+{% block title %}{{ page_title|default:"Liste" }} - Gestion Immobilière{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Interface de recherche améliorée */
+.search-container {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.search-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.search-title {
+    color: white;
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.search-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1rem;
+    margin-bottom: 0;
+}
+
+.search-form {
+    position: relative;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.search-input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: white;
+    border-radius: 50px;
+    padding: 8px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 15px 20px;
+    font-size: 1rem;
+    border-radius: 50px;
+    background: transparent;
+}
+
+.search-input::placeholder {
+    color: #999;
+    font-style: italic;
+}
+
+.search-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-left: 8px;
+}
+
+.search-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.search-clear {
+    background: #f8f9fa;
+    border: none;
+    color: #6c757d;
+    padding: 8px;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-right: 8px;
+    transition: all 0.2s ease;
+}
+
+.search-clear:hover {
+    background: #e9ecef;
+    color: #495057;
+}
+
+/* Suggestions de recherche */
+.search-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    margin-top: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+    display: none;
+}
+
+.search-suggestions.show {
+    display: block;
+    animation: slideDown 0.3s ease;
+}
+
+.suggestion-item {
+    padding: 12px 20px;
+    border-bottom: 1px solid #f8f9fa;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.suggestion-item:hover {
+    background: #f8f9fa;
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-text {
+    color: #495057;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.suggestion-hint {
+    color: #6c757d;
+    font-size: 0.8rem;
+    margin: 0;
+    font-style: italic;
+}
+
+/* Filtres rapides */
+.quick-filters {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.filter-chip {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 8px 16px;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.filter-chip:hover,
+.filter-chip.active {
+    background: white;
+    color: #667eea;
+    transform: translateY(-2px);
+}
+
+/* Statistiques */
+.stats-container {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #667eea;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+/* Tableau amélioré */
+.table-container {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+.table {
+    margin: 0;
+}
+
+.table thead th {
+    background: #f8f9fa;
+    border: none;
+    padding: 15px;
+    font-weight: 600;
+    color: #495057;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.table tbody td {
+    padding: 15px;
+    border-top: 1px solid #f8f9fa;
+    vertical-align: middle;
+}
+
+.table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+/* Actions */
+.action-buttons {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.action-btn {
+    padding: 6px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.8rem;
+    transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+    transform: translateY(-1px);
+    text-decoration: none;
+}
+
+/* Pagination améliorée */
+.pagination-container {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    margin-top: 30px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+.pagination {
+    justify-content: center;
+    margin: 0;
+}
+
+.page-link {
+    border: none;
+    color: #667eea;
+    padding: 10px 15px;
+    margin: 0 2px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.page-link:hover {
+    background: #667eea;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.page-item.active .page-link {
+    background: #667eea;
+    color: white;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .search-container {
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .search-title {
+        font-size: 1.5rem;
+    }
+    
+    .search-form {
+        max-width: 100%;
+    }
+    
+    .search-input-group {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .search-input {
+        border-radius: 10px;
+    }
+    
+    .search-btn {
+        border-radius: 10px;
+        margin-left: 0;
+    }
+    
+    .quick-filters {
+        justify-content: flex-start;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+}
+
+/* Animations */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <!-- En-tête de recherche -->
+    <div class="search-container">
+        <div class="search-header">
+            <h1 class="search-title">
+                <i class="bi bi-{{ page_icon|default:'list' }} me-2"></i>
+                {{ page_title|default:"Liste" }}
+            </h1>
+            <p class="search-subtitle">
+                Recherchez par nom, numéro, téléphone, email, adresse...
+            </p>
+        </div>
+        
+        <form class="search-form" method="GET" id="searchForm">
+            <div class="search-input-group">
+                <button type="button" class="search-clear" id="clearSearch" style="display: none;">
+                    <i class="bi bi-x"></i>
+                </button>
+                <input type="text" 
+                       class="search-input" 
+                       name="search" 
+                       id="searchInput"
+                       placeholder="Tapez pour rechercher..."
+                       value="{{ search_term }}"
+                       autocomplete="off">
+                <button type="submit" class="search-btn">
+                    <i class="bi bi-search me-1"></i>
+                    Rechercher
+                </button>
+            </div>
+            
+            <!-- Suggestions de recherche -->
+            <div class="search-suggestions" id="searchSuggestions">
+                {% if search_suggestions %}
+                    {% for suggestion in search_suggestions %}
+                        <div class="suggestion-item">
+                            <p class="suggestion-text">{{ suggestion }}</p>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </form>
+        
+        <!-- Filtres rapides -->
+        <div class="quick-filters">
+            <div class="filter-chip" data-filter="all">
+                <i class="bi bi-funnel me-1"></i>
+                Tous
+            </div>
+            {% for filter_name, filter_choices in available_filters.items %}
+                {% for value, label in filter_choices %}
+                    <div class="filter-chip" data-filter="{{ filter_name }}" data-value="{{ value }}">
+                        {{ label }}
+                    </div>
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Statistiques -->
+    <div class="stats-container">
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-number">{{ total_count|default:0 }}</div>
+                <p class="stat-label">Total</p>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ filtered_count|default:0 }}</div>
+                <p class="stat-label">Résultats</p>
+            </div>
+            {% if search_term %}
+                <div class="stat-item">
+                    <div class="stat-number">{{ search_term|length }}</div>
+                    <p class="stat-label">Caractères</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Tableau de résultats -->
+    <div class="table-container">
+        {% if object_list %}
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        {% for column in columns %}
+                            <th>
+                                {% if column.sortable %}
+                                    <a href="?{% if search_term %}search={{ search_term }}&{% endif %}sort={{ column.field }}" 
+                                       class="text-decoration-none text-dark">
+                                        {{ column.label }}
+                                        <i class="bi bi-arrow-up-down ms-1"></i>
+                                    </a>
+                                {% else %}
+                                    {{ column.label }}
+                                {% endif %}
+                            </th>
+                        {% endfor %}
+                        {% if actions %}
+                            <th>Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for object in object_list %}
+                        <tr>
+                            {% for column in columns %}
+                                <td>
+                                    {% if column.field == 'bailleur' %}
+                                        {{ object.bailleur.get_nom_complet|default:"-" }}
+                                    {% elif column.field == 'locataire' %}
+                                        {{ object.locataire.get_nom_complet|default:"-" }}
+                                    {% elif column.field == 'propriete' %}
+                                        {{ object.propriete.titre|default:"-" }}
+                                    {% elif column.field == 'type_bien' %}
+                                        {{ object.type_bien.nom|default:"-" }}
+                                    {% elif column.field == 'loyer_actuel' or column.field == 'loyer_mensuel' or column.field == 'montant' %}
+                                        {{ object|getattr:column.field|format_currency }}
+                                    {% elif column.field == 'surface' %}
+                                        {{ object|getattr:column.field|format_surface }}
+                                    {% elif column.field == 'telephone' or column.field == 'telephone_mobile' or column.field == 'garant_telephone' %}
+                                        {{ object|getattr:column.field|format_phone }}
+                                    {% elif column.field == 'date_paiement' or column.field == 'date_creation' or column.field == 'date_debut' or column.field == 'date_fin' %}
+                                        {{ object|getattr:column.field|format_date }}
+                                    {% elif column.field == 'created_at' or column.field == 'updated_at' %}
+                                        {{ object|getattr:column.field|format_datetime }}
+                                    {% elif column.field == 'statut' %}
+                                        {{ object|getattr:column.field|format_status }}
+                                    {% elif column.field == 'type_paiement' %}
+                                        {{ object|getattr:column.field|format_type_paiement }}
+                                    {% elif column.field == 'mode_paiement' %}
+                                        {{ object|getattr:column.field|format_mode_paiement }}
+                                    {% elif column.field == 'disponible' or column.field == 'est_actif' or column.field == 'est_resilie' %}
+                                        {{ object|getattr:column.field|format_status }}
+                                    {% elif column.field == 'adresse' or column.field == 'notes' %}
+                                        {{ object|getattr:column.field|truncate_text:30 }}
+                                    {% else %}
+                                        {{ object|getattr:column.field|default:"-" }}
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                            {% if actions %}
+                                <td>
+                                    <div class="action-buttons">
+                                        {% for action in actions %}
+                                            {% if not action.condition or user|check_condition:action.condition %}
+                                                <a href="{% url action.url_name object.id %}" 
+                                                   class="action-btn btn btn-{{ action.style|default:'outline-primary' }}"
+                                                   title="{{ action.title }}">
+                                                    <i class="bi bi-{{ action.icon }}"></i>
+                                                </a>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-search display-1 text-muted"></i>
+                <h3 class="text-muted mt-3">Aucun résultat trouvé</h3>
+                <p class="text-muted">
+                    {% if search_term %}
+                        Aucun résultat pour "{{ search_term }}". Essayez avec d'autres mots-clés.
+                    {% else %}
+                        Aucun élément dans cette liste.
+                    {% endif %}
+                </p>
+                {% if add_url %}
+                    <a href="{% url add_url %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-1"></i>
+                        {{ add_text|default:"Ajouter" }}
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Pagination -->
+    {% if is_paginated %}
+        <div class="pagination-container">
+            <nav aria-label="Pagination">
+                <ul class="pagination">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if search_term %}search={{ search_term }}&{% endif %}page=1">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if search_term %}search={{ search_term }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if search_term %}search={{ search_term }}&{% endif %}page={{ num }}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if search_term %}search={{ search_term }}&{% endif %}page={{ page_obj.next_page_number }}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if search_term %}search={{ search_term }}&{% endif %}page={{ page_obj.paginator.num_pages }}">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const clearBtn = document.getElementById('clearSearch');
+    const suggestions = document.getElementById('searchSuggestions');
+    const filterChips = document.querySelectorAll('.filter-chip');
+    
+    // Afficher/masquer le bouton clear
+    searchInput.addEventListener('input', function() {
+        if (this.value.length > 0) {
+            clearBtn.style.display = 'block';
+        } else {
+            clearBtn.style.display = 'none';
+        }
+    });
+    
+    // Clear search
+    clearBtn.addEventListener('click', function() {
+        searchInput.value = '';
+        this.style.display = 'none';
+        suggestions.classList.remove('show');
+        document.getElementById('searchForm').submit();
+    });
+    
+    // Filtres rapides
+    filterChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            // Retirer la classe active de tous les chips
+            filterChips.forEach(c => c.classList.remove('active'));
+            
+            // Ajouter la classe active au chip cliqué
+            this.classList.add('active');
+            
+            // Appliquer le filtre
+            const filter = this.dataset.filter;
+            const value = this.dataset.value;
+            
+            if (filter === 'all') {
+                // Retirer tous les filtres
+                const url = new URL(window.location);
+                url.searchParams.delete('filter');
+                window.location.href = url.toString();
+            } else if (value) {
+                // Appliquer le filtre spécifique
+                const url = new URL(window.location);
+                url.searchParams.set(filter, value);
+                window.location.href = url.toString();
+            }
+        });
+    });
+    
+    // Recherche en temps réel (optionnel)
+    let searchTimeout;
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            // Ici on pourrait implémenter une recherche AJAX
+            // Pour l'instant, on garde la soumission du formulaire
+        }, 500);
+    });
+    
+    // Raccourci clavier pour la recherche
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'f') {
+            e.preventDefault();
+            searchInput.focus();
+        }
+    });
+});
+</script>
+{% endblock %}
