@@ -3,7 +3,6 @@ Configuration PostgreSQL propre pour la migration
 """
 import os
 from pathlib import Path
-import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -68,11 +67,17 @@ TEMPLATES = [
 
 # Database PostgreSQL
 DATABASES = {
-    'default': dj_database_url.parse(
-        os.environ.get('DATABASE_URL', 'postgresql://kbis_user:qN64K1DDSffwfTPThqEPgtsH5sVwwKGP@dpg-d3og40k9c44c73cvh1h0-a.oregon-postgres.render.com/kbis_immobilier'),
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'kbis_immobilier',
+        'USER': 'kbis_user',
+        'PASSWORD': 'qN64K1DDSffwfTPThqEPgtsH5sVwwKGP',
+        'HOST': 'dpg-d3og40k9c44c73cvh1h0-a.oregon-postgres.render.com',
+        'PORT': '5432',
+        'OPTIONS': {
+            'sslmode': 'require',
+        },
+    }
 }
 
 # Password validation
