@@ -1,0 +1,240 @@
+{% load static %}
+<!-- Messages d'aide contextuels -->
+<div id="help-messages" class="help-messages">
+    <!-- Messages d'aide pour les actions courantes -->
+    <div class="help-message" id="help-payment-success" style="display: none;">
+        <div class="help-content">
+            <i class="bi bi-check-circle-fill text-success"></i>
+            <div class="help-text">
+                <strong>Paiement enregistré avec succès !</strong><br>
+                <small>Vous pouvez maintenant générer un récépissé ou une quittance. Utilisez les boutons d'action à droite de la liste.</small>
+            </div>
+            <button class="help-close" onclick="closeHelp('help-payment-success')">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="help-message" id="help-contract-success" style="display: none;">
+        <div class="help-content">
+            <i class="bi bi-check-circle-fill text-success"></i>
+            <div class="help-text">
+                <strong>Contrat créé avec succès !</strong><br>
+                <small>Le contrat est maintenant actif. Vous pouvez ajouter des paiements ou générer des quittances.</small>
+            </div>
+            <button class="help-close" onclick="closeHelp('help-contract-success')">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="help-message" id="help-property-success" style="display: none;">
+        <div class="help-content">
+            <i class="bi bi-check-circle-fill text-success"></i>
+            <div class="help-text">
+                <strong>Propriété ajoutée avec succès !</strong><br>
+                <small>Vous pouvez maintenant créer des unités locatives et des contrats pour cette propriété.</small>
+            </div>
+            <button class="help-close" onclick="closeHelp('help-property-success')">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="help-message" id="help-retrait-period" style="display: none;">
+        <div class="help-content">
+            <i class="bi bi-info-circle-fill text-info"></i>
+            <div class="help-text">
+                <strong>Période de retrait</strong><br>
+                <small>Les retraits ne peuvent être générés que du 25 du mois courant au 5 du mois suivant. Un seul retrait par bailleur par mois.</small>
+            </div>
+            <button class="help-close" onclick="closeHelp('help-retrait-period')">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="help-message" id="help-search-tip" style="display: none;">
+        <div class="help-content">
+            <i class="bi bi-lightbulb-fill text-warning"></i>
+            <div class="help-text">
+                <strong>Astuce de recherche</strong><br>
+                <small>Utilisez Ctrl+K pour rechercher rapidement. Vous pouvez chercher par nom, téléphone, ou adresse.</small>
+            </div>
+            <button class="help-close" onclick="closeHelp('help-search-tip')">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="help-message" id="help-shortcuts" style="display: none;">
+        <div class="help-content">
+            <i class="bi bi-keyboard-fill text-primary"></i>
+            <div class="help-text">
+                <strong>Raccourcis clavier</strong><br>
+                <small>Ctrl+P: Propriétés | Ctrl+C: Contrats | Ctrl+M: Paiements | Ctrl+B: Bailleurs | Ctrl+L: Locataires</small>
+            </div>
+            <button class="help-close" onclick="closeHelp('help-shortcuts')">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.help-messages {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1050;
+    max-width: 400px;
+}
+
+.help-message {
+    margin-bottom: 10px;
+    animation: slideInRight 0.3s ease-out;
+}
+
+.help-content {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    padding: 15px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    border-left: 4px solid #007bff;
+}
+
+.help-content i {
+    font-size: 1.2rem;
+    margin-top: 2px;
+}
+
+.help-text {
+    flex: 1;
+}
+
+.help-text strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #333;
+}
+
+.help-text small {
+    color: #666;
+    line-height: 1.4;
+}
+
+.help-close {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.help-close:hover {
+    background: #f8f9fa;
+    color: #333;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .help-messages {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+    
+    .help-content {
+        padding: 12px;
+    }
+    
+    .help-text small {
+        font-size: 0.8rem;
+    }
+}
+</style>
+
+<script>
+// Fonction pour fermer les messages d'aide
+function closeHelp(messageId) {
+    const message = document.getElementById(messageId);
+    if (message) {
+        message.style.animation = 'slideOutRight 0.3s ease-out';
+        setTimeout(() => {
+            message.style.display = 'none';
+        }, 300);
+    }
+}
+
+// Fonction pour afficher un message d'aide
+function showHelp(messageId, duration = 5000) {
+    const message = document.getElementById(messageId);
+    if (message) {
+        message.style.display = 'block';
+        
+        // Auto-fermeture après la durée spécifiée
+        if (duration > 0) {
+            setTimeout(() => {
+                closeHelp(messageId);
+            }, duration);
+        }
+    }
+}
+
+// Détecter les messages de succès Django et afficher l'aide appropriée
+document.addEventListener('DOMContentLoaded', function() {
+    const alerts = document.querySelectorAll('.alert-success');
+    alerts.forEach(alert => {
+        const text = alert.textContent.toLowerCase();
+        
+        if (text.includes('paiement') && text.includes('enregistré')) {
+            setTimeout(() => showHelp('help-payment-success'), 1000);
+        } else if (text.includes('contrat') && text.includes('créé')) {
+            setTimeout(() => showHelp('help-contract-success'), 1000);
+        } else if (text.includes('propriété') && text.includes('ajoutée')) {
+            setTimeout(() => showHelp('help-property-success'), 1000);
+        }
+    });
+    
+    // Afficher l'aide pour la recherche au premier chargement
+    if (window.location.pathname.includes('liste') || window.location.pathname.includes('recherche')) {
+        setTimeout(() => showHelp('help-search-tip', 8000), 2000);
+    }
+    
+    // Afficher l'aide pour les raccourcis au premier chargement
+    setTimeout(() => showHelp('help-shortcuts', 10000), 5000);
+});
+
+// Animation de sortie
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideOutRight {
+        from {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+    }
+`;
+document.head.appendChild(style);
+</script>
