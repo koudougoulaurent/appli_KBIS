@@ -95,10 +95,24 @@ class Utilisateur(DuplicatePreventionMixin, AbstractUser):
     duplicate_check_fields = ['email', 'telephone']
     
     # Champs supplémentaires
-    telephone = models.CharField(max_length=100, blank=True, null=True)  # Aucune validation - temporaire
+    telephone = models.CharField(
+        max_length=20, 
+        blank=True, 
+        null=True,
+        validators=[
+            RegexValidator(
+                regex=r'^(\+?[1-9]\d{0,3})?[1-9]\d{7,14}$',
+                message="Format de téléphone invalide. Utilisez le format international."
+            )
+        ],
+        help_text="Format international (ex: +226 70 12 34 56)"
+    )
     adresse = models.TextField(blank=True)
     date_naissance = models.DateField(null=True, blank=True)
     photo = models.ImageField(upload_to='photos_utilisateurs/', null=True, blank=True)
+    
+    # Forcer l'unicité de l'email
+    email = models.EmailField(unique=True, verbose_name="Adresse email")
     
     # Groupe de travail
     groupe_travail = models.ForeignKey(

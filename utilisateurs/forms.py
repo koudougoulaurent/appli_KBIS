@@ -82,17 +82,86 @@ class UtilisateurForm(forms.ModelForm):
                 field.widget.attrs.update({'class': 'form-control'})
     
     def clean_telephone(self):
-        """Nettoyer et valider le numéro de téléphone - TEMPORAIREMENT DÉSACTIVÉ"""
+        """Nettoyer et valider le numéro de téléphone"""
         telephone = self.cleaned_data.get('telephone')
         
-        # TEMPORAIREMENT : Accepter n'importe quoi
         if telephone:
-            # Nettoyer seulement les espaces, tirets, points
             import re
-            clean_number = re.sub(r'[\s\-\.]', '', telephone)
+            # Nettoyer le numéro (supprimer espaces, tirets, points, parenthèses)
+            clean_number = re.sub(r'[\s\-\.\(\)]', '', telephone)
+            
+            # Validation du format téléphone international
+            # Format attendu: +XX ou XX (où XX est le code pays) suivi de 8-15 chiffres
+            phone_pattern = r'^(\+?[1-9]\d{0,3})?[1-9]\d{7,14}$'
+            
+            if not re.match(phone_pattern, clean_number):
+                raise forms.ValidationError(
+                    "Format de téléphone invalide. Utilisez le format international "
+                    "(ex: +226 70 12 34 56 ou 22670123456)"
+                )
+            
+            # Vérifier la longueur minimale
+            if len(clean_number) < 8:
+                raise forms.ValidationError(
+                    "Le numéro de téléphone doit contenir au moins 8 chiffres."
+                )
+            
+            # Vérifier la longueur maximale
+            if len(clean_number) > 15:
+                raise forms.ValidationError(
+                    "Le numéro de téléphone ne peut pas dépasser 15 chiffres."
+                )
+            
             return clean_number
         
         return telephone
+    
+    def clean_email(self):
+        """Valider l'email avec unicité"""
+        email = self.cleaned_data.get('email')
+        
+        if email:
+            # Vérifier le format email
+            import re
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            if not re.match(email_pattern, email):
+                raise forms.ValidationError("Format d'email invalide.")
+            
+            # Vérifier l'unicité
+            from .models import Utilisateur
+            queryset = Utilisateur.objects.filter(email=email)
+            if self.instance.pk:
+                queryset = queryset.exclude(pk=self.instance.pk)
+            
+            if queryset.exists():
+                raise forms.ValidationError("Cette adresse email est déjà utilisée.")
+        
+        return email
+    
+    def clean_password(self):
+        """Valider la force du mot de passe"""
+        password = self.cleaned_data.get('password')
+        
+        if password:
+            # Vérifier la longueur minimale
+            if len(password) < 8:
+                raise forms.ValidationError("Le mot de passe doit contenir au moins 8 caractères.")
+            
+            # Vérifier la complexité
+            import re
+            if not re.search(r'[A-Z]', password):
+                raise forms.ValidationError("Le mot de passe doit contenir au moins une majuscule.")
+            
+            if not re.search(r'[a-z]', password):
+                raise forms.ValidationError("Le mot de passe doit contenir au moins une minuscule.")
+            
+            if not re.search(r'\d', password):
+                raise forms.ValidationError("Le mot de passe doit contenir au moins un chiffre.")
+            
+            if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+                raise forms.ValidationError("Le mot de passe doit contenir au moins un caractère spécial.")
+        
+        return password
     
     def clean(self):
         cleaned_data = super().clean()
@@ -103,6 +172,16 @@ class UtilisateurForm(forms.ModelForm):
         if password and password_confirm:
             if password != password_confirm:
                 raise forms.ValidationError("Les mots de passe ne correspondent pas.")
+        
+        # Validation des champs requis
+        if not cleaned_data.get('first_name'):
+            raise forms.ValidationError("Le prénom est obligatoire.")
+        
+        if not cleaned_data.get('last_name'):
+            raise forms.ValidationError("Le nom est obligatoire.")
+        
+        if not cleaned_data.get('email'):
+            raise forms.ValidationError("L'adresse email est obligatoire.")
         
         return cleaned_data
     
@@ -118,25 +197,6 @@ class UtilisateurForm(forms.ModelForm):
         
         return user
     
-    def clean(self):
-        """Validation globale du formulaire avec prévention des doublons."""
-        cleaned_data = super().clean()
-        
-        # Vérifier les doublons d'informations de contact
-        try:
-            validate_unique_contact_info(
-                self._meta.model, 
-                self.instance, 
-                ['email', 'telephone']
-            )
-        except ValidationError as e:
-            # Ajouter l'erreur aux champs concernés
-            if 'email' in str(e):
-                self.add_error('email', e)
-            if 'telephone' in str(e):
-                self.add_error('telephone', e)
-        
-        return cleaned_data
 
 class GroupeTravailForm(forms.ModelForm):
     """Formulaire pour créer/modifier un groupe de travail"""
