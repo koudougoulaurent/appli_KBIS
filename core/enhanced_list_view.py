@@ -188,7 +188,6 @@ class EnhancedSearchMixin:
         return context
 
 
-@method_decorator(csrf_exempt, name='dispatch')
 class AjaxSearchView:
     """
     Vue AJAX pour la recherche en temps réel
