@@ -138,14 +138,15 @@ def ajouter_contrat(request):
     """
     Vue pour ajouter un contrat avec génération automatique de PDF et reçu de caution
     """
-    # Vérification des permissions : PRIVILEGE et ADMINISTRATION peuvent ajouter
+    # Vérification des permissions : TOUS les groupes peuvent ajouter
     from core.utils import check_group_permissions
     from core.id_generator import IDGenerator
     
-    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
-        return redirect('contrats:liste')
+    # Tous les groupes peuvent ajouter des contrats
+    # permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
+    # if not permissions['allowed']:
+    #     messages.error(request, permissions['message'])
+    #     return redirect('contrats:liste')
     
     if request.method == 'POST':
         form = ContratForm(request.POST, request.FILES)
@@ -723,12 +724,14 @@ def ajouter_quittance(request):
     """
     Vue pour ajouter une quittance
     """
-    # Vérification des permissions : PRIVILEGE et ADMINISTRATION peuvent ajouter
+    # Vérification des permissions : TOUS les groupes peuvent ajouter
     from core.utils import check_group_permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
-        return redirect('contrats:quittances_liste')
+    
+    # Tous les groupes peuvent ajouter des quittances
+    # permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
+    # if not permissions['allowed']:
+    #     messages.error(request, permissions['message'])
+    #     return redirect('contrats:quittances_liste')
     
     if request.method == 'POST':
         # Logique d'ajout de quittance

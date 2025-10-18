@@ -229,14 +229,15 @@ def ajouter_propriete(request):
     """
     Vue pour ajouter une propriété avec documents
     """
-    # Vérification des permissions : ADMINISTRATION et PRIVILEGE peuvent ajouter
+    # Vérification des permissions : TOUS les groupes peuvent ajouter
     from core.utils import check_group_permissions
     from core.id_generator import IDGenerator
     
-    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
-        return redirect('proprietes:liste')
+    # Tous les groupes peuvent ajouter des propriétés
+    # permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
+    # if not permissions['allowed']:
+    #     messages.error(request, permissions['message'])
+    #     return redirect('proprietes:liste')
     
     if request.method == 'POST':
         form = ProprieteForm(request.POST, request.FILES)
@@ -675,14 +676,15 @@ def ajouter_bailleur(request):
     """
     Vue pour ajouter un bailleur avec identifiant unique et documents
     """
-    # Vérification des permissions : ADMINISTRATION et PRIVILEGE peuvent ajouter
+    # Vérification des permissions : TOUS les groupes peuvent ajouter
     from core.utils import check_group_permissions
     from core.id_generator import IDGenerator
     
-    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
-        return redirect('proprietes:bailleurs_liste')
+    # Tous les groupes peuvent ajouter des bailleurs
+    # permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
+    # if not permissions['allowed']:
+    #     messages.error(request, permissions['message'])
+    #     return redirect('proprietes:bailleurs_liste')
     
     if request.method == 'POST':
         # Gérer les valeurs par défaut avant la validation
@@ -1401,14 +1403,15 @@ def ajouter_locataire(request):
     """
     Vue pour ajouter un locataire avec documents
     """
-    # Vérification des permissions : ADMINISTRATION et PRIVILEGE peuvent ajouter
+    # Vérification des permissions : TOUS les groupes peuvent ajouter
     from core.utils import check_group_permissions
     from core.id_generator import IDGenerator
     
-    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
-        return redirect('proprietes:locataires_liste')
+    # Tous les groupes peuvent ajouter des locataires
+    # permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
+    # if not permissions['allowed']:
+    #     messages.error(request, permissions['message'])
+    #     return redirect('proprietes:locataires_liste')
     
     if request.method == 'POST':
         # Gérer les valeurs par défaut avant la validation
@@ -1824,12 +1827,14 @@ def api_calcul_loyer_net(request, propriete_id):
 
 @login_required
 def ajouter_charge_bailleur_rapide(request):
-    # Vérification des permissions : PRIVILEGE et ADMINISTRATION peuvent ajouter
+    # Vérification des permissions : TOUS les groupes peuvent ajouter
     from core.utils import check_group_permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
-        return redirect('proprietes:liste')
+    
+    # Tous les groupes peuvent ajouter des charges
+    # permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
+    # if not permissions['allowed']:
+    #     messages.error(request, permissions['message'])
+    #     return redirect('proprietes:liste')
     
     if request.method == 'POST':
         propriete_id = request.POST.get('propriete_id')
