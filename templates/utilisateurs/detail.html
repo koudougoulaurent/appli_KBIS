@@ -22,8 +22,8 @@
                 <div class="col-md-6">
                     <h6>Informations personnelles</h6>
                     <p><strong>Nom d'utilisateur:</strong> {{ utilisateur.username }}</p>
-                    <p><strong>Nom:</strong> {{ utilisateur.nom }}</p>
-                    <p><strong>Prénom:</strong> {{ utilisateur.prenom }}</p>
+                    <p><strong>Nom:</strong> {{ utilisateur.last_name|default:"Non renseigné" }}</p>
+                    <p><strong>Prénom:</strong> {{ utilisateur.first_name|default:"Non renseigné" }}</p>
                     <p><strong>Email:</strong> {{ utilisateur.email }}</p>
                     <p><strong>Téléphone:</strong> {{ utilisateur.telephone }}</p>
                 </div>

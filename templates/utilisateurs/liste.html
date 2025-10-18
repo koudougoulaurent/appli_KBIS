@@ -38,8 +38,8 @@
                                 <td>
                                     <strong>{{ utilisateur.username }}</strong>
                                 </td>
-                                <td>{{ utilisateur.nom }}</td>
-                                <td>{{ utilisateur.prenom }}</td>
+                                <td>{{ utilisateur.last_name|default:"-" }}</td>
+                                <td>{{ utilisateur.first_name|default:"-" }}</td>
                                 <td>{{ utilisateur.email }}</td>
                                 <td>
                                     {% if utilisateur.is_superuser %}
