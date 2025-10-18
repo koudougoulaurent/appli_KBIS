@@ -1,0 +1,228 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load i18n %}
+{% load humanize %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-item {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #007bff;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 10px;
+        padding: 2rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .table-container {
+        background: white;
+        border-radius: 10px;
+        padding: 2rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="bi bi-{{ page_icon }}"></i>
+                {{ page_title }}
+            </h1>
+            <p class="text-muted">
+                Statistiques et analyses des récapitulatifs mensuels
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'paiements:liste_recapitulatifs' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Retour à la liste
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistiques générales -->
+    <div class="stats-grid">
+        <div class="stat-item">
+            <div class="stat-value">{{ stats_mensuelles|length }}</div>
+            <div class="stat-label">Mois avec récapitulatifs</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">
+                {% if stats_mensuelles %}
+                    {{ stats_mensuelles.0.total_loyers|floatformat:0|intcomma }}
+                {% else %}
+                    0
+                {% endif %} F CFA
+            </div>
+            <div class="stat-label">Total loyers (dernier mois)</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">
+                {% if stats_mensuelles %}
+                    {{ stats_mensuelles.0.total_charges|floatformat:0|intcomma }}
+                {% else %}
+                    0
+                {% endif %} F CFA
+            </div>
+            <div class="stat-label">Total charges (dernier mois)</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">
+                {% if stats_mensuelles %}
+                    {{ stats_mensuelles.0.total_net|floatformat:0|intcomma }}
+                {% else %}
+                    0
+                {% endif %} F CFA
+            </div>
+            <div class="stat-label">Net à payer (dernier mois)</div>
+        </div>
+    </div>
+
+    <!-- Statistiques par mois -->
+    <div class="chart-container">
+        <h5 class="mb-3">
+            <i class="bi bi-bar-chart"></i> Évolution mensuelle
+        </h5>
+        
+        {% if stats_mensuelles %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Mois</th>
+                            <th>Nombre de récapitulatifs</th>
+                            <th>Total loyers</th>
+                            <th>Total charges</th>
+                            <th>Net à payer</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in stats_mensuelles %}
+                        <tr>
+                            <td>{{ stat.mois_recapitulatif|date:"F Y" }}</td>
+                            <td>
+                                <span class="badge bg-primary">{{ stat.nombre }}</span>
+                            </td>
+                            <td>{{ stat.total_loyers|floatformat:0|intcomma }} F CFA</td>
+                            <td>{{ stat.total_charges|floatformat:0|intcomma }} F CFA</td>
+                            <td class="fw-bold text-success">{{ stat.total_net|floatformat:0|intcomma }} F CFA</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-graph-up fa-3x text-muted mb-3"></i>
+                <h5>Aucune donnée disponible</h5>
+                <p class="text-muted">Aucun récapitulatif n'a encore été généré.</p>
+                <a href="{% url 'paiements:creer_recapitulatif' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Créer le premier récapitulatif
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Statistiques par statut -->
+    <div class="chart-container">
+        <h5 class="mb-3">
+            <i class="bi bi-pie-chart"></i> Répartition par statut
+        </h5>
+        
+        {% if stats_statut %}
+            <div class="row">
+                {% for stat in stats_statut %}
+                <div class="col-md-3 mb-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6 class="card-title">{{ stat.statut|title }}</h6>
+                            <h4 class="text-primary">{{ stat.nombre }}</h4>
+                            <small class="text-muted">récapitulatif{{ stat.nombre|pluralize }}</small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-3">
+                <p class="text-muted">Aucune donnée de statut disponible.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Statistiques par type -->
+    <div class="chart-container">
+        <h5 class="mb-3">
+            <i class="bi bi-diagram-3"></i> Répartition par type
+        </h5>
+        
+        {% if stats_type %}
+            <div class="row">
+                {% for stat in stats_type %}
+                <div class="col-md-3 mb-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6 class="card-title">{{ stat.type_recapitulatif|title }}</h6>
+                            <h4 class="text-info">{{ stat.nombre }}</h4>
+                            <small class="text-muted">récapitulatif{{ stat.nombre|pluralize }}</small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-3">
+                <p class="text-muted">Aucune donnée de type disponible.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Scripts pour les graphiques si nécessaire
+document.addEventListener('DOMContentLoaded', function() {
+    // Ici on pourrait ajouter des graphiques avec Chart.js ou autre
+    console.log('Page des statistiques chargée');
+});
+</script>
+{% endblock %}

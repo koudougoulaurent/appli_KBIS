@@ -1,0 +1,1058 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}Rapports d'audit - Gestion Immobilière{% endblock %}
+
+{% block extra_css %}
+<style>
+    .audit-log {
+        border-left: 4px solid #007bff;
+        padding-left: 15px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+    }
+    .audit-log.create { border-left-color: #28a745; }
+    .audit-log.update { border-left-color: #ffc107; }
+    .audit-log.delete { border-left-color: #dc3545; }
+    .audit-log.view { border-left-color: #17a2b8; }
+    .audit-log.login { border-left-color: #6f42c1; }
+    .audit-log.logout { border-left-color: #6c757d; }
+    .audit-log.export { border-left-color: #fd7e14; }
+    .audit-log.import { border-left-color: #20c997; }
+    .audit-log.validation { border-left-color: #198754; }
+    .audit-log.rejection { border-left-color: #dc3545; }
+    
+    .stats-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+    }
+    .stats-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .action-type-badge {
+        font-size: 0.75em;
+        padding: 0.4em 0.8em;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    .filter-section {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 25px;
+        border: 1px solid #e9ecef;
+    }
+    
+    .audit-table {
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .audit-table th {
+        background: #f8f9fa;
+        border: none;
+        font-weight: 600;
+        color: #495057;
+        padding: 15px 12px;
+    }
+    
+    .audit-table td {
+        padding: 12px;
+        vertical-align: middle;
+        border-top: 1px solid #e9ecef;
+    }
+    
+    .audit-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .export-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .quick-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+    
+    .quick-stat-item {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        border-left: 4px solid #007bff;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .quick-stat-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .filter-advanced {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .filter-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .filter-group label {
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: #495057;
+    }
+    
+    .filter-group input,
+    .filter-group select {
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        padding: 8px 12px;
+        transition: border-color 0.2s;
+    }
+    
+    .filter-group input:focus,
+    .filter-group select:focus {
+        border-color: #007bff;
+        outline: none;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+    }
+    
+    .chart-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 20px;
+        margin-bottom: 25px;
+    }
+    
+    .chart-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .chart-card h6 {
+        color: #495057;
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+    
+    .pagination-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 20px;
+    }
+    
+    .page-size-selector {
+        margin-left: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .quick-stat-number {
+        font-size: 1.8em;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 5px;
+    }
+    
+    .quick-stat-label {
+        color: #6c757d;
+        font-size: 0.9em;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .search-box {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    
+    .search-box input {
+        padding-left: 40px;
+        border-radius: 25px;
+        border: 2px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+    
+    .search-box input:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+    }
+    
+    .search-box i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+    }
+    
+    .no-data {
+        text-align: center;
+        padding: 40px 20px;
+        color: #6c757d;
+    }
+    
+    .no-data i {
+        font-size: 3em;
+        margin-bottom: 15px;
+        opacity: 0.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Conteneur pour les notifications toast -->
+    <div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;"></div>
+    
+    <!-- Conteneur pour les erreurs -->
+    <div id="error-container"></div>
+    
+    <!-- Spinner de chargement -->
+    <div id="loading-spinner" class="position-fixed top-50 start-50 translate-middle" style="display: none; z-index: 1056;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Chargement...</span>
+        </div>
+    </div>
+    
+    <!-- En-tête de page -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-shield-alt text-primary"></i>
+                Centre d'Audit et de Contrôle
+            </h1>
+            <p class="text-muted mt-2">Surveillance et traçabilité de toutes les actions du système</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'core:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Retour
+            </a>
+            <button class="btn btn-outline-primary" onclick="window.print()">
+                <i class="fas fa-print"></i> Imprimer
+            </button>
+            <div class="dropdown">
+                <button class="btn btn-primary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown">
+                    <i class="fas fa-download"></i> Exporter
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" onclick="exportData('csv')">CSV</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportData('excel')">Excel</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportData('pdf')">PDF</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques rapides -->
+    <div class="quick-stats">
+        <div class="quick-stat-item">
+            <div class="quick-stat-number text-primary">{{ stats_audit.total_actions }}</div>
+            <div class="quick-stat-label">Total Actions</div>
+        </div>
+        <div class="quick-stat-item">
+            <div class="quick-stat-number text-success">{{ stats_audit.actions_aujourd_hui }}</div>
+            <div class="quick-stat-label">Aujourd'hui</div>
+        </div>
+        <div class="quick-stat-item">
+            <div class="quick-stat-number text-info">{{ stats_audit.actions_semaine }}</div>
+            <div class="quick-stat-label">Cette Semaine</div>
+        </div>
+        <div class="quick-stat-item">
+            <div class="quick-stat-number text-warning">{{ stats_audit.actions_mois }}</div>
+            <div class="quick-stat-label">Ce Mois</div>
+        </div>
+    </div>
+
+    <!-- Section des filtres -->
+    <div class="filter-section">
+        <h5 class="mb-3"><i class="fas fa-filter text-primary"></i> Filtres et Recherche</h5>
+        
+        <!-- Contrôles de temps réel -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="auto-refresh-toggle" checked>
+                        <label class="form-check-label" for="auto-refresh-toggle">
+                            <i class="fas fa-sync-alt text-primary"></i> Actualisation automatique
+                        </label>
+                    </div>
+                    <button type="button" id="manual-refresh-btn" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-sync-alt"></i> Actualiser maintenant
+                    </button>
+                    <small class="text-muted">
+                        Dernière actualisation: <span id="last-refresh-time">{{ "now"|date:"d/m/Y H:i" }}</span>
+                    </small>
+                </div>
+            </div>
+            <div class="col-md-6 text-end">
+                <div class="d-flex align-items-center gap-2 justify-content-end">
+                    <span class="badge bg-primary" id="notification-badge" style="display: none;">0</span>
+                    <small class="text-muted">Nouvelles actions</small>
+                </div>
+            </div>
+        </div>
+        
+        <form method="get" id="auditFilters">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" class="form-control" name="search" placeholder="Rechercher..." 
+                               value="{{ filters.search }}" title="Rechercher dans les logs d'audit">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-control" name="action_type" title="Filtrer par type d'action">
+                    <option value="">Tous les types d'action</option>
+                    <option value="create" {% if filters.action_type == 'create' %}selected{% endif %}>Création</option>
+                    <option value="update" {% if filters.action_type == 'update' %}selected{% endif %}>Modification</option>
+                    <option value="delete" {% if filters.action_type == 'delete' %}selected{% endif %}>Suppression</option>
+                    <option value="view" {% if filters.action_type == 'view' %}selected{% endif %}>Consultation</option>
+                    <option value="login" {% if filters.action_type == 'login' %}selected{% endif %}>Connexion</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="date" class="form-control" name="date_from" placeholder="Date de début" 
+                       value="{{ filters.date_from }}" title="Date de début pour le filtrage">
+            </div>
+            <div class="col-md-3">
+                <input type="date" class="form-control" name="date_to" placeholder="Date de fin" 
+                       value="{{ filters.date_to }}" title="Date de fin pour le filtrage">
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-3">
+                <select class="form-control" name="user" title="Filtrer par utilisateur">
+                    <option value="">Tous les utilisateurs</option>
+                    {% for user in actions_par_utilisateur %}
+                    <option value="{{ user.user__username }}" {% if filters.user == user.user__username %}selected{% endif %}>
+                        {{ user.user__username }} ({{ user.count }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-control" name="page_size" title="Nombre d'éléments par page">
+                    <option value="20" {% if filters.page_size == 20 %}selected{% endif %}>20 par page</option>
+                    <option value="50" {% if filters.page_size == 50 %}selected{% endif %}>50 par page</option>
+                    <option value="100" {% if filters.page_size == 100 %}selected{% endif %}>100 par page</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Appliquer les filtres
+                    </button>
+                    <a href="{% url 'core:rapports_audit' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Réinitialiser
+                    </a>
+                    <span class="text-muted align-self-center">
+                        {{ total_filtered }} résultat{{ total_filtered|pluralize }} trouvé{{ total_filtered|pluralize }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Filtres avancés -->
+<div class="filter-advanced">
+    <h5 class="mb-3">
+        <i class="fas fa-sliders-h text-primary"></i> 
+        Filtres Avancés et Options d'Export
+        <button class="btn btn-sm btn-outline-primary float-end" type="button" 
+                data-bs-toggle="collapse" data-bs-target="#advancedFilters" 
+                aria-expanded="false" aria-controls="advancedFilters">
+            <i class="fas fa-chevron-down"></i> Afficher/Masquer
+        </button>
+    </h5>
+    
+    <div class="collapse" id="advancedFilters">
+        <div class="filter-row">
+            <div class="filter-group">
+                <label for="exportFormat">Format d'export :</label>
+                <select id="exportFormat" class="form-control" title="Sélectionner le format d'export">
+                    <option value="">Choisir un format</option>
+                    <option value="csv">CSV (Excel)</option>
+                    <option value="excel">Excel (.xlsx)</option>
+                    <option value="pdf">PDF</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="exportAction">Action d'export :</label>
+                <button type="button" class="btn btn-success" onclick="exportFilteredData()" 
+                        title="Exporter les données filtrées">
+                    <i class="fas fa-download"></i> Exporter les données
+                </button>
+            </div>
+        </div>
+        
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i>
+            <strong>Conseil :</strong> Utilisez les filtres ci-dessus pour affiner votre recherche, 
+            puis exportez uniquement les données qui vous intéressent.
+        </div>
+    </div>
+</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" name="action_type">
+                        <option value="">Toutes les actions</option>
+                        <option value="create" {% if request.GET.action_type == 'create' %}selected{% endif %}>Création</option>
+                        <option value="update" {% if request.GET.action_type == 'update' %}selected{% endif %}>Modification</option>
+                        <option value="delete" {% if request.GET.action_type == 'delete' %}selected{% endif %}>Suppression</option>
+                        <option value="view" {% if request.GET.action_type == 'view' %}selected{% endif %}>Consultation</option>
+                        <option value="login" {% if request.GET.action_type == 'login' %}selected{% endif %}>Connexion</option>
+                        <option value="export" {% if request.GET.action_type == 'export' %}selected{% endif %}>Export</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" name="user">
+                        <option value="">Tous les utilisateurs</option>
+                        {% for user_action in actions_par_utilisateur %}
+                        <option value="{{ user_action.user__username }}" 
+                                {% if request.GET.user == user_action.user__username %}selected{% endif %}>
+                            {{ user_action.user__username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="date" class="form-control" name="date_from" 
+                           value="{{ request.GET.date_from }}" placeholder="Date début">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" class="form-control" name="date_to" 
+                           value="{{ request.GET.date_to }}" placeholder="Date fin">
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Section des graphiques et statistiques -->
+    <div class="chart-grid">
+        <!-- Graphique des actions par type -->
+        <div class="chart-card">
+            <h6><i class="fas fa-chart-pie text-primary"></i> Répartition des Actions par Type</h6>
+            <div class="chart-container" style="height: 300px;">
+                <canvas id="actionsTypeChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Graphique des actions par heure -->
+        <div class="chart-card">
+            <h6><i class="fas fa-clock text-info"></i> Actions par Heure de la Journée</h6>
+            <div class="chart-container" style="height: 300px;">
+                <canvas id="actionsHourChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Graphique des actions par jour -->
+        <div class="chart-card">
+            <h6><i class="fas fa-calendar text-success"></i> Actions par Jour de la Semaine</h6>
+            <div class="chart-container" style="height: 300px;">
+                <canvas id="actionsDayChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Top des utilisateurs actifs -->
+        <div class="chart-card">
+            <h6><i class="fas fa-users text-warning"></i> Top des Utilisateurs Actifs</h6>
+            <div class="chart-container" style="height: 300px;">
+                <canvas id="usersActivityChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actions critiques et alertes -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> Actions Critiques Récentes
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if actions_critiques %}
+                        <div class="list-group list-group-flush">
+                            {% for action in actions_critiques %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="badge action-type-badge bg-{{ action.action }}">
+                                        {{ action.get_action_display }}
+                                    </span>
+                                    <span class="ms-2">{{ action.user.username }}</span>
+                                </div>
+                                <small class="text-muted">{{ action.timestamp|date:"d/m/Y H:i" }}</small>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">Aucune action critique récente.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-user-clock"></i> Utilisateurs Actifs Aujourd'hui
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if utilisateurs_actifs_aujourd_hui %}
+                        <div class="list-group list-group-flush">
+                            {% for user in utilisateurs_actifs_aujourd_hui %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="fw-bold">{{ user.user__username }}</span>
+                                    <small class="text-muted d-block">{{ user.count }} action{{ user.count|pluralize }}</small>
+                                </div>
+                                <span class="badge bg-primary">{{ user.count }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">Aucun utilisateur actif aujourd'hui.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Logs d'audit détaillés -->
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-list-alt"></i> Journal d'Audit Détaillé
+                    </h6>
+                    <div class="d-flex gap-2">
+                        <select class="form-select form-select-sm" id="pageSize">
+                            <option value="20">20 par page</option>
+                            <option value="50">50 par page</option>
+                            <option value="100">100 par page</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if logs_audit %}
+                        <div class="table-responsive">
+                            <table class="table table-hover audit-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Date/Heure</th>
+                                        <th>Utilisateur</th>
+                                        <th>Action</th>
+                                        <th>Objet</th>
+                                        <th>Détails</th>
+                                        <th>IP</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for log in logs_audit %}
+                                    <tr class="audit-log {{ log.action }}">
+                                        <td>
+                                            <div class="fw-bold">{{ log.timestamp|date:"d/m/Y" }}</div>
+                                            <small class="text-muted">{{ log.timestamp|date:"H:i:s" }}</small>
+                                        </td>
+                                        <td>
+                                            {% if log.user %}
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                                        {{ log.user.username|first|upper }}
+                                                    </div>
+                                                    <span class="fw-bold">{{ log.user.username }}</span>
+                                                </div>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Système</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge action-type-badge bg-{{ log.action|lower }}">
+                                                <i class="fas fa-{% if log.action == 'create' %}plus{% elif log.action == 'update' %}edit{% elif log.action == 'delete' %}trash{% elif log.action == 'view' %}eye{% elif log.action == 'login' %}sign-in-alt{% elif log.action == 'export' %}download{% else %}circle{% endif %}"></i>
+                                                {{ log.get_action_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if log.content_type %}
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-{% if log.content_type.model == 'contrat' %}file-contract{% elif log.content_type.model == 'propriete' %}building{% elif log.content_type.model == 'locataire' %}user{% elif log.content_type.model == 'paiement' %}money-bill{% else %}file{% endif %} text-muted me-2"></i>
+                                                    <span class="fw-bold">{{ log.content_type.model|title }}</span>
+                                                    {% if log.object_id %}
+                                                        <span class="badge bg-light text-dark ms-1">#{{ log.object_id }}</span>
+                                                    {% endif %}
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if log.changes %}
+                                                <button class="btn btn-sm btn-outline-info" type="button" 
+                                                        data-bs-toggle="collapse" 
+                                                        data-bs-target="#details-{{ log.id }}">
+                                                    <i class="fas fa-eye"></i> Voir
+                                                </button>
+                                                <div class="collapse mt-2" id="details-{{ log.id }}">
+                                                    <div class="card card-body p-2">
+                                                        <small class="text-muted">{{ log.changes|truncatechars:100 }}</small>
+                                                    </div>
+                                                </div>
+                                            {% else %}
+                                                <small class="text-muted">Aucun détail</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if log.ip_address %}
+                                                <small class="text-muted">{{ log.ip_address }}</small>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="no-data">
+                            <i class="fas fa-search"></i>
+                            <h5>Aucun log d'audit trouvé</h5>
+                            <p>Aucune action ne correspond aux critères de recherche actuels.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistiques et graphiques -->
+        <div class="col-lg-4">
+            <!-- Actions par type -->
+            <div class="chart-container">
+                <h6 class="mb-3">
+                    <i class="fas fa-chart-pie text-primary"></i> Répartition par Type d'Action
+                </h6>
+                {% if actions_par_type %}
+                    <div class="mb-3">
+                        {% for action in actions_par_type %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="d-flex align-items-center">
+                                <span class="badge action-type-badge bg-{{ action.action|lower }} me-2">
+                                    {{ action.get_action_display|default:action.action|upper }}
+                                </span>
+                            </div>
+                            <span class="fw-bold">{{ action.count }}</span>
+                        </div>
+                        <div class="progress mb-2" style="height: 6px;">
+                            <div class="progress-bar bg-{{ action.action|lower }}" 
+                                 style="width: {{ action.count|div:stats_audit.total_actions|mul:100 }}%"></div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">Aucune donnée disponible</p>
+                {% endif %}
+            </div>
+
+            <!-- Actions par utilisateur -->
+            <div class="chart-container">
+                <h6 class="mb-3">
+                    <i class="fas fa-users text-primary"></i> Top Utilisateurs
+                </h6>
+                {% if actions_par_utilisateur %}
+                    {% for user_action in actions_par_utilisateur %}
+                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+                                {{ user_action.user__username|first|upper }}
+                            </div>
+                            <span class="fw-bold">{{ user_action.user__username }}</span>
+                        </div>
+                        <span class="badge bg-primary">{{ user_action.count }}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center">Aucune donnée disponible</p>
+                {% endif %}
+            </div>
+
+            <!-- Informations système -->
+            <div class="chart-container">
+                <h6 class="mb-3">
+                    <i class="fas fa-info-circle text-primary"></i> Informations Système
+                </h6>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="p-2">
+                            <div class="h5 mb-0 text-primary">{{ logs_audit|length }}</div>
+                            <small class="text-muted">Logs affichés</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-2">
+                            <div class="h5 mb-0 text-success">{{ actions_par_utilisateur|length }}</div>
+                            <small class="text-muted">Utilisateurs actifs</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="pagination-wrapper">
+        <nav aria-label="Navigation des pages d'audit">
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            <i class="fas fa-angle-left"></i>
+                        </a>
+                    </li>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            <i class="fas fa-angle-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        
+        <div class="page-size-selector">
+            <span class="text-muted">Affichage :</span>
+            <select class="form-select form-select-sm" onchange="changePageSize(this.value)">
+                <option value="20" {% if filters.page_size == 20 %}selected{% endif %}>20</option>
+                <option value="50" {% if filters.page_size == 50 %}selected{% endif %}>50</option>
+                <option value="100" {% if filters.page_size == 100 %}selected{% endif %}>100</option>
+            </select>
+            <span class="text-muted">par page</span>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Informations sur la pagination -->
+    <div class="text-center text-muted mt-3">
+        <small>
+            Affichage de {{ page_obj.start_index }} à {{ page_obj.end_index }} 
+            sur {{ page_obj.paginator.count }} résultat{{ page_obj.paginator.count|pluralize }}
+        </small>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Données pour les graphiques
+    const actionsTypeData = {
+        labels: [{% for action in actions_par_type %}'{{ action.action|title }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for action in actions_par_type %}{{ action.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: [
+                '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6f42c1', '#fd7e14', '#20c997'
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    };
+    
+    const actionsHourData = {
+        labels: [{% for action in actions_par_heure %}'{{ action.heure }}h'{% if not forloop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Nombre d\'actions',
+            data: [{% for action in actions_par_heure %}{{ action.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            borderColor: '#007bff',
+            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    };
+    
+    const actionsDayData = {
+        labels: ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'],
+        datasets: [{
+            label: 'Actions',
+            data: [{% for action in actions_par_jour %}{{ action.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: 'rgba(40, 167, 69, 0.8)',
+            borderColor: '#28a745',
+            borderWidth: 2
+        }]
+    };
+    
+    const usersActivityData = {
+        labels: [{% for user in actions_par_utilisateur %}'{{ user.user__username }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Actions',
+            data: [{% for user in actions_par_utilisateur %}{{ user.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: 'rgba(255, 193, 7, 0.8)',
+            borderColor: '#ffc107',
+            borderWidth: 2
+        }]
+    };
+    
+    // Configuration des graphiques
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    padding: 20,
+                    usePointStyle: true
+                }
+            }
+        }
+    };
+    
+    // Initialisation des graphiques
+    document.addEventListener('DOMContentLoaded', function() {
+        // Graphique des actions par type
+        if (document.getElementById('actionsTypeChart')) {
+            new Chart(document.getElementById('actionsTypeChart'), {
+                type: 'doughnut',
+                data: actionsTypeData,
+                options: {
+                    ...chartOptions,
+                    cutout: '60%',
+                    plugins: {
+                        ...chartOptions.plugins,
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                    return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Graphique des actions par heure
+        if (document.getElementById('actionsHourChart')) {
+            new Chart(document.getElementById('actionsHourChart'), {
+                type: 'line',
+                data: actionsHourData,
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Graphique des actions par jour
+        if (document.getElementById('actionsDayChart')) {
+            new Chart(document.getElementById('actionsDayChart'), {
+                type: 'bar',
+                data: actionsDayData,
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Graphique des utilisateurs actifs
+        if (document.getElementById('usersActivityChart')) {
+            new Chart(document.getElementById('usersActivityChart'), {
+                type: 'bar',
+                data: usersActivityData,
+                options: {
+                    ...chartOptions,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    });
+    
+    // Fonction pour changer la taille de page
+    function changePageSize(size) {
+        const url = new URL(window.location);
+        url.searchParams.set('page_size', size);
+        url.searchParams.delete('page'); // Retour à la première page
+        window.location = url;
+    }
+    
+    // Fonction d'export des données filtrées
+    function exportFilteredData() {
+        const format = document.getElementById('exportFormat').value;
+        if (!format) {
+            alert('Veuillez sélectionner un format d\'export.');
+            return;
+        }
+        
+        const url = new URL(window.location);
+        url.searchParams.set('export', format);
+        window.open(url.toString(), '_blank');
+    }
+    
+    // Fonction d'export générale
+    function exportData(format) {
+        const url = new URL(window.location);
+        url.searchParams.set('export', format);
+        window.open(url.toString(), '_blank');
+    }
+    
+    // Filtres automatiques
+    document.querySelectorAll('#auditFilters select, #auditFilters input[type="date"]').forEach(element => {
+        element.addEventListener('change', function() {
+            document.getElementById('auditFilters').submit();
+        });
+    });
+    
+    // Animation des cartes de statistiques
+    document.querySelectorAll('.quick-stat-item').forEach(card => {
+        card.addEventListener('click', function() {
+            this.style.transform = 'scale(1.05)';
+            setTimeout(() => {
+                this.style.transform = 'scale(1)';
+            }, 200);
+        });
+    });
+    
+    // Actualisation automatique des données toutes les 5 minutes
+    setInterval(function() {
+        // Actualiser seulement les graphiques, pas toute la page
+        if (window.location.pathname.includes('rapports-audit')) {
+            location.reload();
+        }
+    }, 300000);
+    
+    // Gestion des filtres avancés
+    document.addEventListener('DOMContentLoaded', function() {
+        // Afficher/masquer les filtres avancés
+        const advancedFiltersToggle = document.querySelector('[data-bs-target="#advancedFilters"]');
+        if (advancedFiltersToggle) {
+            advancedFiltersToggle.addEventListener('click', function() {
+                const icon = this.querySelector('i');
+                if (icon.classList.contains('fa-chevron-down')) {
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-up');
+                } else {
+                    icon.classList.remove('fa-chevron-up');
+                    icon.classList.add('fa-chevron-down');
+                }
+            });
+        }
+    });
+    
+    // Recherche en temps réel
+    let searchTimeout;
+    document.querySelector('input[name="search"]').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            if (this.value.length >= 3 || this.value.length === 0) {
+                document.getElementById('auditFilters').submit();
+            }
+        }, 500);
+    });
+    
+    // Suppression de l'ancien auto-refresh qui rechargeait toute la page
+    // L'auto-refresh est maintenant géré par le script audit_realtime.js
+</script>
+
+<!-- Chart.js pour les graphiques dynamiques -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Script pour l'audit en temps réel -->
+<script src="{% static 'js/audit_realtime.js' %}"></script>
+{% endblock %}

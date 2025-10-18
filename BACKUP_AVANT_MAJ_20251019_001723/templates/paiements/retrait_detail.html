@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+
+{% block title %}Détail du Retrait #{{ retrait.id }} - Gestion Immobilière{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête avec navigation -->
+    <div class="dashboard-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1><i class="bi bi-cash-stack"></i> Retrait #{{ retrait.id }}</h1>
+                <p>Détails du retrait pour {{ retrait.bailleur.nom }} {{ retrait.bailleur.prenom }}</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'paiements:retraits_liste' %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Retour à la liste
+                </a>
+                <a href="{% url 'paiements:retrait_modifier' retrait.pk %}" class="btn btn-primary">
+                    <i class="bi bi-pencil"></i> Modifier
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Informations principales -->
+        <div class="col-lg-8">
+            <!-- Informations du retrait -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-info-circle"></i> Informations du Retrait</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Montant :</strong> <span class="text-success fw-bold">{{ retrait.montant }} F CFA</span></p>
+                            <p><strong>Type :</strong> <span class="badge bg-info">{{ retrait.get_type_retrait_display }}</span></p>
+                            <p><strong>Mode de retrait :</strong> {{ retrait.get_mode_retrait_display }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Statut :</strong> 
+                                {% if retrait.statut == 'en_attente' %}
+                                    <span class="badge bg-warning">En attente</span>
+                                {% elif retrait.statut == 'valide' %}
+                                    <span class="badge bg-success">Validé</span>
+                                {% elif retrait.statut == 'annule' %}
+                                    <span class="badge bg-danger">Annulé</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Date de demande :</strong> {{ retrait.date_demande|date:"d/m/Y" }}</p>
+                            {% if retrait.date_versement %}
+                            <p><strong>Date de versement :</strong> {{ retrait.date_versement|date:"d/m/Y" }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations du bailleur -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-person"></i> Informations du Bailleur</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Nom :</strong> {{ retrait.bailleur.nom }} {{ retrait.bailleur.prenom }}</p>
+                            <p><strong>Email :</strong> {{ retrait.bailleur.email }}</p>
+                            <p><strong>Téléphone :</strong> {{ retrait.bailleur.telephone }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            {% if retrait.bailleur.iban %}
+                            <p><strong>IBAN :</strong> {{ retrait.bailleur.iban }}</p>
+                            {% endif %}
+                            {% if retrait.bailleur.bic %}
+                            <p><strong>BIC :</strong> {{ retrait.bailleur.bic }}</p>
+                            {% endif %}
+                            <p><strong>Adresse :</strong> {{ retrait.bailleur.adresse }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations bancaires -->
+            {% if retrait.numero_cheque or retrait.reference_virement %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-bank"></i> Informations Bancaires</h5>
+                </div>
+                <div class="card-body">
+                    {% if retrait.numero_cheque %}
+                    <p><strong>Numéro de chèque :</strong> {{ retrait.numero_cheque }}</p>
+                    {% endif %}
+                    {% if retrait.reference_virement %}
+                    <p><strong>Référence virement :</strong> {{ retrait.reference_virement }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Notes -->
+            {% if retrait.notes %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-journal-text"></i> Notes</h5>
+                </div>
+                <div class="card-body">
+                    <p>{{ retrait.notes|linebreaks }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-gear"></i> Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if retrait.statut == 'en_attente' %}
+                        <button type="button" class="btn btn-success" onclick="validerRetrait({{ retrait.id }})">
+                            <i class="bi bi-check-circle"></i> Valider le Retrait
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="annulerRetrait({{ retrait.id }})">
+                            <i class="bi bi-x-circle"></i> Annuler le Retrait
+                        </button>
+                        {% endif %}
+                        {% if retrait.statut == 'valide' %}
+                        <a href="{% url 'paiements:generer_quittance_retrait_kbis' retrait.pk %}" class="btn btn-success">
+                            <i class="bi bi-file-earmark-text"></i> Quittance KBIS
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'paiements:retrait_modifier' retrait.pk %}" class="btn btn-primary">
+                            <i class="bi bi-pencil"></i> Modifier
+                        </a>
+                        <a href="{% url 'paiements:retraits_liste' %}" class="btn btn-secondary">
+                            <i class="bi bi-list"></i> Liste des Retraits
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations système -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-info-circle"></i> Informations Système</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Créé le :</strong> {{ retrait.date_creation|date:"d/m/Y H:i" }}</p>
+                    <p><strong>Modifié le :</strong> {{ retrait.date_modification|date:"d/m/Y H:i" }}</p>
+                    {% if retrait.cree_par %}
+                        <p><strong>Créé par :</strong> {{ retrait.cree_par.username }}</p>
+                    {% endif %}
+                    {% if retrait.valide_par %}
+                        <p><strong>Validé par :</strong> {{ retrait.valide_par.username }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Statistiques rapides -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-graph-up"></i> Statistiques</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <div class="stat-card primary">
+                                <div class="stat-number">{{ retrait.bailleur.retraits.count }}</div>
+                                <div class="stat-label">Retraits</div>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="stat-card success">
+                                <div class="stat-number">
+                                    {% with total=0 %}
+                                        {% for r in retrait.bailleur.retraits.all %}
+                                            {% with total=total|add:r.montant %}{% endwith %}
+                                        {% endfor %}
+                                        {{ total }} F CFA
+                                    {% endwith %}
+                                </div>
+                                <div class="stat-label">Total</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function validerRetrait(retraitId) {
+    if (confirm('Êtes-vous sûr de vouloir valider ce retrait ?')) {
+        // Ici vous pouvez ajouter une requête AJAX pour valider le retrait
+        window.location.href = `/paiements/retraits/${retraitId}/valider/`;
+    }
+}
+
+function annulerRetrait(retraitId) {
+    if (confirm('Êtes-vous sûr de vouloir annuler ce retrait ?')) {
+        // Ici vous pouvez ajouter une requête AJAX pour annuler le retrait
+        window.location.href = `/paiements/retraits/${retraitId}/annuler/`;
+    }
+}
+</script>
+{% endblock %} 

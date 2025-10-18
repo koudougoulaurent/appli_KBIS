@@ -1,0 +1,267 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Détail de l'état des lieux{% endblock %}
+
+{% block extra_css %}
+<style>
+    .etat-lieux-detail {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .detail-section {
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        background: #f8f9fa;
+    }
+    
+    .detail-section h5 {
+        color: #495057;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .etat-badge {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    .etat-excellent { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .etat-bon { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    .etat-moyen { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+    .etat-mauvais { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    
+    .contrat-info {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .contrat-info h6 {
+        margin: 0;
+        font-weight: 600;
+    }
+    
+    .contrat-info p {
+        margin: 0.25rem 0;
+        opacity: 0.9;
+    }
+    
+    .observations-box {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 1rem;
+        min-height: 100px;
+    }
+    
+    .btn-action {
+        margin-right: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête de la page -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-clipboard-check text-primary me-2"></i>
+                Détail de l'état des lieux
+            </h1>
+            <p class="text-muted">Consultez les détails de l'état des lieux</p>
+        </div>
+        <div>
+            <a href="{% url 'contrats:etats_lieux_liste' %}" class="btn btn-outline-secondary btn-action">
+                <i class="fas fa-arrow-left me-2"></i>Retour à la liste
+            </a>
+            <a href="{% url 'contrats:etat_lieux_modifier' etat_lieux.pk %}" class="btn btn-warning btn-action">
+                <i class="fas fa-edit me-2"></i>Modifier
+            </a>
+            <button type="button" class="btn btn-danger btn-action" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                <i class="fas fa-trash me-2"></i>Supprimer
+            </button>
+        </div>
+    </div>
+
+    <!-- Informations du contrat -->
+    <div class="contrat-info">
+        <h6><i class="fas fa-file-contract me-2"></i>Informations du contrat</h6>
+        <p><strong>Numéro de contrat:</strong> {{ etat_lieux.contrat.numero_contrat }}</p>
+        <p><strong>Propriété:</strong> {{ etat_lieux.contrat.propriete.titre }}</p>
+        <p><strong>Locataire:</strong> {{ etat_lieux.contrat.locataire.nom }} {{ etat_lieux.contrat.locataire.prenom }}</p>
+        <p><strong>Type d'état des lieux:</strong> 
+            <span class="badge {% if etat_lieux.type_etat == 'entree' %}bg-success{% else %}bg-info{% endif %}">
+                {{ etat_lieux.get_type_etat_display }}
+            </span>
+        </p>
+    </div>
+
+    <div class="etat-lieux-detail">
+        <!-- Informations générales -->
+        <div class="detail-section">
+            <h5><i class="fas fa-info-circle me-2"></i>Informations générales</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Date de l'état des lieux:</strong> {{ etat_lieux.date_etat|date:"d/m/Y" }}</p>
+                    <p><strong>Date de création:</strong> {{ etat_lieux.date_creation|date:"d/m/Y H:i" }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Créé par:</strong> {{ etat_lieux.cree_par.username|default:"Système" }}</p>
+                    {% if etat_lieux.notes %}
+                    <p><strong>Notes:</strong> {{ etat_lieux.notes }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Observations générales -->
+        {% if etat_lieux.observations_generales %}
+        <div class="detail-section">
+            <h5><i class="fas fa-comments me-2"></i>Observations générales</h5>
+            <div class="observations-box">
+                {{ etat_lieux.observations_generales|linebreaks }}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- État des murs -->
+        <div class="detail-section">
+            <h5><i class="fas fa-home me-2"></i>État des murs</h5>
+            <span class="etat-badge etat-{{ etat_lieux.etat_murs }}">
+                {{ etat_lieux.get_etat_murs_display }}
+            </span>
+        </div>
+
+        <!-- État du sol -->
+        <div class="detail-section">
+            <h5><i class="fas fa-square me-2"></i>État du sol</h5>
+            <span class="etat-badge etat-{{ etat_lieux.etat_sol }}">
+                {{ etat_lieux.get_etat_sol_display }}
+            </span>
+        </div>
+
+        <!-- État de la plomberie -->
+        <div class="detail-section">
+            <h5><i class="fas fa-tint me-2"></i>État de la plomberie</h5>
+            <span class="etat-badge etat-{{ etat_lieux.etat_plomberie }}">
+                {{ etat_lieux.get_etat_plomberie_display }}
+            </span>
+        </div>
+
+        <!-- État de l'électricité -->
+        <div class="detail-section">
+            <h5><i class="fas fa-bolt me-2"></i>État de l'électricité</h5>
+            <span class="etat-badge etat-{{ etat_lieux.etat_electricite }}">
+                {{ etat_lieux.get_etat_electricite_display }}
+            </span>
+        </div>
+
+        <!-- Résumé des états -->
+        <div class="detail-section">
+            <h5><i class="fas fa-chart-pie me-2"></i>Résumé des états</h5>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="etat-badge etat-{{ etat_lieux.etat_murs }} mb-2">
+                            {{ etat_lieux.get_etat_murs_display }}
+                        </div>
+                        <small class="text-muted">Murs</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="etat-badge etat-{{ etat_lieux.etat_sol }} mb-2">
+                            {{ etat_lieux.get_etat_sol_display }}
+                        </div>
+                        <small class="text-muted">Sol</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="etat-badge etat-{{ etat_lieux.etat_plomberie }} mb-2">
+                            {{ etat_lieux.get_etat_plomberie_display }}
+                        </div>
+                        <small class="text-muted">Plomberie</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="etat-badge etat-{{ etat_lieux.etat_electricite }} mb-2">
+                            {{ etat_lieux.get_etat_electricite_display }}
+                        </div>
+                        <small class="text-muted">Électricité</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmation de suppression -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirmer la suppression</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer cet état des lieux ?</p>
+                <p><strong>Contrat:</strong> {{ etat_lieux.contrat.numero_contrat }}</p>
+                <p><strong>Type:</strong> {{ etat_lieux.get_type_etat_display }}</p>
+                <p><strong>Date:</strong> {{ etat_lieux.date_etat|date:"d/m/Y" }}</p>
+                <p class="text-danger"><small>Cette action est irréversible.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form method="post" action="{% url 'contrats:etat_lieux_supprimer' etat_lieux.pk %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Supprimer définitivement</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation des badges d'état
+    const badges = document.querySelectorAll('.etat-badge');
+    badges.forEach(badge => {
+        badge.style.opacity = '0';
+        badge.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            badge.style.transition = 'all 0.5s ease';
+            badge.style.opacity = '1';
+            badge.style.transform = 'translateY(0)';
+        }, 100);
+    });
+    
+    // Confirmation de suppression
+    const deleteModal = document.getElementById('deleteModal');
+    if (deleteModal) {
+        deleteModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const modal = this;
+            // Logique supplémentaire si nécessaire
+        });
+    }
+});
+</script>
+{% endblock %}

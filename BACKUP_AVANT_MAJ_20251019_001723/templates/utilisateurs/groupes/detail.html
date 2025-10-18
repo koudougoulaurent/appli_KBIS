@@ -1,0 +1,311 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Détails du Groupe {{ groupe.nom }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .permission-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 20px;
+        padding: 0.5rem 1rem;
+        margin: 0.25rem;
+        display: inline-block;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #e3e6f0;
+    }
+    
+    .user-card {
+        transition: all 0.3s ease;
+        border-left: 3px solid transparent;
+    }
+    
+    .user-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        border-left-color: #4e73df;
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête de la page -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-layer-group text-primary me-2"></i>
+                Groupe : {{ groupe.nom }}
+            </h1>
+            <p class="text-muted mt-1">{{ groupe.description|default:"Aucune description" }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'utilisateurs:modifier_groupe' pk=groupe.pk %}" class="btn btn-warning btn-sm">
+                <i class="fas fa-edit me-1"></i>
+                Modifier
+            </a>
+            <a href="{% url 'utilisateurs:liste_groupes' %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>
+                Retour
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistiques du groupe -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card">
+                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                    Utilisateurs
+                </div>
+                <div class="h3 mb-0 font-weight-bold text-gray-800">{{ utilisateurs.count }}</div>
+                <div class="text-muted small">membres actifs</div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card">
+                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                    Permissions
+                </div>
+                <div class="h3 mb-0 font-weight-bold text-gray-800">{{ groupe.get_permissions_list|length }}</div>
+                <div class="text-muted small">modules accessibles</div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card">
+                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                    Statut
+                </div>
+                <div class="h3 mb-0 font-weight-bold {% if groupe.actif %}text-success{% else %}text-secondary{% endif %}">
+                    {% if groupe.actif %}Actif{% else %}Inactif{% endif %}
+                </div>
+                <div class="text-muted small">groupe de travail</div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card">
+                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                    Créé le
+                </div>
+                <div class="h3 mb-0 font-weight-bold text-gray-800">{{ groupe.date_creation|date:"d/m/Y" }}</div>
+                <div class="text-muted small">il y a {{ groupe.date_creation|timesince }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Informations du groupe -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Informations du Groupe
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Nom :</strong>
+                        <span class="badge bg-primary ms-2">{{ groupe.nom }}</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Description :</strong>
+                        <p class="text-muted mt-1">{{ groupe.description|default:"Aucune description fournie" }}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Statut :</strong>
+                        <span class="badge {% if groupe.actif %}bg-success{% else %}bg-secondary{% endif %} ms-2">
+                            {% if groupe.actif %}Actif{% else %}Inactif{% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Date de création :</strong>
+                        <p class="text-muted mt-1">{{ groupe.date_creation|date:"d/m/Y à H:i" }}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Dernière modification :</strong>
+                        <p class="text-muted mt-1">{{ groupe.date_modification|date:"d/m/Y à H:i" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Permissions du groupe -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        Permissions et Modules Accessibles
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if groupe.get_permissions_list %}
+                        <div class="mb-3">
+                            <p class="text-muted">Ce groupe a accès aux modules suivants :</p>
+                            <div class="d-flex flex-wrap">
+                                {% for permission in groupe.get_permissions_list %}
+                                    <span class="permission-badge">
+                                        <i class="fas fa-check me-1"></i>
+                                        {{ permission }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-shield-alt fa-2x text-gray-300 mb-3"></i>
+                            <h6 class="text-gray-500">Aucune permission spécifique</h6>
+                            <p class="text-gray-400">Ce groupe n'a pas de permissions particulières définies.</p>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="mt-4">
+                        <h6 class="font-weight-bold text-gray-800 mb-2">Permissions JSON :</h6>
+                        <pre class="bg-light p-3 rounded" style="font-size: 0.8rem; max-height: 200px; overflow-y: auto;">{{ groupe.permissions|pprint }}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des utilisateurs -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-users me-2"></i>
+                Utilisateurs du Groupe ({{ utilisateurs.count }})
+            </h6>
+            <a href="{% url 'utilisateurs:ajouter_utilisateur' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus me-1"></i>
+                Ajouter un utilisateur
+            </a>
+        </div>
+        <div class="card-body">
+            {% if utilisateurs %}
+                <div class="table-responsive">
+                    <table class="table table-bordered" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>Utilisateur</th>
+                                <th>Nom complet</th>
+                                <th>Email</th>
+                                <th>Téléphone</th>
+                                <th>Poste</th>
+                                <th>Statut</th>
+                                <th>Dernière connexion</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for utilisateur in utilisateurs %}
+                            <tr class="user-card">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if utilisateur.photo %}
+                                            <img src="{{ utilisateur.photo.url }}" alt="{{ utilisateur.username }}" class="user-avatar me-2">
+                                        {% else %}
+                                            <div class="user-avatar me-2 bg-primary d-flex align-items-center justify-content-center text-white">
+                                                {{ utilisateur.username|first|upper }}
+                                            </div>
+                                        {% endif %}
+                                        <div>
+                                            <strong>{{ utilisateur.username }}</strong>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ utilisateur.get_full_name|default:"Non renseigné" }}</td>
+                                <td>{{ utilisateur.email|default:"Non renseigné" }}</td>
+                                <td>{{ utilisateur.telephone|default:"Non renseigné" }}</td>
+                                <td>{{ utilisateur.poste|default:"Non renseigné" }}</td>
+                                <td>
+                                    <span class="badge {% if utilisateur.actif %}bg-success{% else %}bg-secondary{% endif %}">
+                                        {% if utilisateur.actif %}Actif{% else %}Inactif{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if utilisateur.derniere_connexion %}
+                                        {{ utilisateur.derniere_connexion|timesince }}
+                                    {% else %}
+                                        <span class="text-muted">Jamais connecté</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{% url 'utilisateurs:detail_utilisateur' pk=utilisateur.pk %}" class="btn btn-outline-primary" title="Voir détails">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'utilisateurs:modifier_utilisateur' pk=utilisateur.pk %}" class="btn btn-outline-warning" title="Modifier">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-users fa-3x text-gray-300 mb-3"></i>
+                    <h5 class="text-gray-500">Aucun utilisateur dans ce groupe</h5>
+                    <p class="text-gray-400">Ce groupe ne contient actuellement aucun utilisateur.</p>
+                    <a href="{% url 'utilisateurs:ajouter_utilisateur' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>
+                        Ajouter un utilisateur
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation des cartes au chargement
+    const cards = document.querySelectorAll('.stat-card, .user-card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,327 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Liste des Avances de Loyer - KBIS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/avances.css' %}">
+<style>
+    .avance-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        background: white;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+    }
+    
+    .avance-card:hover {
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .status-active {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+    }
+    
+    .status-epuisee {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        color: white;
+    }
+    
+    .status-annulee {
+        background: linear-gradient(135deg, #a8a8a8 0%, #d3d3d3 100%);
+        color: white;
+    }
+    
+    .montant-display {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    
+    .mois-couverts {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        text-align: center;
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .filter-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .action-btn {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-block;
+        margin: 0.25rem;
+        transition: all 0.3s ease;
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+    
+    .btn-success {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        border: none;
+    }
+    
+    .btn-info {
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        border: none;
+        color: #333;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-list-check text-primary"></i>
+                        Liste des Avances de Loyer
+                    </h1>
+                    <p class="text-muted mb-0">Gestion et suivi des avances de loyer</p>
+                </div>
+                <div>
+                    <a href="/paiements/avances/ajouter/" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Nouvelle Avance
+                    </a>
+                    <a href="/paiements/avances/" class="btn btn-outline-secondary">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="filter-card">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="statut" class="form-label">Statut</label>
+                        <select class="form-select" id="statut" name="statut">
+                            <option value="">Tous les statuts</option>
+                            <option value="active" {% if request.GET.statut == 'active' %}selected{% endif %}>Active</option>
+                            <option value="epuisee" {% if request.GET.statut == 'epuisee' %}selected{% endif %}>Épuisée</option>
+                            <option value="annulee" {% if request.GET.statut == 'annulee' %}selected{% endif %}>Annulée</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="contrat" class="form-label">Contrat</label>
+                        <input type="text" class="form-control" id="contrat" name="contrat" 
+                               placeholder="Numéro de contrat" value="{{ request.GET.contrat }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="locataire" class="form-label">Locataire</label>
+                        <input type="text" class="form-control" id="locataire" name="locataire" 
+                               placeholder="Nom du locataire" value="{{ request.GET.locataire }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search"></i> Filtrer
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des avances -->
+    <div class="row">
+        <div class="col-12">
+            {% if avances %}
+                {% for avance in avances %}
+                <div class="avance-card">
+                    <div class="row align-items-center">
+                        <div class="col-lg-4">
+                            <h5 class="mb-2">
+                                <i class="bi bi-person-circle text-primary"></i>
+                                {{ avance.contrat.locataire.get_nom_complet }}
+                            </h5>
+                            <p class="text-muted mb-1">
+                                <i class="bi bi-file-text"></i>
+                                Contrat: {{ avance.contrat.numero_contrat }}
+                            </p>
+                            <p class="text-muted mb-0">
+                                <i class="bi bi-geo-alt"></i>
+                                {{ avance.contrat.propriete.adresse }}
+                            </p>
+                        </div>
+                        
+                        <div class="col-lg-2">
+                            <div class="text-center">
+                                <div class="montant-display text-primary">
+                                    {{ avance.montant_avance|floatformat:0 }} F CFA
+                                </div>
+                                <div class="small text-muted">
+                                    Loyer: {{ avance.loyer_mensuel|floatformat:0 }} F CFA
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-2">
+                            <div class="mois-couverts">
+                                <div class="h5 mb-0">{{ avance.nombre_mois_couverts }}</div>
+                                <div class="small">mois couverts</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-2">
+                            <div class="text-center">
+                                <div class="h6 mb-1">
+                                    Restant: {{ avance.montant_restant|floatformat:0 }} F CFA
+                                </div>
+                                <div class="small text-muted">
+                                    {{ avance.date_avance|date:"d/m/Y" }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-2">
+                            <div class="text-center">
+                                <span class="status-badge status-{{ avance.statut }}">
+                                    {% if avance.statut == 'active' %}
+                                        <i class="bi bi-check-circle"></i> Active
+                                    {% elif avance.statut == 'epuisee' %}
+                                        <i class="bi bi-x-circle"></i> Épuisée
+                                    {% else %}
+                                        <i class="bi bi-pause-circle"></i> Annulée
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="text-end">
+                                <a href="/paiements/avances/detail/{{ avance.id }}/" class="action-btn btn btn-info">
+                                    <i class="bi bi-eye"></i> Détails
+                                </a>
+                                <a href="/paiements/avances/rapport-historique-pdf/{{ avance.contrat.id }}/" class="action-btn btn btn-success">
+                                    <i class="bi bi-file-pdf"></i> Rapport PDF
+                                </a>
+                                <a href="/paiements/avances/recu/{{ avance.id }}/" class="action-btn btn btn-warning" target="_blank">
+                                    <i class="bi bi-receipt"></i> Reçu KBIS
+                                </a>
+                                {% if avance.statut == 'active' %}
+                                <a href="/paiements/avances/ajouter/?contrat={{ avance.contrat.id }}" class="action-btn btn btn-primary">
+                                    <i class="bi bi-cash-coin"></i> Nouveau Paiement
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <!-- Pagination -->
+                {% if is_paginated %}
+                <nav aria-label="Pagination des avances">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.contrat %}&contrat={{ request.GET.contrat }}{% endif %}{% if request.GET.locataire %}&locataire={{ request.GET.locataire }}{% endif %}">
+                                    <i class="bi bi-chevron-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.contrat %}&contrat={{ request.GET.contrat }}{% endif %}{% if request.GET.locataire %}&locataire={{ request.GET.locataire }}{% endif %}">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                        
+                        <li class="page-item active">
+                            <span class="page-link">
+                                Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
+                            </span>
+                        </li>
+                        
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.contrat %}&contrat={{ request.GET.contrat }}{% endif %}{% if request.GET.locataire %}&locataire={{ request.GET.locataire }}{% endif %}">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.contrat %}&contrat={{ request.GET.contrat }}{% endif %}{% if request.GET.locataire %}&locataire={{ request.GET.locataire }}{% endif %}">
+                                    <i class="bi bi-chevron-double-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+                
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-house-add display-1 text-muted"></i>
+                    <h4 class="text-muted mt-3">Aucune avance trouvée</h4>
+                    <p class="text-muted">Commencez par ajouter une avance de loyer</p>
+                    <a href="/paiements/avances/ajouter/" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Ajouter une avance
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Animation des cartes
+    document.addEventListener('DOMContentLoaded', function() {
+        const cards = document.querySelectorAll('.avance-card');
+        cards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'all 0.5s ease';
+            
+            setTimeout(() => {
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+    });
+</script>
+{% endblock %}

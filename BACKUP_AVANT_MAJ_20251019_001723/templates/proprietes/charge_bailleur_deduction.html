@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}Déduire une charge bailleur{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Déduire une charge bailleur</h2>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="card mt-3">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Informations de la charge</h5>
+                    <p><strong>Propriété :</strong> {{ charge.propriete.numero_propriete }} - {{ charge.propriete.titre }}</p>
+                    <p><strong>Bailleur :</strong> {{ charge.propriete.bailleur.get_nom_complet }}</p>
+                    <p><strong>Titre de la charge :</strong> {{ charge.titre }}</p>
+                    <p><strong>Montant total :</strong> {{ charge.montant }} F CFA</p>
+                    <p><strong>Montant restant :</strong> {{ charge.montant_restant }} F CFA</p>
+                </div>
+                <div class="col-md-6">
+                    <h5>Déduction du retrait mensuel</h5>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Note :</strong> Cette charge sera déduite du <strong>retrait mensuel du bailleur</strong> 
+                        (montant total que le bailleur reçoit à la fin du mois), et non pas du loyer individuel.
+                    </div>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <form method="post">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.montant_deduction.id_for_label }}" class="form-label">
+                                Montant à déduire (F CFA)
+                            </label>
+                            {{ form.montant_deduction }}
+                            {% if form.montant_deduction.help_text %}
+                                <div class="form-text">{{ form.montant_deduction.help_text }}</div>
+                            {% endif %}
+                            {% if form.montant_deduction.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.montant_deduction.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.motif.id_for_label }}" class="form-label">
+                                Motif de la déduction
+                            </label>
+                            {{ form.motif }}
+                            {% if form.motif.help_text %}
+                                <div class="form-text">{{ form.motif.help_text }}</div>
+                            {% endif %}
+                            {% if form.motif.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.motif.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-minus-circle"></i> Déduire du retrait mensuel
+                    </button>
+                    <a href="{% url 'proprietes:detail_charge_bailleur' charge.pk %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Retour
+                    </a>
+                    <a href="{% url 'proprietes:liste_charges_bailleur' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-list"></i> Liste des charges
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,543 @@
+{% load static %}
+<!-- Recherche Globale Rapide -->
+<div id="global-search" class="global-search">
+    <div class="search-trigger" onclick="toggleGlobalSearch()">
+        <i class="bi bi-search"></i>
+        <span class="search-label">Recherche</span>
+        <kbd>Ctrl</kbd> + <kbd>K</kbd>
+    </div>
+    
+    <div class="search-modal" id="search-modal">
+        <div class="search-content">
+            <div class="search-header">
+                <div class="search-input-container">
+                    <i class="bi bi-search search-icon"></i>
+                    <input type="text" id="global-search-input" placeholder="Rechercher propriétés, contrats, paiements, personnes..." autocomplete="off">
+                    <button class="search-clear" onclick="clearSearch()">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+                <button class="search-close" onclick="closeGlobalSearch()">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+            
+            <div class="search-results" id="search-results">
+                <div class="search-suggestions">
+                    <h6><i class="bi bi-lightbulb"></i> Suggestions</h6>
+                    <div class="suggestion-categories">
+                        <div class="suggestion-category">
+                            <h6>Propriétés</h6>
+                            <div class="suggestion-items">
+                                <a href="{% url 'proprietes:liste' %}" class="suggestion-item">
+                                    <i class="bi bi-house"></i>
+                                    <span>Toutes les propriétés</span>
+                                </a>
+                        <a href="{% url 'proprietes:recherche_unites' %}" class="suggestion-item">
+                            <i class="bi bi-search"></i>
+                            <span>Recherche avancée</span>
+                        </a>
+                            </div>
+                        </div>
+                        
+                        <div class="suggestion-category">
+                            <h6>Contrats</h6>
+                            <div class="suggestion-items">
+                                <a href="{% url 'contrats:liste' %}" class="suggestion-item">
+                                    <i class="bi bi-file-text"></i>
+                                    <span>Tous les contrats</span>
+                                </a>
+                        <a href="{% url 'contrats:orphelins' %}" class="suggestion-item">
+                            <i class="bi bi-search"></i>
+                            <span>Recherche avancée</span>
+                        </a>
+                            </div>
+                        </div>
+                        
+                        <div class="suggestion-category">
+                            <h6>Paiements</h6>
+                            <div class="suggestion-items">
+                                <a href="{% url 'paiements:liste' %}" class="suggestion-item">
+                                    <i class="bi bi-credit-card"></i>
+                                    <span>Tous les paiements</span>
+                                </a>
+                                <a href="{% url 'paiements:avances:monitoring_avances' %}" class="suggestion-item">
+                                    <i class="bi bi-piggy-bank"></i>
+                                    <span>Avances de loyer</span>
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="suggestion-category">
+                            <h6>Personnes</h6>
+                            <div class="suggestion-items">
+                                <a href="{% url 'proprietes:bailleurs_liste' %}" class="suggestion-item">
+                                    <i class="bi bi-person-badge"></i>
+                                    <span>Bailleurs</span>
+                                </a>
+                                <a href="{% url 'proprietes:locataires_liste' %}" class="suggestion-item">
+                                    <i class="bi bi-people"></i>
+                                    <span>Locataires</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="search-footer">
+                <div class="search-shortcuts">
+                    <span class="shortcut-item">
+                        <kbd>↑</kbd> <kbd>↓</kbd> Naviguer
+                    </span>
+                    <span class="shortcut-item">
+                        <kbd>Entrée</kbd> Sélectionner
+                    </span>
+                    <span class="shortcut-item">
+                        <kbd>Esc</kbd> Fermer
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.global-search {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1001;
+}
+
+.search-trigger {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 25px;
+    padding: 8px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    font-size: 0.9em;
+    color: #6c757d;
+}
+
+.search-trigger:hover {
+    border-color: #007bff;
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.2);
+    color: #007bff;
+}
+
+.search-trigger i {
+    font-size: 1.1em;
+}
+
+.search-label {
+    font-weight: 500;
+}
+
+.search-trigger kbd {
+    background: #f8f9fa;
+    color: #6c757d;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.7em;
+    font-family: monospace;
+}
+
+.search-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    z-index: 1002;
+}
+
+.search-content {
+    position: absolute;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 600px;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+.search-header {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e9ecef;
+    background: #f8f9fa;
+}
+
+.search-input-container {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-icon {
+    position: absolute;
+    left: 15px;
+    color: #6c757d;
+    font-size: 1.1em;
+    z-index: 1;
+}
+
+#global-search-input {
+    width: 100%;
+    padding: 12px 15px 12px 45px;
+    border: 2px solid #e9ecef;
+    border-radius: 25px;
+    font-size: 1em;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+#global-search-input:focus {
+    border-color: #007bff;
+}
+
+.search-clear {
+    position: absolute;
+    right: 15px;
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    transition: background 0.2s ease;
+}
+
+.search-clear:hover {
+    background: #e9ecef;
+}
+
+.search-close {
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 8px;
+    margin-left: 10px;
+    border-radius: 50%;
+    transition: background 0.2s ease;
+}
+
+.search-close:hover {
+    background: #e9ecef;
+}
+
+.search-results {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.search-suggestions h6 {
+    color: #495057;
+    font-size: 0.9em;
+    font-weight: 600;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.suggestion-categories {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.suggestion-category h6 {
+    color: #007bff;
+    font-size: 0.8em;
+    font-weight: 600;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.suggestion-items {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.suggestion-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #495057;
+    font-size: 0.9em;
+    transition: all 0.2s ease;
+}
+
+.suggestion-item:hover {
+    background: #007bff;
+    color: white;
+    transform: translateX(5px);
+    text-decoration: none;
+}
+
+.suggestion-item i {
+    font-size: 1em;
+    width: 16px;
+    text-align: center;
+}
+
+.search-footer {
+    padding: 15px 20px;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+
+.search-shortcuts {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.shortcut-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.8em;
+    color: #6c757d;
+}
+
+.shortcut-item kbd {
+    background: #e9ecef;
+    color: #495057;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.7em;
+    font-family: monospace;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .search-content {
+        width: 95%;
+        top: 10%;
+    }
+    
+    .suggestion-categories {
+        grid-template-columns: 1fr;
+    }
+    
+    .search-shortcuts {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+/* Animation */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.search-modal.show {
+    display: block;
+    animation: fadeIn 0.2s ease;
+}
+
+.search-content {
+    animation: slideDown 0.3s ease;
+}
+</style>
+
+<script>
+let searchTimeout;
+
+function toggleGlobalSearch() {
+    const modal = document.getElementById('search-modal');
+    const input = document.getElementById('global-search-input');
+    
+    if (modal.style.display === 'block') {
+        closeGlobalSearch();
+    } else {
+        modal.style.display = 'block';
+        modal.classList.add('show');
+        setTimeout(() => {
+            input.focus();
+        }, 100);
+    }
+}
+
+function closeGlobalSearch() {
+    const modal = document.getElementById('search-modal');
+    const input = document.getElementById('global-search-input');
+    
+    modal.style.display = 'none';
+    modal.classList.remove('show');
+    input.value = '';
+    clearSearchResults();
+}
+
+function clearSearch() {
+    const input = document.getElementById('global-search-input');
+    input.value = '';
+    input.focus();
+    clearSearchResults();
+}
+
+function clearSearchResults() {
+    const results = document.getElementById('search-results');
+    results.innerHTML = `
+        <div class="search-suggestions">
+            <h6><i class="bi bi-lightbulb"></i> Suggestions</h6>
+            <div class="suggestion-categories">
+                <div class="suggestion-category">
+                    <h6>Propriétés</h6>
+                    <div class="suggestion-items">
+                        <a href="{% url 'proprietes:liste' %}" class="suggestion-item">
+                            <i class="bi bi-house"></i>
+                            <span>Toutes les propriétés</span>
+                        </a>
+                        <a href="{% url 'proprietes:recherche_unites' %}" class="suggestion-item">
+                            <i class="bi bi-search"></i>
+                            <span>Recherche avancée</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="suggestion-category">
+                    <h6>Contrats</h6>
+                    <div class="suggestion-items">
+                        <a href="{% url 'contrats:liste' %}" class="suggestion-item">
+                            <i class="bi bi-file-text"></i>
+                            <span>Tous les contrats</span>
+                        </a>
+                        <a href="{% url 'contrats:orphelins' %}" class="suggestion-item">
+                            <i class="bi bi-search"></i>
+                            <span>Recherche avancée</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="suggestion-category">
+                    <h6>Paiements</h6>
+                    <div class="suggestion-items">
+                        <a href="{% url 'paiements:liste' %}" class="suggestion-item">
+                            <i class="bi bi-credit-card"></i>
+                            <span>Tous les paiements</span>
+                        </a>
+                        <a href="{% url 'paiements:recherche_intelligente' %}" class="suggestion-item">
+                            <i class="bi bi-piggy-bank"></i>
+                            <span>Avances de loyer</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="suggestion-category">
+                    <h6>Personnes</h6>
+                    <div class="suggestion-items">
+                        <a href="{% url 'proprietes:bailleurs_liste' %}" class="suggestion-item">
+                            <i class="bi bi-person-badge"></i>
+                            <span>Bailleurs</span>
+                        </a>
+                        <a href="{% url 'proprietes:locataires_liste' %}" class="suggestion-item">
+                            <i class="bi bi-people"></i>
+                            <span>Locataires</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Raccourcis clavier
+document.addEventListener('keydown', function(event) {
+    // Ctrl + K pour ouvrir la recherche
+    if (event.ctrlKey && event.key === 'k') {
+        event.preventDefault();
+        toggleGlobalSearch();
+    }
+    
+    // Escape pour fermer
+    if (event.key === 'Escape') {
+        closeGlobalSearch();
+    }
+});
+
+// Recherche en temps réel
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('global-search-input');
+    
+    if (input) {
+        input.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const query = this.value.trim();
+            
+            if (query.length > 2) {
+                searchTimeout = setTimeout(() => {
+                    performSearch(query);
+                }, 300);
+            } else {
+                clearSearchResults();
+            }
+        });
+    }
+});
+
+function performSearch(query) {
+    // Ici on pourrait implémenter une recherche AJAX
+    // Pour l'instant, on affiche juste un message
+    const results = document.getElementById('search-results');
+    results.innerHTML = `
+        <div class="search-suggestions">
+            <h6><i class="bi bi-search"></i> Résultats pour "${query}"</h6>
+            <div class="suggestion-items">
+                <div class="suggestion-item">
+                    <i class="bi bi-info-circle"></i>
+                    <span>Recherche en cours...</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Fermer en cliquant à l'extérieur
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('search-modal');
+    const trigger = document.querySelector('.search-trigger');
+    
+    if (modal.style.display === 'block' && !modal.contains(event.target) && !trigger.contains(event.target)) {
+        closeGlobalSearch();
+    }
+});
+</script>

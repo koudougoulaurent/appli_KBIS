@@ -1,0 +1,426 @@
+{% load static %}
+<!-- Navigation Breadcrumb Intelligente -->
+<nav class="smart-breadcrumb" aria-label="breadcrumb">
+    <div class="breadcrumb-container">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'core:tableau_bord_principal' %}">
+                    <i class="bi bi-house"></i>
+                    <span>Accueil</span>
+                </a>
+            </li>
+            
+            <!-- Module actuel -->
+            {% if request.resolver_match.app_name == 'proprietes' %}
+                <li class="breadcrumb-item">
+                    <a href="{% url 'proprietes:proprietes_dashboard' %}">
+                        <i class="bi bi-house"></i>
+                        <span>Propriétés</span>
+                    </a>
+                </li>
+            {% elif request.resolver_match.app_name == 'contrats' %}
+                <li class="breadcrumb-item">
+                    <a href="{% url 'contrats:dashboard' %}">
+                        <i class="bi bi-file-text"></i>
+                        <span>Contrats</span>
+                    </a>
+                </li>
+            {% elif request.resolver_match.app_name == 'paiements' %}
+                <li class="breadcrumb-item">
+                    <a href="{% url 'paiements:dashboard' %}">
+                        <i class="bi bi-credit-card"></i>
+                        <span>Paiements</span>
+                    </a>
+                </li>
+            {% endif %}
+            
+            <!-- Page actuelle -->
+            {% if request.resolver_match.url_name == 'proprietes_dashboard' %}
+                <li class="breadcrumb-item active">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>Dashboard</span>
+                </li>
+            {% elif request.resolver_match.url_name == 'ajouter' %}
+                <li class="breadcrumb-item active">
+                    <i class="bi bi-plus-circle"></i>
+                    <span>Ajouter</span>
+                </li>
+            {% elif request.resolver_match.url_name == 'liste' %}
+                <li class="breadcrumb-item active">
+                    <i class="bi bi-list-ul"></i>
+                    <span>Liste</span>
+                </li>
+            {% elif request.resolver_match.url_name == 'recherche' %}
+                <li class="breadcrumb-item active">
+                    <i class="bi bi-search"></i>
+                    <span>Recherche</span>
+                </li>
+            {% elif request.resolver_match.url_name == 'detail' %}
+                <li class="breadcrumb-item active">
+                    <i class="bi bi-eye"></i>
+                    <span>Détails</span>
+                </li>
+            {% elif request.resolver_match.url_name == 'modifier' %}
+                <li class="breadcrumb-item active">
+                    <i class="bi bi-pencil"></i>
+                    <span>Modifier</span>
+                </li>
+            {% elif request.resolver_match.url_name == 'monitoring_avances' %}
+                <li class="breadcrumb-item active">
+                    <i class="bi bi-piggy-bank"></i>
+                    <span>Avances de Loyer</span>
+                </li>
+            {% elif request.resolver_match.url_name == 'detail_progression_avance' %}
+                <li class="breadcrumb-item">
+                    <a href="{% url 'paiements:avances:monitoring_avances' %}">
+                        <i class="bi bi-piggy-bank"></i>
+                        <span>Avances</span>
+                    </a>
+                </li>
+                <li class="breadcrumb-item active">
+                    <i class="bi bi-graph-up"></i>
+                    <span>Progression</span>
+                </li>
+            {% endif %}
+        </ol>
+        
+        <!-- Actions rapides contextuelles -->
+        <div class="breadcrumb-actions">
+            {% if request.resolver_match.url_name == 'detail' %}
+                <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left"></i>
+                    <span>Retour</span>
+                </a>
+            {% endif %}
+            
+            {% if request.resolver_match.url_name == 'liste' %}
+                <a href="{% url request.resolver_match.app_name|add:':ajouter' %}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-circle"></i>
+                    <span>Ajouter</span>
+                </a>
+            {% endif %}
+            
+            {% if request.resolver_match.url_name == 'detail' %}
+                <a href="{% url request.resolver_match.app_name|add:':modifier' object.id %}" class="btn btn-warning btn-sm">
+                    <i class="bi bi-pencil"></i>
+                    <span>Modifier</span>
+                </a>
+            {% endif %}
+            
+            <button class="btn btn-outline-info btn-sm" onclick="toggleBreadcrumbHelp()">
+                <i class="bi bi-question-circle"></i>
+                <span>Aide</span>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<!-- Aide contextuelle -->
+<div id="breadcrumb-help" class="breadcrumb-help" style="display: none;">
+    <div class="help-content">
+        <h6><i class="bi bi-lightbulb"></i> Navigation Rapide</h6>
+        <div class="help-shortcuts">
+            <div class="shortcut-group">
+                <h6>Raccourcis Clavier</h6>
+                <div class="shortcut-list">
+                    <div class="shortcut-item">
+                        <kbd>Ctrl</kbd> + <kbd>H</kbd> <span>Accueil</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>Ctrl</kbd> + <kbd>P</kbd> <span>Propriétés</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>Ctrl</kbd> + <kbd>C</kbd> <span>Contrats</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>Ctrl</kbd> + <kbd>M</kbd> <span>Paiements</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>Ctrl</kbd> + <kbd>K</kbd> <span>Recherche</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="shortcut-group">
+                <h6>Navigation</h6>
+                <div class="shortcut-list">
+                    <div class="shortcut-item">
+                        <kbd>←</kbd> <span>Page précédente</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>→</kbd> <span>Page suivante</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>Esc</kbd> <span>Fermer l'aide</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.smart-breadcrumb {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-bottom: 1px solid #dee2e6;
+    padding: 15px 0;
+    margin-bottom: 20px;
+}
+
+.breadcrumb-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.breadcrumb {
+    margin: 0;
+    background: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.breadcrumb-item a {
+    color: #007bff;
+    text-decoration: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.breadcrumb-item a:hover {
+    background: #007bff;
+    color: white;
+    text-decoration: none;
+}
+
+.breadcrumb-item.active {
+    color: #495057;
+    font-weight: 600;
+    padding: 5px 10px;
+    background: white;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.breadcrumb-item i {
+    font-size: 0.9em;
+}
+
+.breadcrumb-item span {
+    font-size: 0.9em;
+}
+
+.breadcrumb-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.breadcrumb-actions .btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.8em;
+    padding: 6px 12px;
+}
+
+.breadcrumb-actions .btn i {
+    font-size: 0.9em;
+}
+
+/* Aide contextuelle */
+.breadcrumb-help {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    padding: 25px;
+    z-index: 1003;
+    max-width: 500px;
+    width: 90%;
+    border: 1px solid #e9ecef;
+}
+
+.help-content h6 {
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.help-content h6 i {
+    color: #007bff;
+}
+
+.help-shortcuts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.shortcut-group h6 {
+    color: #007bff;
+    font-size: 0.8em;
+    font-weight: 600;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.shortcut-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.shortcut-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    background: #f8f9fa;
+    border-radius: 5px;
+    font-size: 0.9em;
+}
+
+.shortcut-item kbd {
+    background: #495057;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.8em;
+    font-family: monospace;
+    font-weight: 600;
+}
+
+.shortcut-item span {
+    color: #495057;
+    font-size: 0.8em;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .breadcrumb-container {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .breadcrumb {
+        width: 100%;
+    }
+    
+    .breadcrumb-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .help-shortcuts {
+        grid-template-columns: 1fr;
+    }
+    
+    .breadcrumb-help {
+        width: 95%;
+        padding: 20px;
+    }
+}
+
+/* Animation */
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.smart-breadcrumb {
+    animation: slideInDown 0.3s ease;
+}
+
+/* Mode sombre */
+@media (prefers-color-scheme: dark) {
+    .smart-breadcrumb {
+        background: linear-gradient(135deg, #2d3748, #4a5568);
+        border-bottom-color: #4a5568;
+    }
+    
+    .breadcrumb-item.active {
+        background: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .breadcrumb-help {
+        background: #2d3748;
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .shortcut-item {
+        background: #4a5568;
+    }
+    
+    .shortcut-item span {
+        color: #e2e8f0;
+    }
+}
+</style>
+
+<script>
+function toggleBreadcrumbHelp() {
+    const help = document.getElementById('breadcrumb-help');
+    help.style.display = help.style.display === 'block' ? 'none' : 'block';
+}
+
+// Fermer l'aide en cliquant à l'extérieur
+document.addEventListener('click', function(event) {
+    const help = document.getElementById('breadcrumb-help');
+    const button = document.querySelector('[onclick="toggleBreadcrumbHelp()"]');
+    
+    if (help.style.display === 'block' && !help.contains(event.target) && !button.contains(event.target)) {
+        help.style.display = 'none';
+    }
+});
+
+// Raccourcis clavier pour l'aide
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        document.getElementById('breadcrumb-help').style.display = 'none';
+    }
+    
+    if (event.ctrlKey && event.key === 'h') {
+        event.preventDefault();
+        window.location.href = "{% url 'core:tableau_bord_principal' %}";
+    }
+});
+</script>

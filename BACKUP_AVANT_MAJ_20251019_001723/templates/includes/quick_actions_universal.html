@@ -1,0 +1,298 @@
+{% load static %}
+
+<!-- Actions Rapides Universelles -->
+<div class="quick-actions-universal card mb-4" id="quickActionsUniversal">
+    <div class="card-header bg-primary text-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">
+                <i class="bi bi-lightning-fill me-2"></i>Actions Rapides
+            </h6>
+            <button class="btn btn-sm btn-outline-light" onclick="toggleQuickActions()" id="toggleQuickActionsBtn">
+                <i class="bi bi-chevron-up" id="toggleIcon"></i>
+            </button>
+        </div>
+    </div>
+    <div class="card-body" id="quickActionsContent">
+        <div class="row g-2">
+            <!-- Actions Générales -->
+            <div class="col-12">
+                <h6 class="text-muted mb-2">
+                    <i class="bi bi-house me-1"></i>Général
+                </h6>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'core:dashboard' %}" class="quick-action-btn w-100 text-center">
+                    <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                </a>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'core:intelligent_search' %}" class="quick-action-btn w-100 text-center">
+                    <i class="bi bi-search me-2"></i>Recherche
+                </a>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'notifications:notification_list' %}" class="quick-action-btn w-100 text-center">
+                    <i class="bi bi-bell me-2"></i>Notifications
+                </a>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'core:configuration_entreprise' %}" class="quick-action-btn w-100 text-center">
+                    <i class="bi bi-gear me-2"></i>Configuration
+                </a>
+            </div>
+            
+            <!-- Actions Propriétés -->
+            <div class="col-12 mt-3">
+                <h6 class="text-muted mb-2">
+                    <i class="bi bi-building me-1"></i>Propriétés
+                </h6>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'proprietes:ajouter' %}" class="quick-action-btn w-100 text-center">
+                    <i class="bi bi-plus-circle me-2"></i>Nouvelle Propriété
+                </a>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'proprietes:liste' %}" class="quick-action-btn secondary w-100 text-center">
+                    <i class="bi bi-list me-2"></i>Toutes Propriétés
+                </a>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'proprietes:bailleurs_liste' %}" class="quick-action-btn warning w-100 text-center">
+                    <i class="bi bi-person-badge me-2"></i>Bailleurs
+                </a>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'proprietes:locataires_liste' %}" class="quick-action-btn info w-100 text-center">
+                    <i class="bi bi-people me-2"></i>Locataires
+                </a>
+            </div>
+            
+            <!-- Actions Paiements -->
+            <div class="col-12 mt-3">
+                <h6 class="text-muted mb-2">
+                    <i class="bi bi-credit-card me-1"></i>Paiements
+                </h6>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'paiements:ajouter' %}" class="quick-action-btn w-100 text-center">
+                    <i class="bi bi-plus-circle me-2"></i>Nouveau Paiement
+                </a>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'paiements:liste' %}" class="quick-action-btn secondary w-100 text-center">
+                    <i class="bi bi-list me-2"></i>Tous Paiements
+                </a>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'paiements:liste' %}?statut=en_attente" class="quick-action-btn danger w-100 text-center">
+                    <i class="bi bi-clock me-2"></i>En Attente
+                </a>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'paiements:liste_recaps_mensuels' %}" class="quick-action-btn info w-100 text-center">
+                    <i class="bi bi-calendar-month me-2"></i>Récaps
+                </a>
+            </div>
+            
+            <!-- Actions Contrats -->
+            <div class="col-12 mt-3">
+                <h6 class="text-muted mb-2">
+                    <i class="bi bi-file-earmark-text me-1"></i>Contrats
+                </h6>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'contrats:ajouter' %}" class="quick-action-btn w-100 text-center">
+                    <i class="bi bi-plus-circle me-2"></i>Nouveau Contrat
+                </a>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'contrats:liste' %}" class="quick-action-btn secondary w-100 text-center">
+                    <i class="bi bi-list me-2"></i>Tous Contrats
+                </a>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'contrats:quittances_liste' %}" class="quick-action-btn warning w-100 text-center">
+                    <i class="bi bi-receipt me-2"></i>Quittances
+                </a>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'contrats:dashboard' %}" class="quick-action-btn info w-100 text-center">
+                    <i class="bi bi-graph-up me-2"></i>Dashboard
+                </a>
+            </div>
+            
+            <!-- Actions Privilégiées (si utilisateur PRIVILEGE) -->
+            {% if user.groupe_travail.nom == 'PRIVILEGE' %}
+            <div class="col-12 mt-3">
+                <h6 class="text-warning mb-2">
+                    <i class="bi bi-shield-check me-1"></i>Actions Privilégiées
+                </h6>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'proprietes:document_list' %}" class="quick-action-btn w-100 text-center">
+                    <i class="bi bi-files me-2"></i>Documents
+                </a>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'utilisateurs:privilege_dashboard_advanced' %}" class="quick-action-btn warning w-100 text-center">
+                    <i class="bi bi-shield-lock me-2"></i>Admin Avancé
+                </a>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="{% url 'core:rapports_audit' %}" class="quick-action-btn danger w-100 text-center">
+                    <i class="bi bi-clipboard-data me-2"></i>Audit
+                </a>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <a href="/admin/" class="quick-action-btn secondary w-100 text-center" target="_blank">
+                    <i class="bi bi-tools me-2"></i>Admin Django
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Statistiques des Actions Rapides -->
+        <div class="row mt-3">
+            <div class="col">
+                <div class="alert alert-info d-flex align-items-center">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <div>
+                        <strong>Statut des Actions Rapides :</strong>
+                        <span id="quickActionsStatus">Initialisation...</span>
+                    </div>
+                    <button class="btn btn-sm btn-outline-info ms-auto" onclick="checkQuickActionsStatus()">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Vérifier
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.quick-actions-universal {
+    border: 2px solid #007bff;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+}
+
+.quick-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 8px;
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #495057;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    font-size: 0.9rem;
+    min-height: 50px;
+}
+
+.quick-action-btn:hover {
+    background: #007bff;
+    border-color: #007bff;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+    text-decoration: none;
+}
+
+.quick-action-btn.secondary:hover {
+    background: #6c757d;
+    border-color: #6c757d;
+}
+
+.quick-action-btn.warning:hover {
+    background: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+}
+
+.quick-action-btn.info:hover {
+    background: #17a2b8;
+    border-color: #17a2b8;
+}
+
+.quick-action-btn.danger:hover {
+    background: #dc3545;
+    border-color: #dc3545;
+}
+
+.quick-action-btn[data-quick-action-activated="true"] {
+    border-color: #28a745;
+    background: rgba(40, 167, 69, 0.1);
+}
+
+@media (max-width: 768px) {
+    .quick-action-btn {
+        font-size: 0.8rem;
+        padding: 10px 6px;
+        min-height: 45px;
+    }
+}
+</style>
+
+<script>
+function toggleQuickActions() {
+    const content = document.getElementById('quickActionsContent');
+    const icon = document.getElementById('toggleIcon');
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        icon.className = 'bi bi-chevron-up';
+    } else {
+        content.style.display = 'none';
+        icon.className = 'bi bi-chevron-down';
+    }
+}
+
+function checkQuickActionsStatus() {
+    if (window.quickActionsActivator) {
+        const status = window.quickActionsActivator.getStatus();
+        const statusElement = document.getElementById('quickActionsStatus');
+        
+        if (status.percentage === 100) {
+            statusElement.innerHTML = `<span class="text-success">✅ Toutes activées (${status.activated}/${status.total})</span>`;
+        } else {
+            statusElement.innerHTML = `<span class="text-warning">⚠️ ${status.activated}/${status.total} activées (${status.percentage}%)</span>`;
+            
+            // Forcer la réactivation
+            window.quickActionsActivator.forceReactivate();
+        }
+    } else {
+        document.getElementById('quickActionsStatus').innerHTML = '<span class="text-danger">❌ Activateur non initialisé</span>';
+    }
+}
+
+// Mettre à jour le statut périodiquement
+setInterval(checkQuickActionsStatus, 10000);
+
+// Mise à jour initiale après chargement
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(checkQuickActionsStatus, 1000);
+});
+</script>

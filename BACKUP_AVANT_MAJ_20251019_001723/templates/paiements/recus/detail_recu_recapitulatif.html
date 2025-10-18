@@ -1,0 +1,574 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .receipt-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    
+    .receipt-title {
+        font-size: 1.8rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .receipt-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+    
+    .receipt-number {
+        font-size: 1.2rem;
+        font-family: monospace;
+        background: rgba(255,255,255,0.2);
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        display: inline-block;
+        margin-top: 1rem;
+    }
+    
+    .info-section {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+    }
+    
+    .section-title {
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 3px solid #e9ecef;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 10px;
+        border-left: 4px solid #007bff;
+    }
+    
+    .info-label {
+        font-size: 0.9rem;
+        color: #666;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+    }
+    
+    .info-value {
+        font-size: 1.1rem;
+        color: #333;
+        font-weight: 600;
+    }
+    
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-size: 0.9rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        display: inline-block;
+    }
+    
+    .status-brouillon { background: #f8f9fa; color: #6c757d; }
+    .status-valide { background: #d4edda; color: #155724; }
+    .status-imprime { background: #cce5ff; color: #004085; }
+    .status-envoye { background: #fff3cd; color: #856404; }
+    .status-archive { background: #f8d7da; color: #721c24; }
+    
+    .actions-section {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+    }
+    
+    .action-buttons {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    
+    .action-btn {
+        padding: 1rem;
+        border-radius: 10px;
+        text-decoration: none;
+        text-align: center;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .btn-primary { background: #007bff; color: white; }
+    .btn-success { background: #28a745; color: white; }
+    .btn-info { background: #17a2b8; color: white; }
+    .btn-warning { background: #ffc107; color: #333; }
+    .btn-secondary { background: #6c757d; color: white; }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+        border-top: 4px solid #007bff;
+    }
+    
+    .stat-card.success { border-top-color: #28a745; }
+    .stat-card.warning { border-top-color: #ffc107; }
+    .stat-card.danger { border-top-color: #dc3545; }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        color: #666;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 0.5rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e9ecef;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 1.5rem;
+        padding-left: 2rem;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -0.5rem;
+        top: 0.5rem;
+        width: 1rem;
+        height: 1rem;
+        border-radius: 50%;
+        background: #007bff;
+        border: 3px solid white;
+        box-shadow: 0 0 0 3px #e9ecef;
+    }
+    
+    .timeline-content {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 10px;
+        border-left: 4px solid #007bff;
+    }
+    
+    .timeline-date {
+        font-size: 0.9rem;
+        color: #666;
+        font-weight: 600;
+    }
+    
+    .timeline-text {
+        color: #333;
+        margin-top: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête du reçu -->
+    <div class="receipt-header">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <div class="receipt-title">{{ recu.get_type_recu_display }}</div>
+                <div class="receipt-subtitle">Reçu de récapitulatif mensuel</div>
+                <div class="receipt-number">N° {{ recu.numero_recu }}</div>
+            </div>
+            <div>
+                <span class="status-badge status-{{ recu.statut }}">
+                    {{ recu.get_statut_display }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques rapides -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ totaux.nombre_proprietes }}</div>
+            <div class="stat-label">Propriétés</div>
+        </div>
+        <div class="stat-card success">
+            <div class="stat-number">{{ totaux.total_loyers_bruts|floatformat:0 }}</div>
+            <div class="stat-label">Loyers Attendus (F CFA)</div>
+        </div>
+        <div class="stat-card warning">
+            <div class="stat-number">{{ totaux.total_charges_deductibles|floatformat:0 }}</div>
+            <div class="stat-label">Charges (F CFA)</div>
+        </div>
+        <div class="stat-card danger">
+            <div class="stat-number">{{ totaux.total_net_a_payer|floatformat:0 }}</div>
+            <div class="stat-label">Montant Net (F CFA)</div>
+        </div>
+    </div>
+
+    <!-- Informations du reçu -->
+    <div class="info-section">
+        <div class="section-title">
+            <i class="bi bi-info-circle"></i>
+            Informations du Reçu
+        </div>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Numéro de reçu</div>
+                <div class="info-value">{{ recu.numero_recu }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Type de reçu</div>
+                <div class="info-value">{{ recu.get_type_recu_display }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Template utilisé</div>
+                <div class="info-value">{{ recu.get_template_utilise_display }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Format d'impression</div>
+                <div class="info-value">{{ recu.get_format_impression_display }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Date de création</div>
+                <div class="info-value">{{ recu.date_creation|date:"d/m/Y H:i" }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Créé par</div>
+                <div class="info-value">
+                    {% if recu.cree_par %}
+                        {{ recu.cree_par.get_full_name }}
+                    {% else %}
+                        Système
+                    {% endif %}
+                </div>
+            </div>
+            {% if recu.date_impression %}
+            <div class="info-item">
+                <div class="info-label">Date d'impression</div>
+                <div class="info-value">{{ recu.date_impression|date:"d/m/Y H:i" }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Imprimé par</div>
+                <div class="info-value">
+                    {% if recu.imprime_par %}
+                        {{ recu.imprime_par.get_full_name }}
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% if recu.nombre_impressions > 0 %}
+            <div class="info-item">
+                <div class="info-label">Nombre d'impressions</div>
+                <div class="info-value">{{ recu.nombre_impressions }} fois</div>
+            </div>
+            {% endif %}
+            {% if recu.envoye %}
+            <div class="info-item">
+                <div class="info-label">Date d'envoi</div>
+                <div class="info-value">{{ recu.date_envoi|date:"d/m/Y H:i" }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Mode d'envoi</div>
+                <div class="info-value">{{ recu.get_mode_envoi_display }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Informations du récapitulatif -->
+    <div class="info-section">
+        <div class="section-title">
+            <i class="bi bi-file-earmark-text"></i>
+            Récapitulatif Associé
+        </div>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Bailleur</div>
+                <div class="info-value">{{ recu.recapitulatif.bailleur.get_nom_complet }}</div>
+            </div>
+            {% if recu.recapitulatif.propriete %}
+            <div class="info-item">
+                <div class="info-label">Propriété</div>
+                <div class="info-value">
+                    {{ recu.recapitulatif.propriete.titre }}<br>
+                    <span class="text-muted">Adresse: {{ recu.recapitulatif.propriete.adresse }}</span>
+                </div>
+            </div>
+            {% endif %}
+            {% if recu.recapitulatif.unite_locative %}
+            <div class="info-item">
+                <div class="info-label">Unité locative</div>
+                <div class="info-value">
+                    {{ recu.recapitulatif.unite_locative.nom }}<br>
+                    <span class="text-muted">Type: {{ recu.recapitulatif.unite_locative.type_unite }} | Surface: {{ recu.recapitulatif.unite_locative.surface }} m²</span>
+                </div>
+            </div>
+            {% endif %}
+            <div class="info-item">
+                <div class="info-label">Période</div>
+                <div class="info-value">{{ recu.recapitulatif.mois_recapitulatif|date:"F Y" }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Type de récapitulatif</div>
+                <div class="info-value">{{ recu.recapitulatif.get_type_recapitulatif_display }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Statut du récapitulatif</div>
+                <div class="info-value">
+                    <span class="badge bg-{{ recu.recapitulatif.get_statut_display_color }}">
+                        {{ recu.recapitulatif.get_statut_display }}
+                    </span>
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Date de création</div>
+                <div class="info-value">{{ recu.recapitulatif.date_creation|date:"d/m/Y H:i" }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Gestionnaire</div>
+                <div class="info-value">
+                    {% if recu.recapitulatif.gestionnaire %}
+                        {{ recu.recapitulatif.gestionnaire.get_full_name }}
+                    {% else %}
+                        Non assigné
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions-section">
+        <div class="section-title">
+            <i class="bi bi-gear"></i>
+            Actions Disponibles
+        </div>
+        <div class="action-buttons">
+            <a href="{% url 'paiements:apercu_recu_recapitulatif' recu.pk %}" class="action-btn btn-info">
+                <i class="bi bi-eye-fill"></i><br>
+                Aperçu Standard
+            </a>
+            <a href="{% url 'paiements:apercu_recu_recapitulatif_gestimmob' recu.pk %}" class="action-btn btn-primary">
+                <i class="bi bi-receipt"></i><br>
+                Aperçu GESTIMMOB
+            </a>
+            <a href="{% url 'paiements:imprimer_recu_recapitulatif' recu.pk %}" class="action-btn btn-success">
+                <i class="bi bi-printer"></i><br>
+                Imprimer Standard
+            </a>
+            <a href="{% url 'paiements:imprimer_recu_recapitulatif_gestimmob' recu.pk %}" class="action-btn btn-warning">
+                <i class="bi bi-file-earmark-pdf"></i><br>
+                Imprimer GESTIMMOB
+            </a>
+            <a href="{% url 'paiements:detail_recapitulatif' recu.recapitulatif.pk %}" class="action-btn btn-secondary">
+                <i class="bi bi-file-earmark-text"></i><br>
+                Voir Récapitulatif
+            </a>
+            {% if recu.statut == 'valide' and not recu.envoye %}
+            <button type="button" class="action-btn btn-warning" onclick="marquerEnvoye({{ recu.pk }})">
+                <i class="bi bi-send"></i><br>
+                Marquer Envoyé
+            </button>
+            {% endif %}
+            {% if recu.statut == 'brouillon' %}
+            <button type="button" class="action-btn btn-primary" onclick="validerRecu({{ recu.pk }})">
+                <i class="bi bi-check-circle"></i><br>
+                Valider
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Historique -->
+    <div class="info-section">
+        <div class="section-title">
+            <i class="bi bi-clock-history"></i>
+            Historique du Reçu
+        </div>
+        <div class="timeline">
+            <div class="timeline-item">
+                <div class="timeline-content">
+                    <div class="timeline-date">{{ recu.date_creation|date:"d/m/Y H:i" }}</div>
+                    <div class="timeline-text">
+                        <strong>Reçu créé</strong>
+                        {% if recu.cree_par %}
+                            par {{ recu.cree_par.get_full_name }}
+                        {% else %}
+                            automatiquement
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            {% if recu.date_impression %}
+            <div class="timeline-item">
+                <div class="timeline-content">
+                    <div class="timeline-date">{{ recu.date_impression|date:"d/m/Y H:i" }}</div>
+                    <div class="timeline-text">
+                        <strong>Reçu imprimé</strong>
+                        {% if recu.imprime_par %}
+                            par {{ recu.imprime_par.get_full_name }}
+                        {% endif %}
+                        ({{ recu.nombre_impressions }} impression{{ recu.nombre_impressions|pluralize }})
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if recu.envoye %}
+            <div class="timeline-item">
+                <div class="timeline-content">
+                    <div class="timeline-date">{{ recu.date_envoi|date:"d/m/Y H:i" }}</div>
+                    <div class="timeline-text">
+                        <strong>Reçu envoyé</strong>
+                        par {{ recu.get_mode_envoi_display }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Notes -->
+    {% if recu.notes %}
+    <div class="info-section">
+        <div class="section-title">
+            <i class="bi bi-sticky"></i>
+            Notes
+        </div>
+        <div class="alert alert-info">
+            {{ recu.notes }}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Hash de sécurité -->
+    {% if recu.hash_securite %}
+    <div class="info-section">
+        <div class="section-title">
+            <i class="bi bi-shield-check"></i>
+            Sécurité
+        </div>
+        <div class="alert alert-light">
+            <strong>Hash de sécurité:</strong> 
+            <code>{{ recu.hash_securite|slice:":16" }}...</code>
+            <small class="text-muted">(Utilisé pour vérifier l'intégrité du reçu)</small>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Fonction pour marquer un reçu comme envoyé
+function marquerEnvoye(recuId) {
+    if (confirm('Êtes-vous sûr de vouloir marquer ce reçu comme envoyé ?')) {
+        fetch(`/paiements/recus-recapitulatifs/${recuId}/marquer-envoye/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'mode_envoi=email'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la mise à jour');
+        });
+    }
+}
+
+// Fonction pour valider un reçu
+function validerRecu(recuId) {
+    if (confirm('Êtes-vous sûr de vouloir valider ce reçu ?')) {
+        fetch(`/paiements/recus-recapitulatifs/${recuId}/valider/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la validation');
+        });
+    }
+}
+</script>
+
+<!-- Token CSRF pour les requêtes AJAX -->
+{% csrf_token %}
+{% endblock %}

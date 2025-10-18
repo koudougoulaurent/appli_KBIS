@@ -1,0 +1,783 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}{{ title }} - Gestion Immobilière{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Container principal */
+.container-fluid {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: 100vh;
+    padding: 2rem 0;
+}
+
+/* Formulaire principal */
+.form-container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+/* En-tête du formulaire */
+.form-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    text-align: center;
+}
+
+.form-header h2 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.form-header p {
+    margin: 0.5rem 0 0 0;
+    opacity: 0.9;
+    font-size: 1.1rem;
+}
+
+/* Indicateur d'étapes */
+.steps-indicator {
+    display: flex;
+    justify-content: center;
+    padding: 1.5rem 2rem;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    margin: 0 1rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.step.active {
+    color: #007bff;
+}
+
+.step.completed {
+    color: #28a745;
+}
+
+.step-number {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.5rem;
+    font-weight: bold;
+}
+
+.step.active .step-number {
+    background: #007bff;
+    color: white;
+}
+
+.step.completed .step-number {
+    background: #28a745;
+    color: white;
+}
+
+/* Corps du formulaire */
+.form-body {
+    padding: 2rem;
+}
+
+/* Étapes */
+.step-content {
+    display: none;
+}
+
+.step-content.active {
+    display: block;
+}
+
+/* Sections d'étape */
+.step-section {
+    background: #f8f9fa;
+    border-radius: 15px;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid #e9ecef;
+    min-height: 300px;
+}
+
+.step-section h3 {
+    color: #2c3e50;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.step-section h3 i {
+    color: #007bff;
+    font-size: 1.4rem;
+}
+
+/* Champs de formulaire */
+.form-floating {
+    margin-bottom: 2rem;
+    min-height: 60px;
+}
+
+.form-control {
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    min-height: 50px;
+    height: auto;
+}
+
+.form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+}
+
+.form-floating > label {
+    color: #495057;
+    font-weight: 500;
+    padding: 1rem 1.25rem;
+    font-size: 0.95rem;
+}
+
+/* Correction pour les champs tronqués */
+.form-floating .form-control {
+    padding-top: 1.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.form-floating > label {
+    transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
+    transform-origin: 0 0;
+}
+
+/* Correction spécifique pour les champs select */
+.form-floating select.form-control {
+    padding-top: 1.5rem;
+    padding-bottom: 0.5rem;
+    height: auto;
+    min-height: 50px;
+}
+
+/* Correction pour les champs input */
+.form-floating input.form-control {
+    padding-top: 1.5rem;
+    padding-bottom: 0.5rem;
+    height: auto;
+    min-height: 50px;
+}
+
+/* Assurer que les champs ne sont pas coupés */
+.form-floating {
+    overflow: visible;
+    position: relative;
+}
+
+.form-floating .form-control {
+    position: relative;
+    z-index: 2;
+}
+
+/* Groupes d'équipements */
+.equipment-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.equipment-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.equipment-item:hover {
+    border-color: #007bff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.equipment-item input[type="checkbox"] {
+    margin-right: 0.75rem;
+    transform: scale(1.2);
+}
+
+/* Navigation entre étapes */
+.step-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2rem;
+    border-top: 2px solid #e9ecef;
+    background: #f8f9fa;
+}
+
+.btn {
+    border-radius: 10px;
+    padding: 0.75rem 2rem;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    min-width: 150px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border: none;
+    box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,123,255,0.4);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    border: none;
+    box-shadow: 0 4px 15px rgba(108,117,125,0.3);
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(108,117,125,0.4);
+}
+
+.btn-outline-primary {
+    border: 2px solid #007bff;
+    color: #007bff;
+    background: transparent;
+}
+
+.btn-outline-primary:hover {
+    background: #007bff;
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Aide contextuelle */
+.help-box {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border: none;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 15px rgba(0,123,255,0.1);
+}
+
+.help-box i {
+    color: #1976d2;
+    margin-right: 0.5rem;
+    font-size: 1.2rem;
+}
+
+/* Suggestions */
+.suggestion-box {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    border: 1px solid #ffeaa7;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 15px rgba(255,193,7,0.2);
+}
+
+.suggestion-box i {
+    color: #f39c12;
+    margin-right: 0.5rem;
+    font-size: 1.2rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .form-container {
+        margin: 1rem;
+        border-radius: 15px;
+    }
+    
+    .form-header {
+        padding: 1.5rem;
+    }
+    
+    .form-header h2 {
+        font-size: 1.5rem;
+    }
+    
+    .form-body {
+        padding: 1.5rem;
+    }
+    
+    .steps-indicator {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .step {
+        margin: 0;
+    }
+    
+    .equipment-group {
+        grid-template-columns: 1fr;
+    }
+    
+    .step-navigation {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="form-container">
+        <!-- En-tête -->
+        <div class="form-header">
+            <h2>
+                <i class="fas fa-{% if unite %}edit{% else %}plus-circle{% endif %}"></i> 
+                {{ title }}
+            </h2>
+            <p>
+                {% if unite %}
+                    Modification de l'unité {{ unite.numero_unite }}
+                {% else %}
+                    Création d'une nouvelle unité locative
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Indicateur d'étapes -->
+        <div class="steps-indicator">
+            <div class="step active" data-step="1">
+                <div class="step-number">1</div>
+                <span>Essentiel</span>
+            </div>
+            <div class="step" data-step="2">
+                <div class="step-number">2</div>
+                <span>Caractéristiques</span>
+            </div>
+            <div class="step" data-step="3">
+                <div class="step-number">3</div>
+                <span>Finances</span>
+            </div>
+            <div class="step" data-step="4">
+                <div class="step-number">4</div>
+                <span>Équipements</span>
+            </div>
+            <div class="step" data-step="5">
+                <div class="step-number">5</div>
+                <span>Description</span>
+            </div>
+        </div>
+
+        <!-- Corps du formulaire -->
+        <div class="form-body">
+            <!-- Aide contextuelle -->
+            <div class="help-box">
+                <i class="fas fa-info-circle"></i>
+                <strong>Conseil :</strong>
+                {% if unite %}
+                    Modifiez les informations par étapes. Les champs marqués d'un astérisque (*) sont obligatoires.
+                {% else %}
+                    Remplissez les informations par étapes. Les champs marqués d'un astérisque (*) sont obligatoires.
+                {% endif %}
+                {% if propriete %}
+                    Cette unité sera ajoutée à la propriété <strong>{{ propriete.titre }}</strong>.
+                {% endif %}
+            </div>
+
+            <!-- Suggestions intelligentes -->
+            {% if suggestion %}
+            <div class="suggestion-box">
+                <i class="fas fa-lightbulb"></i>
+                <strong>Suggestion :</strong> {{ suggestion }}
+            </div>
+            {% endif %}
+
+            <!-- Affichage des erreurs -->
+            {% if form.errors %}
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Erreurs détectées :</strong>
+                <ul class="mb-0 mt-2">
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                            <li><strong>{{ field|title }}:</strong> {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <form method="post" class="needs-validation" novalidate id="uniteForm">
+                {% csrf_token %}
+                
+                <!-- ÉTAPE 1: Informations essentielles -->
+                <div class="step-content active" data-step="1">
+                    <div class="step-section">
+                        <h3><i class="fas fa-id-card"></i> Informations essentielles</h3>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ form.type_unite }}
+                                    <label for="{{ form.type_unite.id_for_label }}">Type d'unité *</label>
+                                    {% if form.type_unite.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.type_unite.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ form.numero_unite }}
+                                    <label for="{{ form.numero_unite.id_for_label }}">Numéro d'unité *</label>
+                                    {% if form.numero_unite.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.numero_unite.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% if not propriete %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ form.propriete }}
+                                    <label for="{{ form.propriete.id_for_label }}">Propriété *</label>
+                                    {% if form.propriete.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.propriete.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ form.bailleur }}
+                                    <label for="{{ form.bailleur.id_for_label }}">Bailleur</label>
+                                    {% if form.bailleur.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.bailleur.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-info-circle"></i> 
+                                        Optionnel. Si non spécifié, le bailleur de la propriété sera utilisé.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- ÉTAPE 2: Caractéristiques physiques -->
+                <div class="step-content" data-step="2">
+                    <div class="step-section">
+                        <h3><i class="fas fa-ruler-combined"></i> Caractéristiques physiques</h3>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    {{ form.surface }}
+                                    <label for="{{ form.surface.id_for_label }}">Surface (m²)</label>
+                                    {% if form.surface.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.surface.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    {{ form.nombre_pieces }}
+                                    <label for="{{ form.nombre_pieces.id_for_label }}">Nombre de pièces</label>
+                                    {% if form.nombre_pieces.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.nombre_pieces.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    {{ form.etage }}
+                                    <label for="{{ form.etage.id_for_label }}">Étage</label>
+                                    {% if form.etage.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.etage.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ form.nombre_chambres }}
+                                    <label for="{{ form.nombre_chambres.id_for_label }}">Nombre de chambres</label>
+                                    {% if form.nombre_chambres.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.nombre_chambres.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ form.nombre_salles_bain }}
+                                    <label for="{{ form.nombre_salles_bain.id_for_label }}">Nombre de salles de bain</label>
+                                    {% if form.nombre_salles_bain.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.nombre_salles_bain.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ÉTAPE 3: Informations financières -->
+                <div class="step-content" data-step="3">
+                    <div class="step-section">
+                        <h3><i class="fas fa-euro-sign"></i> Informations financières</h3>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ form.loyer_mensuel }}
+                                    <label for="{{ form.loyer_mensuel.id_for_label }}">Loyer mensuel (F CFA) *</label>
+                                    {% if form.loyer_mensuel.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.loyer_mensuel.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ form.charges_mensuelles }}
+                                    <label for="{{ form.charges_mensuelles.id_for_label }}">Charges mensuelles (F CFA)</label>
+                                    {% if form.charges_mensuelles.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.charges_mensuelles.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ form.caution_demandee }}
+                                    <label for="{{ form.caution_demandee.id_for_label }}">Caution demandée (F CFA)</label>
+                                    {% if form.caution_demandee.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.caution_demandee.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    {{ form.date_disponibilite }}
+                                    <label for="{{ form.date_disponibilite.id_for_label }}">Date de disponibilité</label>
+                                    {% if form.date_disponibilite.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.date_disponibilite.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ÉTAPE 4: Équipements -->
+                <div class="step-content" data-step="4">
+                    <div class="step-section">
+                        <h3><i class="fas fa-cogs"></i> Équipements et caractéristiques</h3>
+                        <div class="equipment-group">
+                            <div class="equipment-item">
+                                {{ form.meuble }}
+                                <label for="{{ form.meuble.id_for_label }}">Meublé</label>
+                            </div>
+                            <div class="equipment-item">
+                                {{ form.balcon }}
+                                <label for="{{ form.balcon.id_for_label }}">Balcon</label>
+                            </div>
+                            <div class="equipment-item">
+                                {{ form.parking_inclus }}
+                                <label for="{{ form.parking_inclus.id_for_label }}">Parking inclus</label>
+                            </div>
+                            <div class="equipment-item">
+                                {{ form.climatisation }}
+                                <label for="{{ form.climatisation.id_for_label }}">Climatisation</label>
+                            </div>
+                            <div class="equipment-item">
+                                {{ form.internet_inclus }}
+                                <label for="{{ form.internet_inclus.id_for_label }}">Internet inclus</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ÉTAPE 5: Description -->
+                <div class="step-content" data-step="5">
+                    <div class="step-section">
+                        <h3><i class="fas fa-align-left"></i> Description et notes</h3>
+                        <div class="form-floating">
+                            {{ form.description }}
+                            <label for="{{ form.description.id_for_label }}">Description de l'unité</label>
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.description.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="form-floating">
+                            {{ form.notes_privees }}
+                            <label for="{{ form.notes_privees.id_for_label }}">Notes privées</label>
+                            {% if form.notes_privees.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.notes_privees.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation entre étapes -->
+                <div class="step-navigation">
+                    <button type="button" class="btn btn-outline-primary" id="prevStep" style="display: none;">
+                        <i class="fas fa-arrow-left"></i> Précédent
+                    </button>
+                    <div></div>
+                    <button type="button" class="btn btn-primary" id="nextStep">
+                        Suivant <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn" style="display: none;">
+                        <i class="fas fa-{% if unite %}save{% else %}plus{% endif %}"></i>
+                        {% if unite %}
+                            Modifier l'unité
+                        {% else %}
+                            Créer l'unité
+                        {% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentStep = 1;
+    const totalSteps = 5;
+    
+    const steps = document.querySelectorAll('.step');
+    const stepContents = document.querySelectorAll('.step-content');
+    const prevBtn = document.getElementById('prevStep');
+    const nextBtn = document.getElementById('nextStep');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    function updateStepDisplay() {
+        // Mettre à jour les indicateurs d'étapes
+        steps.forEach((step, index) => {
+            step.classList.remove('active', 'completed');
+            if (index + 1 < currentStep) {
+                step.classList.add('completed');
+            } else if (index + 1 === currentStep) {
+                step.classList.add('active');
+            }
+        });
+        
+        // Mettre à jour le contenu des étapes
+        stepContents.forEach((content, index) => {
+            content.classList.remove('active');
+            if (index + 1 === currentStep) {
+                content.classList.add('active');
+            }
+        });
+        
+        // Mettre à jour les boutons de navigation
+        prevBtn.style.display = currentStep > 1 ? 'block' : 'none';
+        nextBtn.style.display = currentStep < totalSteps ? 'block' : 'none';
+        submitBtn.style.display = currentStep === totalSteps ? 'block' : 'none';
+    }
+    
+    function nextStep() {
+        if (currentStep < totalSteps) {
+            currentStep++;
+            updateStepDisplay();
+        }
+    }
+    
+    function prevStep() {
+        if (currentStep > 1) {
+            currentStep--;
+            updateStepDisplay();
+        }
+    }
+    
+    // Événements
+    nextBtn.addEventListener('click', nextStep);
+    prevBtn.addEventListener('click', prevStep);
+    
+    // Clic sur les indicateurs d'étapes
+    steps.forEach((step, index) => {
+        step.addEventListener('click', function() {
+            if (index + 1 <= currentStep) {
+                currentStep = index + 1;
+                updateStepDisplay();
+            }
+        });
+    });
+    
+    // Auto-remplissage du numéro d'unité
+    const typeUniteSelect = document.getElementById('id_type_unite');
+    const numeroUniteInput = document.getElementById('id_numero_unite');
+    
+    if (typeUniteSelect && numeroUniteInput && !numeroUniteInput.value) {
+        typeUniteSelect.addEventListener('change', function() {
+            const type = this.value.toLowerCase();
+            if (type && !numeroUniteInput.value) {
+                numeroUniteInput.value = type + '1';
+            }
+        });
+    }
+    
+    // Initialisation
+    updateStepDisplay();
+});
+</script>
+{% endblock %}
+

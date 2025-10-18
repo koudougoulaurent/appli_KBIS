@@ -1,0 +1,369 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }} - {{ config.nom_entreprise|default:"Gestion Immobilière" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border: 1px solid #dee2e6;
+    }
+    .form-section h4 {
+        color: #495057;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .form-card {
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        border: none;
+        border-radius: 15px;
+    }
+    .form-card .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px 15px 0 0;
+        border: none;
+    }
+    .help-card {
+        background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        border: none;
+        border-radius: 15px;
+    }
+    .color-preview {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 3px solid #fff;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        display: inline-block;
+        margin-left: 10px;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    .btn-submit {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        padding: 12px 30px;
+        font-weight: 600;
+        border-radius: 25px;
+    }
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2 mb-0">
+                        <i class="bi bi-graph-up text-primary me-2"></i>
+                        {{ title }}
+                    </h1>
+                    <p class="text-muted mb-0">
+                        {% if tableau %}
+                            Modifiez votre tableau de bord financier
+                        {% else %}
+                            Créez un nouveau tableau de bord pour suivre vos performances
+                        {% endif %}
+                    </p>
+                </div>
+                <a href="{% url 'paiements:tableau_bord_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i> Retour à la liste
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Formulaire principal -->
+        <div class="col-lg-8">
+            <div class="card form-card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gear me-2"></i>
+                        Configuration du Tableau de Bord
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" id="tableauForm">
+                        {% csrf_token %}
+                        
+                        <!-- Section Informations de base -->
+                        <div class="form-section">
+                            <h4><i class="bi bi-info-circle me-2"></i>Informations de base</h4>
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    {{ form.nom|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.actif|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12">
+                                    {{ form.description|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section Sélection des données -->
+                        <div class="form-section">
+                            <h4><i class="bi bi-database me-2"></i>Sélection des données</h4>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    {{ form.proprietes|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.bailleurs|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section Période d'analyse -->
+                        <div class="form-section">
+                            <h4><i class="bi bi-calendar-range me-2"></i>Période d'analyse</h4>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    {{ form.periode|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    <div id="periodePersonnalisee" style="display: none;">
+                                        {{ form.date_debut_personnalisee|as_crispy_field }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row" id="datesPersonnalisees" style="display: none;">
+                                <div class="col-md-6">
+                                    {{ form.date_debut_personnalisee|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.date_fin_personnalisee|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section Paramètres d'affichage -->
+                        <div class="form-section">
+                            <h4><i class="bi bi-eye me-2"></i>Paramètres d'affichage</h4>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    {{ form.afficher_revenus|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.afficher_charges|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.afficher_benefices|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.afficher_taux_occupation|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section Configuration avancée -->
+                        <div class="form-section">
+                            <h4><i class="bi bi-sliders me-2"></i>Configuration avancée</h4>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    {{ form.seuil_alerte|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.devise|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="{{ form.couleur_theme.id_for_label }}" class="form-label">
+                                        {{ form.couleur_theme.label }}
+                                    </label>
+                                    <div class="d-flex align-items-center">
+                                        {{ form.couleur_theme }}
+                                        <div class="color-preview" id="colorPreview"></div>
+                                    </div>
+                                    {% if form.couleur_theme.help_text %}
+                                        <div class="form-text">{{ form.couleur_theme.help_text }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Boutons d'action -->
+                        <div class="d-flex justify-content-between align-items-center pt-3">
+                            <a href="{% url 'paiements:tableau_bord_list' %}" class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-x-circle me-2"></i> Annuler
+                            </a>
+                            <button type="submit" class="btn btn-submit btn-lg text-white">
+                                <i class="bi bi-check-circle me-2"></i>
+                                {% if tableau %}Modifier{% else %}Créer{% endif %} le Tableau de Bord
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aide et conseils -->
+        <div class="col-lg-4">
+            <div class="card help-card">
+                <div class="card-header bg-transparent border-0">
+                    <h6 class="mb-0">
+                        <i class="bi bi-lightbulb me-2"></i> Conseils et bonnes pratiques
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info border-0">
+                        <h6><i class="bi bi-info-circle me-2"></i> Nom et description</h6>
+                        <ul class="mb-0 small">
+                            <li>Choisissez un nom descriptif et unique</li>
+                            <li>Décrivez clairement l'objectif du tableau</li>
+                            <li>Utilisez des mots-clés pertinents</li>
+                        </ul>
+                    </div>
+
+                    <div class="alert alert-warning border-0">
+                        <h6><i class="bi bi-exclamation-triangle me-2"></i> Sélection des données</h6>
+                        <ul class="mb-0 small">
+                            <li>Sélectionnez les propriétés pertinentes</li>
+                            <li>Incluez les bailleurs si nécessaire</li>
+                            <li>Évitez de surcharger avec trop de données</li>
+                        </ul>
+                    </div>
+
+                    <div class="alert alert-success border-0">
+                        <h6><i class="bi bi-check-circle me-2"></i> Période d'analyse</h6>
+                        <ul class="mb-0 small">
+                            <li>Mensuel : Suivi régulier</li>
+                            <li>Trimestriel : Analyse saisonnière</li>
+                            <li>Annuel : Vue d'ensemble</li>
+                            <li>Personnalisé : Périodes spécifiques</li>
+                        </ul>
+                    </div>
+
+                    <div class="alert alert-primary border-0">
+                        <h6><i class="bi bi-gear me-2"></i> Configuration</h6>
+                        <ul class="mb-0 small">
+                            <li>Définissez des seuils d'alerte réalistes</li>
+                            <li>Choisissez une devise cohérente</li>
+                            <li>Personnalisez l'apparence visuelle</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prévisualisation -->
+            <div class="card mt-3">
+                <div class="card-header bg-transparent">
+                    <h6 class="mb-0">
+                        <i class="bi bi-eye me-2"></i> Aperçu
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        <div class="color-preview mx-auto mb-2" id="previewColor"></div>
+                        <small class="text-muted">Couleur du thème</small>
+                    </div>
+                    <hr>
+                    <div class="small">
+                        <strong>Propriétés sélectionnées :</strong>
+                        <span id="previewProprietes">0</span>
+                    </div>
+                    <div class="small">
+                        <strong>Bailleurs sélectionnés :</strong>
+                        <span id="previewBailleurs">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const periodeSelect = document.getElementById('id_periode');
+    const datesPersonnalisees = document.getElementById('datesPersonnalisees');
+    const couleurTheme = document.getElementById('id_couleur_theme');
+    const colorPreview = document.getElementById('colorPreview');
+    const previewColor = document.getElementById('previewColor');
+    const proprietesSelect = document.getElementById('id_proprietes');
+    const bailleursSelect = document.getElementById('id_bailleurs');
+    const previewProprietes = document.getElementById('previewProprietes');
+    const previewBailleurs = document.getElementById('previewBailleurs');
+
+    // Gestion de la période personnalisée
+    function toggleDatesPersonnalisees() {
+        if (periodeSelect.value === 'personnalise') {
+            datesPersonnalisees.style.display = 'block';
+        } else {
+            datesPersonnalisees.style.display = 'none';
+        }
+    }
+
+    periodeSelect.addEventListener('change', toggleDatesPersonnalisees);
+    toggleDatesPersonnalisees();
+
+    // Gestion de la couleur du thème
+    function updateColorPreview() {
+        const color = couleurTheme.value || '#007bff';
+        colorPreview.style.backgroundColor = color;
+        previewColor.style.backgroundColor = color;
+    }
+
+    couleurTheme.addEventListener('input', updateColorPreview);
+    updateColorPreview();
+
+    // Mise à jour des aperçus
+    function updatePreviews() {
+        previewProprietes.textContent = proprietesSelect.selectedOptions.length;
+        previewBailleurs.textContent = bailleursSelect.selectedOptions.length;
+    }
+
+    proprietesSelect.addEventListener('change', updatePreviews);
+    bailleursSelect.addEventListener('change', updatePreviews);
+    updatePreviews();
+
+    // Validation du formulaire
+    const form = document.getElementById('tableauForm');
+    form.addEventListener('submit', function(e) {
+        const periode = periodeSelect.value;
+        const dateDebut = document.getElementById('id_date_debut_personnalisee').value;
+        const dateFin = document.getElementById('id_date_fin_personnalisee').value;
+
+        if (periode === 'personnalise') {
+            if (!dateDebut || !dateFin) {
+                e.preventDefault();
+                alert('Les dates de début et de fin sont requises pour une période personnalisée.');
+                return false;
+            }
+
+            if (new Date(dateDebut) >= new Date(dateFin)) {
+                e.preventDefault();
+                alert('La date de début doit être antérieure à la date de fin.');
+                return false;
+            }
+        }
+
+        // Validation des propriétés
+        if (proprietesSelect.selectedOptions.length === 0) {
+            e.preventDefault();
+            alert('Au moins une propriété doit être sélectionnée.');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

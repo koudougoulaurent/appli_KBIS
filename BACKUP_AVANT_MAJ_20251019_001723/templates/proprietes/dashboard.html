@@ -1,0 +1,460 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}GESTION IMMOBILIERE PRO - Propriétés{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-header {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+    }
+    
+    .stat-card {
+        border-radius: 15px;
+        border: none;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+    }
+    
+    .stat-card.success {
+        background: linear-gradient(135deg, #10b981 0%, #22c55e 100%);
+        color: white;
+    }
+    
+    .stat-card.info {
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        color: white;
+    }
+    
+    .stat-card.warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+    }
+    
+    .stat-card.danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    
+    .stat-label {
+        font-size: 1.1rem;
+        font-weight: 600;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .stat-subtitle {
+        font-size: 0.9rem;
+        opacity: 0.8;
+        margin-top: 0.5rem;
+    }
+    
+    .stat-icon {
+        font-size: 3rem;
+        opacity: 0.8;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    
+    .content-card {
+        background: white;
+        border-radius: 15px;
+        border: none;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .content-card .card-header {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border-radius: 15px 15px 0 0 !important;
+        border: none;
+        padding: 1.5rem;
+    }
+    
+    .content-card .card-header h6 {
+        font-weight: 700;
+        font-size: 1.2rem;
+        margin: 0;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    }
+    
+    .quick-action-btn {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border: none;
+        border-radius: 12px;
+        color: white;
+        padding: 1rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: block;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    
+    .quick-action-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+        color: white;
+        text-decoration: none;
+    }
+    
+    .quick-action-btn.secondary {
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+    }
+    
+    .quick-action-btn.secondary:hover {
+        box-shadow: 0 10px 25px rgba(6, 182, 212, 0.4);
+    }
+    
+    .quick-action-btn.warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+    
+    .quick-action-btn.warning:hover {
+        box-shadow: 0 10px 25px rgba(245, 158, 11, 0.4);
+    }
+    
+    .property-item {
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .property-item:hover {
+        border-color: #10b981;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .property-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-loue { background: #10b981; color: white; }
+    .status-disponible { background: #f59e0b; color: white; }
+    .status-construction { background: #6b7280; color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header text-center">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <a href="{% url 'core:dashboard' %}" class="btn btn-outline-light">
+            <i class="bi bi-arrow-left me-2"></i>Retour au Dashboard Principal
+        </a>
+        <h1 class="display-4 fw-bold mb-0">
+            <i class="bi bi-house-door me-3"></i>GESTION IMMOBILIERE PRO - Propriétés
+        </h1>
+        <div style="width: 150px;"></div> <!-- Espaceur pour centrer le titre -->
+    </div>
+    <p class="lead mb-0">Vue d'ensemble et gestion de votre portefeuille immobilier</p>
+</div>
+
+<!-- Statistiques principales -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card success">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-start">
+                        <div class="stat-number">{{ total_proprietes }}</div>
+                        <div class="stat-label">Total Propriétés</div>
+                        <div class="stat-subtitle">Portefeuille complet</div>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="bi bi-house"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card info">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-start">
+                        <div class="stat-number">{{ proprietes_louees }}</div>
+                        <div class="stat-label">Louées</div>
+                        <div class="stat-subtitle">En location active</div>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card warning">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-start">
+                        <div class="stat-number">{{ proprietes_disponibles }}</div>
+                        <div class="stat-label">Disponibles</div>
+                        <div class="stat-subtitle">À louer</div>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card danger">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-start">
+                        <div class="stat-number">{{ proprietes_en_construction }}</div>
+                        <div class="stat-label">En Construction</div>
+                        <div class="stat-subtitle">En développement</div>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="bi bi-tools"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actions rapides et contenu principal -->
+<div class="row">
+    <!-- Actions rapides -->
+    <div class="col-lg-4">
+        <div class="card content-card">
+            <div class="card-header">
+                <h6><i class="bi bi-lightning me-2"></i>Actions Rapides</h6>
+            </div>
+            <div class="card-body">
+                <a href="{% url 'proprietes:ajouter' %}" class="quick-action-btn">
+                    <i class="bi bi-plus-circle me-2"></i>Ajouter une Propriété
+                </a>
+                <a href="{% url 'proprietes:liste' %}" class="quick-action-btn secondary">
+                    <i class="bi bi-list me-2"></i>Voir Toutes les Propriétés
+                </a>
+                                                         <a href="{% url 'proprietes:bailleurs_liste' %}" class="quick-action-btn warning">
+                            <i class="bi bi-person-badge me-2"></i>Gérer les Bailleurs
+                        </a>
+                        <a href="{% url 'proprietes:locataires_liste' %}" class="quick-action-btn info">
+                            <i class="bi bi-people me-2"></i>Gérer les Locataires
+                        </a>
+                <a href="{% url 'proprietes:liste_charges_bailleur' %}" class="quick-action-btn secondary">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Charges Bailleur
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Contenu principal -->
+    <div class="col-lg-8">
+        <!-- Top propriétés -->
+        <div class="card content-card">
+            <div class="card-header">
+                <h6><i class="bi bi-star me-2"></i>Top 5 des Propriétés par Activité</h6>
+            </div>
+            <div class="card-body">
+                {% if top_proprietes %}
+                    {% for propriete in top_proprietes %}
+                    <div class="property-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ propriete.titre }}</h6>
+                                <small class="text-muted">{{ propriete.ville|default:"Ville non renseignée" }}</small>
+                                <span class="property-status status-{{ propriete.statut }} ms-2">{{ propriete.get_statut_display }}</span>
+                            </div>
+                            <div class="text-end">
+                                <div class="h5 mb-0 text-success">{{ propriete.get_statut_display }}</div>
+                                <small class="text-muted">Statut</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center">Aucune propriété enregistrée</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Deuxième ligne -->
+<div class="row">
+    <!-- Propriétés par ville -->
+    <div class="col-lg-6">
+        <div class="card content-card">
+            <div class="card-header">
+                <h6><i class="bi bi-geo-alt me-2"></i>Répartition par Ville</h6>
+            </div>
+            <div class="card-body">
+                {% if proprietes_par_ville %}
+                    <div class="list-group list-group-flush">
+                        {% for ville in proprietes_par_ville %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="h6 mb-0">{{ ville.ville|default:"Ville non renseignée" }}</span>
+                            <span class="badge bg-success">{{ ville.count }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">Aucune donnée disponible</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Propriétés récentes -->
+    <div class="col-lg-6">
+        <div class="card content-card">
+            <div class="card-header">
+                <h6><i class="bi bi-clock me-2"></i>Propriétés Récentes</h6>
+            </div>
+            <div class="card-body">
+                {% if proprietes_recentes %}
+                    {% for propriete in proprietes_recentes %}
+                    <div class="property-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ propriete.titre }}</h6>
+                                <small class="text-muted">{{ propriete.ville|default:"Ville non renseignée" }}</small>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted">{{ propriete.date_creation|date:"d/m/Y" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center">Aucune propriété récente</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Propriétés nécessitant attention -->
+{% if proprietes_attention %}
+<div class="row">
+    <div class="col-12">
+        <div class="card content-card">
+            <div class="card-header">
+                <h6><i class="bi bi-exclamation-triangle me-2"></i>Propriétés Nécessitant Attention</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for propriete in proprietes_attention %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="property-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ propriete.titre }}</h6>
+                                    <small class="text-muted">{{ propriete.ville|default:"Ville non renseignée" }}</small>
+                                    <span class="property-status status-{{ propriete.statut }} ms-2">{{ propriete.get_statut_display }}</span>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <a href="{% url 'proprietes:detail' propriete.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye me-1"></i>Voir
+                                </a>
+                                <a href="{% url 'proprietes:modifier' propriete.pk %}" class="btn btn-sm btn-outline-warning">
+                                    <i class="bi bi-pencil me-1"></i>Modifier
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+ {% endif %}
+
+<!-- Section Bailleurs -->
+<div id="bailleurs" class="row mt-5">
+    <div class="col-12">
+        <div class="card content-card">
+            <div class="card-header">
+                <h6><i class="bi bi-person-badge me-2"></i>Gestion des Bailleurs</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Actions Rapides</h6>
+                        <a href="{% url 'proprietes:bailleurs_liste' %}" class="btn btn-primary me-2">
+                            <i class="bi bi-list me-1"></i>Voir Tous les Bailleurs
+                        </a>
+                        <a href="{% url 'proprietes:ajouter_bailleur' %}" class="btn btn-success">
+                            <i class="bi bi-plus-circle me-1"></i>Ajouter un Bailleur
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Statistiques</h6>
+                        <p class="mb-1"><strong>Total Bailleurs:</strong> {{ total_bailleurs|default:"N/A" }}</p>
+                        <p class="mb-1"><strong>Bailleurs Actifs:</strong> {{ bailleurs_actifs|default:"N/A" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section Locataires -->
+<div id="locataires" class="row mt-4">
+    <div class="col-12">
+        <div class="card content-card">
+            <div class="card-header">
+                <h6><i class="bi bi-people me-2"></i>Gestion des Locataires</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Actions Rapides</h6>
+                        <a href="{% url 'proprietes:locataires_liste' %}" class="btn btn-primary me-2">
+                            <i class="bi bi-list me-1"></i>Voir Tous les Locataires
+                        </a>
+                        <a href="{% url 'proprietes:ajouter_locataire' %}" class="btn btn-success">
+                            <i class="bi bi-plus-circle me-1"></i>Ajouter un Locataire
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Statistiques</h6>
+                        <p class="mb-1"><strong>Total Locataires:</strong> {{ total_locataires|default:"N/A" }}</p>
+                        <p class="mb-1"><strong>Locataires Actifs:</strong> {{ locataires_actifs|default:"N/A" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

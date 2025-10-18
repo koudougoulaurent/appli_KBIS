@@ -1,0 +1,374 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Détail du paiement - {{ paiement.reference_paiement }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .paiement-header {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        border-radius: 10px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .paiement-number {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .paiement-status {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.2);
+        font-weight: 600;
+    }
+    
+    .info-section {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .info-section h5 {
+        color: #007bff;
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #495057;
+        min-width: 200px;
+    }
+    
+    .info-value {
+        color: #212529;
+        text-align: right;
+        flex: 1;
+    }
+    
+    .amount-highlight {
+        background: #28a745;
+        color: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        text-align: center;
+        margin: 1.5rem 0;
+    }
+    
+    .amount-highlight .amount {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .quittance-section {
+        background: #f8f9fa;
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        padding: 2rem;
+        text-align: center;
+        margin: 2rem 0;
+    }
+    
+    .quittance-section.has-quittance {
+        background: #d4edda;
+        border-color: #28a745;
+    }
+    
+    .quittance-section.no-quittance {
+        background: #fff3cd;
+        border-color: #ffc107;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 2rem;
+    }
+    
+    .btn-custom {
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .btn-quittance {
+        background: #17a2b8;
+        border-color: #17a2b8;
+        color: white;
+    }
+    
+    .btn-quittance:hover {
+        background: #138496;
+        border-color: #117a8b;
+        color: white;
+    }
+    
+    .btn-print {
+        background: #28a745;
+        border-color: #28a745;
+        color: white;
+    }
+    
+    .btn-print:hover {
+        background: #218838;
+        border-color: #1e7e34;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- En-tête de la page -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-credit-card me-2"></i>Détail du paiement
+                    </h1>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'core:dashboard' %}">Tableau de bord</a>
+                            </li>
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'paiements:liste' %}">Paiements</a>
+                            </li>
+                            <li class="breadcrumb-item active" aria-current="page">{{ paiement.reference_paiement }}</li>
+                        </ol>
+                    </nav>
+                </div>
+                
+                <div class="d-flex align-items-center">
+                    <a href="{% url 'paiements:liste' %}" class="btn btn-outline-secondary me-2">
+                        <i class="bi bi-arrow-left me-2"></i>Retour
+                    </a>
+                    <a href="{% url 'paiements:modifier_paiement' paiement.pk %}" class="btn btn-warning">
+                        <i class="bi bi-pencil me-2"></i>Modifier
+                    </a>
+                </div>
+            </div>
+
+            <!-- En-tête du paiement -->
+            <div class="paiement-header">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h1 class="paiement-number">{{ paiement.reference_paiement }}</h1>
+                        <p class="mb-0">Paiement de {{ paiement.get_locataire.get_nom_complet }}</p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <span class="paiement-status">{{ paiement.get_statut_display }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <!-- Informations du paiement -->
+                    <div class="info-section">
+                        <h5><i class="bi bi-info-circle me-2"></i>Informations du paiement</h5>
+                        <div class="info-row">
+                            <span class="info-label">Référence :</span>
+                            <span class="info-value">{{ paiement.reference_paiement }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Type :</span>
+                            <span class="info-value">{{ paiement.get_type_paiement_display }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Mode de paiement :</span>
+                            <span class="info-value">{{ paiement.get_mode_paiement_display }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Date de paiement :</span>
+                            <span class="info-value">{{ paiement.date_paiement|date:"d/m/Y" }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Date d'encaissement :</span>
+                            <span class="info-value">{{ paiement.date_encaissement|date:"d/m/Y"|default:"Non encaissé" }}</span>
+                        </div>
+                        {% if paiement.numero_cheque %}
+                        <div class="info-row">
+                            <span class="info-label">Numéro de chèque :</span>
+                            <span class="info-value">{{ paiement.numero_cheque }}</span>
+                        </div>
+                        {% endif %}
+                        {% if paiement.reference_virement %}
+                        <div class="info-row">
+                            <span class="info-label">Référence virement :</span>
+                            <span class="info-value">{{ paiement.reference_virement }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Informations du contrat -->
+                    <div class="info-section">
+                        <h5><i class="bi bi-file-text me-2"></i>Informations du contrat</h5>
+                        <div class="info-row">
+                            <span class="info-label">Numéro de contrat :</span>
+                            <span class="info-value">{{ paiement.contrat.numero_contrat }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Locataire :</span>
+                            <span class="info-value">{{ paiement.get_locataire.get_nom_complet }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Propriété :</span>
+                            <span class="info-value">{{ paiement.get_propriete.adresse }}, {{ paiement.get_propriete.ville }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Bailleur :</span>
+                            <span class="info-value">{{ paiement.get_bailleur.get_nom_complet }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    {% if paiement.notes %}
+                    <div class="info-section">
+                        <h5><i class="bi bi-chat-text me-2"></i>Notes</h5>
+                        <p class="mb-0">{{ paiement.notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-lg-4">
+                    <!-- Montant -->
+                    <div class="amount-highlight">
+                        <div class="amount">{{ paiement.get_montant_formatted }}</div>
+                        <p class="mb-0">Montant total payé</p>
+                    </div>
+
+                    <!-- Détail des montants si charges déduites -->
+                    {% if paiement.montant_charges_deduites > 0 %}
+                    <div class="info-section">
+                        <h5><i class="bi bi-calculator me-2"></i>Détail des montants</h5>
+                        <div class="info-row">
+                            <span class="info-label">Montant brut :</span>
+                            <span class="info-value">{{ paiement.get_montant_formatted }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Charges déduites :</span>
+                            <span class="info-value">- {{ paiement.get_montant_charges_formatted }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Montant net :</span>
+                            <span class="info-value"><strong>{{ paiement.get_montant_net_formatted }}</strong></span>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Section quittance -->
+                    <div class="quittance-section {% if hasattr(paiement, 'quittance') %}has-quittance{% else %}no-quittance{% endif %}">
+                        <h5><i class="bi bi-receipt me-2"></i>Quittance de paiement</h5>
+                        
+                        {% if hasattr(paiement, 'quittance') %}
+                            <!-- Quittance existante -->
+                            <div class="mb-3">
+                                <p class="mb-2"><strong>Quittance générée</strong></p>
+                                <p class="mb-2">N° {{ paiement.quittance.numero_quittance }}</p>
+                                <p class="mb-2">Statut: {{ paiement.quittance.get_statut_display }}</p>
+                                <p class="mb-0">Émise le {{ paiement.quittance.date_emission|date:"d/m/Y" }}</p>
+                            </div>
+                            
+                            <div class="action-buttons">
+                                <a href="{% url 'paiements:quittance_detail' paiement.quittance.pk %}" 
+                                   class="btn btn-quittance btn-custom">
+                                    <i class="bi bi-eye me-2"></i>Voir la quittance
+                                </a>
+                                <button type="button" class="btn btn-print btn-custom" onclick="window.print()">
+                                    <i class="bi bi-printer me-2"></i>Imprimer
+                                </button>
+                            </div>
+                        {% else %}
+                            <!-- Pas de quittance -->
+                            <div class="mb-3">
+                                <p class="mb-2"><strong>Aucune quittance générée</strong></p>
+                                <p class="mb-0 text-muted">Générez une quittance pour ce paiement validé</p>
+                            </div>
+                            
+                            {% if paiement.statut == 'valide' %}
+                            <div class="action-buttons">
+                                <form method="post" action="{% url 'paiements:generer_quittance_manuelle' paiement.pk %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-quittance btn-custom">
+                                        <i class="bi bi-plus-circle me-2"></i>Générer la quittance
+                                    </button>
+                                </form>
+                            </div>
+                            {% else %}
+                            <div class="action-buttons">
+                                <p class="text-muted mb-0">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    La quittance sera générée automatiquement après validation du paiement
+                                </p>
+                            </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+
+                    <!-- Métadonnées -->
+                    <div class="info-section">
+                        <h5><i class="bi bi-clock me-2"></i>Métadonnées</h5>
+                        <div class="info-row">
+                            <span class="info-label">Créé le :</span>
+                            <span class="info-value">{{ paiement.date_creation|date:"d/m/Y H:i" }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Modifié le :</span>
+                            <span class="info-value">{{ paiement.date_modification|date:"d/m/Y H:i" }}</span>
+                        </div>
+                        {% if paiement.cree_par %}
+                        <div class="info-row">
+                            <span class="info-label">Créé par :</span>
+                            <span class="info-value">{{ paiement.cree_par.get_full_name }}</span>
+                        </div>
+                        {% endif %}
+                        {% if paiement.valide_par %}
+                        <div class="info-row">
+                            <span class="info-label">Validé par :</span>
+                            <span class="info-value">{{ paiement.valide_par.get_full_name }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion des actions sur le paiement
+    console.log('Paiement chargé:', '{{ paiement.reference_paiement }}');
+});
+</script>
+{% endblock %}

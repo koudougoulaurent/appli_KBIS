@@ -1,0 +1,452 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block title %}Paiements Partiels{% endblock %}
+
+{% block extra_css %}
+<style>
+    .paiements-partiels-container {
+        background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+        min-height: 100vh;
+        padding: 2rem 0;
+    }
+    
+    .paiements-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+    
+    .paiements-header {
+        background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+        color: white;
+        padding: 2rem;
+        text-align: center;
+    }
+    
+    .paiements-header h1 {
+        margin: 0;
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+    
+    .paiements-header p {
+        margin: 0.5rem 0 0 0;
+        opacity: 0.9;
+        font-size: 1.1rem;
+    }
+    
+    .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin: 2rem 0;
+    }
+    
+    .stat-card {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 1.5rem;
+        text-align: center;
+        border-left: 5px solid #ff6b6b;
+    }
+    
+    .stat-card h3 {
+        color: #495057;
+        margin-bottom: 0.5rem;
+        font-size: 1.1rem;
+    }
+    
+    .stat-card .value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #ff6b6b;
+    }
+    
+    .filters-section {
+        background: #e3f2fd;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .paiement-item {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border-left: 5px solid #ff6b6b;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    
+    .paiement-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    }
+    
+    .paiement-header {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .paiement-reference {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #ff6b6b;
+    }
+    
+    .paiement-montant {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #28a745;
+    }
+    
+    .paiement-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .detail-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .detail-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+    }
+    
+    .detail-value {
+        font-size: 1rem;
+        color: #495057;
+        font-weight: 600;
+    }
+    
+    .paiement-status {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e9ecef;
+    }
+    
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .status-partiel {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+    
+    .status-en-cours {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+    }
+    
+    .btn-action {
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .btn-view {
+        background: #007bff;
+        color: white;
+    }
+    
+    .btn-view:hover {
+        background: #0056b3;
+        color: white;
+        transform: translateY(-1px);
+    }
+    
+    .btn-complete {
+        background: #28a745;
+        color: white;
+    }
+    
+    .btn-complete:hover {
+        background: #1e7e34;
+        color: white;
+        transform: translateY(-1px);
+    }
+    
+    .no-paiements {
+        text-align: center;
+        padding: 3rem;
+        color: #6c757d;
+    }
+    
+    .no-paiements i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        color: #dee2e6;
+    }
+    
+    .pagination-custom {
+        display: flex;
+        justify-content: center;
+        margin-top: 2rem;
+    }
+    
+    .page-link {
+        color: #ff6b6b;
+        border-color: #ff6b6b;
+    }
+    
+    .page-link:hover {
+        color: white;
+        background-color: #ff6b6b;
+        border-color: #ff6b6b;
+    }
+    
+    .page-item.active .page-link {
+        background-color: #ff6b6b;
+        border-color: #ff6b6b;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="paiements-partiels-container">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-12">
+                <div class="paiements-card">
+                    <!-- Header -->
+                    <div class="paiements-header">
+                        <h1><i class="bi bi-pie-chart me-3"></i>Paiements Partiels</h1>
+                        <p>Suivi des paiements partiels en cours - Aucun reçu généré</p>
+                    </div>
+                    
+                    <!-- Statistiques -->
+                    <div class="stats-cards">
+                        <div class="stat-card">
+                            <h3>Total Paiements</h3>
+                            <div class="value">{{ total_paiements }}</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Montant Total</h3>
+                            <div class="value">{{ total_montant|floatformat:0 }} FCFA</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>En Cours</h3>
+                            <div class="value">{{ total_paiements }}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Filtres -->
+                    <div class="filters-section">
+                        <h4><i class="bi bi-funnel me-2"></i>Filtres et Recherche</h4>
+                        <form method="GET" class="row g-3">
+                            <div class="col-md-4">
+                                <label for="q" class="form-label">Recherche</label>
+                                <input type="text" class="form-control" id="q" name="q" 
+                                       value="{{ query }}" placeholder="Référence, locataire, propriété...">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="statut" class="form-label">Statut</label>
+                                <select class="form-select" id="statut" name="statut">
+                                    <option value="">Tous les statuts</option>
+                                    <option value="partiellement_payé" {% if statut_filter == 'partiellement_payé' %}selected{% endif %}>
+                                        Partiellement Payé
+                                    </option>
+                                    <option value="en_attente" {% if statut_filter == 'en_attente' %}selected{% endif %}>
+                                        En Attente
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="type_paiement" class="form-label">Type</label>
+                                <select class="form-select" id="type_paiement" name="type_paiement">
+                                    <option value="">Tous les types</option>
+                                    <option value="loyer" {% if type_filter == 'loyer' %}selected{% endif %}>Loyer</option>
+                                    <option value="caution" {% if type_filter == 'caution' %}selected{% endif %}>Caution</option>
+                                    <option value="avance" {% if type_filter == 'avance' %}selected{% endif %}>Avance</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-search me-1"></i>Filtrer
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Liste des paiements partiels -->
+                    <div class="p-4">
+                        {% if paiements %}
+                            {% for paiement in paiements %}
+                            <div class="paiement-item">
+                                <div class="paiement-header">
+                                    <div class="paiement-reference">{{ paiement.reference_paiement }}</div>
+                                    <div class="paiement-montant">{{ paiement.montant|floatformat:0 }} FCFA</div>
+                                </div>
+                                
+                                <div class="paiement-details">
+                                    <div class="detail-item">
+                                        <div class="detail-label">Locataire</div>
+                                        <div class="detail-value">{{ paiement.contrat.locataire.nom }} {{ paiement.contrat.locataire.prenom }}</div>
+                                    </div>
+                                    <div class="detail-item">
+                                        <div class="detail-label">Propriété</div>
+                                        <div class="detail-value">{{ paiement.contrat.propriete.titre }}</div>
+                                    </div>
+                                    <div class="detail-item">
+                                        <div class="detail-label">Type</div>
+                                        <div class="detail-value">{{ paiement.get_type_paiement_display }}</div>
+                                    </div>
+                                    <div class="detail-item">
+                                        <div class="detail-label">Mode</div>
+                                        <div class="detail-value">{{ paiement.get_mode_paiement_display }}</div>
+                                    </div>
+                                    <div class="detail-item">
+                                        <div class="detail-label">Date</div>
+                                        <div class="detail-value">{{ paiement.date_paiement|date:"d/m/Y" }}</div>
+                                    </div>
+                                    <div class="detail-item">
+                                        <div class="detail-label">Mois Payé</div>
+                                        <div class="detail-value">
+                                            {% if paiement.mois_paye %}
+                                                {{ paiement.mois_paye|date:"F Y" }}
+                                            {% else %}
+                                                Non spécifié
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="paiement-status">
+                                    <div>
+                                        <span class="status-badge status-partiel">
+                                            <i class="bi bi-pie-chart me-1"></i>Paiement Partiel
+                                        </span>
+                                        {% if paiement.montant_restant_du %}
+                                        <span class="status-badge status-en-cours ms-2">
+                                            Reste: {{ paiement.montant_restant_du|floatformat:0 }} FCFA
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <a href="{% url 'paiements:detail' paiement.pk %}" class="btn-action btn-view me-2">
+                                            <i class="bi bi-eye me-1"></i>Voir
+                                        </a>
+                                        <a href="{% url 'paiements:ajouter_partiel' %}?contrat_id={{ paiement.contrat.id }}&mois={{ paiement.mois_paye.month }}&annee={{ paiement.mois_paye.year }}" 
+                                           class="btn-action btn-complete">
+                                            <i class="bi bi-plus-circle me-1"></i>Compléter
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            
+                            <!-- Pagination -->
+                            {% if page_obj.has_other_pages %}
+                            <div class="pagination-custom">
+                                <nav aria-label="Pagination des paiements partiels">
+                                    <ul class="pagination">
+                                        {% if page_obj.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page=1{% if query %}&q={{ query }}{% endif %}{% if statut_filter %}&statut={{ statut_filter }}{% endif %}{% if type_filter %}&type_paiement={{ type_filter }}{% endif %}">
+                                                <i class="bi bi-chevron-double-left"></i>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if statut_filter %}&statut={{ statut_filter }}{% endif %}{% if type_filter %}&type_paiement={{ type_filter }}{% endif %}">
+                                                <i class="bi bi-chevron-left"></i>
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                        
+                                        <li class="page-item active">
+                                            <span class="page-link">
+                                                Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
+                                            </span>
+                                        </li>
+                                        
+                                        {% if page_obj.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if statut_filter %}&statut={{ statut_filter }}{% endif %}{% if type_filter %}&type_paiement={{ type_filter }}{% endif %}">
+                                                <i class="bi bi-chevron-right"></i>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}{% if statut_filter %}&statut={{ statut_filter }}{% endif %}{% if type_filter %}&type_paiement={{ type_filter }}{% endif %}">
+                                                <i class="bi bi-chevron-double-right"></i>
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                    </ul>
+                                </nav>
+                            </div>
+                            {% endif %}
+                            
+                        {% else %}
+                        <div class="no-paiements">
+                            <i class="bi bi-pie-chart"></i>
+                            <h3>Aucun paiement partiel trouvé</h3>
+                            <p>Il n'y a actuellement aucun paiement partiel en cours.</p>
+                            <a href="{% url 'paiements:ajouter_partiel' %}" class="btn btn-primary">
+                                <i class="bi bi-plus-circle me-2"></i>Créer un Paiement Partiel
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation des cartes au survol
+    const paiementItems = document.querySelectorAll('.paiement-item');
+    paiementItems.forEach(item => {
+        item.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+        });
+        item.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+    
+    // Auto-submit du formulaire de filtres
+    const filterForm = document.querySelector('form[method="GET"]');
+    if (filterForm) {
+        const selects = filterForm.querySelectorAll('select');
+        selects.forEach(select => {
+            select.addEventListener('change', function() {
+                filterForm.submit();
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

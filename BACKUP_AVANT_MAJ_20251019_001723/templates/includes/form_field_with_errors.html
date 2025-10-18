@@ -1,0 +1,25 @@
+{% comment %}
+Template partiel pour afficher un champ de formulaire avec gestion des erreurs
+Usage: {% include 'includes/form_field_with_errors.html' with field=form.nom_field required=True %}
+{% endcomment %}
+
+<div class="form-group">
+    <label for="{{ field.id_for_label }}" class="form-label">
+        {{ field.label }}
+        {% if required %}<span class="text-danger">*</span>{% endif %}
+    </label>
+    
+    {{ field }}
+    
+    {% if field.errors %}
+        <div class="invalid-feedback d-block">
+            {% for error in field.errors %}
+                <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+            {% endfor %}
+        </div>
+    {% endif %}
+    
+    {% if field.help_text %}
+        <div class="form-text">{{ field.help_text }}</div>
+    {% endif %}
+</div>

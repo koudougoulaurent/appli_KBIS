@@ -1,0 +1,65 @@
+<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="buildingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="windowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="shadowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#000000;stop-opacity:0.1" />
+      <stop offset="100%" style="stop-color:#000000;stop-opacity:0.3" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Fond du logo -->
+  <rect width="80" height="80" rx="20" fill="url(#buildingGradient)"/>
+  
+  <!-- Ombre du bâtiment -->
+  <rect x="8" y="65" width="64" height="8" rx="4" fill="url(#shadowGradient)"/>
+  
+  <!-- Bâtiment principal -->
+  <rect x="20" y="25" width="40" height="40" rx="2" fill="white" opacity="0.95"/>
+  
+  <!-- Toit du bâtiment -->
+  <polygon points="20,25 40,10 60,25" fill="white" opacity="0.9"/>
+  
+  <!-- Lignes du bâtiment -->
+  <rect x="20" y="35" width="40" height="2" fill="url(#buildingGradient)" opacity="0.3"/>
+  <rect x="20" y="45" width="40" height="2" fill="url(#buildingGradient)" opacity="0.3"/>
+  <rect x="20" y="55" width="40" height="2" fill="url(#buildingGradient)" opacity="0.3"/>
+  
+  <!-- Fenêtres -->
+  <!-- Étage 1 -->
+  <rect x="25" y="28" width="6" height="4" rx="1" fill="url(#windowGradient)"/>
+  <rect x="35" y="28" width="6" height="4" rx="1" fill="url(#windowGradient)"/>
+  <rect x="45" y="28" width="6" height="4" rx="1" fill="url(#windowGradient)"/>
+  
+  <!-- Étage 2 -->
+  <rect x="25" y="38" width="6" height="4" rx="1" fill="url(#windowGradient)"/>
+  <rect x="35" y="38" width="6" height="4" rx="1" fill="url(#windowGradient)"/>
+  <rect x="45" y="38" width="6" height="4" rx="1" fill="url(#windowGradient)"/>
+  
+  <!-- Étage 3 -->
+  <rect x="25" y="48" width="6" height="4" rx="1" fill="url(#windowGradient)"/>
+  <rect x="35" y="48" width="6" height="4" rx="1" fill="url(#windowGradient)"/>
+  <rect x="45" y="48" width="6" height="4" rx="1" fill="url(#windowGradient)"/>
+  
+  <!-- Étage 4 -->
+  <rect x="25" y="58" width="6" height="4" rx="1" fill="url(#windowGradient)"/>
+  <rect x="35" y="58" width="6" height="4" rx="1" fill="url(#windowGradient)"/>
+  <rect x="45" y="58" width="6" height="4" rx="1" fill="url(#windowGradient)"/>
+  
+  <!-- Porte d'entrée -->
+  <rect x="35" y="62" width="10" height="3" rx="1" fill="url(#buildingGradient)"/>
+  
+  <!-- Effet de brillance -->
+  <rect x="20" y="25" width="40" height="40" rx="2" fill="none" stroke="white" stroke-width="1" opacity="0.3"/>
+  
+  <!-- Animation de brillance -->
+  <rect x="20" y="25" width="40" height="40" rx="2" fill="url(#buildingGradient)" opacity="0.1">
+    <animate attributeName="opacity" values="0.1;0.3;0.1" dur="3s" repeatCount="indefinite"/>
+  </rect>
+</svg>

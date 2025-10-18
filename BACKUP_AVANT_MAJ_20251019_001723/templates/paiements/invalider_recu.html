@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Invalider le reçu {{ recu.numero_recu }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Invalider le reçu {{ recu.numero_recu }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Attention!</strong> Vous êtes sur le point d'invalider ce reçu. Cette action le rendra inutilisable.
+                    </div>
+                    
+                    <!-- Informations du reçu -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>Informations du reçu</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Numéro:</strong></td>
+                                    <td>{{ recu.numero_recu }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Date d'émission:</strong></td>
+                                    <td>{{ recu.date_emission|date:"d/m/Y H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Template:</strong></td>
+                                    <td>{{ recu.get_template_utilise_display }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Statut actuel:</strong></td>
+                                    <td>
+                                        <span class="badge bg-{{ recu.get_statut_color }}">
+                                            {{ recu.get_statut_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Informations du paiement</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Montant:</strong></td>
+                                    <td>{{ informations.montant|floatformat:2 }} F CFA</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Type:</strong></td>
+                                    <td>{{ informations.type_paiement }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Date:</strong></td>
+                                    <td>{{ informations.date_paiement|date:"d/m/Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Locataire:</strong></td>
+                                    <td>{{ informations.locataire_nom }} {{ informations.locataire_prenom }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Formulaire d'invalidation -->
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="motif" class="form-label">
+                                <strong>Motif d'invalidation (optionnel):</strong>
+                            </label>
+                            <textarea class="form-control" id="motif" name="motif" rows="3" 
+                                      placeholder="Expliquez pourquoi ce reçu doit être invalidé..."></textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                                            <a href="{% url 'paiements:recu_detail' recu.pk %}" class="btn btn-secondary me-md-2">
+                                <i class="fas fa-arrow-left me-1"></i>
+                                Annuler
+                            </a>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-times me-1"></i>
+                                Invalider le reçu
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

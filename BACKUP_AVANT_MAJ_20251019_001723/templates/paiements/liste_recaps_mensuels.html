@@ -1,0 +1,222 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Récapitulatifs Mensuels - Gestion Immobilière{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-calendar-month text-primary"></i>
+            Récapitulatifs Mensuels
+        </h1>
+        <p class="text-muted mb-0">Gestion simplifiée des récapitulatifs et paiements aux bailleurs</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'paiements:generer_recap_mensuel_automatique' %}" class="btn btn-success">
+            <i class="bi bi-magic"></i> Génération Auto
+        </a>
+        <a href="{% url 'paiements:creer_recap_mensuel' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Nouveau
+        </a>
+               {% if user.is_superuser or 'PRIVILEGE' in user.groups.values_list:'name' %}
+        <a href="{% url 'paiements:liste_recaps_supprimes' %}" class="btn btn-outline-danger">
+            <i class="bi bi-trash"></i> Supprimés
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="bailleur" class="form-label">Bailleur</label>
+                <select name="bailleur" id="bailleur" class="form-select">
+                    <option value="">Tous les bailleurs</option>
+                    {% for bailleur in bailleurs %}
+                        <option value="{{ bailleur.id }}" {% if request.GET.bailleur == bailleur.id|stringformat:"s" %}selected{% endif %}>
+                            {{ bailleur.get_nom_complet }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="statut" class="form-label">Statut</label>
+                <select name="statut" id="statut" class="form-select">
+                    <option value="">Tous les statuts</option>
+                    <option value="brouillon" {% if request.GET.statut == 'brouillon' %}selected{% endif %}>Brouillon</option>
+                    <option value="valide" {% if request.GET.statut == 'valide' %}selected{% endif %}>Validé</option>
+                    <option value="envoye" {% if request.GET.statut == 'envoye' %}selected{% endif %}>Envoyé</option>
+                    <option value="paye" {% if request.GET.statut == 'paye' %}selected{% endif %}>Payé</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="mois" class="form-label">Mois</label>
+                <input type="month" name="mois" id="mois" class="form-control" value="{{ request.GET.mois }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-funnel"></i> Filtrer
+                    </button>
+                    <a href="{% url 'paiements:liste_recaps_mensuels' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> Reset
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Liste des récapitulatifs -->
+<div class="card">
+    <div class="card-body">
+        {% if recaps %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Bailleur</th>
+                            <th>Mois</th>
+                            <th>Propriétés</th>
+                            <th>Contrats Actifs</th>
+                            <th>Total Loyers</th>
+                            <th>Charges</th>
+                            <th>Net à Payer</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for recap in recaps %}
+                        <tr>
+                            <td>
+                                <strong>{{ recap.bailleur.get_nom_complet|default:recap.bailleur.nom|default:recap.bailleur.username }}</strong>
+                            </td>
+                            <td>
+                                {{ recap.mois_recap|date:"F Y" }}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-info">{{ recap.nombre_proprietes }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-success">{{ recap.nombre_contrats_actifs }}</span>
+                            </td>
+                            <td class="text-end">
+                                <span class="fw-bold text-success">
+                                    {{ recap.get_total_loyers_bruts_formatted }}
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <span class="text-warning">
+                                    {{ recap.get_total_charges_deductibles_formatted }}
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <span class="fw-bold text-primary">
+                                    {{ recap.get_total_net_formatted }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if recap.statut == 'brouillon' %}
+                                    <span class="badge bg-secondary">Brouillon</span>
+                                {% elif recap.statut == 'valide' %}
+                                    <span class="badge bg-success">Validé</span>
+                                {% elif recap.statut == 'envoye' %}
+                                    <span class="badge bg-info">Envoyé</span>
+                                {% elif recap.statut == 'paye' %}
+                                    <span class="badge bg-primary">Payé</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'paiements:detail_recap_mensuel_auto' recap_id=recap.id %}" 
+                                       class="btn btn-outline-primary" title="Voir les détails">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if recap.statut == 'valide' and recap.total_net_a_payer > 0 %}
+                                        <a href="{% url 'paiements:creer_retrait_depuis_recap' recap_id=recap.id %}" 
+                                           class="btn btn-success" title="Payer le bailleur">
+                                            <i class="bi bi-cash-coin"></i>
+                                        </a>
+                                    {% endif %}
+                                    {% if recap.statut == 'brouillon' %}
+                                        <a href="{% url 'paiements:valider_recap_mensuel' recap.id %}" 
+                                           class="btn btn-outline-success" title="Valider">
+                                            <i class="bi bi-check-circle"></i>
+                                        </a>
+                                    {% endif %}
+                                    <a href="{% url 'paiements:imprimer_recap_mensuel' recap.id %}" 
+                                       class="btn btn-outline-secondary" title="Imprimer PDF" target="_blank">
+                                        <i class="bi bi-printer"></i>
+                                    </a>
+                                    {% if user.is_superuser or 'PRIVILEGE' in user.groups.values_list:'name' %}
+                                        <a href="{% url 'paiements:supprimer_recap_mensuel' recap_id=recap.id %}" 
+                                           class="btn btn-outline-danger" title="Supprimer" 
+                                           onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce récapitulatif ?')">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Navigation des pages">
+                <ul class="pagination justify-content-center mt-4">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.mois %}&mois={{ request.GET.mois }}{% endif %}">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.mois %}&mois={{ request.GET.mois }}{% endif %}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.mois %}&mois={{ request.GET.mois }}{% endif %}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.mois %}&mois={{ request.GET.mois }}{% endif %}">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-calendar-month text-muted" style="font-size: 4rem;"></i>
+                <h4 class="text-muted mt-3">Aucun récapitulatif trouvé</h4>
+                <p class="text-muted">Commencez par créer un nouveau récapitulatif mensuel.</p>
+                <a href="{% url 'paiements:creer_recap_mensuel' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Créer un récapitulatif
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

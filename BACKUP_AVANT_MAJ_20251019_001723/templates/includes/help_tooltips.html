@@ -1,0 +1,232 @@
+{% load static %}
+<!-- Tooltips d'aide pour les champs importants -->
+<div id="help-tooltips" class="help-tooltips">
+    <!-- Tooltip pour les champs de paiement -->
+    <div class="tooltip-help" data-field="montant" style="display: none;">
+        <div class="tooltip-content">
+            <i class="bi bi-info-circle"></i>
+            <span>Montant en F CFA. Utilisez le point (.) pour les décimales.</span>
+        </div>
+    </div>
+
+    <div class="tooltip-help" data-field="type_paiement" style="display: none;">
+        <div class="tooltip-content">
+            <i class="bi bi-info-circle"></i>
+            <span>Loyer: Paiement mensuel | Caution: Garantie | Avance: Paiement anticipé</span>
+        </div>
+    </div>
+
+    <div class="tooltip-help" data-field="mode_paiement" style="display: none;">
+        <div class="tooltip-content">
+            <i class="bi bi-info-circle"></i>
+            <span>Choisissez le mode de paiement utilisé par le locataire</span>
+        </div>
+    </div>
+
+    <!-- Tooltip pour les champs de contrat -->
+    <div class="tooltip-help" data-field="loyer_mensuel" style="display: none;">
+        <div class="tooltip-content">
+            <i class="bi bi-info-circle"></i>
+            <span>Montant du loyer mensuel en F CFA. Sera utilisé pour calculer les avances.</span>
+        </div>
+    </div>
+
+    <div class="tooltip-help" data-field="depot_garantie" style="display: none;">
+        <div class="tooltip-content">
+            <i class="bi bi-info-circle"></i>
+            <span>Montant de la caution déposée par le locataire en F CFA</span>
+        </div>
+    </div>
+
+    <div class="tooltip-help" data-field="avance_loyer" style="display: none;">
+        <div class="tooltip-content">
+            <i class="bi bi-info-circle"></i>
+            <span>Montant de l'avance de loyer en F CFA. Sera utilisé pour calculer les mois couverts.</span>
+        </div>
+    </div>
+
+    <!-- Tooltip pour les champs de propriété -->
+    <div class="tooltip-help" data-field="adresse" style="display: none;">
+        <div class="tooltip-content">
+            <i class="bi bi-info-circle"></i>
+            <span>Adresse complète de la propriété. Incluez le quartier et la ville.</span>
+        </div>
+    </div>
+
+    <div class="tooltip-help" data-field="surface" style="display: none;">
+        <div class="tooltip-content">
+            <i class="bi bi-info-circle"></i>
+            <span>Surface en m². Utilisez le point (.) pour les décimales.</span>
+        </div>
+    </div>
+
+    <!-- Tooltip pour les champs de retrait -->
+    <div class="tooltip-help" data-field="mois_retrait" style="display: none;">
+        <div class="tooltip-content">
+            <i class="bi bi-info-circle"></i>
+            <span>Mois pour lequel le retrait est effectué. Les retraits ne sont possibles que du 25 au 5 du mois suivant.</span>
+        </div>
+    </div>
+
+    <!-- Tooltip pour les champs de recherche -->
+    <div class="tooltip-help" data-field="search" style="display: none;">
+        <div class="tooltip-content">
+            <i class="bi bi-info-circle"></i>
+            <span>Recherchez par nom, téléphone, adresse ou numéro. Utilisez Ctrl+K pour la recherche globale.</span>
+        </div>
+    </div>
+</div>
+
+<style>
+.help-tooltips {
+    position: fixed;
+    z-index: 1060;
+    pointer-events: none;
+}
+
+.tooltip-help {
+    position: absolute;
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    max-width: 300px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    transform: translateY(-5px);
+    transition: all 0.2s ease;
+    pointer-events: none;
+}
+
+.tooltip-help.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.tooltip-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tooltip-content i {
+    color: #4dabf7;
+    font-size: 1rem;
+}
+
+.tooltip-content span {
+    line-height: 1.4;
+}
+
+/* Flèche du tooltip */
+.tooltip-help::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #333;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .tooltip-help {
+        max-width: 250px;
+        font-size: 0.8rem;
+        padding: 6px 10px;
+    }
+}
+</style>
+
+<script>
+// Système de tooltips d'aide
+document.addEventListener('DOMContentLoaded', function() {
+    // Ajouter des attributs data-help aux champs importants
+    const helpFields = [
+        { selector: 'input[name="montant"], input[id*="montant"]', field: 'montant' },
+        { selector: 'select[name="type_paiement"], select[id*="type_paiement"]', field: 'type_paiement' },
+        { selector: 'select[name="mode_paiement"], select[id*="mode_paiement"]', field: 'mode_paiement' },
+        { selector: 'input[name="loyer_mensuel"], input[id*="loyer_mensuel"]', field: 'loyer_mensuel' },
+        { selector: 'input[name="depot_garantie"], input[id*="depot_garantie"]', field: 'depot_garantie' },
+        { selector: 'input[name="avance_loyer"], input[id*="avance_loyer"]', field: 'avance_loyer' },
+        { selector: 'input[name="adresse"], input[id*="adresse"], textarea[name="adresse"]', field: 'adresse' },
+        { selector: 'input[name="surface"], input[id*="surface"]', field: 'surface' },
+        { selector: 'input[name="mois_retrait"], input[id*="mois_retrait"]', field: 'mois_retrait' },
+        { selector: 'input[type="search"], input[placeholder*="recherche"], input[placeholder*="Rechercher"]', field: 'search' }
+    ];
+
+    helpFields.forEach(({ selector, field }) => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+            element.setAttribute('data-help-field', field);
+            element.addEventListener('focus', showTooltip);
+            element.addEventListener('blur', hideTooltip);
+            element.addEventListener('mouseenter', showTooltip);
+            element.addEventListener('mouseleave', hideTooltip);
+        });
+    });
+});
+
+function showTooltip(event) {
+    const field = event.target.getAttribute('data-help-field');
+    if (!field) return;
+
+    const tooltip = document.querySelector(`[data-field="${field}"]`);
+    if (!tooltip) return;
+
+    // Positionner le tooltip
+    const rect = event.target.getBoundingClientRect();
+    const tooltipRect = tooltip.getBoundingClientRect();
+    
+    let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+    let top = rect.top - tooltipRect.height - 10;
+
+    // Ajuster si le tooltip sort de l'écran
+    if (left < 10) left = 10;
+    if (left + tooltipRect.width > window.innerWidth - 10) {
+        left = window.innerWidth - tooltipRect.width - 10;
+    }
+    if (top < 10) {
+        top = rect.bottom + 10;
+        // Changer la flèche
+        tooltip.style.setProperty('--arrow-direction', 'bottom');
+    } else {
+        tooltip.style.setProperty('--arrow-direction', 'top');
+    }
+
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = top + 'px';
+    tooltip.style.display = 'block';
+    
+    // Animation
+    setTimeout(() => {
+        tooltip.classList.add('show');
+    }, 10);
+}
+
+function hideTooltip(event) {
+    const field = event.target.getAttribute('data-help-field');
+    if (!field) return;
+
+    const tooltip = document.querySelector(`[data-field="${field}"]`);
+    if (!tooltip) return;
+
+    tooltip.classList.remove('show');
+    setTimeout(() => {
+        tooltip.style.display = 'none';
+    }, 200);
+}
+
+// CSS pour les flèches directionnelles
+const style = document.createElement('style');
+style.textContent = `
+    .tooltip-help[style*="--arrow-direction: bottom"]::after {
+        top: -5px;
+        border-top-color: transparent;
+        border-bottom-color: #333;
+    }
+`;
+document.head.appendChild(style);
+</script>

@@ -1,0 +1,434 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ title }} - Gestion Immobilière{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="bi bi-graph-up text-primary"></i>
+        Tableau de Bord - Récapitulatifs Mensuels
+    </h1>
+    <div class="btn-group" role="group">
+        <a href="{% url 'paiements:generer_recap_mensuel_automatique' %}" class="btn btn-success">
+            <i class="bi bi-magic"></i> Génération Automatique
+        </a>
+        <a href="{% url 'paiements:liste_bailleurs_recaps' %}" class="btn btn-info">
+            <i class="bi bi-people"></i> Sélectionner Bailleur
+        </a>
+        <a href="{% url 'paiements:liste_recaps_mensuels_auto' %}" class="btn btn-primary">
+            <i class="bi bi-list"></i> Voir Tous
+        </a>
+    </div>
+</div>
+
+<!-- Statistiques globales -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Récapitulatifs
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_recaps }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-file-earmark-text fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Bailleurs Actifs
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_bailleurs }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-people fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Loyers Année {{ current_year }}
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_loyers_annee|floatformat:0|intcomma }} F CFA</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-cash-coin fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Net à Payer {{ current_year }}
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_net_annee|floatformat:0|intcomma }} F CFA</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-calculator fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Graphiques et statistiques -->
+<div class="row mb-4">
+    <!-- Statistiques par statut -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-pie-chart"></i>
+                    Répartition par Statut
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if stats_par_statut %}
+                    <div class="chart-pie pt-4 pb-2">
+                        <canvas id="chartStatut"></canvas>
+                    </div>
+                    <div class="mt-4 text-center small">
+                        {% for stat in stats_par_statut %}
+                            <span class="mr-2">
+                                <i class="bi bi-circle-fill text-{% cycle 'primary' 'success' 'info' 'warning' %}"></i>
+                                {{ stat.statut|title }} ({{ stat.nombre }})
+                            </span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-center text-muted">Aucune donnée disponible</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Évolution sur 6 mois -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-graph-up"></i>
+                    Évolution sur 6 Mois
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if recaps_6_mois %}
+                    <div class="chart-area">
+                        <canvas id="chartEvolution"></canvas>
+                    </div>
+                {% else %}
+                    <p class="text-center text-muted">Aucune donnée disponible</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top bailleurs et récapitulatifs récents -->
+<div class="row mb-4">
+    <!-- Top 5 des bailleurs -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-trophy"></i>
+                    Top 5 des Bailleurs ({{ current_year }})
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if top_bailleurs %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Bailleur</th>
+                                    <th>Récapitulatifs</th>
+                                    <th class="text-end">Total Net</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for bailleur in top_bailleurs %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ bailleur.bailleur__nom }} {{ bailleur.bailleur__prenom }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ bailleur.nombre_recaps }}</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="fw-bold text-success">
+                                            {{ bailleur.total_net|floatformat:0|intcomma }} F CFA
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-center text-muted">Aucune donnée disponible</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Récapitulatifs récents -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-clock-history"></i>
+                    Récapitulatifs Récents
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if recaps_recents %}
+                    <div class="list-group list-group-flush">
+                        {% for recap in recaps_recents %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ recap.bailleur.get_nom_complet }}</h6>
+                                <small class="text-muted">
+                                    {{ recap.mois_recap|date:"F Y" }} - 
+                                    <span class="badge bg-{% if recap.statut == 'brouillon' %}secondary{% elif recap.statut == 'valide' %}success{% elif recap.statut == 'envoye' %}info{% else %}primary{% endif %}">
+                                        {{ recap.get_statut_display }}
+                                    </span>
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold text-primary">
+                                    {{ recap.total_net_a_payer|floatformat:0|intcomma }} F CFA
+                                </div>
+                                <small class="text-muted">{{ recap.date_creation|date:"d/m/Y" }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{% url 'paiements:liste_recaps_mensuels_auto' %}" class="btn btn-sm btn-outline-primary">
+                            Voir tous les récapitulatifs
+                        </a>
+                    </div>
+                {% else %}
+                    <p class="text-center text-muted">Aucun récapitulatif récent</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+                <!-- Actions rapides -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card shadow">
+                            <div class="card-header py-3">
+                                <h6 class="m-0 font-weight-bold text-primary">
+                                    <i class="bi bi-lightning"></i>
+                                    Actions Rapides
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3 text-center mb-3">
+                                        <a href="{% url 'paiements:generer_recap_mensuel_automatique' %}" class="btn btn-success btn-lg w-100">
+                                            <i class="bi bi-magic mb-2 d-block"></i>
+                                            Génération Automatique
+                                        </a>
+                                        <small class="text-muted">Créer tous les récapitulatifs d'un mois</small>
+                                    </div>
+                                    <div class="col-md-3 text-center mb-3">
+                                        <a href="{% url 'paiements:generer_pdf_recaps_lot' %}" class="btn btn-danger btn-lg w-100">
+                                            <i class="bi bi-file-pdf mb-2 d-block"></i>
+                                            PDF en Lot
+                                        </a>
+                                        <small class="text-muted">Générer tous les PDF d'un mois</small>
+                                    </div>
+                                    <div class="col-md-3 text-center mb-3">
+                                        <a href="{% url 'paiements:liste_recaps_mensuels_auto' %}" class="btn btn-primary btn-lg w-100">
+                                            <i class="bi bi-list-ul mb-2 d-block"></i>
+                                            Voir Tous
+                                        </a>
+                                        <small class="text-muted">Consulter tous les récapitulatifs</small>
+                                    </div>
+                                    <div class="col-md-3 text-center mb-3">
+                                        <a href="{% url 'paiements:statistiques_recaps_mensuels' %}" class="btn btn-warning btn-lg w-100">
+                                            <i class="bi bi-bar-chart mb-2 d-block"></i>
+                                            Statistiques
+                                        </a>
+                                        <small class="text-muted">Analyses détaillées</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Données pour les graphiques
+    const statsStatut = {{ stats_par_statut|safe }};
+    const recaps6Mois = {{ recaps_6_mois|safe }};
+    
+    // Graphique en secteurs pour les statuts
+    if (statsStatut.length > 0) {
+        const ctxStatut = document.getElementById('chartStatut').getContext('2d');
+        new Chart(ctxStatut, {
+            type: 'doughnut',
+            data: {
+                labels: statsStatut.map(s => s.statut.charAt(0).toUpperCase() + s.statut.slice(1)),
+                datasets: [{
+                    data: statsStatut.map(s => s.nombre),
+                    backgroundColor: [
+                        '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b'
+                    ],
+                    hoverBackgroundColor: [
+                        '#2e59d9', '#17a673', '#2c9faf', '#f4b619', '#e02424'
+                    ],
+                    hoverBorderColor: "rgba(234, 236, 244, 1)",
+                }],
+            },
+            options: {
+                maintainAspectRatio: false,
+                tooltips: {
+                    backgroundColor: "rgb(255,255,255)",
+                    bodyFontColor: "#858796",
+                    borderColor: '#dddfeb',
+                    borderWidth: 1,
+                    xPadding: 15,
+                    yPadding: 15,
+                    displayColors: false,
+                    caretPadding: 10,
+                },
+                legend: {
+                    display: false
+                },
+                cutoutPercentage: 80,
+            },
+        });
+    }
+    
+    // Graphique d'évolution sur 6 mois
+    if (recaps6Mois.length > 0) {
+        const ctxEvolution = document.getElementById('chartEvolution').getContext('2d');
+        new Chart(ctxEvolution, {
+            type: 'line',
+            data: {
+                labels: recaps6Mois.map(r => {
+                    const date = new Date(r.mois_recap);
+                    return date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+                }),
+                datasets: [{
+                    label: 'Loyers Bruts',
+                    data: recaps6Mois.map(r => r.total_loyers || 0),
+                    borderColor: '#4e73df',
+                    backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                    tension: 0.4
+                }, {
+                    label: 'Net à Payer',
+                    data: recaps6Mois.map(r => r.total_net || 0),
+                    borderColor: '#1cc88a',
+                    backgroundColor: 'rgba(28, 200, 138, 0.05)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                layout: {
+                    padding: {
+                        left: 10,
+                        right: 25,
+                        top: 25,
+                        bottom: 0
+                    }
+                },
+                scales: {
+                    xAxes: [{
+                        time: {
+                            unit: 'month'
+                        },
+                        gridLines: {
+                            display: false,
+                            drawBorder: false
+                        },
+                        ticks: {
+                            maxTicksLimit: 7
+                        }
+                    }],
+                    yAxes: [{
+                        ticks: {
+                            maxTicksLimit: 5,
+                            padding: 10,
+                            callback: function(value, index, values) {
+                                return Math.round(value).toLocaleString('fr-FR', {maximumFractionDigits: 0}) + ' F CFA';
+                            }
+                        },
+                        gridLines: {
+                            color: "rgb(234, 236, 244)",
+                            zeroLineColor: "rgb(234, 236, 244)",
+                            drawBorder: false,
+                            borderDash: [2],
+                            zeroLineBorderDash: [2]
+                        }
+                    }],
+                },
+                legend: {
+                    display: true
+                },
+                tooltips: {
+                    backgroundColor: "rgb(255,255,255)",
+                    bodyFontColor: "#858796",
+                    titleMarginBottom: 10,
+                    titleFontColor: '#6e707e',
+                    titleFontSize: 14,
+                    borderColor: '#dddfeb',
+                    borderWidth: 1,
+                    xPadding: 15,
+                    yPadding: 15,
+                    displayColors: false,
+                    intersect: false,
+                    mode: 'index',
+                    caretPadding: 10,
+                    callbacks: {
+                        label: function(tooltipItem, chart) {
+                            var datasetLabel = chart.datasets[tooltipItem.datasetIndex].label || '';
+                            return datasetLabel + ': ' + Math.round(tooltipItem.yLabel).toLocaleString('fr-FR', {maximumFractionDigits: 0}) + ' F CFA';
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

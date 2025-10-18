@@ -1,0 +1,353 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .security-dashboard {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 2rem 0;
+    }
+    
+    .security-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin-bottom: 2rem;
+        overflow: hidden;
+    }
+    
+    .security-header {
+        background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+        color: white;
+        padding: 2rem;
+        text-align: center;
+    }
+    
+    .security-score {
+        font-size: 4rem;
+        font-weight: bold;
+        margin: 1rem 0;
+    }
+    
+    .security-level {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .security-level.EXCELLENT {
+        background: #2ecc71;
+        color: white;
+    }
+    
+    .security-level.GOOD {
+        background: #3498db;
+        color: white;
+    }
+    
+    .security-level.WARNING {
+        background: #f39c12;
+        color: white;
+    }
+    
+    .security-level.CRITICAL {
+        background: #e74c3c;
+        color: white;
+    }
+    
+    .alert-item {
+        background: #f8f9fa;
+        border-left: 4px solid #e74c3c;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        border-radius: 0 10px 10px 0;
+        transition: all 0.3s ease;
+    }
+    
+    .alert-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .alert-item.HIGH {
+        border-left-color: #e74c3c;
+        background: #fdf2f2;
+    }
+    
+    .alert-item.MEDIUM {
+        border-left-color: #f39c12;
+        background: #fef9e7;
+    }
+    
+    .alert-item.LOW {
+        border-left-color: #3498db;
+        background: #ebf3fd;
+    }
+    
+    .metric-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #2c3e50;
+        margin: 0.5rem 0;
+    }
+    
+    .metric-label {
+        color: #7f8c8d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .issue-item {
+        background: #fff5f5;
+        border: 1px solid #fed7d7;
+        border-radius: 10px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        color: #c53030;
+    }
+    
+    .refresh-btn {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .refresh-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    .pulse {
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="security-dashboard">
+    <div class="container">
+        <!-- Header -->
+        <div class="security-card">
+            <div class="security-header">
+                <h1 class="mb-3">
+                    <i class="fas fa-shield-alt"></i>
+                    {{ title }}
+                </h1>
+                <div class="security-score">{{ security_score }}/100</div>
+                <div class="security-level {{ security_level.level }}">
+                    {{ security_level.icon }} {{ security_level.level }}
+                </div>
+                <button class="refresh-btn mt-3" onclick="refreshDashboard()">
+                    <i class="fas fa-sync-alt"></i> Actualiser
+                </button>
+            </div>
+        </div>
+
+        <!-- Métriques principales -->
+        <div class="row">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value text-danger">{{ total_alerts_24h }}</div>
+                    <div class="metric-label">Alertes 24h</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value text-warning">{{ financial_issues|length }}</div>
+                    <div class="metric-label">Problèmes Financiers</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value text-info">{{ user_issues|length }}</div>
+                    <div class="metric-label">Problèmes Utilisateurs</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value text-success">{{ recent_alerts|length }}</div>
+                    <div class="metric-label">Alertes Récentes</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alertes récentes -->
+        <div class="security-card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Alertes de Sécurité Récentes
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_alerts %}
+                    {% for alert in recent_alerts %}
+                    <div class="alert-item {{ alert.severity }}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ alert.type }}</strong>
+                                <small class="text-muted d-block">{{ alert.timestamp }}</small>
+                            </div>
+                            <span class="badge badge-{{ alert.severity|lower }}">{{ alert.severity }}</span>
+                        </div>
+                        <div class="mt-2">
+                            <small>{{ alert.data|safe }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-check-circle fa-3x mb-3 text-success"></i>
+                        <p>Aucune alerte récente</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Problèmes d'intégrité -->
+        {% if financial_issues or user_issues %}
+        <div class="security-card">
+            <div class="card-header bg-warning text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-circle"></i>
+                    Problèmes d'Intégrité des Données
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if financial_issues %}
+                <h6 class="text-danger">Problèmes Financiers:</h6>
+                {% for issue in financial_issues %}
+                <div class="issue-item">
+                    <i class="fas fa-dollar-sign"></i> {{ issue }}
+                </div>
+                {% endfor %}
+                {% endif %}
+                
+                {% if user_issues %}
+                <h6 class="text-danger mt-3">Problèmes Utilisateurs:</h6>
+                {% for issue in user_issues %}
+                <div class="issue-item">
+                    <i class="fas fa-user"></i> {{ issue }}
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Répartition des alertes -->
+        {% if alert_breakdown %}
+        <div class="security-card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie"></i>
+                    Répartition des Alertes
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for alert_type, count in alert_breakdown.items %}
+                    <div class="col-md-4 mb-3">
+                        <div class="metric-card">
+                            <div class="metric-value">{{ count }}</div>
+                            <div class="metric-label">{{ alert_type }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function refreshDashboard() {
+    location.reload();
+}
+
+// Auto-refresh toutes les 30 secondes
+setInterval(function() {
+    // Mettre à jour seulement les métriques sans recharger la page
+    fetch('/core/security/health-check/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'CRITICAL') {
+                // Afficher une notification critique
+                showNotification('Alerte de sécurité critique détectée!', 'error');
+            }
+        })
+        .catch(error => console.error('Erreur de monitoring:', error));
+}, 30000);
+
+function showNotification(message, type) {
+    // Créer une notification toast
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="close" data-dismiss="alert">
+            <span>&times;</span>
+        </button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Supprimer après 5 secondes
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+}
+
+// Animation d'entrée
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.security-card, .metric-card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.6s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+</script>
+{% endblock %}

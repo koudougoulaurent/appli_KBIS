@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Récapitulatif Mensuel - {{ recapitulatif.bailleur.get_nom_complet }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .subtitle {
+            font-size: 16px;
+            color: #666;
+            margin-top: 10px;
+        }
+        .info-section {
+            margin-bottom: 30px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .info-value {
+            color: #333;
+        }
+        .totals-section {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .total-label {
+            font-weight: bold;
+        }
+        .total-value {
+            font-weight: bold;
+            color: #007bff;
+        }
+        .final-total {
+            border-top: 2px solid #007bff;
+            padding-top: 10px;
+            margin-top: 10px;
+            font-size: 18px;
+        }
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">RÉCAPITULATIF MENSUEL</div>
+        <div class="subtitle">{{ recapitulatif.bailleur.get_nom_complet }} - {{ recapitulatif.mois_recap|date:"F Y" }}</div>
+    </div>
+
+    <div class="info-section">
+        <div class="info-row">
+            <span class="info-label">Bailleur :</span>
+            <span class="info-value">{{ recapitulatif.bailleur.get_nom_complet }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Période :</span>
+            <span class="info-value">{{ recapitulatif.mois_recap|date:"F Y" }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Statut :</span>
+            <span class="info-value">{{ recapitulatif.get_statut_display }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Propriétés :</span>
+            <span class="info-value">{{ recapitulatif.nombre_proprietes }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Contrats actifs :</span>
+            <span class="info-value">{{ recapitulatif.nombre_contrats_actifs }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Paiements reçus :</span>
+            <span class="info-value">{{ recapitulatif.nombre_paiements_recus }}</span>
+        </div>
+    </div>
+
+    <!-- Détails des Propriétés et Loyers -->
+    <div class="info-section">
+        <h3 style="color: #007bff; margin-bottom: 20px;">Détails des Propriétés et Loyers</h3>
+        
+        {% if proprietes_details %}
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+                <thead>
+                    <tr style="background-color: #f8f9fa;">
+                        <th style="border: 1px solid #dee2e6; padding: 12px; text-align: left;">Propriété</th>
+                        <th style="border: 1px solid #dee2e6; padding: 12px; text-align: left;">Adresse</th>
+                        <th style="border: 1px solid #dee2e6; padding: 12px; text-align: left;">Locataire</th>
+                        <th style="border: 1px solid #dee2e6; padding: 12px; text-align: right;">Loyer Mensuel</th>
+                        <th style="border: 1px solid #dee2e6; padding: 12px; text-align: right;">Charges Déductibles</th>
+                        <th style="border: 1px solid #dee2e6; padding: 12px; text-align: right;">Net à Payer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for detail in proprietes_details %}
+                    <tr>
+                        <td style="border: 1px solid #dee2e6; padding: 12px;">{{ detail.propriete.titre|default:"N/A" }}</td>
+                        <td style="border: 1px solid #dee2e6; padding: 12px;">{{ detail.adresse_complete }}</td>
+                        <td style="border: 1px solid #dee2e6; padding: 12px;">{{ detail.locataire.get_nom_complet|default:detail.locataire.nom|default:"N/A" }}</td>
+                        <td style="border: 1px solid #dee2e6; padding: 12px; text-align: right;">{{ detail.loyer_mensuel|floatformat:0 }} F CFA</td>
+                        <td style="border: 1px solid #dee2e6; padding: 12px; text-align: right;">{{ detail.charges_deductibles|floatformat:0 }} F CFA</td>
+                        <td style="border: 1px solid #dee2e6; padding: 12px; text-align: right; font-weight: bold;">{{ detail.net_a_payer|floatformat:0 }} F CFA</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border: 1px solid #dee2e6; margin-bottom: 30px;">
+                <p style="color: #6c757d; margin: 0;">Aucune propriété active trouvée pour ce mois</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="totals-section">
+        <h3 style="margin-top: 0; color: #007bff;">Résumé Financier</h3>
+        
+        <div class="total-row">
+            <span class="total-label">Total des loyers bruts :</span>
+            <span class="total-value">{{ recapitulatif.total_loyers_bruts|floatformat:0 }} F CFA</span>
+        </div>
+        
+        <div class="total-row">
+            <span class="total-label">Charges déductibles :</span>
+            <span class="total-value">{{ recapitulatif.total_charges_deductibles|floatformat:0 }} F CFA</span>
+        </div>
+        
+        {% if recapitulatif.total_charges_bailleur %}
+        <div class="total-row">
+            <span class="total-label">Charges bailleur :</span>
+            <span class="total-value">{{ recapitulatif.total_charges_bailleur|floatformat:0 }} F CFA</span>
+        </div>
+        {% endif %}
+        
+        <div class="total-row final-total">
+            <span class="total-label">MONTANT NET À PAYER :</span>
+            <span class="total-value">{{ recapitulatif.total_net_a_payer|floatformat:0 }} F CFA</span>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p><strong>KBIS IMMOBILIER</strong> - pissy 10050 ouagadougou Burkina Faso, Quartier Centre-Ville, BP 440 ouagadougou, Burkina Faso</p>
+        <p>Tél: +226 70 20 54 91 | Email: kbissarl2022@gmail.com</p>
+        <p>RCCM: CI-ABJ-XXXX-X-XXXXX | IFU: XXXXXXXXXX</p>
+    </div>
+</body>
+</html>
+

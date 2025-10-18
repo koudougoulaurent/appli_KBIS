@@ -1,0 +1,470 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .suggestion-card {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border-left: 4px solid #2196f3;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .suggestion-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    
+    .suggestion-icon {
+        background: #2196f3;
+        color: white;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+        font-size: 18px;
+    }
+    
+    .suggestion-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1976d2;
+        margin: 0;
+    }
+    
+    .suggestion-details {
+        background: white;
+        border-radius: 6px;
+        padding: 15px;
+        margin-top: 10px;
+    }
+    
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        padding: 5px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .detail-row:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+    
+    .detail-label {
+        font-weight: 500;
+        color: #666;
+    }
+    
+    .detail-value {
+        color: #333;
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 8px;
+        padding: 25px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-top: 20px;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    .form-select {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 16px;
+        transition: border-color 0.3s ease;
+    }
+    
+         .form-select:focus {
+         outline: none;
+         border-color: #2196f3;
+         box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+     }
+     
+     .form-select.is-invalid {
+         border-color: #dc3545;
+         box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+     }
+     
+     .form-select.is-valid {
+         border-color: #28a745;
+         box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+     }
+     
+     .invalid-feedback {
+         display: block !important;
+         color: #dc3545;
+         font-size: 14px;
+         margin-top: 5px;
+         padding: 8px 12px;
+         background-color: #f8d7da;
+         border: 1px solid #f5c6cb;
+         border-radius: 4px;
+     }
+     
+     .valid-feedback {
+         display: block !important;
+         color: #28a745;
+         font-size: 14px;
+         margin-top: 5px;
+         padding: 8px 12px;
+         background-color: #d4edda;
+         border: 1px solid #c3e6cb;
+         border-radius: 4px;
+     }
+    
+         .suggested-option {
+         background-color: #e3f2fd;
+         font-weight: 600;
+         color: #1976d2;
+     }
+     
+     .form-select option:disabled {
+         background-color: #f8f9fa;
+         color: #6c757d;
+         font-style: italic;
+     }
+     
+     .form-select option:disabled:hover {
+         background-color: #f8f9fa;
+         color: #6c757d;
+     }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+        border: none;
+        padding: 12px 30px;
+        border-radius: 6px;
+        color: white;
+        font-weight: 600;
+        font-size: 16px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+    }
+    
+    .btn-secondary {
+        background: #f5f5f5;
+        border: 2px solid #e0e0e0;
+        padding: 12px 30px;
+        border-radius: 6px;
+        color: #666;
+        font-weight: 600;
+        font-size: 16px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-secondary:hover {
+        background: #e0e0e0;
+        color: #333;
+        text-decoration: none;
+    }
+    
+    .alert-info {
+        background: #e3f2fd;
+        border: 1px solid #bbdefb;
+        color: #1976d2;
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+    }
+    
+    .bailleur-info {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .bailleur-name {
+        font-size: 24px;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 10px;
+    }
+    
+    .bailleur-details {
+        color: #666;
+        font-size: 14px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- En-tête de la page -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-{{ page_icon }} text-primary me-2"></i>
+                        {{ page_title }}
+                    </h1>
+                    <p class="text-muted mb-0">{{ description }}</p>
+                </div>
+            </div>
+
+            <!-- Informations sur le bailleur -->
+            <div class="bailleur-info">
+                <div class="bailleur-name">{{ bailleur.get_nom_complet }}</div>
+                <div class="bailleur-details">
+                    <i class="bi bi-person me-1"></i>
+                    Bailleur ID: {{ bailleur.id }} | 
+                    <i class="bi bi-calendar me-1"></i>
+                    Créé le: {{ bailleur.date_creation|date:"d/m/Y" }}
+                </div>
+            </div>
+
+            <!-- Suggestion automatique du mois -->
+            <div class="suggestion-card">
+                <div class="suggestion-header">
+                    <div class="suggestion-icon">
+                        <i class="bi bi-lightbulb"></i>
+                    </div>
+                    <h3 class="suggestion-title">Suggestion Automatique</h3>
+                </div>
+                <div class="suggestion-details">
+                    <div class="detail-row">
+                        <span class="detail-label">Mois suggéré :</span>
+                        <span class="detail-value"><strong>{{ mois_info.mois_suggere_formate }}</strong></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Raison :</span>
+                        <span class="detail-value">{{ mois_info.raison }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Dernier récapitulatif :</span>
+                        <span class="detail-value">
+                            {% if mois_info.dernier_mois %}
+                                {{ mois_info.dernier_mois|date:"F Y" }}
+                            {% else %}
+                                Aucun
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Statut :</span>
+                        <span class="detail-value">
+                            {% if mois_info.recap_existant %}
+                                <span class="badge bg-warning">Récapitulatif existant</span>
+                            {% else %}
+                                <span class="badge bg-success">Prêt à créer</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {% if mois_info.recap_existant %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Un récapitulatif existe déjà pour le mois suggéré. Vous pouvez choisir un autre mois ou consulter le récapitulatif existant.
+                </div>
+            {% endif %}
+
+            <!-- Formulaire de création -->
+            <div class="form-section">
+                <h4 class="mb-3">
+                    <i class="bi bi-calendar-plus me-2"></i>
+                    Sélectionner le mois du récapitulatif
+                </h4>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                                         <div class="form-group">
+                         <label for="mois_recap" class="form-label">
+                             <i class="bi bi-calendar3 me-1"></i>
+                             Mois du récapitulatif
+                         </label>
+                         <select name="mois_recap" id="mois_recap" class="form-select" required>
+                             <option value="">-- Sélectionner un mois --</option>
+                             {% for mois in mois_disponibles %}
+                                 <option value="{{ mois.value }}" 
+                                         {% if mois.is_suggested %}class="suggested-option"{% endif %}
+                                         {% if mois.is_suggested %}selected{% endif %}
+                                         {% if not mois.is_suggested %}disabled{% endif %}
+                                         data-is-suggested="{{ mois.is_suggested|yesno:'true,false' }}">
+                                     {% if mois.is_suggested %}
+                                         {{ mois.label }}
+                                     {% else %}
+                                         {{ mois.label }} (Non disponible)
+                                     {% endif %}
+                                 </option>
+                             {% endfor %}
+                         </select>
+                         <div id="mois-error" class="invalid-feedback" style="display: none;">
+                             <i class="bi bi-exclamation-triangle me-1"></i>
+                             Vous devez sélectionner le mois suggéré automatiquement : <strong>{{ mois_info.mois_suggere_formate }}</strong>
+                         </div>
+                         <div id="mois-success" class="valid-feedback" style="display: none;">
+                             <i class="bi bi-check-circle me-1"></i>
+                             Mois correct sélectionné : <strong>{{ mois_info.mois_suggere_formate }}</strong>
+                         </div>
+                         <small class="form-text text-muted">
+                             <i class="bi bi-shield-check me-1"></i>
+                             <strong>Validation stricte :</strong> Seul le mois suggéré automatiquement peut être sélectionné pour maintenir la continuité des récapitulatifs. Les autres mois sont désactivés.
+                         </small>
+                     </div>
+
+                    <div class="d-flex gap-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-2"></i>
+                            Créer le Récapitulatif
+                        </button>
+                        <a href="{% url 'paiements:liste_bailleurs_recaps' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>
+                            Retour à la liste
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+                         <!-- Informations supplémentaires -->
+             <div class="alert alert-info">
+                 <h6 class="alert-heading">
+                     <i class="bi bi-shield-check me-2"></i>
+                     Validation Stricte - Détection Automatique
+                 </h6>
+                 <p class="mb-2">
+                     <strong>Règle importante :</strong> Seul le mois suggéré automatiquement peut être sélectionné pour garantir la continuité des récapitulatifs.
+                 </p>
+                 <ul class="mb-0">
+                     <li><strong>Aucun récapitulatif existant :</strong> Le mois actuel est suggéré et obligatoire</li>
+                     <li><strong>Dernier récapitulatif antérieur :</strong> Le mois actuel est suggéré et obligatoire</li>
+                     <li><strong>Dernier récapitulatif récent :</strong> Le mois suivant est suggéré et obligatoire</li>
+                 </ul>
+                 <div class="mt-2">
+                     <small class="text-muted">
+                         <i class="bi bi-lock me-1"></i>
+                         Les autres mois sont désactivés pour éviter les erreurs et maintenir la cohérence du système.
+                     </small>
+                 </div>
+             </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const select = document.getElementById('mois_recap');
+    const errorDiv = document.getElementById('mois-error');
+    const successDiv = document.getElementById('mois-success');
+    const form = document.querySelector('form');
+    
+    // Récupérer la valeur du mois suggéré
+    const suggestedValue = '{{ mois_info.mois_suggere|date:"Y-m-d" }}';
+    
+    // Fonction de validation
+    function validateMonth() {
+        const selectedValue = select.value;
+        const selectedOption = select.options[select.selectedIndex];
+        const isSuggested = selectedOption.getAttribute('data-is-suggested') === 'true';
+        const isDisabled = selectedOption.disabled;
+        
+        if (!selectedValue) {
+            // Aucune sélection
+            select.classList.remove('is-valid', 'is-invalid');
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+            return false;
+        } else if (isDisabled) {
+            // Option désactivée sélectionnée (ne devrait pas arriver)
+            select.classList.remove('is-valid');
+            select.classList.add('is-invalid');
+            errorDiv.style.display = 'block';
+            successDiv.style.display = 'none';
+            return false;
+        } else if (isSuggested) {
+            // Mois suggéré sélectionné
+            select.classList.remove('is-invalid');
+            select.classList.add('is-valid');
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'block';
+            return true;
+        } else {
+            // Mois non suggéré sélectionné (ne devrait pas arriver car désactivé)
+            select.classList.remove('is-valid');
+            select.classList.add('is-invalid');
+            errorDiv.style.display = 'block';
+            successDiv.style.display = 'none';
+            return false;
+        }
+    }
+    
+    // Validation en temps réel lors du changement
+    select.addEventListener('change', validateMonth);
+    
+    // Validation lors de la soumission du formulaire
+    form.addEventListener('submit', function(e) {
+        if (!validateMonth()) {
+            e.preventDefault();
+            
+            // Animation d'erreur
+            select.style.animation = 'shake 0.5s ease-in-out';
+            setTimeout(() => {
+                select.style.animation = '';
+            }, 500);
+            
+            // Focus sur le champ
+            select.focus();
+            
+            return false;
+        }
+    });
+    
+    // Validation initiale
+    validateMonth();
+    
+    // Mise en évidence de l'option suggérée
+    const options = select.querySelectorAll('option');
+    options.forEach(option => {
+        if (option.classList.contains('suggested-option')) {
+            option.style.backgroundColor = '#e3f2fd';
+            option.style.fontWeight = '600';
+            option.style.color = '#1976d2';
+        }
+    });
+});
+
+// Animation de secousse pour l'erreur
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

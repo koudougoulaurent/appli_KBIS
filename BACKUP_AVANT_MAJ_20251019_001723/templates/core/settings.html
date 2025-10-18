@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}Paramètres - Gestion Immobilière{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">
+                        <i class="bi bi-gear"></i> Paramètres du système
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Paramètres utilisateur</h5>
+                            <p class="text-muted">
+                                Les paramètres utilisateur seront disponibles dans une prochaine version.
+                            </p>
+                            
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Information :</strong> Cette section sera développée pour permettre 
+                                la personnalisation des préférences utilisateur.
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5>Paramètres système</h5>
+                            <p class="text-muted">
+                                Accédez aux paramètres système via l'administration Django.
+                            </p>
+                            
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'admin:index' %}" class="btn btn-primary">
+                                    <i class="bi bi-gear"></i> Administration Django
+                                </a>
+                                <a href="{% url 'core:intelligent_search' %}" class="btn btn-info">
+                                    <i class="bi bi-search"></i> Recherche Intelligente
+                                </a>
+                                <a href="{% url 'core:dashboard' %}" class="btn btn-secondary">
+                                    <i class="bi bi-arrow-left"></i> Retour au dashboard
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

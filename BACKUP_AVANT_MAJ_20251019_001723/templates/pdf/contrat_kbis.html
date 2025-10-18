@@ -1,0 +1,280 @@
+{% extends 'pdf/base_document_kbis.html' %}
+
+{% load static %}
+
+{% block title %}Contrat de Location - KBIS{% endblock %}
+
+{% block content %}
+<div class="contrat-container">
+    <!-- Titre du contrat -->
+    <div class="contrat-title">
+        <h1>CONTRAT DE LOCATION</h1>
+        <div class="contrat-number">N° {{ contrat.numero_contrat|default:"CTN-"|add:contrat.id|stringformat:"%06d" }}</div>
+    </div>
+
+    <!-- Informations principales du contrat -->
+    <div class="contrat-info">
+        <div class="info-section">
+            <h3>INFORMATIONS DU CONTRAT</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="label">Numéro :</span>
+                    <span class="value">{{ contrat.numero_contrat|default:"N/A" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Date de signature :</span>
+                    <span class="value">{{ contrat.date_creation|date:"d/m/Y" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informations du bailleur -->
+    <div class="info-section">
+        <h3>BAILLEUR</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="label">Nom :</span>
+                <span class="value">{{ contrat.bailleur.nom_complet|default:"N/A" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Adresse :</span>
+                <span class="value">{{ contrat.bailleur.adresse|default:"N/A" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Téléphone :</span>
+                <span class="value">{{ contrat.bailleur.telephone|default:"N/A" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informations du locataire -->
+    <div class="info-section">
+        <h3>LOCATAIRE</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="label">Nom :</span>
+                <span class="value">{{ contrat.locataire.nom_complet|default:"N/A" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Adresse :</span>
+                <span class="value">{{ contrat.locataire.adresse|default:"N/A" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Téléphone :</span>
+                <span class="value">{{ contrat.locataire.telephone|default:"N/A" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informations de la propriété -->
+    <div class="info-section">
+        <h3>PROPRIÉTÉ LOUE</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="label">Titre :</span>
+                <span class="value">{{ contrat.propriete.titre|default:"N/A" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Adresse :</span>
+                <span class="value">{{ contrat.propriete.adresse|default:"N/A" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Ville :</span>
+                <span class="value">{{ contrat.propriete.ville|default:"N/A" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conditions du contrat -->
+    <div class="info-section">
+        <h3>CONDITIONS DU CONTRAT</h3>
+        <div class="conditions-grid">
+            <div class="condition-item">
+                <span class="label">Date de début :</span>
+                <span class="value">{{ contrat.date_debut|date:"d/m/Y" }}</span>
+            </div>
+            <div class="condition-item">
+                <span class="label">Date de fin :</span>
+                <span class="value">{{ contrat.date_fin|date:"d/m/Y"|default:"Non définie" }}</span>
+            </div>
+            <div class="condition-item">
+                <span class="label">Durée :</span>
+                <span class="value">{{ contrat.duree|default:"Non définie" }}</span>
+            </div>
+            <div class="condition-item highlight">
+                <span class="label">Loyer mensuel :</span>
+                <span class="value">{{ contrat.loyer_mensuel|floatformat:0 }} F CFA</span>
+            </div>
+            <div class="condition-item">
+                <span class="label">Charges mensuelles :</span>
+                <span class="value">{{ contrat.charges_mensuelles|floatformat:0|default:"0" }} F CFA</span>
+            </div>
+            <div class="condition-item highlight">
+                <span class="label">Dépôt de garantie :</span>
+                <span class="value">{{ contrat.caution|floatformat:0|default:"0" }} F CFA</span>
+            </div>
+            <div class="condition-item highlight">
+                <span class="label">Avance de loyer :</span>
+                <span class="value">{{ contrat.avance_loyer|floatformat:0|default:"0" }} F CFA</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zone de signature -->
+    <div class="signature-area">
+        <div class="signature-section">
+            <div class="signature-box">
+                <p>Signature du Bailleur</p>
+                <div class="signature-line"></div>
+            </div>
+            <div class="signature-box">
+                <p>Signature du Locataire</p>
+                <div class="signature-line"></div>
+            </div>
+        </div>
+        <div class="signature-box">
+            <p>Cachet et signature de l'Agence KBIS</p>
+        </div>
+    </div>
+</div>
+
+<style>
+.contrat-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background: white;
+}
+
+.contrat-title {
+    text-align: center;
+    margin-bottom: 40px;
+    border-bottom: 3px solid #1e3c72;
+    padding-bottom: 20px;
+}
+
+.contrat-title h1 {
+    color: #1e3c72;
+    font-size: 28px;
+    font-weight: bold;
+    margin: 0 0 10px 0;
+}
+
+.contrat-number {
+    font-size: 16px;
+    color: #666;
+    font-weight: bold;
+}
+
+.info-section {
+    margin-bottom: 30px;
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.info-section h3 {
+    color: #1e3c72;
+    font-size: 18px;
+    font-weight: bold;
+    margin: 0 0 15px 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.condition-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.condition-item:last-child {
+    border-bottom: none;
+}
+
+.condition-item.highlight {
+    background: #e2e8f0;
+    padding: 15px;
+    border-radius: 6px;
+    font-weight: bold;
+    color: #1e3c72;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+.label {
+    font-weight: bold;
+    color: #333;
+    min-width: 150px;
+}
+
+.value {
+    color: #666;
+    text-align: right;
+    flex: 1;
+}
+
+.conditions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.signature-area {
+    margin-top: 60px;
+    text-align: center;
+}
+
+.signature-section {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 30px;
+}
+
+.signature-box {
+    border: 2px dashed #ccc;
+    padding: 30px 20px;
+    border-radius: 8px;
+    background: #f8fafc;
+    min-width: 200px;
+    text-align: center;
+}
+
+.signature-box p {
+    margin: 0 0 20px 0;
+    color: #666;
+    font-weight: bold;
+}
+
+.signature-line {
+    height: 2px;
+    background: #ccc;
+    margin-top: 20px;
+}
+
+.signature-area > .signature-box {
+    max-width: 400px;
+    margin: 0 auto;
+}
+</style>
+{% endblock %}

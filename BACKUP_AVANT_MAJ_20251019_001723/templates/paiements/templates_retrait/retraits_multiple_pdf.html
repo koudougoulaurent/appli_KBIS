@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Retraits Consolidés - {{ config.nom_entreprise }}</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: white;
+        }
+        
+        .header { 
+            text-align: center; 
+            margin-bottom: 30px; 
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 20px;
+        }
+        
+        .logo { 
+            max-width: 150px; 
+            height: auto; 
+            margin-bottom: 10px;
+        }
+        
+        .title { 
+            font-size: 24px; 
+            font-weight: bold; 
+            color: #2c3e50; 
+            margin: 20px 0; 
+        }
+        
+        .subtitle { 
+            font-size: 18px; 
+            color: #7f8c8d; 
+            margin-bottom: 30px; 
+        }
+        
+        .info-section { 
+            margin: 20px 0; 
+        }
+        
+        .info-title { 
+            font-size: 16px; 
+            font-weight: bold; 
+            color: #34495e; 
+            margin-bottom: 10px; 
+            border-left: 4px solid #3498db;
+            padding-left: 10px;
+        }
+        
+        .info-content { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 5px; 
+            border: 1px solid #e9ecef;
+        }
+        
+        .table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin: 20px 0; 
+        }
+        
+        .table th, .table td { 
+            border: 1px solid #ddd; 
+            padding: 12px; 
+            text-align: left; 
+        }
+        
+        .table th { 
+            background: #3498db; 
+            color: white; 
+            font-weight: bold; 
+        }
+        
+        .table tr:nth-child(even) { 
+            background: #f2f2f2; 
+        }
+        
+        .total-section { 
+            margin-top: 30px; 
+            padding: 20px; 
+            background: #ecf0f1; 
+            border-radius: 5px; 
+            border: 2px solid #bdc3c7;
+        }
+        
+        .total-line { 
+            display: flex; 
+            justify-content: space-between; 
+            margin: 10px 0; 
+            padding: 5px 0;
+        }
+        
+        .total-final { 
+            font-size: 18px; 
+            font-weight: bold; 
+            color: #27ae60; 
+            border-top: 2px solid #27ae60; 
+            padding-top: 10px; 
+        }
+        
+        .footer { 
+            margin-top: 50px; 
+            text-align: center; 
+            font-size: 12px; 
+            color: #7f8c8d; 
+            border-top: 1px solid #bdc3c7;
+            padding-top: 20px;
+        }
+        
+        .retrait-section {
+            margin: 30px 0;
+            border: 1px solid #bdc3c7;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .retrait-header {
+            background: #3498db;
+            color: white;
+            padding: 15px;
+            font-weight: bold;
+        }
+        
+        .retrait-content {
+            padding: 20px;
+        }
+        
+        .montant {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .montant-positif {
+            color: #27ae60;
+        }
+        
+        .montant-negatif {
+            color: #e74c3c;
+        }
+        
+        .page-break {
+            page-break-before: always;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        {% if config.logo %}
+        <img src="{{ config.logo.url }}" alt="Logo" class="logo">
+        {% endif %}
+        <h1 class="title">{{ config.nom_entreprise }}</h1>
+        <p class="subtitle">RETRAITS CONSOLIDÉS - {{ retraits.0.mois_retrait|date:"F Y"|upper }}</p>
+        <p><strong>Nombre de retraits:</strong> {{ donnees.nombre_retraits }}</p>
+    </div>
+    
+    <div class="info-section">
+        <h3 class="info-title">Résumé Global</h3>
+        <div class="info-content">
+            <p><strong>Période:</strong> {{ retraits.0.mois_retrait|date:"F Y" }}</p>
+            <p><strong>Nombre de bailleurs:</strong> {{ donnees.nombre_retraits }}</p>
+            <p><strong>Date de génération:</strong> {{ date_generation|date:"d/m/Y à H:i" }}</p>
+        </div>
+    </div>
+    
+    {% for retrait_detail in donnees.retraits_details %}
+    <div class="retrait-section">
+        <div class="retrait-header">
+            Retrait - {{ retrait_detail.retrait.bailleur.get_nom_complet }}
+        </div>
+        <div class="retrait-content">
+            <div class="row">
+                <div class="col-md-6">
+                    <h4>Informations du Bailleur</h4>
+                    <p><strong>Nom:</strong> {{ retrait_detail.retrait.bailleur.get_nom_complet }}</p>
+                    <p><strong>Email:</strong> {{ retrait_detail.retrait.bailleur.email|default:"Non renseigné" }}</p>
+                    <p><strong>Téléphone:</strong> {{ retrait_detail.retrait.bailleur.telephone|default:"Non renseigné" }}</p>
+                </div>
+                <div class="col-md-6">
+                    <h4>Détails du Retrait</h4>
+                    <p><strong>Statut:</strong> {{ retrait_detail.retrait.get_statut_display }}</p>
+                    <p><strong>Type:</strong> {{ retrait_detail.retrait.get_type_retrait_display }}</p>
+                    <p><strong>Mode:</strong> {{ retrait_detail.retrait.get_mode_retrait_display }}</p>
+                </div>
+            </div>
+            
+            <h4>Détail des Propriétés</h4>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Propriété</th>
+                        <th>Loyer Brut</th>
+                        <th>Charges Déductibles</th>
+                        <th>Charges Bailleur</th>
+                        <th>Net à Payer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for propriete in retrait_detail.donnees.proprietes %}
+                    <tr>
+                        <td>{{ propriete.propriete.titre }}</td>
+                        <td class="montant montant-positif">{{ propriete.loyer_brut|floatformat:0 }} F CFA</td>
+                        <td class="montant montant-negatif">- {{ propriete.charges_deductibles|floatformat:0 }} F CFA</td>
+                        <td class="montant montant-negatif">- {{ propriete.charges_bailleur|floatformat:0 }} F CFA</td>
+                        <td class="montant montant-positif">{{ propriete.montant_net|floatformat:0 }} F CFA</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <div class="total-section">
+                <div class="total-line">
+                    <span>Total Loyers Bruts:</span>
+                    <span class="montant montant-positif">{{ retrait_detail.donnees.total_loyers_bruts|floatformat:0 }} F CFA</span>
+                </div>
+                <div class="total-line">
+                    <span>Total Charges Déductibles:</span>
+                    <span class="montant montant-negatif">- {{ retrait_detail.donnees.total_charges_deductibles|floatformat:0 }} F CFA</span>
+                </div>
+                <div class="total-line">
+                    <span>Total Charges Bailleur:</span>
+                    <span class="montant montant-negatif">- {{ retrait_detail.donnees.total_charges_bailleur|floatformat:0 }} F CFA</span>
+                </div>
+                <div class="total-line total-final">
+                    <span>MONTANT NET À PAYER:</span>
+                    <span class="montant montant-positif">{{ retrait_detail.donnees.montant_net_total|floatformat:0 }} F CFA</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if not forloop.last %}
+    <div class="page-break"></div>
+    {% endif %}
+    {% endfor %}
+    
+    <div class="total-section">
+        <h3 class="info-title">Récapitulatif Global</h3>
+        <div class="total-line">
+            <span>Total Loyers Bruts (Tous Bailleurs):</span>
+            <span class="montant montant-positif">{{ donnees.total_loyers_bruts|floatformat:0 }} F CFA</span>
+        </div>
+        <div class="total-line">
+            <span>Total Charges Déductibles (Tous Bailleurs):</span>
+            <span class="montant montant-negatif">- {{ donnees.total_charges_deductibles|floatformat:0 }} F CFA</span>
+        </div>
+        <div class="total-line">
+            <span>Total Charges Bailleur (Tous Bailleurs):</span>
+            <span class="montant montant-negatif">- {{ donnees.total_charges_bailleur|floatformat:0 }} F CFA</span>
+        </div>
+        <div class="total-line total-final">
+            <span>TOTAL NET À PAYER (TOUS BAILLEURS):</span>
+            <span class="montant montant-positif">{{ donnees.total_net|floatformat:0 }} F CFA</span>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p><strong>Document généré le {{ date_generation|date:"d/m/Y à H:i" }}</strong></p>
+        <p>{{ config.nom_entreprise }} - {{ config.adresse|default:"" }}</p>
+        {% if config.telephone %}
+        <p>Téléphone: {{ config.telephone }}</p>
+        {% endif %}
+        {% if config.email %}
+        <p>Email: {{ config.email }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>
+

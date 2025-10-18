@@ -1,0 +1,10 @@
+{% load core_extras %}
+
+{% if user.is_privilege_user %}
+    <a href="{% url suppression_url_name obj.pk %}" 
+       class="btn btn-sm btn-outline-danger" 
+       title="Supprimer"
+       onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet élément ?')">
+        <i class="bi bi-trash"></i>
+    </a>
+{% endif %}

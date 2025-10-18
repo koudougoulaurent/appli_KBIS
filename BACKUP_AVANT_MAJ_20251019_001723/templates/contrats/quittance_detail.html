@@ -1,0 +1,570 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Quittance de loyer - {{ quittance.numero_quittance }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Styles pour l'impression A5 */
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+        .quittance-page {
+            page-break-after: always;
+            margin: 0;
+            padding: 10px;
+            width: 148mm;
+            height: 210mm;
+        }
+        body {
+            font-size: 8px;
+            line-height: 1.2;
+        }
+        .quittance-container {
+            box-shadow: none;
+            border: 1px solid #ddd;
+            max-width: none;
+            margin: 0;
+        }
+        .quittance-header {
+            padding: 0.5rem;
+        }
+        .quittance-title {
+            font-size: 1.4rem;
+        }
+        .quittance-section {
+            padding: 0.4rem 0.5rem;
+        }
+        .amount-section {
+            margin: 0.3rem 0.5rem;
+            padding: 0.5rem;
+        }
+        .amount-value {
+            font-size: 1.4rem;
+        }
+        .quittance-footer {
+            padding: 0.5rem;
+        }
+        .rent-details {
+            padding: 0.3rem 0.5rem;
+        }
+    }
+
+    /* Styles pour l'écran */
+    .quittance-page {
+        background: #f8f9fa;
+        min-height: 100vh;
+        padding: 1rem 0;
+    }
+
+    .quittance-container {
+        max-width: 148mm;
+        margin: 0 auto;
+        background: white;
+        border: 1px solid #ddd;
+        overflow: hidden;
+        min-height: 210mm;
+    }
+
+    /* En-tête de l'entreprise */
+    .entreprise-header {
+        background: #2c3e50;
+        color: white;
+        padding: 0.8rem;
+        text-align: center;
+        border-bottom: 2px solid #3498db;
+    }
+
+    .entreprise-logo {
+        margin-bottom: 0.4rem;
+    }
+
+    .entreprise-logo img {
+        max-height: 35px;
+        max-width: 100px;
+        object-fit: contain;
+    }
+
+    .entreprise-nom {
+        font-size: 1rem;
+        font-weight: 700;
+        margin-bottom: 0.2rem;
+    }
+
+    .entreprise-details {
+        font-size: 0.7rem;
+        opacity: 0.9;
+        line-height: 1.2;
+    }
+
+    /* En-tête de la quittance */
+    .quittance-header {
+        background: white;
+        padding: 0.8rem;
+        text-align: center;
+        border-bottom: 1px solid #ecf0f1;
+    }
+
+    .quittance-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin: 0 0 0.4rem 0;
+        color: #2c3e50;
+        text-transform: uppercase;
+    }
+
+    .quittance-number {
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 0.2rem;
+        color: #3498db;
+    }
+
+    .quittance-date {
+        color: #7f8c8d;
+        font-size: 0.8rem;
+        margin: 0;
+    }
+
+    /* Sections de la quittance */
+    .quittance-section {
+        padding: 0.5rem 0.8rem;
+        border-bottom: 1px solid #ecf0f1;
+    }
+
+    .quittance-section:last-child {
+        border-bottom: none;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.4rem;
+        color: #2c3e50;
+    }
+
+    .section-header i {
+        font-size: 0.9rem;
+        margin-right: 0.4rem;
+        color: #3498db;
+    }
+
+    .section-header h5 {
+        margin: 0;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 0.4rem;
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .info-label {
+        font-size: 0.6rem;
+        color: #7f8c8d;
+        font-weight: 500;
+        margin-bottom: 0.1rem;
+        text-transform: uppercase;
+    }
+
+    .info-value {
+        font-size: 0.7rem;
+        color: #2c3e50;
+        font-weight: 600;
+        padding: 0.2rem;
+        background: #f8f9fa;
+        border-radius: 2px;
+        border-left: 2px solid #3498db;
+    }
+
+    /* Section des montants */
+    .amount-section {
+        background: #27ae60;
+        color: white;
+        padding: 0.8rem;
+        text-align: center;
+        margin: 0.4rem 0.8rem;
+        border-radius: 4px;
+    }
+
+    .amount-value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin-bottom: 0.2rem;
+    }
+
+    .amount-label {
+        font-size: 0.7rem;
+        opacity: 0.9;
+        text-transform: uppercase;
+    }
+
+    /* Détails du loyer */
+    .rent-details {
+        background: #f8f9fa;
+        padding: 0.5rem 0.8rem;
+        border-bottom: 1px solid #ecf0f1;
+    }
+
+    .rent-details h5 {
+        font-size: 0.8rem;
+        margin: 0 0 0.3rem 0;
+        color: #2c3e50;
+        text-transform: uppercase;
+    }
+
+    .rent-info {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.3rem;
+        font-size: 0.7rem;
+    }
+
+    .rent-info-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.2rem 0;
+    }
+
+    .rent-info-label {
+        color: #7f8c8d;
+        font-weight: 500;
+    }
+
+    .rent-info-value {
+        color: #2c3e50;
+        font-weight: 600;
+    }
+
+    /* Pied de page avec signatures et entreprise */
+    .quittance-footer {
+        background: #f8f9fa;
+        padding: 0.8rem;
+        border-top: 1px solid #ecf0f1;
+        margin-top: auto;
+    }
+
+    .signature-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.8rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .signature-box {
+        text-align: center;
+        padding: 0.4rem;
+        background: white;
+        border-radius: 4px;
+        border: 1px solid #e9ecef;
+    }
+
+    .signature-line {
+        width: 100%;
+        height: 1px;
+        background: #bdc3c7;
+        margin: 0.4rem 0;
+        border-radius: 1px;
+    }
+
+    .signature-label {
+        margin: 0;
+        color: #7f8c8d;
+        font-size: 0.6rem;
+        font-weight: 500;
+    }
+
+    .entreprise-footer {
+        background: #2c3e50;
+        color: white;
+        padding: 0.6rem;
+        text-align: center;
+        border-radius: 4px;
+    }
+
+    .entreprise-footer-info {
+        font-size: 0.6rem;
+        line-height: 1.2;
+    }
+
+    /* Boutons d'action */
+    .action-buttons {
+        display: flex;
+        gap: 0.8rem;
+        justify-content: center;
+        padding: 0.8rem;
+        background: #f8f9fa;
+        border-top: 1px solid #ecf0f1;
+    }
+
+    .btn-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.4rem 0.8rem;
+        border: none;
+        border-radius: 4px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        font-size: 0.8rem;
+    }
+
+    .btn-print {
+        background: #3498db;
+        color: white;
+    }
+
+    .btn-print:hover {
+        background: #2980b9;
+    }
+
+    .btn-download {
+        background: #27ae60;
+        color: white;
+    }
+
+    .btn-download:hover {
+        background: #229954;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .quittance-container {
+            margin: 1rem;
+            border-radius: 0;
+        }
+        
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .signature-section {
+            grid-template-columns: 1fr;
+            gap: 0.4rem;
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+            align-items: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="quittance-page">
+    <div class="container-fluid">
+        <!-- En-tête avec navigation -->
+        <div class="row mb-4 no-print">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'contrats:liste' %}">
+                                <i class="bi bi-file-earmark-text me-2"></i>Contrats
+                            </a>
+                        </li>
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'contrats:detail' quittance.contrat.pk %}">
+                                {{ quittance.contrat.reference_contrat }}
+                            </a>
+                        </li>
+                        <li class="breadcrumb-item active" aria-current="page">Quittance</li>
+                    </ol>
+                </nav>
+
+                <!-- Statut de la quittance -->
+                <div class="d-flex align-items-center mb-3">
+                    <span class="badge bg-success me-3">
+                        Quittance de loyer
+                    </span>
+                    <small class="text-muted">
+                        Émise le {{ quittance.date_emission|date:"d/m/Y" }}
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenu de la quittance -->
+        <div class="quittance-container">
+            <!-- En-tête de l'entreprise -->
+            <div class="entreprise-header">
+                {% if config_entreprise.logo_url %}
+                <div class="entreprise-logo">
+                    <img src="{{ config_entreprise.logo_url }}" alt="Logo" onerror="this.style.display='none'">
+                </div>
+                {% endif %}
+                <div class="entreprise-nom">{{ config_entreprise.nom_entreprise }}</div>
+                <div class="entreprise-details">
+                    {{ config_entreprise.get_adresse_complete }}<br>
+                    {{ config_entreprise.get_contact_complet }}
+                </div>
+            </div>
+
+            <!-- En-tête de la quittance -->
+            <div class="quittance-header">
+                <h1 class="quittance-title">Quittance de Loyer</h1>
+                <div class="quittance-number">N° {{ quittance.numero_quittance }}</div>
+                <p class="quittance-date">Émise le {{ quittance.date_emission|date:"d/m/Y" }}</p>
+            </div>
+
+            <!-- Informations du locataire -->
+            <div class="quittance-section">
+                <div class="section-header">
+                    <i class="bi bi-person"></i>
+                    <h5>Locataire</h5>
+                </div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Nom</span>
+                        <span class="info-value">{{ quittance.contrat.locataire.get_nom_complet }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Code</span>
+                        <span class="info-value">{{ quittance.contrat.locataire.code_locataire }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations de la propriété -->
+            <div class="quittance-section">
+                <div class="section-header">
+                    <i class="bi bi-house"></i>
+                    <h5>Propriété</h5>
+                </div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Adresse</span>
+                        <span class="info-value">{{ quittance.contrat.propriete.adresse }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Ville</span>
+                        <span class="info-value">{{ quittance.contrat.propriete.ville }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Période concernée -->
+            <div class="quittance-section">
+                <div class="section-header">
+                    <i class="bi bi-calendar"></i>
+                    <h5>Période concernée</h5>
+                </div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Mois</span>
+                        <span class="info-value">{{ quittance.mois|date:"F Y" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Année</span>
+                        <span class="info-value">{{ quittance.mois|date:"Y" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Détails du loyer -->
+            <div class="rent-details">
+                <h5>Détails du loyer</h5>
+                <div class="rent-info">
+                    <div class="rent-info-item">
+                        <span class="rent-info-label">Loyer:</span>
+                        <span class="rent-info-value">{{ quittance.montant_loyer|floatformat:0|intcomma }} F CFA</span>
+                    </div>
+                    <div class="rent-info-item">
+                        <span class="rent-info-label">Charges:</span>
+                        <span class="rent-info-value">{{ quittance.montant_charges|floatformat:0|intcomma }} F CFA</span>
+                    </div>
+                    <div class="rent-info-item">
+                        <span class="rent-info-label">Total:</span>
+                        <span class="rent-info-value">{{ quittance.get_montant_total|floatformat:0|intcomma }} F CFA</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Montant principal -->
+            <div class="amount-section">
+                <div class="amount-value">{{ quittance.get_montant_total|floatformat:0|intcomma }} F CFA</div>
+                <div class="amount-label">Montant total du loyer</div>
+            </div>
+
+            <!-- Pied de page avec signatures et entreprise -->
+            <div class="quittance-footer">
+                <div class="signature-section">
+                    <div class="signature-box">
+                        <div class="signature-line"></div>
+                        <p class="signature-label">Signature du Gérant</p>
+                    </div>
+                    <div class="signature-box">
+                        <div class="signature-line"></div>
+                        <p class="signature-label">Signature du locataire</p>
+                    </div>
+                </div>
+
+                <div class="entreprise-footer">
+                    <div class="entreprise-footer-info">
+                        <strong>{{ config_entreprise.nom_entreprise }}</strong><br>
+                        {{ config_entreprise.get_adresse_complete }}<br>
+                        {{ config_entreprise.get_contact_complet }}<br>
+                        {{ config_entreprise.get_informations_legales }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Boutons d'action -->
+        <div class="action-buttons no-print">
+            <button type="button" class="btn-action btn-print" onclick="window.print()">
+                <i class="bi bi-printer"></i>
+                Imprimer la quittance
+            </button>
+            <a href="#" class="btn-action btn-download">
+                <i class="bi bi-download"></i>
+                Télécharger en PDF
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Script pour améliorer l'expérience utilisateur
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animation d'apparition des sections
+        const sections = document.querySelectorAll('.quittance-section');
+        sections.forEach((section, index) => {
+            section.style.opacity = '0';
+            section.style.transform = 'translateY(20px)';
+            section.style.transition = 'all 0.5s ease';
+            
+            setTimeout(() => {
+                section.style.opacity = '1';
+                section.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+
+        // Animation de l'en-tête
+        const header = document.querySelector('.quittance-header');
+        header.style.opacity = '0';
+        header.style.transform = 'scale(0.9)';
+        header.style.transition = 'all 0.8s ease';
+        
+        setTimeout(() => {
+            header.style.opacity = '1';
+            header.style.transform = 'scale(1)';
+        }, 200);
+    });
+</script>
+{% endblock %}

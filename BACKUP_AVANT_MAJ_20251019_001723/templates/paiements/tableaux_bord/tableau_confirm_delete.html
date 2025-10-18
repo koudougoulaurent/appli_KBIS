@@ -1,0 +1,208 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Confirmer la suppression - {{ config.nom_entreprise|default:"Gestion Immobilière" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .delete-card {
+        background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+    .delete-header {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+        border-radius: 20px 20px 0 0;
+        border: none;
+    }
+    .warning-icon {
+        font-size: 4rem;
+        color: #dc3545;
+    }
+    .btn-danger-custom {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        border: none;
+        border-radius: 25px;
+        padding: 12px 30px;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+    }
+    .btn-danger-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+    }
+    .info-item {
+        background: rgba(255, 255, 255, 0.8);
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        border-left: 4px solid #007bff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-6">
+            <!-- En-tête -->
+            <div class="text-center mb-4">
+                <h1 class="h2 mb-0">
+                    <i class="bi bi-exclamation-triangle text-danger me-2"></i>
+                    Confirmer la suppression
+                </h1>
+                <p class="text-muted">
+                    Vous êtes sur le point de supprimer un tableau de bord financier
+                </p>
+            </div>
+
+            <!-- Carte de confirmation -->
+            <div class="card delete-card">
+                <div class="card-header delete-header">
+                    <h5 class="mb-0 text-center">
+                        <i class="bi bi-trash me-2"></i>
+                        Suppression du tableau de bord
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Icône d'avertissement -->
+                    <div class="text-center mb-4">
+                        <i class="bi bi-exclamation-triangle warning-icon"></i>
+                    </div>
+
+                    <!-- Message d'avertissement -->
+                    <div class="alert alert-danger border-0 text-center mb-4">
+                        <h5 class="mb-2">Attention !</h5>
+                        <p class="mb-0">
+                            Cette action est <strong>irréversible</strong>. 
+                            Toutes les données et configurations de ce tableau de bord seront définitivement supprimées.
+                        </p>
+                    </div>
+
+                    <!-- Informations sur le tableau à supprimer -->
+                    <div class="info-item">
+                        <h6 class="mb-2">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Tableau à supprimer
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <strong>Nom :</strong> {{ tableau.nom }}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Période :</strong> {{ tableau.get_periode_display }}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Propriétés :</strong> {{ tableau.get_nombre_proprietes }}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Bailleurs :</strong> {{ tableau.get_nombre_bailleurs }}
+                            </div>
+                            <div class="col-12">
+                                <strong>Description :</strong> 
+                                {{ tableau.description|default:"Aucune description" }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Conséquences de la suppression -->
+                    <div class="info-item">
+                        <h6 class="mb-2">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Conséquences de la suppression
+                        </h6>
+                        <ul class="mb-0">
+                            <li>Toutes les configurations seront perdues</li>
+                            <li>Les statistiques calculées ne seront plus accessibles</li>
+                            <li>Les seuils d'alerte configurés seront supprimés</li>
+                            <li>Cette action ne peut pas être annulée</li>
+                        </ul>
+                    </div>
+
+                    <!-- Alternatives suggérées -->
+                    <div class="info-item">
+                        <h6 class="mb-2">
+                            <i class="bi bi-lightbulb me-2"></i>
+                            Alternatives suggérées
+                        </h6>
+                        <ul class="mb-0">
+                            <li><strong>Désactiver</strong> le tableau au lieu de le supprimer</li>
+                            <li><strong>Modifier</strong> la configuration si nécessaire</li>
+                            <li><strong>Archiver</strong> les données importantes avant suppression</li>
+                        </ul>
+                    </div>
+
+                    <!-- Formulaire de confirmation -->
+                    <form method="post" class="mt-4">
+                        {% csrf_token %}
+                        
+                        <!-- Champ de confirmation -->
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="confirmDelete" required>
+                                <label class="form-check-label" for="confirmDelete">
+                                    <strong>Je confirme que je comprends les conséquences de cette action</strong>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Boutons d'action -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{% url 'paiements:tableau_bord_detail' tableau.pk %}" class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-arrow-left me-2"></i>
+                                Annuler
+                            </a>
+                            
+                            <button type="submit" class="btn btn-danger-custom btn-lg text-white" 
+                                    id="deleteBtn" disabled>
+                                <i class="bi bi-trash me-2"></i>
+                                Supprimer définitivement
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Lien de retour -->
+            <div class="text-center mt-4">
+                <a href="{% url 'paiements:tableau_bord_list' %}" class="text-muted">
+                    <i class="bi bi-arrow-left me-1"></i>
+                    Retour à la liste des tableaux de bord
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmCheckbox = document.getElementById('confirmDelete');
+    const deleteBtn = document.getElementById('deleteBtn');
+
+    // Activer/désactiver le bouton de suppression selon la confirmation
+    confirmCheckbox.addEventListener('change', function() {
+        deleteBtn.disabled = !this.checked;
+    });
+
+    // Confirmation supplémentaire avant soumission
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        if (!confirmCheckbox.checked) {
+            e.preventDefault();
+            alert('Veuillez confirmer que vous comprenez les conséquences de cette action.');
+            return false;
+        }
+
+        // Dernière confirmation
+        if (!confirm('Êtes-vous ABSOLUMENT sûr de vouloir supprimer ce tableau de bord ? Cette action est irréversible.')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

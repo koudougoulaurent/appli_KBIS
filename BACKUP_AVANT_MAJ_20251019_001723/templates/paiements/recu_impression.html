@@ -1,0 +1,441 @@
+{% load core_extras %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reçu {{ recu.numero_recu }} - GESTIMMOB</title>
+    <style>
+        @page {
+            size: A5;
+            margin: 8mm;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 9px;
+            line-height: 1.2;
+            color: #333;
+            margin: 0;
+            padding: 8mm;
+        }
+        
+        .receipt-container {
+            max-width: 100%;
+            margin: 0 auto;
+            border: 1px solid #333;
+            padding: 6mm;
+            position: relative;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 1px solid #333;
+            padding-bottom: 4mm;
+            margin-bottom: 6mm;
+        }
+        
+        .company-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 2mm;
+        }
+        
+        .company-slogan {
+            font-size: 9px;
+            color: #666;
+            margin-bottom: 2mm;
+        }
+        
+        .company-info {
+            font-size: 7px;
+            color: #666;
+            margin-bottom: 2mm;
+        }
+        
+        .receipt-title {
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 4mm 0;
+            text-align: center;
+            border: 1px solid #333;
+            padding: 3mm;
+            background-color: #f8f9fa;
+        }
+        
+        .receipt-number {
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 6mm;
+        }
+        
+        .amount-section {
+            text-align: center;
+            margin: 6mm 0;
+            padding: 4mm;
+            border: 2px solid #28a745;
+            background-color: #f8fff9;
+        }
+        
+        .amount {
+            font-size: 18px;
+            font-weight: bold;
+            color: #28a745;
+            margin-bottom: 2mm;
+        }
+        
+        .amount-words {
+            font-size: 8px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4mm;
+            margin: 6mm 0;
+        }
+        
+        .info-section {
+            border: 1px solid #ddd;
+            padding: 3mm;
+            border-radius: 3px;
+        }
+        
+        .info-section h3 {
+            font-size: 8px;
+            font-weight: bold;
+            margin: 0 0 3mm 0;
+            padding-bottom: 1mm;
+            border-bottom: 1px solid #ddd;
+            color: #2c3e50;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2mm;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #555;
+            font-size: 7px;
+        }
+        
+        .info-value {
+            text-align: right;
+            font-size: 7px;
+        }
+        
+        .payment-details {
+            grid-column: 1 / -1;
+            border: 2px solid #007bff;
+            background-color: #f8fbff;
+        }
+        
+        .signature-section {
+            margin-top: 6mm;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8mm;
+        }
+        
+        .signature-box {
+            border-top: 1px solid #333;
+            padding-top: 2mm;
+            text-align: center;
+        }
+        
+        .signature-line {
+            border-top: 1px solid #333;
+            margin-top: 8mm;
+            width: 3cm;
+            display: inline-block;
+        }
+        
+        .footer {
+            margin-top: 6mm;
+            text-align: center;
+            font-size: 6px;
+            color: #666;
+            border-top: 1px solid #ddd;
+            padding-top: 3mm;
+        }
+        
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 30px;
+            color: rgba(0,0,0,0.1);
+            z-index: -1;
+            pointer-events: none;
+        }
+        
+        .print-info {
+            position: absolute;
+            top: 2mm;
+            right: 2mm;
+            font-size: 6px;
+            color: #999;
+        }
+        
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            
+            .receipt-container {
+                border: none;
+                padding: 0;
+            }
+            
+            .print-info {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt-container">
+        <!-- Filigrane -->
+        <div class="watermark">{{ config_entreprise.nom_entreprise }}</div>
+        
+        <!-- Informations d'impression -->
+        <div class="print-info">
+            Imprimé le {{ recu.date_impression|date:"d/m/Y H:i"|default:"Non imprimé" }}
+        </div>
+        
+        <!-- En-tête -->
+        <div class="header">
+            <div class="company-name">{{ config_entreprise.nom_entreprise }}</div>
+            {% if config_entreprise.slogan %}
+            <div class="company-slogan">{{ config_entreprise.slogan }}</div>
+            {% endif %}
+            <div class="company-info">
+                {% if config_entreprise.logo_url %}
+                <img src="{{ config_entreprise.logo_url }}" alt="Logo {{ config_entreprise.nom_entreprise }}" style="max-height: 60px; margin-bottom: 10px;">
+                {% endif %}
+                {{ config_entreprise.get_adresse_complete }}<br>
+                {{ config_entreprise.get_contact_complet }}<br>
+                {{ config_entreprise.get_informations_legales }}
+            </div>
+        </div>
+        
+        <!-- Titre du reçu -->
+        <div class="receipt-title">Reçu de Paiement</div>
+        
+        <!-- Numéro du reçu -->
+        <div class="receipt-number">
+            N° {{ recu.numero_recu }}
+        </div>
+        
+        <!-- Section montant -->
+        <div class="amount-section">
+            {% if informations.a_charges_deduites %}
+                <div style="margin-bottom: 15px;">
+                    <div style="font-size: 18px; color: #666;">Montant du loyer: {{ informations.montant|currency_format }}</div>
+                    <div style="font-size: 16px; color: #dc3545;">Charges déduites: -{{ informations.montant_charges_deduites|currency_format }}</div>
+                </div>
+                <div class="amount">{{ informations.montant_net_paye|currency_format }}</div>
+                <div class="amount-words">{{ informations.montant_net_lettres }}</div>
+                <div style="font-size: 12px; color: #666; margin-top: 10px;">
+                    <strong>Montant net payé après déduction des charges</strong>
+                </div>
+            {% else %}
+                <div class="amount">{{ informations.montant|currency_format }}</div>
+                <div class="amount-words">{{ informations.montant_lettres }}</div>
+            {% endif %}
+        </div>
+        
+        <!-- Grille d'informations -->
+        <div class="info-grid">
+            <!-- Informations du paiement -->
+            <div class="info-section">
+                <h3>Informations du Paiement</h3>
+                <div class="info-row">
+                    <span class="info-label">Type:</span>
+                    <span class="info-value">{{ informations.type_paiement }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Mode:</span>
+                    <span class="info-value">{{ informations.mode_paiement }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date:</span>
+                    <span class="info-value">{{ informations.date_paiement|date:"d/m/Y" }}</span>
+                </div>
+                {% if informations.numero_cheque %}
+                <div class="info-row">
+                    <span class="info-label">N° Chèque:</span>
+                    <span class="info-value">{{ informations.numero_cheque }}</span>
+                </div>
+                {% endif %}
+                {% if informations.reference_virement %}
+                <div class="info-row">
+                    <span class="info-label">Réf. Virement:</span>
+                    <span class="info-value">{{ informations.reference_virement }}</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Informations du locataire -->
+            <div class="info-section">
+                <h3>Informations du Locataire</h3>
+                <div class="info-row">
+                    <span class="info-label">Nom:</span>
+                    <span class="info-value">{{ informations.locataire.nom }} {{ informations.locataire.prenom }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Email:</span>
+                    <span class="info-value">{{ informations.locataire.email|default:"-" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Téléphone:</span>
+                    <span class="info-value">{{ informations.locataire.telephone|default:"-" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Adresse:</span>
+                    <span class="info-value">{{ informations.locataire.adresse_actuelle|default:"-" }}</span>
+                </div>
+            </div>
+            
+            <!-- Informations de la propriété -->
+            <div class="info-section">
+                <h3>Informations de la Propriété</h3>
+                <div class="info-row">
+                    <span class="info-label">Titre:</span>
+                    <span class="info-value">{{ informations.propriete.titre }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Adresse:</span>
+                    <span class="info-value">{{ informations.propriete.adresse }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Ville:</span>
+                    <span class="info-value">{{ informations.propriete.code_postal }} {{ informations.propriete.ville }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Type:</span>
+                    <span class="info-value">{{ informations.propriete.type_bien.nom }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Surface:</span>
+                    <span class="info-value">{{ informations.propriete.surface }} m²</span>
+                </div>
+            </div>
+            
+            <!-- Informations du bailleur -->
+            <div class="info-section">
+                <h3>Informations du Bailleur</h3>
+                <div class="info-row">
+                    <span class="info-label">Nom:</span>
+                    <span class="info-value">{{ informations.bailleur.nom }} {{ informations.bailleur.prenom }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Email:</span>
+                    <span class="info-value">{{ informations.bailleur.email|default:"-" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Téléphone:</span>
+                    <span class="info-value">{{ informations.bailleur.telephone|default:"-" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Adresse:</span>
+                    <span class="info-value">{{ informations.bailleur.adresse|default:"-" }}</span>
+                </div>
+            </div>
+            
+            <!-- Détails du contrat -->
+            <div class="info-section payment-details">
+                <h3>Détails du Contrat</h3>
+                <div class="info-row">
+                    <span class="info-label">N° Contrat:</span>
+                    <span class="info-value">{{ informations.contrat.numero_contrat }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Période:</span>
+                    <span class="info-value">{{ informations.contrat.date_debut|date:"d/m/Y" }} au {{ informations.contrat.date_fin|date:"d/m/Y" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Loyer mensuel:</span>
+                    <span class="info-value">{{ informations.contrat.loyer_mensuel|floatformat:2 }} F CFA</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Charges mensuelles:</span>
+                    <span class="info-value">{{ informations.contrat.charges_mensuelles|floatformat:2 }} F CFA</span>
+                </div>
+            </div>
+            
+            {% if informations.a_charges_deduites %}
+            <!-- Charges déductibles -->
+            <div class="info-section" style="grid-column: 1 / -1; border: 2px solid #dc3545; background-color: #fff5f5;">
+                <h3 style="color: #dc3545;">Charges Déductibles</h3>
+                <div style="margin-bottom: 15px; font-size: 13px; color: #666;">
+                    Les charges ci-dessous ont été avancées par le locataire et sont déduites du montant du loyer.
+                </div>
+                {% for charge in informations.charges_deduites %}
+                <div class="info-row" style="border-bottom: 1px dotted #ddd; padding-bottom: 8px; margin-bottom: 8px;">
+                    <div>
+                        <div class="info-label">{{ charge.libelle }}</div>
+                        <div style="font-size: 11px; color: #666;">{{ charge.type }} - {{ charge.date|date:"d/m/Y" }}</div>
+                    </div>
+                    <span class="info-value" style="color: #dc3545; font-weight: bold;">-{{ charge.montant|floatformat:2 }} F CFA</span>
+                </div>
+                {% endfor %}
+                <div class="info-row" style="border-top: 2px solid #dc3545; padding-top: 10px; margin-top: 15px; font-weight: bold;">
+                    <span class="info-label" style="color: #dc3545;">Total des charges déduites:</span>
+                    <span class="info-value" style="color: #dc3545; font-size: 16px;">-{{ informations.montant_charges_deduites|floatformat:2 }} F CFA</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Section signatures -->
+        <div class="signature-section">
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <div>Signature du locataire</div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <div>Signature de l'agent</div>
+            </div>
+        </div>
+        
+        <!-- Pied de page -->
+        <div class="footer">
+            <p>
+                <strong>{{ config_entreprise.nom_entreprise }}</strong>{% if config_entreprise.slogan %} - {{ config_entreprise.slogan }}{% endif %}<br>
+                {{ config_entreprise.get_adresse_complete }} | {{ config_entreprise.get_contact_complet }}<br>
+                {{ config_entreprise.get_informations_legales }}<br>
+                Ce reçu est généré automatiquement par le système {{ config_entreprise.nom_entreprise }}
+            </p>
+            <p>
+                Reçu émis le {{ recu.date_emission|date:"d/m/Y à H:i" }}
+                {% if recu.imprime %}
+                    | Imprimé le {{ recu.date_impression|date:"d/m/Y à H:i" }}
+                {% endif %}
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        // Impression automatique
+        window.onload = function() {
+            // Attendre un peu avant d'imprimer
+            setTimeout(function() {
+                window.print();
+            }, 1000);
+        };
+    </script>
+</body>
+</html> 

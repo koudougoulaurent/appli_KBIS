@@ -1,0 +1,422 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Dashboard - Paiements Partiels{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components.css' %}">
+<style>
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .stat-card.success {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    }
+    
+    .stat-card.warning {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    
+    .stat-card.info {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        font-size: 1rem;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .progress-ring {
+        width: 120px;
+        height: 120px;
+        transform: rotate(-90deg);
+    }
+    
+    .progress-ring-circle {
+        stroke: #e6e6e6;
+        stroke-width: 8;
+        fill: transparent;
+        r: 52;
+        cx: 60;
+        cy: 60;
+    }
+    
+    .progress-ring-progress {
+        stroke: #4facfe;
+        stroke-width: 8;
+        fill: transparent;
+        r: 52;
+        cx: 60;
+        cy: 60;
+        stroke-dasharray: 326.73;
+        stroke-dashoffset: 326.73;
+        transition: stroke-dashoffset 0.5s ease;
+    }
+    
+    .alert-item {
+        border-left: 4px solid #f5576c;
+        background: #fff5f5;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 0 8px 8px 0;
+    }
+    
+    .alert-item.critique {
+        border-left-color: #e53e3e;
+        background: #fed7d7;
+    }
+    
+    .alert-item.eleve {
+        border-left-color: #f56565;
+        background: #fef5e7;
+    }
+    
+    .alert-item.moyen {
+        border-left-color: #f6ad55;
+        background: #fef5e7;
+    }
+    
+    .alert-item.faible {
+        border-left-color: #68d391;
+        background: #f0fff4;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0 text-gray-800">
+                        <i class="fas fa-credit-card text-primary me-2"></i>
+                        Dashboard Paiements Partiels
+                    </h1>
+                    <p class="text-muted">Gestion professionnelle des paiements échelonnés</p>
+                </div>
+                <div>
+                    <a href="{% url 'paiements:creer_plan_partiel' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Nouveau Plan
+                    </a>
+                    <a href="{% url 'paiements:liste_plans_partiels' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-list me-2"></i>Liste des Plans
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques principales -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="stat-value">{{ stats.total_plans|default:0 }}</div>
+                        <div class="stat-label">Plans Actifs</div>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-list-alt fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card success">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="stat-value">{{ stats.plans_termines|default:0 }}</div>
+                        <div class="stat-label">Plans Terminés</div>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card warning">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="stat-value">{{ stats.echelons_en_retard|default:0 }}</div>
+                        <div class="stat-label">Échelons en Retard</div>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stat-card info">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="stat-value">{{ stats.alertes_actives|default:0 }}</div>
+                        <div class="stat-label">Alertes Actives</div>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-bell fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Montants financiers -->
+    <div class="row mb-4">
+        <div class="col-xl-6 col-lg-12 mb-4">
+            <div class="card card-modern">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-pie text-primary me-2"></i>
+                        Répartition Financière
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h4 text-primary">{{ stats.montant_total_plans|floatformat:0|intcomma }} FCFA</div>
+                                <small class="text-muted">Montant Total des Plans</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h4 text-success">{{ stats.montant_paye_total|floatformat:0|intcomma }} FCFA</div>
+                                <small class="text-muted">Montant Payé</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Barre de progression -->
+                    <div class="mt-3">
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-gradient-primary" role="progressbar" 
+                                 style="width: {% if stats.montant_total_plans > 0 %}{% widthratio stats.montant_paye_total stats.montant_total_plans 100 %}{% else %}0{% endif %}%">
+                            </div>
+                        </div>
+                        <small class="text-muted">
+                            Progression: 
+                            {% if stats.montant_total_plans > 0 %}
+                                {% widthratio stats.montant_paye_total stats.montant_total_plans 100 %}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-6 col-lg-12 mb-4">
+            <div class="card card-modern">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-clock text-warning me-2"></i>
+                        Échelons en Retard
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if echelons_retard %}
+                        <div class="list-group list-group-flush">
+                            {% for echelon in echelons_retard %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <h6 class="mb-1">{{ echelon.plan.contrat.locataire.nom }} {{ echelon.plan.contrat.locataire.prenom }}</h6>
+                                    <small class="text-muted">Échelon {{ echelon.numero_echelon }} - {{ echelon.montant|floatformat:0|intcomma }} FCFA</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge badge-error">{{ echelon.date_echeance|timesince }} en retard</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-check-circle fa-3x mb-3"></i>
+                            <p>Aucun échelon en retard</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Plans récents et alertes -->
+    <div class="row">
+        <div class="col-xl-8 col-lg-12 mb-4">
+            <div class="card card-modern">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-list text-primary me-2"></i>
+                        Plans Récents
+                    </h5>
+                    <a href="{% url 'paiements:liste_plans_partiels' %}" class="btn btn-sm btn-outline-primary">
+                        Voir tous
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if plans_recents %}
+                        <div class="table-responsive">
+                            <table class="table table-modern">
+                                <thead>
+                                    <tr>
+                                        <th>Plan</th>
+                                        <th>Locataire</th>
+                                        <th>Montant</th>
+                                        <th>Progression</th>
+                                        <th>Statut</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for plan in plans_recents %}
+                                    <tr>
+                                        <td>
+                                            <div>
+                                                <strong>{{ plan.nom_plan }}</strong>
+                                                <br>
+                                                <small class="text-muted">{{ plan.numero_plan }}</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {{ plan.contrat.locataire.nom }} {{ plan.contrat.locataire.prenom }}
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <strong>{{ plan.montant_total|floatformat:0|intcomma }} FCFA</strong>
+                                                <br>
+                                                <small class="text-muted">Restant: {{ plan.montant_restant|floatformat:0|intcomma }} FCFA</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="progress" style="height: 6px; width: 80px;">
+                                                <div class="progress-bar bg-gradient-primary" role="progressbar" 
+                                                     style="width: {{ plan.calculer_progression|floatformat:0 }}%">
+                                                </div>
+                                            </div>
+                                            <small class="text-muted">{{ plan.calculer_progression|floatformat:1 }}%</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-{{ plan.statut|default:'info' }}">
+                                                {{ plan.get_statut_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'paiements:detail_plan_partiel' plan.id %}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-3x mb-3"></i>
+                            <p>Aucun plan de paiement partiel</p>
+                            <a href="{% url 'paiements:creer_plan_partiel' %}" class="btn btn-primary">
+                                Créer le premier plan
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-4 col-lg-12 mb-4">
+            <div class="card card-modern">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-bell text-warning me-2"></i>
+                        Alertes Actives
+                    </h5>
+                    <a href="#" class="btn btn-sm btn-outline-warning" onclick="alert('Fonctionnalité en cours de développement')">
+                        Voir toutes
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if alertes_actives %}
+                        {% for alerte in alertes_actives %}
+                        <div class="alert-item {{ alerte.niveau_urgence }}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ alerte.get_type_alerte_display }}</h6>
+                                    <p class="mb-1 small">{{ alerte.message|truncatechars:100 }}</p>
+                                    <small class="text-muted">
+                                        {{ alerte.date_creation|timesince }} - 
+                                        {{ alerte.plan.contrat.locataire.nom }}
+                                    </small>
+                                </div>
+                                <span class="badge badge-{{ alerte.niveau_urgence }}">
+                                    {{ alerte.get_niveau_urgence_display }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-check-circle fa-3x mb-3"></i>
+                            <p>Aucune alerte active</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/components.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation des cartes de statistiques
+    const statCards = document.querySelectorAll('.stat-card');
+    statCards.forEach((card, index) => {
+        setTimeout(() => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'all 0.5s ease';
+            
+            setTimeout(() => {
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, 100);
+        }, index * 100);
+    });
+    
+    // Mise à jour automatique des statistiques
+    setInterval(function() {
+        // Ici on pourrait ajouter une requête AJAX pour mettre à jour les stats
+    }, 30000); // Toutes les 30 secondes
+});
+</script>
+{% endblock %}

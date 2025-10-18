@@ -1,0 +1,377 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Historique SMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'notifications:notification_list' %}">
+                                <i class="fas fa-bell me-1"></i>
+                                Notifications
+                            </a>
+                        </li>
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'notifications:sms_configuration' %}">
+                                Configuration SMS
+                            </a>
+                        </li>
+                        <li class="breadcrumb-item active" aria-current="page">Historique SMS</li>
+                    </ol>
+                </nav>
+                <div>
+                    <a href="{% url 'notifications:sms_configuration' %}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-cog me-1"></i>
+                        Configuration
+                    </a>
+                    <a href="{% url 'notifications:notification_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        Retour
+                    </a>
+                </div>
+            </div>
+
+            <!-- Statistiques -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card border-primary">
+                        <div class="card-body text-primary">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0 text-dark">{{ total_sms }}</h4>
+                                    <small class="text-muted">Total SMS</small>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-sms fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-success">
+                        <div class="card-body text-success">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0 text-dark">{{ successful_sms }}</h4>
+                                    <small class="text-muted">Envoyés avec succès</small>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-check-circle fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-danger">
+                        <div class="card-body text-danger">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0 text-dark">{{ failed_sms }}</h4>
+                                    <small class="text-muted">Échecs</small>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-times-circle fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtres -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-filter me-2"></i>
+                        Filtres
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="status" class="form-label">Statut</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="">Tous les statuts</option>
+                                {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if status == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="type" class="form-label">Type de notification</label>
+                            <select class="form-select" id="type" name="type">
+                                <option value="">Tous les types</option>
+                                {% for value, label in notification_types %}
+                                <option value="{{ value }}" {% if notification_type == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search me-1"></i>
+                                Filtrer
+                            </button>
+                            <a href="{% url 'notifications:sms_history' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>
+                                Réinitialiser
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Liste des SMS -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        Historique des SMS
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if page_obj %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Numéro</th>
+                                    <th>Message</th>
+                                    <th>Statut</th>
+                                    <th>Détails</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sms in page_obj %}
+                                <tr>
+                                    <td>
+                                        <small class="text-muted">{{ sms.created_at|date:"d/m/Y" }}</small><br>
+                                        <small class="text-muted">{{ sms.created_at|time:"H:i" }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            {% for value, label in notification_types %}
+                                                {% if value == sms.notification_type %}
+                                                    {{ label }}
+                                                {% endif %}
+                                            {% endfor %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <code>{{ sms.phone_number }}</code>
+                                    </td>
+                                    <td>
+                                        <div class="text-truncate" style="max-width: 200px;" title="{{ sms.message }}">
+                                            {{ sms.message }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if sms.status == 'sent' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check me-1"></i>
+                                                Envoyé
+                                            </span>
+                                        {% elif sms.status == 'failed' %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-times me-1"></i>
+                                                Échec
+                                            </span>
+                                        {% elif sms.status == 'pending' %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-clock me-1"></i>
+                                                En attente
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                {{ sms.status }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-outline-info" 
+                                                data-bs-toggle="modal" data-bs-target="#smsDetailModal{{ sms.id }}">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if page_obj.has_other_pages %}
+                    <nav aria-label="Pagination des SMS">
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if status %}&status={{ status }}{% endif %}{% if notification_type %}&type={{ notification_type }}{% endif %}">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if status %}&status={{ status }}{% endif %}{% if notification_type %}&type={{ notification_type }}{% endif %}">
+                                    <i class="fas fa-angle-left"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% if status %}&status={{ status }}{% endif %}{% if notification_type %}&type={{ notification_type }}{% endif %}">
+                                        {{ num }}
+                                    </a>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if status %}&status={{ status }}{% endif %}{% if notification_type %}&type={{ notification_type }}{% endif %}">
+                                    <i class="fas fa-angle-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if status %}&status={{ status }}{% endif %}{% if notification_type %}&type={{ notification_type }}{% endif %}">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Aucun SMS trouvé</h5>
+                        <p class="text-muted">Aucun SMS n'a été envoyé pour le moment.</p>
+                        <a href="{% url 'notifications:sms_configuration' %}" class="btn btn-primary">
+                            <i class="fas fa-cog me-1"></i>
+                            Configurer les SMS
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals pour les détails des SMS -->
+{% for sms in page_obj %}
+<div class="modal fade" id="smsDetailModal{{ sms.id }}" tabindex="-1" aria-labelledby="smsDetailModalLabel{{ sms.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="smsDetailModalLabel{{ sms.id }}">
+                    <i class="fas fa-sms me-2"></i>
+                    Détails du SMS
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Informations générales</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>ID :</strong></td>
+                                <td>{{ sms.id }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Date :</strong></td>
+                                <td>{{ sms.created_at|date:"d/m/Y H:i:s" }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Statut :</strong></td>
+                                <td>
+                                    {% if sms.status == 'sent' %}
+                                        <span class="badge bg-success">Envoyé</span>
+                                    {% elif sms.status == 'failed' %}
+                                        <span class="badge bg-danger">Échec</span>
+                                    {% elif sms.status == 'pending' %}
+                                        <span class="badge bg-warning">En attente</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ sms.status }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Type :</strong></td>
+                                <td>
+                                    {% for value, label in notification_types %}
+                                        {% if value == sms.notification_type %}
+                                            {{ label }}
+                                        {% endif %}
+                                    {% endfor %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Détails techniques</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>Numéro :</strong></td>
+                                <td><code>{{ sms.phone_number }}</code></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Fournisseur :</strong></td>
+                                <td>{{ sms.provider|default:"Non spécifié" }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>ID externe :</strong></td>
+                                <td>{{ sms.external_id|default:"Non spécifié" }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Coût :</strong></td>
+                                <td>{{ sms.cost|default:"Non spécifié" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6>Message</h6>
+                        <div class="alert alert-light">
+                            <pre class="mb-0">{{ sms.message }}</pre>
+                        </div>
+                    </div>
+                </div>
+                {% if sms.error_message %}
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6>Message d'erreur</h6>
+                        <div class="alert alert-danger">
+                            <pre class="mb-0">{{ sms.error_message }}</pre>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %} 

@@ -1,0 +1,323 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {{ title }} - KBIS IMMOBILIER
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .montant-field {
+        font-weight: bold;
+        color: #28a745;
+    }
+    
+    .form-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 4px solid #007bff;
+    }
+    
+    .form-section h5 {
+        color: #007bff;
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+    
+    .montant-total {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    
+    .montant-total h4 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+    
+    .montant-total small {
+        opacity: 0.9;
+    }
+    
+    .field-conditional {
+        display: none;
+    }
+    
+    .field-conditional.show {
+        display: block;
+    }
+    
+    .alert-info {
+        border-left: 4px solid #17a2b8;
+    }
+    
+    .btn-action {
+        min-width: 120px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-credit-card text-primary me-2"></i>
+                        {{ title }}
+                    </h1>
+                    <p class="text-muted mb-0">
+                        Gestion des paiements de caution et d'avance de loyer
+                    </p>
+                </div>
+                <a href="{% url 'paiements:paiement_caution_avance_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i> Retour à la liste
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i> Informations du Paiement
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="paiement-form">
+                        {% csrf_token %}
+                        
+                        <!-- Section Contrat et Type de Paiement -->
+                        <div class="form-section">
+                            <h5><i class="bi bi-file-earmark-text me-2"></i> Contrat et Type de Paiement</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.contrat|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.type_paiement|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section Montants -->
+                        <div class="form-section">
+                            <h5><i class="bi bi-cash-stack me-2"></i> Montants</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.montant_caution|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.montant_avance|as_crispy_field }}
+                                </div>
+                            </div>
+                            
+                            <!-- Affichage du montant total -->
+                            <div class="montant-total">
+                                <h4 id="montant-total-display">0,00 F CFA</h4>
+                                <small>Montant total du paiement</small>
+                            </div>
+                        </div>
+
+                        <!-- Section Mode de Paiement -->
+                        <div class="form-section">
+                            <h5><i class="bi bi-bank me-2"></i> Mode de Paiement</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.mode_paiement|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.date_paiement|as_crispy_field }}
+                                </div>
+                            </div>
+                            
+                            <!-- Champs conditionnels pour le chèque -->
+                            <div class="row field-conditional" id="cheque-fields">
+                                <div class="col-md-6">
+                                    {{ form.numero_cheque|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.banque_emetteur|as_crispy_field }}
+                                </div>
+                            </div>
+                            
+                            <!-- Champs conditionnels pour le virement -->
+                            <div class="row field-conditional" id="virement-fields">
+                                <div class="col-md-12">
+                                    {{ form.reference_paiement|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section Informations du Payeur -->
+                        <div class="form-section">
+                            <h5><i class="bi bi-person me-2"></i> Informations du Payeur</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.nom_payeur|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.telephone_payeur|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    {{ form.email_payeur|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section Documents et Notes -->
+                        <div class="form-section">
+                            <h5><i class="bi bi-file-earmark me-2"></i> Documents et Notes</h5>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    {{ form.justificatif_url|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    {{ form.notes|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Boutons d'action -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'paiements:paiement_caution_avance_list' %}" class="btn btn-outline-secondary btn-action">
+                                <i class="bi bi-x-circle me-2"></i> Annuler
+                            </a>
+                            <button type="submit" class="btn btn-success btn-action">
+                                <i class="bi bi-check-circle me-2"></i> {{ submit_text }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aide et conseils -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-lightbulb me-2"></i> Conseils et Aide
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-info-circle me-2"></i> Types de Paiement</h6>
+                        <ul class="mb-0">
+                            <li><strong>Caution :</strong> Dépôt de garantie pour couvrir les dégâts</li>
+                            <li><strong>Avance :</strong> Paiement anticipé du loyer</li>
+                            <li><strong>Caution + Avance :</strong> Les deux en même temps</li>
+                        </ul>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <h6><i class="bi bi-exclamation-triangle me-2"></i> Validation</h6>
+                        <ul class="mb-0">
+                            <li>Vérifiez les montants avant validation</li>
+                            <li>Assurez-vous d'avoir les justificatifs</li>
+                            <li>Le reçu sera généré après validation</li>
+                        </ul>
+                    </div>
+
+                    <div class="alert alert-success">
+                        <h6><i class="bi bi-check-circle me-2"></i> Avantages</h6>
+                        <ul class="mb-0">
+                            <li>Suivi complet des paiements</li>
+                            <li>Génération automatique de reçus</li>
+                            <li>Intégration avec les contrats</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const typePaiementSelect = document.getElementById('id_type_paiement');
+    const montantCautionField = document.getElementById('id_montant_caution');
+    const montantAvanceField = document.getElementById('id_montant_avance');
+    const montantTotalDisplay = document.getElementById('montant-total-display');
+    const modePaiementSelect = document.getElementById('id_mode_paiement');
+    const chequeFields = document.getElementById('cheque-fields');
+    const virementFields = document.getElementById('virement-fields');
+    
+    // Fonction pour mettre à jour le montant total
+    function updateMontantTotal() {
+        const caution = parseFloat(montantCautionField.value) || 0;
+        const avance = parseFloat(montantAvanceField.value) || 0;
+        const total = caution + avance;
+        
+        montantTotalDisplay.textContent = total.toLocaleString('fr-FR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }) + ' F CFA';
+    }
+    
+    // Fonction pour gérer l'affichage des champs conditionnels
+    function updateConditionalFields() {
+        const modePaiement = modePaiementSelect.value;
+        
+        // Masquer tous les champs conditionnels
+        chequeFields.classList.remove('show');
+        virementFields.classList.remove('show');
+        
+        // Afficher les champs appropriés
+        if (modePaiement === 'cheque') {
+            chequeFields.classList.add('show');
+        } else if (modePaiement === 'virement') {
+            virementFields.classList.add('show');
+        }
+    }
+    
+    // Fonction pour gérer l'affichage des montants selon le type
+    function updateMontantFields() {
+        const typePaiement = typePaiementSelect.value;
+        
+        if (typePaiement === 'caution') {
+            montantAvanceField.disabled = true;
+            montantAvanceField.value = '0.00';
+            montantCautionField.disabled = false;
+        } else if (typePaiement === 'avance_loyer') {
+            montantCautionField.disabled = true;
+            montantCautionField.value = '0.00';
+            montantAvanceField.disabled = false;
+        } else {
+            montantCautionField.disabled = false;
+            montantAvanceField.disabled = false;
+        }
+        
+        updateMontantTotal();
+    }
+    
+    // Événements
+    typePaiementSelect.addEventListener('change', updateMontantFields);
+    montantCautionField.addEventListener('input', updateMontantTotal);
+    montantAvanceField.addEventListener('input', updateMontantTotal);
+    modePaiementSelect.addEventListener('change', updateConditionalFields);
+    
+    // Initialisation
+    updateMontantFields();
+    updateConditionalFields();
+    updateMontantTotal();
+});
+</script>
+{% endblock %}

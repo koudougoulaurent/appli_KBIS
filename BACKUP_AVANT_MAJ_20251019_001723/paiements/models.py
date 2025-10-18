@@ -1,0 +1,1796 @@
+from django.db import models
+from django.db.models import Q
+from django.utils.translation import gettext_lazy as _
+from django.core.validators import MinValueValidator
+from django.urls import reverse
+from decimal import Decimal
+from datetime import date
+from contrats.models import Contrat
+from proprietes.managers import NonDeletedManager
+
+
+class RecapMensuel(models.Model):
+    """Récapitulatif mensuel pour un bailleur."""
+    
+    STATUT_CHOICES = [
+        ('brouillon', _('Brouillon')),
+        ('valide', _('Validé')),
+        ('envoye', _('Envoyé au bailleur')),
+        ('paye', _('Payé au bailleur')),
+    ]
+    
+    # Informations de base
+    bailleur = models.ForeignKey(
+        'proprietes.Bailleur', on_delete=models.PROTECT, related_name='recaps_mensuels', verbose_name=_("Bailleur")
+    )
+    mois_recap = models.DateField(verbose_name=_("Mois du récapitulatif"))
+    
+    # Montants calculés automatiquement
+    total_loyers_bruts = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total des loyers bruts"))
+    total_charges_deductibles = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total des charges déductibles"))
+    total_charges_bailleur = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total des charges bailleur"), null=True, blank=True)
+    total_net_a_payer = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total net à payer"))
+    
+    # Compteurs automatiques
+    nombre_proprietes = models.PositiveIntegerField(default=0, verbose_name=_("Nombre de propriétés"))
+    nombre_contrats_actifs = models.PositiveIntegerField(default=0, verbose_name=_("Nombre de contrats actifs"))
+    nombre_paiements_recus = models.PositiveIntegerField(default=0, verbose_name=_("Nombre de paiements reçus"))
+    
+    # Garanties financières
+    total_cautions_requises = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total des cautions requises"))
+    total_avances_requises = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total des avances requises"))
+    total_cautions_versees = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total des cautions versées"))
+    total_avances_versees = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total des avances versées"))
+    garanties_suffisantes = models.BooleanField(default=True, verbose_name=_("Garanties financières suffisantes"))
+    
+    # Statut et workflow
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='brouillon', verbose_name=_("Statut"))
+    
+    # Métadonnées
+    date_creation = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de création"))
+    cree_par = models.ForeignKey('utilisateurs.Utilisateur', on_delete=models.SET_NULL, null=True, blank=True, related_name='recaps_mensuels_crees', verbose_name=_("Créé par"))
+    date_modification = models.DateTimeField(auto_now=True, verbose_name=_("Date de modification"))
+    modifie_par = models.ForeignKey('utilisateurs.Utilisateur', on_delete=models.SET_NULL, null=True, blank=True, related_name='recaps_mensuels_modifies', verbose_name=_("Modifié par"))
+    
+    # Relations
+    paiements_concernes = models.ManyToManyField('Paiement', related_name='recaps_mensuels', verbose_name=_("Paiements concernés"), blank=True)
+    charges_deductibles = models.ManyToManyField('ChargeDeductible', related_name='recaps_mensuels', verbose_name=_("Charges déductibles"), blank=True)
+    
+    # Suppression logique
+    is_deleted = models.BooleanField(default=False, verbose_name=_("Supprimé logiquement"))
+    deleted_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Date de suppression"))
+    deleted_by = models.ForeignKey('utilisateurs.Utilisateur', on_delete=models.SET_NULL, null=True, blank=True, related_name='recaps_mensuels_supprimes', verbose_name=_("Supprimé par"))
+    
+    class Meta:
+        app_label = 'paiements'
+        verbose_name = _("Récapitulatif mensuel")
+        verbose_name_plural = _("Récapitulatifs mensuels")
+        ordering = ['-mois_recap', 'bailleur__nom']
+        unique_together = ['bailleur', 'mois_recap']
+        indexes = [
+            models.Index(fields=['mois_recap', 'bailleur']),
+            models.Index(fields=['statut', 'mois_recap']),
+        ]
+    
+    def __str__(self):
+        return f"Récapitulatif {self.bailleur.get_nom_complet()} - {self.mois_recap.strftime('%B %Y')}"
+    
+    def get_absolute_url(self):
+        return reverse('paiements:detail_recap_mensuel_auto', kwargs={'recap_id': self.pk})
+    
+    @staticmethod
+    def get_mois_recap_suggere_pour_bailleur(bailleur):
+        """Retourne le mois suggéré pour le prochain récapitulatif."""
+        from datetime import date
+        from dateutil.relativedelta import relativedelta
+        
+        # Récupérer le dernier récapitulatif du bailleur
+        dernier_recap = RecapMensuel.objects.filter(
+            bailleur=bailleur,
+            is_deleted=False
+        ).order_by('-mois_recap').first()
+        
+        if dernier_recap:
+            # Retourner le mois suivant le dernier récapitulatif
+            return dernier_recap.mois_recap + relativedelta(months=1)
+        else:
+            # Retourner le mois précédent si aucun récapitulatif n'existe
+            return date.today().replace(day=1) - relativedelta(months=1)
+    
+    def calculer_totaux_bailleur(self):
+        """Calcule les totaux pour le bailleur avec les charges dynamiques et les paiements réels."""
+        from decimal import Decimal
+        from django.db.models import Sum, Q
+        from proprietes.models import ChargesBailleur
+        from datetime import datetime, timedelta
+        
+        try:
+            # Initialiser les totaux
+            total_loyers = Decimal('0')
+            total_charges_deductibles = Decimal('0')
+            total_charges_bailleur = Decimal('0')
+            nombre_proprietes = 0
+            nombre_contrats_actifs = 0
+            nombre_paiements_recus = 0
+            
+            # Récupérer les propriétés du bailleur
+            proprietes = self.bailleur.proprietes.filter(is_deleted=False)
+            nombre_proprietes = proprietes.count()
+            
+            # Calculer les loyers bruts pour le mois - basé sur les contrats actifs
+            # Calculer les dates de début et fin du mois
+            mois_debut = self.mois_recap.replace(day=1)
+            if self.mois_recap.month == 12:
+                mois_fin = self.mois_recap.replace(year=self.mois_recap.year + 1, month=1, day=1) - timedelta(days=1)
+            else:
+                mois_fin = self.mois_recap.replace(month=self.mois_recap.month + 1, day=1) - timedelta(days=1)
+            
+            for propriete in proprietes:
+                # Récupérer les contrats actifs pour cette propriété au moment du récapitulatif
+                contrats_actifs = propriete.contrats.filter(
+                    est_actif=True,
+                    est_resilie=False,
+                    date_debut__lte=mois_fin
+                ).filter(
+                    models.Q(date_fin__gte=mois_debut) | models.Q(date_fin__isnull=True)
+                )
+                
+                for contrat in contrats_actifs:
+                    nombre_contrats_actifs += 1
+                    # Loyer mensuel - conversion sécurisée
+                    loyer_mensuel = contrat.loyer_mensuel
+                    if loyer_mensuel is None:
+                        loyer_mensuel = Decimal('0')
+                    elif isinstance(loyer_mensuel, str):
+                        try:
+                            loyer_mensuel = Decimal(str(loyer_mensuel))
+                        except:
+                            loyer_mensuel = Decimal('0')
+                    else:
+                        loyer_mensuel = Decimal(str(loyer_mensuel))
+                    total_loyers += loyer_mensuel
+                    
+                    # Charges déductibles du contrat - conversion sécurisée
+                    charges_mensuelles = contrat.charges_mensuelles
+                    if charges_mensuelles is None:
+                        charges_mensuelles = Decimal('0')
+                    elif isinstance(charges_mensuelles, str):
+                        try:
+                            charges_mensuelles = Decimal(str(charges_mensuelles))
+                        except:
+                            charges_mensuelles = Decimal('0')
+                    else:
+                        charges_mensuelles = Decimal(str(charges_mensuelles))
+                    total_charges_deductibles += charges_mensuelles
+            
+            # NOUVEAU : Calculer les paiements réels reçus pour ce mois
+            # Utiliser une requête directe pour éviter les imports circulaires
+            from django.db import connection
+            
+            # Calculer les paiements réels reçus pour ce mois
+            paiements_mois = Paiement.objects.filter(
+                contrat__propriete__bailleur=self.bailleur,
+                date_paiement__year=self.mois_recap.year,
+                date_paiement__month=self.mois_recap.month,
+                statut='confirme'
+            )
+            
+            nombre_paiements_recus = paiements_mois.count()
+            total_paiements_reels = sum(p.montant for p in paiements_mois) if paiements_mois.exists() else Decimal('0')
+            
+            # Si des paiements réels existent, les utiliser pour les totaux
+            if nombre_paiements_recus > 0 and total_paiements_reels > total_loyers:
+                total_loyers = total_paiements_reels
+                
+                # Lier automatiquement les paiements au récapitulatif
+                try:
+                    self.lier_paiements_automatiquement()
+                except:
+                    pass  # Ignorer les erreurs de liaison
+            
+            # Calculer les charges bailleur pour le mois
+            charges_bailleur_mois = ChargesBailleur.objects.filter(
+                propriete__bailleur=self.bailleur,
+                date_charge__year=self.mois_recap.year,
+                date_charge__month=self.mois_recap.month,
+                statut__in=['en_attente', 'deduite_retrait']
+            )
+            
+            for charge in charges_bailleur_mois:
+                total_charges_bailleur += charge.montant_restant or charge.montant
+            
+            # Calculer le total net
+            total_net = total_loyers - total_charges_deductibles - total_charges_bailleur
+            
+            # Mettre à jour les champs
+            self.total_loyers_bruts = total_loyers
+            self.total_charges_deductibles = total_charges_deductibles
+            self.total_charges_bailleur = total_charges_bailleur
+            self.total_net_a_payer = max(total_net, Decimal('0'))
+            self.nombre_proprietes = nombre_proprietes
+            self.nombre_contrats_actifs = nombre_contrats_actifs
+            self.nombre_paiements_recus = nombre_paiements_recus
+            
+            # Sauvegarder les modifications
+            self.save()
+            
+        except Exception as e:
+            # En cas d'erreur, utiliser les valeurs par défaut
+            total_loyers = Decimal('0')
+            total_charges_deductibles = Decimal('0')
+            total_charges_bailleur = Decimal('0')
+            nombre_proprietes = 0
+            nombre_contrats_actifs = 0
+            nombre_paiements_recus = 0
+            total_net = Decimal('0')
+        
+        return {
+            'total_loyers_bruts': total_loyers,
+            'total_charges_deductibles': total_charges_deductibles,
+            'total_charges_bailleur': total_charges_bailleur,
+            'total_net_a_payer': max(total_net, Decimal('0')),
+            'nombre_proprietes': nombre_proprietes,
+            'nombre_contrats_actifs': nombre_contrats_actifs,
+            'nombre_paiements_recus': nombre_paiements_recus,
+        }
+    
+    def calculer_charges_bailleur_disponibles(self):
+        """Calcule les charges bailleur disponibles pour ce mois."""
+        from django.db.models import Sum
+        from decimal import Decimal
+        
+        # Récupérer les charges validées et non utilisées pour ce mois
+        charges_disponibles = ChargeBailleur.objects.filter(
+            bailleur=self.bailleur,
+            mois_charge__year=self.mois_recap.year,
+            mois_charge__month=self.mois_recap.month,
+            statut='valide'
+        ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
+        
+        return charges_disponibles
+    
+    def lier_paiements_automatiquement(self):
+        """Lie automatiquement les paiements du mois au récapitulatif."""
+        from django.db import connection
+        
+        with connection.cursor() as cursor:
+            # Récupérer les IDs des paiements pour ce mois et ce bailleur
+            cursor.execute("""
+                SELECT p.id
+                FROM paiements_paiement p
+                JOIN contrats_contrat c ON p.contrat_id = c.id
+                JOIN proprietes_propriete pr ON c.propriete_id = pr.id
+                WHERE pr.bailleur_id = %s
+                AND EXTRACT(YEAR FROM p.date_paiement) = %s
+                AND EXTRACT(MONTH FROM p.date_paiement) = %s
+                AND p.statut IN ('valide', 'encaisse')
+            """, [self.bailleur.id, self.mois_recap.year, self.mois_recap.month])
+            
+            paiement_ids = [row[0] for row in cursor.fetchall()]
+            
+            # Lier les paiements au récapitulatif
+            if paiement_ids:
+                # Utiliser une requête directe pour éviter les imports circulaires
+                cursor.execute("""
+                    INSERT INTO paiements_recapmensuel_paiements_concernes (recapmensuel_id, paiement_id)
+                    SELECT %s, unnest(%s::int[])
+                    ON CONFLICT DO NOTHING
+                """, [self.id, paiement_ids])
+
+    def generer_pdf_recapitulatif(self):
+        """Génère le PDF du récapitulatif mensuel."""
+        from django.template.loader import render_to_string
+        from django.utils import timezone
+        from io import BytesIO
+        from datetime import timedelta
+        
+        try:
+            # Essayer d'utiliser xhtml2pdf si disponible
+            from xhtml2pdf import pisa
+            
+            # Récupérer les totaux globaux
+            totaux = self.calculer_totaux_globaux()
+            
+            # Récupérer les détails des propriétés et contrats
+            proprietes_details = self.get_proprietes_details()
+            
+            # Charger l'image en Base64
+            import base64
+            import os
+            image_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'images', 'enteteEnImage.png')
+            entete_base64 = ""
+            try:
+                with open(image_path, "rb") as image_file:
+                    entete_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+            except:
+                # Si l'image n'est pas trouvée, utiliser une chaîne vide
+                entete_base64 = ""
+            
+            # Rendre le template HTML
+            html_content = render_to_string(
+                'paiements/recapitulatifs/recapitulatif_mensuel_pdf.html',
+                {
+                    'recapitulatif': self,
+                    'totaux': totaux,
+                    'proprietes_details': proprietes_details,
+                    'date_generation': timezone.now(),
+                    'entete_base64': entete_base64,
+                }
+            )
+            
+            # Créer le PDF avec xhtml2pdf
+            pdf_buffer = BytesIO()
+            pisa_status = pisa.CreatePDF(html_content, dest=pdf_buffer)
+            
+            if pisa_status.err:
+                raise Exception(f"Erreur lors de la génération du PDF: {pisa_status.err}")
+            
+            pdf_content = pdf_buffer.getvalue()
+            pdf_buffer.close()
+            
+            return pdf_content
+            
+        except ImportError:
+            # Fallback si xhtml2pdf n'est pas disponible
+            from django.http import HttpResponse
+            from django.template.loader import render_to_string
+            
+            # Récupérer les totaux globaux
+            totaux = self.calculer_totaux_globaux()
+            
+            # Récupérer les détails des propriétés et contrats
+            proprietes_details = self.get_proprietes_details()
+            
+            # Rendre le template HTML simple
+            html_content = render_to_string(
+                'paiements/recapitulatifs/recapitulatif_mensuel_simple.html',
+                {
+                    'recapitulatif': self,
+                    'totaux': totaux,
+                    'proprietes_details': proprietes_details,
+                    'date_generation': timezone.now(),
+                }
+            )
+            
+            # Retourner le HTML comme fallback
+            return html_content.encode('utf-8')
+
+    def calculer_totaux_globaux(self):
+        """Calcule les totaux globaux pour l'affichage."""
+        return {
+            'total_loyers_bruts': self.total_loyers_bruts,
+            'total_charges_deductibles': self.total_charges_deductibles,
+            'total_charges_bailleur': self.total_charges_bailleur or 0,
+            'total_net_a_payer': self.total_net_a_payer,
+            'nombre_proprietes': self.nombre_proprietes,
+            'nombre_contrats_actifs': self.nombre_contrats_actifs,
+            'nombre_paiements_recus': self.nombre_paiements_recus,
+        }
+
+    def get_nom_fichier_pdf(self):
+        """Génère le nom du fichier PDF du récapitulatif."""
+        return f"recapitulatif_{self.mois_recap.strftime('%Y_%m')}_{self.bailleur.get_nom_complet().replace(' ', '_')}.pdf"
+
+    def get_proprietes_details(self):
+        """Récupère les détails des propriétés, contrats et locataires pour le PDF."""
+        from datetime import timedelta
+        from decimal import Decimal
+        
+        proprietes_details = []
+        
+        # Calculer les dates de début et fin du mois
+        mois_debut = self.mois_recap.replace(day=1)
+        if self.mois_recap.month == 12:
+            mois_fin = self.mois_recap.replace(year=self.mois_recap.year + 1, month=1, day=1) - timedelta(days=1)
+        else:
+            mois_fin = self.mois_recap.replace(month=self.mois_recap.month + 1, day=1) - timedelta(days=1)
+        
+        # Récupérer les propriétés du bailleur
+        proprietes = self.bailleur.proprietes.filter(is_deleted=False)
+        
+        for propriete in proprietes:
+            # Récupérer les contrats actifs pour cette propriété au moment du récapitulatif
+            contrats_actifs = propriete.contrats.filter(
+                est_actif=True,
+                est_resilie=False,
+                date_debut__lte=mois_fin
+            ).filter(
+                models.Q(date_fin__gte=mois_debut) | models.Q(date_fin__isnull=True)
+            )
+            
+            for contrat in contrats_actifs:
+                # Conversion sécurisée des montants
+                loyer_mensuel = contrat.loyer_mensuel
+                if loyer_mensuel is None:
+                    loyer_mensuel = Decimal('0')
+                elif isinstance(loyer_mensuel, str):
+                    try:
+                        loyer_mensuel = Decimal(str(loyer_mensuel))
+                    except:
+                        loyer_mensuel = Decimal('0')
+                else:
+                    loyer_mensuel = Decimal(str(loyer_mensuel))
+                
+                charges_mensuelles = contrat.charges_mensuelles
+                if charges_mensuelles is None:
+                    charges_mensuelles = Decimal('0')
+                elif isinstance(charges_mensuelles, str):
+                    try:
+                        charges_mensuelles = Decimal(str(charges_mensuelles))
+                    except:
+                        charges_mensuelles = Decimal('0')
+                else:
+                    charges_mensuelles = Decimal(str(charges_mensuelles))
+                
+                # Calculer le net à payer
+                net_a_payer = loyer_mensuel - charges_mensuelles
+                
+                proprietes_details.append({
+                    'propriete': propriete,
+                    'contrat': contrat,
+                    'locataire': contrat.locataire,
+                    'loyer_mensuel': loyer_mensuel,
+                    'charges_deductibles': charges_mensuelles,
+                    'net_a_payer': net_a_payer,
+                    'adresse_complete': f"{propriete.adresse}, {propriete.ville}" if propriete.ville else propriete.adresse,
+                })
+        
+        return proprietes_details
+
+
+class ChargeDeductible(models.Model):
+    """Modèle pour les charges avancées par le locataire et déductibles du loyer."""
+    
+    # Informations de base
+    contrat = models.ForeignKey(
+        Contrat,
+        on_delete=models.CASCADE,
+        related_name='charges_deductibles',
+        verbose_name=_("Contrat")
+    )
+    
+    # Détails de la charge
+    description = models.CharField(
+        max_length=200,
+        verbose_name=_("Description de la charge")
+    )
+    montant = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(0.01)],
+        verbose_name=_("Montant de la charge")
+    )
+    date_charge = models.DateField(
+        verbose_name=_("Date de la charge")
+    )
+    
+    # Statut
+    est_deductible_loyer = models.BooleanField(
+        default=True,
+        verbose_name=_("Déductible du loyer")
+    )
+    est_valide = models.BooleanField(
+        default=False,
+        verbose_name=_("Validé")
+    )
+    
+    # Métadonnées
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_deleted = models.BooleanField(default=False)
+    
+    objects = NonDeletedManager()
+    all_objects = models.Manager()
+    
+    class Meta:
+        app_label = 'paiements'
+        verbose_name = _("Charge déductible")
+        verbose_name_plural = _("Charges déductibles")
+        ordering = ['-date_charge']
+    
+    def __str__(self):
+        return f"{self.description} - {self.montant} F CFA"
+
+
+class Paiement(models.Model):
+    """Modèle pour les paiements de loyer avec support des paiements partiels."""
+    
+    # Constantes pour les choix
+    TYPE_PAIEMENT_CHOICES = [
+        ('loyer', 'Loyer'),
+        ('caution', 'Caution'),
+        ('avance', 'Avance de loyer'),
+        ('depot_garantie', 'Dépôt de garantie'),
+        ('charges', 'Charges'),
+        ('regularisation', 'Régularisation'),
+        ('paiement_partiel', 'Paiement partiel'),
+        ('autre', 'Autre'),
+    ]
+    
+    STATUT_CHOICES = [
+        ('en_attente', 'En attente'),
+        ('valide', 'Validé'),
+        ('refuse', 'Refusé'),
+        ('annule', 'Annulé'),
+    ]
+    
+    # Relations
+    contrat = models.ForeignKey(
+        Contrat,
+        on_delete=models.CASCADE,
+        related_name='paiements',
+        verbose_name=_("Contrat")
+    )
+    
+    # Montants
+    montant = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(0.01)],
+        verbose_name=_("Montant payé")
+    )
+    montant_charges_deduites = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Montant des charges déduites")
+    )
+    montant_net_paye = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Montant net payé")
+    )
+    
+    # Type et mode de paiement
+    type_paiement = models.CharField(
+        max_length=20,
+        choices=TYPE_PAIEMENT_CHOICES,
+        default='loyer',
+        verbose_name=_("Type de paiement")
+    )
+    mode_paiement = models.CharField(
+        max_length=20,
+        choices=[
+            ('especes', 'Espèces'),
+            ('cheque', 'Chèque'),
+            ('virement', 'Virement'),
+            ('mobile_money', 'Mobile Money'),
+        ],
+        verbose_name=_("Mode de paiement")
+    )
+    
+    # Dates
+    date_paiement = models.DateField(verbose_name=_("Date de paiement"))
+    date_encaissement = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date d'encaissement")
+    )
+    
+    # Statut
+    statut = models.CharField(
+        max_length=20,
+        choices=STATUT_CHOICES,
+        default='en_attente',
+        verbose_name=_("Statut")
+    )
+    
+    # Paiement partiel
+    est_paiement_partiel = models.BooleanField(
+        default=False,
+        verbose_name=_("Paiement partiel")
+    )
+    
+    # Mois payé
+    mois_paye = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_("Mois payé"),
+        help_text=_("Mois pour lequel le paiement est effectué")
+    )
+    
+    # Montants pour paiements partiels
+    montant_du_mois = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_("Montant dû pour le mois"),
+        help_text=_("Montant total dû pour le mois (loyer + charges)")
+    )
+    
+    montant_restant_du = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Montant restant dû"),
+        help_text=_("Montant restant à payer pour ce mois")
+    )
+    
+    # Informations bancaires
+    numero_cheque = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_("Numéro de chèque")
+    )
+    reference_virement = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_("Référence du virement")
+    )
+    
+    # Référence de paiement
+    reference_paiement = models.CharField(
+        max_length=50,
+        blank=True,
+        unique=True,
+        verbose_name=_("Référence de paiement"),
+        help_text=_("Référence unique du paiement")
+    )
+    
+    # Numéro de paiement
+    numero_paiement = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        unique=True,
+        verbose_name=_("Numéro Paiement"),
+        help_text=_("Numéro unique professionnel du paiement")
+    )
+    
+    # Libellé du paiement
+    libelle = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name=_("Libellé du paiement"),
+        help_text=_("Description ou motif du paiement")
+    )
+    
+    # Notes
+    notes = models.TextField(
+        blank=True,
+        verbose_name=_("Notes"),
+        help_text=_("Notes ou commentaires sur le paiement")
+    )
+    
+    # Validation
+    valide_par = models.ForeignKey(
+        'utilisateurs.Utilisateur',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiements_valides',
+        verbose_name=_("Validé par")
+    )
+    date_validation = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date de validation")
+    )
+    
+    # Annulation
+    annule_par = models.ForeignKey(
+        'utilisateurs.Utilisateur',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiements_annules',
+        verbose_name=_("Annulé par")
+    )
+    date_annulation = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date d'annulation")
+    )
+    raison_annulation = models.TextField(
+        blank=True,
+        verbose_name=_("Raison de l'annulation")
+    )
+    
+    # Refus
+    refuse_par = models.ForeignKey(
+        'utilisateurs.Utilisateur',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiements_refuses',
+        verbose_name=_("Refusé par")
+    )
+    date_refus = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date de refus")
+    )
+    raison_refus = models.TextField(
+        blank=True,
+        verbose_name=_("Raison du refus")
+    )
+    
+    # Métadonnées
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    date_creation = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de création"))
+    date_modification = models.DateTimeField(auto_now=True, verbose_name=_("Date de modification"))
+    cree_par = models.ForeignKey(
+        'utilisateurs.Utilisateur',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiements_crees',
+        verbose_name=_("Créé par")
+    )
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted_by = models.ForeignKey(
+        'utilisateurs.Utilisateur',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paiement_deleted',
+        verbose_name=_("Supprimé par")
+    )
+    
+    objects = NonDeletedManager()
+    all_objects = models.Manager()
+    
+    class Meta:
+        app_label = 'paiements'
+        verbose_name = _("Paiement")
+        verbose_name_plural = _("Paiements")
+        ordering = ['-date_paiement']
+    
+    def __str__(self):
+        return f"Paiement {self.montant} F CFA - {self.contrat.locataire.get_nom_complet()}"
+    
+    def save(self, *args, **kwargs):
+        """Sauvegarde personnalisée pour calculer automatiquement les montants"""
+        from django.utils import timezone
+        
+        # Calculer le montant net payé si pas défini
+        if not self.montant_net_paye:
+            self.montant_net_paye = self.montant - self.montant_charges_deduites
+        
+        # S'assurer que les champs de date sont définis
+        if not self.date_creation:
+            self.date_creation = timezone.now()
+        
+        # Générer la référence de paiement si elle n'existe pas
+        if not hasattr(self, 'reference_paiement') or not self.reference_paiement:
+            self.reference_paiement = self.generate_reference_paiement()
+        
+        # Générer le numéro de paiement si il n'existe pas
+        if not hasattr(self, 'numero_paiement') or not self.numero_paiement:
+            self.numero_paiement = self.generate_numero_paiement()
+        
+        # Générer le libellé si il n'existe pas
+        if not hasattr(self, 'libelle') or not self.libelle:
+            self.libelle = self.generate_libelle()
+        
+        # Mettre à jour la date de modification
+        self.date_modification = timezone.now()
+        
+        super().save(*args, **kwargs)
+    
+    def generate_reference_paiement(self):
+        """Génère une référence de paiement unique"""
+        from django.utils import timezone
+        from datetime import datetime
+        
+        # Format: PAI-YYYYMMDD-HHMMSS-XXXX
+        now = timezone.now()
+        timestamp = now.strftime('%Y%m%d-%H%M%S')
+        
+        # Compter les paiements du jour pour avoir un numéro séquentiel
+        today = now.date()
+        count_today = Paiement.objects.filter(
+            date_creation__date=today
+        ).count() + 1
+        
+        return f"PAI-{timestamp}-{count_today:04d}"
+    
+    def generate_numero_paiement(self):
+        """Génère un numéro de paiement unique"""
+        from django.utils import timezone
+        
+        # Format: PAI-YYYYMMDD-XXXX
+        now = timezone.now()
+        date_str = now.strftime('%Y%m%d')
+        
+        # Compter les paiements du jour
+        today = now.date()
+        count_today = Paiement.objects.filter(
+            date_creation__date=today
+        ).count() + 1
+        
+        return f"PAI-{date_str}-{count_today:04d}"
+    
+    def generate_libelle(self):
+        """Génère un libellé automatique pour le paiement"""
+        type_paiement_display = dict(self.TYPE_PAIEMENT_CHOICES).get(self.type_paiement, self.type_paiement)
+        locataire_nom = self.contrat.locataire.get_nom_complet() if self.contrat.locataire else "N/A"
+        
+        return f"{type_paiement_display} - {locataire_nom} - {self.date_paiement.strftime('%d/%m/%Y')}"
+    
+    def get_statut_color(self):
+        """Retourne la couleur Bootstrap pour le statut"""
+        colors = {
+            'en_attente': 'warning',
+            'valide': 'success',
+            'refuse': 'danger',
+            'annule': 'secondary',
+        }
+        return colors.get(self.statut, 'secondary')
+    
+    def generer_quittance_kbis_dynamique(self):
+        """Génère une quittance KBIS dynamique avec le format correct."""
+        import sys
+        import os
+        from datetime import datetime
+        
+        try:
+            # Utiliser le système unifié - corriger le chemin vers SCRIPTS
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            scripts_path = os.path.join(project_root, 'SCRIPTS')
+            if scripts_path not in sys.path:
+                sys.path.append(scripts_path)
+            from document_kbis_unifie import DocumentKBISUnifie
+            
+            # Déterminer le type de quittance selon le type de paiement
+            type_quittance = self._determiner_type_quittance_paiement()
+            
+            # Récupérer les informations de base de manière sécurisée
+            try:
+                code_location = self.contrat.numero_contrat if self.contrat and self.contrat.numero_contrat else 'N/A'
+            except:
+                code_location = 'N/A'
+                
+            try:
+                recu_de = self.contrat.locataire.get_nom_complet() if self.contrat and self.contrat.locataire else 'LOCATAIRE'
+            except:
+                recu_de = 'LOCATAIRE'
+                
+            try:
+                quartier = self.contrat.propriete.adresse if self.contrat and self.contrat.propriete else 'Non spécifié'
+            except:
+                quartier = 'Non spécifié'
+            
+            # Générer un numéro de quittance unique au format KBIS
+            numero_quittance = f"QUI-{datetime.now().strftime('%Y%m%d%H%M%S')}-{self.id if self.id else 'X1DZ'}"
+            
+            # Données de la quittance
+            donnees_quittance = {
+                'numero': numero_quittance,
+                'date': self.date_paiement.strftime('%d-%b-%y') if self.date_paiement else datetime.now().strftime('%d-%b-%y'),
+                'code_location': code_location,
+                'recu_de': recu_de,
+                'montant': float(self.montant),
+                'mois_regle': self._obtenir_mois_regle(),
+                'type_paiement': self.get_type_paiement_display(),
+                'mode_paiement': self.get_mode_paiement_display(),
+                'quartier': quartier,
+            }
+            
+            # Ajouter des données spécialisées selon le type
+            donnees_quittance.update(self._ajouter_donnees_specialisees_quittance(type_quittance))
+            
+            # Générer le document unifié
+            return DocumentKBISUnifie.generer_document_unifie(donnees_quittance, type_quittance)
+            
+        except Exception as e:
+            print(f"Erreur génération quittance KBIS: {e}")
+            return None
+    
+    def _determiner_type_quittance_paiement(self):
+        """Détermine le type de quittance selon le type de paiement"""
+        mapping = {
+            'loyer': 'quittance_loyer',
+            'caution': 'quittance_caution',
+            'avance': 'quittance_avance',
+            'charges': 'quittance_charges',
+            'autre': 'quittance',
+        }
+        return mapping.get(self.type_paiement, 'quittance')
+    
+    def _obtenir_mois_regle(self):
+        """Obtient le mois réglé formaté"""
+        if self.date_paiement:
+            mois_francais = [
+                'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+                'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+            ]
+            return f"{mois_francais[self.date_paiement.month - 1]} {self.date_paiement.year}"
+        return datetime.now().strftime('%B %Y')
+    
+    def _ajouter_donnees_specialisees_quittance(self, type_quittance):
+        """Ajoute des données spécialisées selon le type de quittance"""
+        donnees_speciales = {}
+        
+        if type_quittance == 'quittance_loyer':
+            try:
+                # Calculer les mois d'avance absorbés
+                mois_avance_absorbes = self._calculer_mois_avance_absorbes()
+                
+                donnees_speciales.update({
+                    'loyer_base': float(self.contrat.loyer_mensuel) if self.contrat else 0,
+                    'charges_mensuelles': float(self.contrat.charges_mensuelles) if self.contrat else 0,
+                    'total_mensuel': float(self.montant),
+                    'restant_du': float(self.montant_restant_du) if hasattr(self, 'montant_restant_du') else 0,
+                    'loyer_au_prorata': 0,  # À calculer selon la logique métier
+                    'mois_avance_absorbes': mois_avance_absorbes,
+                    'note_avance': f"Cette avance couvre {mois_avance_absorbes} mois de loyer" if mois_avance_absorbes > 0 else "",
+                })
+            except:
+                donnees_speciales.update({
+                    'loyer_base': float(self.montant),
+                    'charges_mensuelles': 0,
+                    'total_mensuel': float(self.montant),
+                    'restant_du': 0,
+                    'loyer_au_prorata': 0,
+                    'mois_avance_absorbes': 0,
+                    'note_avance': "",
+                })
+        
+        elif type_quittance == 'quittance_caution':
+            try:
+                donnees_speciales.update({
+                    'montant_caution': float(self.montant),
+                    'note_speciale': 'Dépôt de garantie - Remboursable en fin de bail',
+                })
+            except:
+                donnees_speciales.update({
+                    'montant_caution': float(self.montant),
+                    'note_speciale': 'Dépôt de garantie',
+                })
+        
+        elif type_quittance == 'quittance_avance':
+            try:
+                # Calculer les mois couverts par cette avance
+                loyer_mensuel = float(self.contrat.loyer_mensuel) if self.contrat else 0
+                mois_couverts = int(float(self.montant) // loyer_mensuel) if loyer_mensuel > 0 else 0
+                reste = float(self.montant) % loyer_mensuel if loyer_mensuel > 0 else 0
+                
+                donnees_speciales.update({
+                    'montant_avance': float(self.montant),
+                    'loyer_mensuel': loyer_mensuel,
+                    'mois_couverts': mois_couverts,
+                    'reste_avance': reste,
+                    'note_speciale': f'Cette avance couvre {mois_couverts} mois de loyer' + (f' + {reste} F CFA' if reste > 0 else ''),
+                })
+            except:
+                donnees_speciales.update({
+                    'montant_avance': float(self.montant),
+                    'loyer_mensuel': 0,
+                    'mois_couverts': 0,
+                    'reste_avance': 0,
+                    'note_speciale': 'Avance de loyer',
+                })
+        
+        elif type_quittance == 'quittance_charges':
+            donnees_speciales.update({
+                'type_charges': 'Charges mensuelles',
+                'montant_charges': float(self.montant),
+                'note_speciale': 'Charges communes et services',
+            })
+        
+        return donnees_speciales
+    
+    def _calculer_mois_avance_absorbes(self):
+        """Calcule le nombre de mois d'avance absorbés par ce paiement"""
+        try:
+            from .services_avance import ServiceGestionAvance
+            
+            # Récupérer les avances actives pour ce contrat
+            avances = ServiceGestionAvance.get_avances_actives_contrat(self.contrat)
+            
+            # Calculer le total des mois couverts
+            total_mois = 0
+            for avance in avances:
+                if avance.est_mois_couvert(self.date_paiement.replace(day=1)):
+                    total_mois += 1
+            
+            return total_mois
+        except:
+            return 0
+    
+    def _generer_recu_kbis_dynamique(self):
+        """Génère un récépissé KBIS dynamique avec le format correct."""
+        import sys
+        import os
+        from datetime import datetime
+        
+        try:
+            # Utiliser le système unifié - corriger le chemin vers SCRIPTS
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            scripts_path = os.path.join(project_root, 'SCRIPTS')
+            if scripts_path not in sys.path:
+                sys.path.append(scripts_path)
+            from document_kbis_unifie import DocumentKBISUnifie
+            
+            # Déterminer le type de récépissé selon le type de paiement
+            type_recu = self._determiner_type_recu_paiement()
+            
+            # Récupérer les informations de base de manière sécurisée
+            try:
+                code_location = self.contrat.numero_contrat if self.contrat and self.contrat.numero_contrat else 'N/A'
+            except:
+                code_location = 'N/A'
+                
+            try:
+                recu_de = self.contrat.locataire.get_nom_complet() if self.contrat and self.contrat.locataire else 'LOCATAIRE'
+            except:
+                recu_de = 'LOCATAIRE'
+                
+            try:
+                quartier = self.contrat.propriete.adresse if self.contrat and self.contrat.propriete else 'Non spécifié'
+            except:
+                quartier = 'Non spécifié'
+            
+            # Générer un numéro de récépissé unique au format KBIS
+            numero_recu = f"REC-{datetime.now().strftime('%Y%m%d%H%M%S')}-{self.id if self.id else 'X1DZ'}"
+            
+            # Données du récépissé
+            donnees_recu = {
+                'numero': numero_recu,
+                'date': self.date_paiement.strftime('%d-%b-%y') if self.date_paiement else datetime.now().strftime('%d-%b-%y'),
+                'code_location': code_location,
+                'recu_de': recu_de,
+                'montant': float(self.montant),
+                'mois_regle': self._obtenir_mois_regle(),
+                'type_paiement': self.get_type_paiement_display(),
+                'mode_paiement': self.get_mode_paiement_display(),
+                'quartier': quartier,
+            }
+            
+            # Ajouter des données spécialisées selon le type
+            donnees_recu.update(self._ajouter_donnees_specialisees_recu(type_recu))
+            
+            # Générer le document unifié
+            return DocumentKBISUnifie.generer_document_unifie(donnees_recu, type_recu)
+            
+        except Exception as e:
+            print(f"Erreur génération récépissé KBIS: {e}")
+            return None
+    
+    def _determiner_type_recu_paiement(self):
+        """Détermine le type de récépissé selon le type de paiement"""
+        mapping = {
+            'loyer': 'recu_loyer',
+            'caution': 'recu_caution',
+            'avance': 'recu_avance',
+            'avance_loyer': 'recu_avance',
+            'depot_garantie': 'recu_caution',
+            'charges': 'recu_charges',
+            'regularisation': 'recu',
+            'paiement_partiel': 'recu',
+            'autre': 'recu',
+        }
+        return mapping.get(self.type_paiement, 'recu')
+    
+    def _ajouter_donnees_specialisees_recu(self, type_recu):
+        """Ajoute des données spécialisées selon le type de récépissé"""
+        donnees_speciales = {}
+        
+        if type_recu == 'recu_loyer':
+            try:
+                donnees_speciales.update({
+                    'loyer_mensuel': float(self.contrat.loyer_mensuel) if self.contrat else 0,
+                    'charges_mensuelles': float(self.contrat.charges_mensuelles) if self.contrat else 0,
+                    'total_mensuel': float(self.montant),
+                })
+            except:
+                donnees_speciales.update({
+                    'loyer_mensuel': float(self.montant),
+                    'charges_mensuelles': 0,
+                    'total_mensuel': float(self.montant),
+                })
+        
+        elif type_recu == 'recu_caution':
+            try:
+                donnees_speciales.update({
+                    'montant_caution': float(self.montant),
+                    'note_speciale': 'Dépôt de garantie - Remboursable en fin de bail',
+                })
+            except:
+                donnees_speciales.update({
+                    'montant_caution': float(self.montant),
+                    'note_speciale': 'Dépôt de garantie',
+                })
+        
+        elif type_recu == 'recu_avance':
+            try:
+                # *** CALCUL AUTOMATIQUE DES MOIS COUVERTS POUR LES AVANCES ***
+                loyer_mensuel = float(self.contrat.loyer_mensuel) if self.contrat and self.contrat.loyer_mensuel else 0
+                montant_avance = float(self.montant)
+                
+                # Calculer le nombre de mois couverts
+                nombre_mois_couverts = int(montant_avance // loyer_mensuel) if loyer_mensuel > 0 else 0
+                
+                # Calculer les mois réglés
+                mois_regle = self._calculer_mois_regle_avance(nombre_mois_couverts)
+                
+                donnees_speciales.update({
+                    'montant_avance': montant_avance,
+                    'loyer_mensuel': loyer_mensuel,
+                    'mois_couverts': nombre_mois_couverts,
+                    'mois_regle': mois_regle,
+                    'note_speciale': f'Avance de {nombre_mois_couverts} mois de loyer',
+                })
+            except Exception as e:
+                print(f"Erreur calcul avance: {str(e)}")
+                donnees_speciales.update({
+                    'montant_avance': float(self.montant),
+                    'loyer_mensuel': 0,
+                    'mois_couverts': 0,
+                    'mois_regle': 'Calcul impossible',
+                    'note_speciale': 'Avance de loyer',
+                })
+        
+        elif type_recu == 'recu_charges':
+            donnees_speciales.update({
+                'type_charges': 'Charges mensuelles',
+                'montant_charges': float(self.montant),
+                'note_speciale': 'Charges communes et services',
+            })
+        
+        return donnees_speciales
+    
+    def _calculer_mois_regle_avance(self, nombre_mois_couverts):
+        """Calcule les mois réglés pour une avance selon la logique : dernier mois de paiement + 1, + 2, etc."""
+        from dateutil.relativedelta import relativedelta
+        from datetime import datetime
+        
+        try:
+            if nombre_mois_couverts <= 0:
+                return "Aucun mois couvert"
+            
+            # *** NOUVELLE LOGIQUE : Dernier mois de paiement + 1, + 2, etc. ***
+            # 1. Trouver le dernier mois de paiement (dernière quittance de loyer)
+            dernier_mois_paiement = self._get_dernier_mois_paiement_avance()
+            
+            if dernier_mois_paiement:
+                # Commencer au mois suivant le dernier paiement
+                mois_debut = dernier_mois_paiement + relativedelta(months=1)
+            else:
+                # Si pas de paiement précédent, commencer au mois suivant la date de paiement
+                mois_debut = self.date_paiement.replace(day=1) + relativedelta(months=1)
+            
+            # 2. Générer la liste des mois réglés
+            mois_regles = []
+            mois_courant = mois_debut
+            
+            for i in range(nombre_mois_couverts):
+                mois_regles.append(mois_courant.strftime('%B %Y'))
+                mois_courant = mois_courant + relativedelta(months=1)
+            
+            # 3. Convertir les mois en français
+            mois_francais = {
+                'January': 'Janvier', 'February': 'Février', 'March': 'Mars',
+                'April': 'Avril', 'May': 'Mai', 'June': 'Juin',
+                'July': 'Juillet', 'August': 'Août', 'September': 'Septembre',
+                'October': 'Octobre', 'November': 'Novembre', 'December': 'Décembre'
+            }
+            
+            mois_regles_fr = []
+            for mois in mois_regles:
+                mois_fr = mois
+                for mois_en, mois_fr_val in mois_francais.items():
+                    mois_fr = mois_fr.replace(mois_en, mois_fr_val)
+                mois_regles_fr.append(mois_fr)
+            
+            return ', '.join(mois_regles_fr)
+            
+        except Exception as e:
+            print(f"Erreur lors du calcul des mois réglés: {str(e)}")
+            return f"{nombre_mois_couverts} mois couverts par l'avance"
+    
+    def _get_dernier_mois_paiement_avance(self):
+        """Récupère le dernier mois de paiement (dernière quittance de loyer) pour le calcul des avances"""
+        try:
+            # Chercher la dernière quittance de loyer pour ce contrat
+            derniere_quittance = Paiement.objects.filter(
+                contrat=self.contrat,
+                type_paiement='loyer',
+                statut='valide'
+            ).order_by('-date_paiement').first()
+            
+            if derniere_quittance:
+                # Retourner le mois de la dernière quittance
+                return derniere_quittance.date_paiement.replace(day=1)
+            
+            # Si pas de quittance, utiliser le mois de début du contrat
+            if self.contrat and self.contrat.date_debut:
+                return self.contrat.date_debut.replace(day=1)
+            
+            return None
+            
+        except Exception as e:
+            print(f"Erreur lors de la récupération du dernier mois de paiement: {str(e)}")
+            return None
+
+
+# =============================================================================
+# MODÈLES POUR LES RETRAITS AUX BAILLEURS
+# =============================================================================
+
+class RetraitBailleur(models.Model):
+    """
+    Modèle pour les retraits aux bailleurs
+    """
+    STATUT_CHOICES = [
+        ('en_attente', 'En attente'),
+        ('valide', 'Validé'),
+        ('paye', 'Payé'),
+        ('annule', 'Annulé'),
+    ]
+    
+    TYPE_RETRAIT_CHOICES = [
+        ('mensuel', 'Retrait mensuel'),
+        ('trimestriel', 'Retrait trimestriel'),
+        ('annuel', 'Retrait annuel'),
+        ('exceptionnel', 'Retrait exceptionnel'),
+    ]
+    
+    MODE_RETRAIT_CHOICES = [
+        ('virement', 'Virement bancaire'),
+        ('cheque', 'Chèque'),
+        ('especes', 'Espèces'),
+    ]
+    
+    # Relations
+    bailleur = models.ForeignKey(
+        'proprietes.Bailleur',
+        on_delete=models.CASCADE,
+        verbose_name=_("Bailleur"),
+        related_name='retraits'
+    )
+    
+    # Informations de base
+    mois_retrait = models.DateField(
+        verbose_name=_("Mois de retrait"),
+        help_text=_("Mois pour lequel le retrait est effectué")
+    )
+    
+    # Montants
+    montant_loyers_bruts = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Montant des loyers bruts")
+    )
+    
+    montant_charges_deductibles = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Montant des charges déductibles")
+    )
+    
+    montant_charges_bailleur = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Montant des charges bailleur")
+    )
+    
+    montant_net_a_payer = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Montant net à payer")
+    )
+    
+    # Configuration
+    statut = models.CharField(
+        max_length=20,
+        choices=STATUT_CHOICES,
+        default='en_attente',
+        verbose_name=_("Statut")
+    )
+    
+    type_retrait = models.CharField(
+        max_length=20,
+        choices=TYPE_RETRAIT_CHOICES,
+        default='mensuel',
+        verbose_name=_("Type de retrait")
+    )
+    
+    mode_retrait = models.CharField(
+        max_length=20,
+        choices=MODE_RETRAIT_CHOICES,
+        default='virement',
+        verbose_name=_("Mode de retrait")
+    )
+    
+    # Dates
+    date_demande = models.DateField(
+        auto_now_add=True,
+        verbose_name=_("Date de demande")
+    )
+    
+    date_validation = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date de validation")
+    )
+    
+    date_paiement = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date de paiement")
+    )
+    
+    # Utilisateurs
+    cree_par = models.ForeignKey(
+        'utilisateurs.Utilisateur',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='retraits_crees',
+        verbose_name=_("Créé par")
+    )
+    
+    valide_par = models.ForeignKey(
+        'utilisateurs.Utilisateur',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='retraits_valides',
+        verbose_name=_("Validé par")
+    )
+    
+    # Métadonnées
+    notes = models.TextField(
+        blank=True,
+        verbose_name=_("Notes")
+    )
+    
+    is_deleted = models.BooleanField(
+        default=False,
+        verbose_name=_("Supprimé")
+    )
+    
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        null=True,
+        blank=True,
+        verbose_name=_("Date de création")
+    )
+    
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Date de modification")
+    )
+    
+    class Meta:
+        app_label = 'paiements'
+        verbose_name = _("Retrait bailleur")
+        verbose_name_plural = _("Retraits bailleur")
+        ordering = ['-mois_retrait', '-date_demande']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['bailleur', 'mois_retrait'],
+                condition=models.Q(is_deleted=False),
+                name='unique_retrait_actif_per_bailleur_month'
+            )
+        ]
+        indexes = [
+            models.Index(fields=['bailleur', 'mois_retrait']),
+            models.Index(fields=['statut']),
+            models.Index(fields=['date_demande']),
+        ]
+    
+    def __str__(self):
+        return f"Retrait {self.mois_retrait.strftime('%B %Y')} - {self.bailleur.get_nom_complet()}"
+    
+    def get_nom_complet(self):
+        """Retourne le nom complet du bailleur"""
+        return self.bailleur.get_nom_complet()
+    
+    def calculer_charges_bailleur_disponibles(self):
+        """Calcule les charges bailleur disponibles pour ce mois"""
+        from django.db.models import Sum
+        
+        # Récupérer les charges validées et non utilisées pour ce mois
+        charges_disponibles = ChargeBailleur.objects.filter(
+            bailleur=self.bailleur,
+            mois_charge__year=self.mois_retrait.year,
+            mois_charge__month=self.mois_retrait.month,
+            statut='valide'
+        ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
+        
+        return charges_disponibles
+    
+    def calculer_montant_net(self):
+        """Calcule le montant net à payer avec les charges bailleur dynamiques"""
+        # Calculer les charges bailleur disponibles
+        self.montant_charges_bailleur = self.calculer_charges_bailleur_disponibles()
+        
+        # Calculer le montant net
+        net = self.montant_loyers_bruts - self.montant_charges_deductibles - self.montant_charges_bailleur
+        self.montant_net_a_payer = max(net, Decimal('0'))
+        return self.montant_net_a_payer
+    
+    def valider(self, user):
+        """Valide le retrait"""
+        from django.utils import timezone
+        
+        self.statut = 'valide'
+        self.date_validation = date.today()
+        self.valide_par = user
+        self.updated_at = timezone.now()
+        
+        # Sauvegarder seulement les champs modifiés
+        self.save(update_fields=['statut', 'date_validation', 'valide_par', 'updated_at'])
+    
+    def marquer_paye(self, user):
+        """Marque le retrait comme payé et marque les charges comme utilisées"""
+        from django.utils import timezone
+        
+        self.statut = 'paye'
+        self.date_paiement = date.today()
+        self.updated_at = timezone.now()
+        
+        # Marquer les charges bailleur comme utilisées
+        from proprietes.models import ChargesBailleur
+        charges_utilisees = ChargesBailleur.objects.filter(
+            propriete__bailleur=self.bailleur,
+            date_charge__year=self.mois_retrait.year,
+            date_charge__month=self.mois_retrait.month,
+            statut='en_attente'
+        )
+        
+        # TODO: Implémenter la logique de marquage des charges comme utilisées
+        # for charge in charges_utilisees:
+        #     charge.marquer_utilise(self)
+        
+        # Sauvegarder seulement les champs modifiés
+        self.save(update_fields=['statut', 'date_paiement', 'updated_at'])
+    
+    def annuler(self, user):
+        """Annule le retrait"""
+        from django.utils import timezone
+        
+        self.statut = 'annule'
+        self.updated_at = timezone.now()
+        
+        # Sauvegarder seulement les champs modifiés
+        self.save(update_fields=['statut', 'updated_at'])
+    
+    def _generer_quittance_retrait_kbis(self):
+        """Génère une quittance de retrait KBIS dynamique avec le format correct."""
+        import sys
+        import os
+        from datetime import datetime
+        
+        try:
+            # Utiliser le système unifié - corriger le chemin vers SCRIPTS
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            scripts_path = os.path.join(project_root, 'SCRIPTS')
+            if scripts_path not in sys.path:
+                sys.path.append(scripts_path)
+            from document_kbis_unifie import DocumentKBISUnifie
+            
+            # Récupérer les informations de base de manière sécurisée
+            try:
+                code_location = f"RET-{self.id}" if self.id else 'RET-N/A'
+            except:
+                code_location = 'RET-N/A'
+                
+            try:
+                recu_de = self.bailleur.get_nom_complet() if self.bailleur else 'BAILLEUR'
+            except:
+                recu_de = 'BAILLEUR'
+                
+            try:
+                quartier = f"Retrait {self.mois_retrait.strftime('%B %Y')}" if self.mois_retrait else 'Retrait mensuel'
+            except:
+                quartier = 'Retrait mensuel'
+            
+            # Générer un numéro de quittance unique au format KBIS
+            numero_quittance = f"QUI-RET-{datetime.now().strftime('%Y%m%d%H%M%S')}-{self.id if self.id else 'X1DZ'}"
+            
+            # Données de la quittance
+            donnees_quittance = {
+                'numero': numero_quittance,
+                'date': datetime.now().strftime('%d-%b-%y'),
+                'code_location': code_location,
+                'recu_de': recu_de,
+                'montant': float(self.montant_net_a_payer),
+                'mois_regle': self.mois_retrait.strftime('%B %Y') if self.mois_retrait else 'N/A',
+                'type_retrait': 'Retrait Mensuel',
+                'mode_retrait': 'Virement bancaire',
+                'quartier': quartier,
+                'montant_brut': float(self.montant_loyers_bruts),
+                'charges_deduites': float(self.montant_charges_deductibles),
+                'charges_bailleur': float(self.montant_charges_bailleur),
+                'montant_net': float(self.montant_net_a_payer),
+            }
+            
+            # Générer le document unifié
+            html_quittance = DocumentKBISUnifie.generer_document_unifie(donnees_quittance, 'quittance_retrait_mensuel')
+            
+            return html_quittance
+            
+        except Exception as e:
+            print(f"Erreur lors de la génération de la quittance de retrait KBIS: {str(e)}")
+            return None
+
+
+class ChargeBailleur(models.Model):
+    """
+    Modèle pour les charges avancées par le bailleur
+    """
+    STATUT_CHOICES = [
+        ('en_attente', 'En attente'),
+        ('valide', 'Validé'),
+        ('utilise', 'Utilisé'),
+        ('annule', 'Annulé'),
+    ]
+    
+    # Relations
+    bailleur = models.ForeignKey(
+        'proprietes.Bailleur',
+        on_delete=models.CASCADE,
+        related_name='charges_bailleur',
+        verbose_name=_("Bailleur")
+    )
+    
+    # Informations de base
+    description = models.CharField(
+        max_length=200,
+        verbose_name=_("Description de la charge")
+    )
+    
+    montant = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(0.01)],
+        verbose_name=_("Montant de la charge")
+    )
+    
+    date_charge = models.DateField(
+        verbose_name=_("Date de la charge")
+    )
+    
+    mois_charge = models.DateField(
+        verbose_name=_("Mois de la charge"),
+        help_text=_("Mois pour lequel cette charge s'applique")
+    )
+    
+    # Statut et utilisation
+    statut = models.CharField(
+        max_length=20,
+        choices=STATUT_CHOICES,
+        default='en_attente',
+        verbose_name=_("Statut")
+    )
+    
+    retrait_utilise = models.ForeignKey(
+        'RetraitBailleur',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='charges_utilisees',
+        verbose_name=_("Retrait qui a utilisé cette charge")
+    )
+    
+    # Métadonnées
+    cree_par = models.ForeignKey(
+        'utilisateurs.Utilisateur',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='charges_bailleur_crees',
+        verbose_name=_("Créé par")
+    )
+    
+    notes = models.TextField(
+        blank=True,
+        verbose_name=_("Notes")
+    )
+    
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Date de création")
+    )
+    
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Date de modification")
+    )
+    
+    class Meta:
+        app_label = 'paiements'
+        verbose_name = _("Charge Bailleur")
+        verbose_name_plural = _("Charges Bailleur")
+        ordering = ['-date_charge', '-created_at']
+    
+    def __str__(self):
+        return f"{self.bailleur.get_nom_complet()} - {self.description} - {self.montant} F CFA"
+    
+    def marquer_utilise(self, retrait):
+        """Marque cette charge comme utilisée dans un retrait"""
+        self.statut = 'utilise'
+        self.retrait_utilise = retrait
+        self.save()
+    
+    def marquer_valide(self, user):
+        """Valide cette charge"""
+        self.statut = 'valide'
+        self.save()
+    
+    def annuler(self, user):
+        """Annule cette charge"""
+        self.statut = 'annule'
+        self.save()
+
+
+class RetraitQuittance(models.Model):
+    """
+    Modèle pour les quittances de retrait
+    """
+    retrait = models.OneToOneField(
+        RetraitBailleur,
+        on_delete=models.CASCADE,
+        related_name='quittance',
+        verbose_name=_("Retrait")
+    )
+    
+    numero_quittance = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name=_("Numéro de quittance")
+    )
+    
+    date_emission = models.DateField(
+        auto_now_add=True,
+        verbose_name=_("Date d'émission")
+    )
+    
+    cree_par = models.ForeignKey(
+        'utilisateurs.Utilisateur',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("Créé par")
+    )
+    
+    # Métadonnées
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Date de création")
+    )
+    
+    class Meta:
+        app_label = 'paiements'
+        verbose_name = _("Quittance de retrait")
+        verbose_name_plural = _("Quittances de retrait")
+        ordering = ['-date_emission']
+    
+    def __str__(self):
+        return f"Quittance {self.numero_quittance} - {self.retrait.get_nom_complet()}"
+    
+    def generer_numero(self):
+        """Génère un numéro de quittance unique"""
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        return f"QUI-{timestamp}-{self.retrait.id}"
+    
+    def save(self, *args, **kwargs):
+        if not self.numero_quittance:
+            self.numero_quittance = self.generer_numero()
+        super().save(*args, **kwargs)
+
+
+class QuittancePaiement(models.Model):
+    """
+    Modèle pour les quittances de paiement
+    """
+    STATUT_CHOICES = [
+        ('generee', 'Générée'),
+        ('imprimee', 'Imprimée'),
+        ('envoyee', 'Envoyée'),
+        ('archivee', 'Archivée'),
+    ]
+    
+    # Relations
+    paiement = models.OneToOneField(
+        Paiement,
+        on_delete=models.CASCADE,
+        related_name='quittance',
+        verbose_name=_("Paiement")
+    )
+    
+    # Informations de base
+    numero_quittance = models.CharField(
+        max_length=50,
+        unique=True,
+        help_text=_('Numéro unique de la quittance'),
+        verbose_name=_("Numéro de quittance")
+    )
+    
+    # Dates
+    date_emission = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Date d'émission")
+    )
+    date_impression = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date d'impression")
+    )
+    
+    # Statut
+    statut = models.CharField(
+        max_length=20,
+        choices=STATUT_CHOICES,
+        default='generee',
+        verbose_name=_("Statut")
+    )
+    
+    # Utilisateurs
+    cree_par = models.ForeignKey(
+        'utilisateurs.Utilisateur',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='quittances_crees',
+        verbose_name=_("Créé par")
+    )
+    
+    # Suppression logique
+    is_deleted = models.BooleanField(
+        default=False,
+        verbose_name=_("Supprimé logiquement")
+    )
+    deleted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date de suppression")
+    )
+    deleted_by = models.ForeignKey(
+        'utilisateurs.Utilisateur',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='quittances_deleted',
+        verbose_name=_("Supprimé par")
+    )
+    
+    class Meta:
+        app_label = 'paiements'
+        verbose_name = _("Quittance de paiement")
+        verbose_name_plural = _("Quittances de paiement")
+        ordering = ['-date_emission']
+    
+    def __str__(self):
+        return f"Quittance {self.numero_quittance} - {self.paiement.contrat.locataire.get_nom_complet()}"
+    
+    def generer_numero(self):
+        """Génère un numéro de quittance unique"""
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        return f"QUI-{timestamp}-{self.paiement.id}"
+    
+    def marquer_imprimee(self):
+        """Marque la quittance comme imprimée"""
+        from django.utils import timezone
+        self.statut = 'imprimee'
+        self.date_impression = timezone.now()
+        self.save()
+    
+    def marquer_envoyee(self):
+        """Marque la quittance comme envoyée"""
+        self.statut = 'envoyee'
+        self.save()
+    
+    def marquer_archivee(self):
+        """Marque la quittance comme archivée"""
+        self.statut = 'archivee'
+        self.save()
+    
+    def save(self, *args, **kwargs):
+        if not self.numero_quittance:
+            self.numero_quittance = self.generer_numero()
+        super().save(*args, **kwargs)

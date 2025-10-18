@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Détails de la Pièce - {{ piece.nom }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Boutons de navigation professionnels -->
+    {% include 'includes/navigation_buttons.html' with 
+        page_title=piece.nom
+        page_subtitle=piece.propriete.titre
+        back_url='proprietes:gestion_pieces'
+        back_text="Retour à la gestion des pièces"
+        show_dashboard_button=True
+        show_list_button=True %}
+    
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Informations de la pièce -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-grid-3x3-gap"></i> Informations de la Pièce</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Nom :</strong> {{ piece.nom }}</p>
+                            <p><strong>Type :</strong> <span class="badge bg-info">{{ piece.get_type_piece_display }}</span></p>
+                            <p><strong>Numéro :</strong> {{ piece.numero_piece|default:"Non défini" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Surface :</strong> {{ piece.surface|default:"Non définie" }} m²</p>
+                            <p><strong>Statut :</strong> 
+                                {% if piece.statut == 'disponible' %}
+                                    <span class="badge bg-success">Disponible</span>
+                                {% elif piece.statut == 'occupee' %}
+                                    <span class="badge bg-warning">Occupée</span>
+                                {% elif piece.statut == 'en_renovation' %}
+                                    <span class="badge bg-danger">En rénovation</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Hors service</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Propriété :</strong> <a href="{% url 'proprietes:detail' piece.propriete.pk %}">{{ piece.propriete.titre }}</a></p>
+                        </div>
+                    </div>
+                    
+                    {% if piece.description %}
+                        <div class="mt-3">
+                            <strong>Description :</strong>
+                            <p class="mt-2">{{ piece.description }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Locataire actuel -->
+            {% if locataire_actuel %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-person-check"></i> Locataire Actuel</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Nom :</strong> <a href="{% url 'proprietes:detail_locataire' locataire_actuel.pk %}">{{ locataire_actuel.get_nom_complet }}</a></p>
+                    <p><strong>Contrat :</strong> <a href="{% url 'contrats:detail' contrat_actuel.pk %}">{{ contrat_actuel.numero_contrat }}</a></p>
+                    <p><strong>Période :</strong> Du {{ contrat_actuel.date_debut }} au {{ contrat_actuel.date_fin|default:"Non définie" }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Actions rapides -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-gear"></i> Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'proprietes:piece_modifier' piece.pk %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-pencil"></i> Modifier
+                        </a>
+                        
+                        {% if piece.statut == 'disponible' %}
+                            <a href="{% url 'contrats:ajouter' %}?piece={{ piece.pk }}" class="btn btn-outline-success">
+                                <i class="bi bi-person-plus"></i> Louer
+                            </a>
+                        {% endif %}
+                        
+                        {% if piece.statut == 'occupee' %}
+                            <button onclick="libererPiece({{ piece.pk }})" class="btn btn-outline-warning">
+                                <i class="bi bi-person-x"></i> Libérer
+                            </button>
+                        {% endif %}
+                        
+                        {% if piece.statut == 'disponible' %}
+                            <button onclick="mettreEnRenovation({{ piece.pk }})" class="btn btn-outline-danger">
+                                <i class="bi bi-tools"></i> Mettre en rénovation
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Statistiques -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-graph-up"></i> Statistiques</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Total contrats :</strong> {{ statistiques.total_contrats }}</p>
+                    <p><strong>Jours occupés :</strong> {{ statistiques.jours_occupes }}</p>
+                    <p><strong>Taux d'occupation :</strong> {{ statistiques.taux_occupation }}%</p>
+                    <p><strong>Contrats actifs :</strong> {{ statistiques.contrats_actifs }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Historique des contrats -->
+    {% if historique_contrats %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-clock-history"></i> Historique des Contrats</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Contrat</th>
+                                    <th>Locataire</th>
+                                    <th>Période</th>
+                                    <th>Statut</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for contrat in historique_contrats %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'contrats:detail' contrat.pk %}">
+                                            {{ contrat.numero_contrat }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'proprietes:detail_locataire' contrat.locataire.pk %}">
+                                            {{ contrat.locataire.get_nom_complet }}
+                                        </a>
+                                    </td>
+                                    <td>{{ contrat.date_debut }} - {{ contrat.date_fin|default:"En cours" }}</td>
+                                    <td>
+                                        {% if contrat.est_actif and not contrat.est_resilie %}
+                                            <span class="badge bg-success">Actif</span>
+                                        {% elif contrat.est_resilie %}
+                                            <span class="badge bg-warning">Résilié</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactif</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'contrats:detail' contrat.pk %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function libererPiece(pieceId) {
+    if (confirm('Êtes-vous sûr de vouloir libérer cette pièce ?')) {
+        fetch(`/proprietes/piece/${pieceId}/liberer/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur lors de la libération de la pièce : ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la libération de la pièce');
+        });
+    }
+}
+
+function mettreEnRenovation(pieceId) {
+    if (confirm('Êtes-vous sûr de vouloir mettre cette pièce en rénovation ?')) {
+        // Rediriger vers la page de planification de rénovation
+        window.location.href = `/proprietes/${piece.propriete.pk}/pieces/planifier-renovation/`;
+    }
+}
+</script>
+{% endblock %}

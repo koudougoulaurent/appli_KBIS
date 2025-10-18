@@ -1,0 +1,825 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+{% load humanize %}
+{% load utilisateur_extras %}
+
+{% block title %}Détail du Paiement - {{ paiement.reference_paiement }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .paiement-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    
+    .paiement-info {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .info-section {
+        margin-bottom: 2rem;
+    }
+    
+    .info-section h4 {
+        color: #495057;
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #6c757d;
+        min-width: 200px;
+    }
+    
+    .info-value {
+        color: #495057;
+        text-align: right;
+        flex: 1;
+    }
+    
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+    }
+    
+    .status-valide {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .status-en-attente {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+    
+    .status-annule {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .quittance-section {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .quittance-section h4 {
+        color: white;
+        border-bottom: 2px solid rgba(255,255,255,0.3);
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .quittance-info {
+        background: rgba(255,255,255,0.1);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .quittance-actions {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .btn-quittance {
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 5px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-quittance:hover {
+        background: rgba(255,255,255,0.3);
+        color: white;
+        text-decoration: none;
+    }
+    
+    .btn-generer-quittance {
+        background: #28a745;
+        border: 1px solid #28a745;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 5px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        font-weight: 600;
+    }
+    
+    .btn-generer-quittance:hover {
+        background: #218838;
+        border-color: #1e7e34;
+        color: white;
+        text-decoration: none;
+    }
+    
+    .montant-section {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .montant-total {
+        font-size: 2rem;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    
+    .montant-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    
+    .montant-item {
+        text-align: center;
+        padding: 1rem;
+        background: rgba(255,255,255,0.1);
+        border-radius: 8px;
+    }
+    
+    .montant-label {
+        font-size: 0.875rem;
+        opacity: 0.9;
+        margin-bottom: 0.5rem;
+    }
+    
+    .montant-value {
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 2rem;
+    }
+    
+    .btn-action {
+        padding: 0.75rem 1.5rem;
+        border-radius: 5px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #0056b3;
+        color: white;
+        text-decoration: none;
+    }
+    
+    .btn-success {
+        background: #28a745;
+        color: white;
+    }
+    
+    .btn-success:hover {
+        background: #218838;
+        color: white;
+        text-decoration: none;
+    }
+    
+    .btn-warning {
+        background: #ffc107;
+        color: #212529;
+    }
+    
+    .btn-warning:hover {
+        background: #e0a800;
+        color: #212529;
+        text-decoration: none;
+    }
+    
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .btn-danger:hover {
+        background: #c82333;
+        color: white;
+        text-decoration: none;
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background: #545b62;
+        color: white;
+        text-decoration: none;
+    }
+    
+    @media (max-width: 768px) {
+        .info-row {
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+        }
+        
+        .info-value {
+            text-align: left;
+            margin-top: 0.25rem;
+        }
+        
+        .quittance-actions {
+            flex-direction: column;
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+        }
+        
+        .montant-details {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête du paiement -->
+    <div class="paiement-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="bi bi-credit-card me-3"></i>
+                    Paiement {{ paiement.reference_paiement }}
+                </h1>
+                <p class="mb-0 opacity-75">
+                    {% if paiement.contrat %}
+                        Contrat : {{ paiement.contrat.reference_contrat }} - 
+                        {{ paiement.contrat.propriete.adresse }}
+                    {% else %}
+                        Paiement sans contrat associé
+                    {% endif %}
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <span class="status-badge status-{{ paiement.statut }}">
+                    {{ paiement.get_statut_display }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Informations principales -->
+        <div class="col-lg-8">
+            <!-- Informations du paiement -->
+            <div class="paiement-info">
+                <h4><i class="bi bi-info-circle me-2"></i>Informations du paiement</h4>
+                
+                <div class="info-row">
+                    <span class="info-label">Référence</span>
+                    <span class="info-value">{{ paiement.reference_paiement }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Date de paiement</span>
+                    <span class="info-value">{{ paiement.date_paiement|date:"d/m/Y" }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Type de paiement</span>
+                    <span class="info-value">{{ paiement.get_type_paiement_display }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Mode de paiement</span>
+                    <span class="info-value">{{ paiement.get_mode_paiement_display }}</span>
+                </div>
+                
+                {% if paiement.numero_cheque %}
+                <div class="info-row">
+                    <span class="info-label">Numéro de chèque</span>
+                    <span class="info-value">{{ paiement.numero_cheque }}</span>
+                </div>
+                {% endif %}
+                
+                {% if paiement.reference_virement %}
+                <div class="info-row">
+                    <span class="info-label">Référence virement</span>
+                    <span class="info-value">{{ paiement.reference_virement }}</span>
+                </div>
+                {% endif %}
+                
+                {% if paiement.date_encaissement %}
+                <div class="info-row">
+                    <span class="info-label">Date d'encaissement</span>
+                    <span class="info-value">{{ paiement.date_encaissement|date:"d/m/Y" }}</span>
+                </div>
+                {% endif %}
+                
+                {% if paiement.valide_par %}
+                <div class="info-row">
+                    <span class="info-label">Validé par</span>
+                    <span class="info-value">{{ paiement.valide_par.get_full_name|default:paiement.valide_par.username }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Informations du contrat -->
+            {% if paiement.contrat %}
+            <div class="paiement-info">
+                <h4><i class="bi bi-file-earmark-text me-2"></i>Informations du contrat</h4>
+                
+                <div class="info-row">
+                    <span class="info-label">Référence contrat</span>
+                    <span class="info-value">{{ paiement.contrat.reference_contrat }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Bailleur</span>
+                    <span class="info-value">{{ paiement.contrat.propriete.bailleur.get_nom_complet }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Locataire</span>
+                    <span class="info-value">{{ paiement.contrat.locataire.get_nom_complet }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Propriété</span>
+                    <span class="info-value">{{ paiement.contrat.propriete.adresse }}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Loyer mensuel</span>
+                    <span class="info-value">{{ paiement.contrat.loyer_mensuel|floatformat:2|intcomma }} F CFA</span>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Notes -->
+            {% if paiement.notes %}
+            <div class="paiement-info">
+                <h4><i class="bi bi-chat-text me-2"></i>Notes</h4>
+                <div class="p-3 bg-light rounded">
+                    {{ paiement.notes|linebreaks }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Colonne de droite -->
+        <div class="col-lg-4">
+            <!-- Résumé des montants -->
+            <div class="montant-section">
+                <h4 class="text-center mb-3">
+                    <i class="bi bi-calculator me-2"></i>Résumé des montants
+                </h4>
+                
+                <div class="montant-total">
+                    {{ paiement.montant|floatformat:2|intcomma }} F CFA
+                </div>
+                
+                <div class="montant-details">
+                    <div class="montant-item">
+                        <div class="montant-label">Montant principal</div>
+                        <div class="montant-value">{{ paiement.montant|floatformat:2|intcomma }} F CFA</div>
+                    </div>
+                    
+                    {% if paiement.charges_deductibles.exists %}
+                    <div class="montant-item">
+                        <div class="montant-label">Charges déductibles</div>
+                        <div class="montant-value">{{ paiement.total_charges_deductibles|floatformat:2|intcomma }} F CFA</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Section Quittance de paiement -->
+            <div class="quittance-section">
+                <h4>
+                    <i class="bi bi-receipt me-2"></i>Quittance de paiement
+                </h4>
+                
+                {% if paiement.quittance %}
+                    <!-- Quittance existante -->
+                    <div class="quittance-info">
+                        <div class="info-row">
+                            <span class="info-label">Numéro</span>
+                            <span class="info-value">{{ paiement.quittance.numero_quittance }}</span>
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="info-label">Date d'émission</span>
+                            <span class="info-value">{{ paiement.quittance.date_emission|date:"d/m/Y H:i" }}</span>
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="info-label">Statut</span>
+                            <span class="info-value">
+                                <span class="badge bg-{% if paiement.quittance.statut == 'generee' %}primary{% elif paiement.quittance.statut == 'imprimee' %}success{% elif paiement.quittance.statut == 'envoyee' %}info{% elif paiement.quittance.statut == 'archivee' %}secondary{% endif %}">
+                                    {{ paiement.quittance.get_statut_display }}
+                                </span>
+                            </span>
+                        </div>
+                        
+                        {% if paiement.quittance.date_impression %}
+                        <div class="info-row">
+                            <span class="info-label">Date d'impression</span>
+                            <span class="info-value">{{ paiement.quittance.date_impression|date:"d/m/Y H:i" }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if paiement.quittance.cree_par %}
+                        <div class="info-row">
+                            <span class="info-label">Créée par</span>
+                            <span class="info-value">{{ paiement.quittance.cree_par.get_full_name|default:paiement.quittance.cree_par.username }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="quittance-actions">
+                        <a href="{% url 'paiements:quittance_detail' paiement.quittance.pk %}" class="btn-quittance">
+                            <i class="bi bi-eye me-1"></i>Voir
+                        </a>
+                        
+                        {% if paiement.quittance.statut == 'generee' %}
+                        <a href="#" onclick="marquerImprimee({{ paiement.quittance.pk }})" class="btn-quittance">
+                            <i class="bi bi-printer me-1"></i>Marquer imprimée
+                        </a>
+                        {% endif %}
+                        
+                        {% if paiement.quittance.statut == 'imprimee' %}
+                        <a href="#" onclick="marquerEnvoyee({{ paiement.quittance.pk }})" class="btn-quittance">
+                            <i class="bi bi-envelope me-1"></i>Marquer envoyée
+                        </a>
+                        {% endif %}
+                        
+                        {% if paiement.quittance.statut == 'envoyee' %}
+                        <a href="#" onclick="marquerArchivee({{ paiement.quittance.pk }})" class="btn-quittance">
+                            <i class="bi bi-archive me-1"></i>Archiver
+                        </a>
+                        {% endif %}
+                    </div>
+                    
+                {% else %}
+                    <!-- Pas de quittance -->
+                    <div class="quittance-info">
+                        <p class="text-center mb-3">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Aucune quittance générée pour ce paiement
+                        </p>
+                        
+                        {% if paiement.statut == 'valide' %}
+                        <div class="text-center">
+                            <div class="d-flex gap-2 justify-content-center flex-wrap">
+                                <a href="{% url 'paiements:generer_quittance_unifie_a5' paiement.pk %}" class="btn btn-success" target="_blank">
+                                    <i class="bi bi-file-earmark-text me-2"></i>Quittance A5
+                                </a>
+                                <a href="{% url 'paiements:generer_recu_unifie_a5' paiement.pk %}" class="btn btn-primary" target="_blank">
+                                    <i class="bi bi-receipt me-2"></i>Récépissé A5
+                                </a>
+                                {% if paiement.type_paiement == 'avance' %}
+                                <a href="{% url 'paiements:generer_avance_unifie_a5' paiement.pk %}" class="btn btn-warning" target="_blank">
+                                    <i class="bi bi-cash-coin me-2"></i>Avance A5
+                                </a>
+                                {% endif %}
+                                {% if paiement.type_paiement == 'caution' %}
+                                <a href="{% url 'paiements:generer_caution_unifie_a5' paiement.pk %}" class="btn btn-info" target="_blank">
+                                    <i class="bi bi-shield-check me-2"></i>Caution A5
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="text-center">
+                            <p class="text-warning mb-0">
+                                <i class="bi bi-info-circle me-2"></i>
+                                La quittance sera générée automatiquement après validation du paiement
+                            </p>
+                        </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Boutons d'action -->
+    <div class="action-buttons">
+        <a href="{% url 'paiements:liste' %}" class="btn-action btn-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Retour à la liste
+        </a>
+        
+        {% if user|has_group_permission:'paiements' %}
+        <a href="{% url 'paiements:modifier_paiement' paiement.pk %}" class="btn-action btn-primary">
+            <i class="bi bi-pencil me-2"></i>Modifier
+        </a>
+        
+        {% if paiement.statut == 'en_attente' %}
+        <button type="button" 
+                onclick="validerPaiement({{ paiement.pk }})" 
+                class="btn btn-success btn-lg me-2"
+                style="font-weight: bold; padding: 15px 30px; font-size: 1.1rem;">
+            <i class="bi bi-check-circle-fill me-2"></i>✅ VALIDER LE PAIEMENT
+        </button>
+        
+        <button type="button" 
+                onclick="refuserPaiement({{ paiement.pk }})" 
+                class="btn btn-danger btn-lg me-2"
+                style="font-weight: bold; padding: 15px 30px; font-size: 1.1rem;">
+            <i class="bi bi-x-circle-fill me-2"></i>❌ REFUSER LE PAIEMENT
+        </button>
+        {% elif paiement.statut == 'valide' %}
+        <div class="alert alert-success d-flex align-items-center" role="alert">
+            <i class="bi bi-check-circle-fill me-2 fs-4"></i>
+            <div>
+                <strong>Paiement Validé</strong>
+                {% if paiement.date_validation %}
+                <br><small>Validé le {{ paiement.date_validation|date:"d/m/Y à H:i" }}</small>
+                {% endif %}
+                {% if paiement.valide_par %}
+                <br><small>par {{ paiement.valide_par.get_full_name|default:paiement.valide_par.username }}</small>
+                {% endif %}
+            </div>
+        </div>
+        {% elif paiement.statut == 'refuse' %}
+        <div class="alert alert-danger d-flex align-items-center" role="alert">
+            <i class="bi bi-x-circle-fill me-2 fs-4"></i>
+            <div>
+                <strong>Paiement Refusé</strong>
+                {% if paiement.date_refus %}
+                <br><small>Refusé le {{ paiement.date_refus|date:"d/m/Y à H:i" }}</small>
+                {% endif %}
+                {% if paiement.refuse_par %}
+                <br><small>par {{ paiement.refuse_par.get_full_name|default:paiement.refuse_par.username }}</small>
+                {% endif %}
+                {% if paiement.raison_refus %}
+                <br><small><strong>Raison :</strong> {{ paiement.raison_refus }}</small>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+        
+        {% if paiement.quittance %}
+        <a href="{% url 'paiements:quittance_detail' paiement.quittance.pk %}" class="btn-action btn-warning">
+            <i class="bi bi-receipt me-2"></i>Voir la quittance
+        </a>
+        {% endif %}
+        
+        {% if paiement.statut == 'valide' %}
+        <a href="{% url 'paiements:generer_quittance_unifie_a5' paiement.pk %}" class="btn-action btn-success" target="_blank">
+            <i class="bi bi-file-earmark-text me-2"></i>Quittance A5
+        </a>
+        <a href="{% url 'paiements:generer_recu_unifie_a5' paiement.pk %}" class="btn-action btn-primary" target="_blank">
+            <i class="bi bi-receipt me-2"></i>Récépissé A5
+        </a>
+        {% if paiement.type_paiement == 'avance' %}
+        <a href="{% url 'paiements:generer_avance_unifie_a5' paiement.pk %}" class="btn-action btn-warning" target="_blank">
+            <i class="bi bi-cash-coin me-2"></i>Avance A5
+        </a>
+        {% endif %}
+        {% if paiement.type_paiement == 'caution' %}
+        <a href="{% url 'paiements:generer_caution_unifie_a5' paiement.pk %}" class="btn-action btn-info" target="_blank">
+            <i class="bi bi-shield-check me-2"></i>Caution A5
+        </a>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de confirmation -->
+<div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmationModalLabel">Confirmation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="confirmationModalBody">
+                <!-- Le contenu sera rempli dynamiquement -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="confirmationModalConfirm">Confirmer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Fonction pour valider un paiement
+    function validerPaiement(paiementId) {
+        if (confirm('Êtes-vous sûr de vouloir valider ce paiement ?\n\nCette action confirmera que le paiement a été reçu et traité.')) {
+            fetch(`/paiements/paiement/${paiementId}/valider/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+            })
+            .then(response => {
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert('Erreur lors de la validation du paiement');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la validation du paiement');
+            });
+        }
+    }
+
+    // Fonction pour refuser un paiement
+    function refuserPaiement(paiementId) {
+        const raison = prompt('Veuillez indiquer la raison du refus :');
+        if (raison && raison.trim()) {
+            if (confirm(`Êtes-vous sûr de vouloir refuser ce paiement ?\n\nRaison : ${raison}`)) {
+                const formData = new FormData();
+                formData.append('raison_refus', raison);
+                
+                fetch(`/paiements/paiement/${paiementId}/refuser/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    },
+                    body: formData
+                })
+                .then(response => {
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        alert('Erreur lors du refus du paiement');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    alert('Erreur lors du refus du paiement');
+                });
+            }
+        } else if (raison !== null) {
+            alert('Veuillez indiquer une raison pour le refus.');
+        }
+    }
+
+    // Fonction pour annuler un paiement
+    function annulerPaiement(paiementId) {
+        if (confirm('Êtes-vous sûr de vouloir annuler ce paiement ?')) {
+            fetch(`/paiements/${paiementId}/annuler/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Erreur lors de l\'annulation : ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors de l\'annulation du paiement');
+            });
+        }
+    }
+
+    // Fonction pour marquer une quittance comme imprimée
+    function marquerImprimee(quittanceId) {
+        if (confirm('Marquer cette quittance comme imprimée ?')) {
+            fetch(`/paiements/quittance/${quittanceId}/imprimee/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Erreur : ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la mise à jour du statut');
+            });
+        }
+    }
+
+    // Fonction pour marquer une quittance comme envoyée
+    function marquerEnvoyee(quittanceId) {
+        if (confirm('Marquer cette quittance comme envoyée ?')) {
+            fetch(`/paiements/quittance/${quittanceId}/envoyee/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Erreur : ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la mise à jour du statut');
+            });
+        }
+    }
+
+    // Fonction pour marquer une quittance comme archivée
+    function marquerArchivee(quittanceId) {
+        if (confirm('Archiver cette quittance ?')) {
+            fetch(`/paiements/quittance/${quittanceId}/archivee/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Erreur : ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la mise à jour du statut');
+            });
+        }
+    }
+
+    // Ajouter le token CSRF à toutes les requêtes fetch
+    document.addEventListener('DOMContentLoaded', function() {
+        // Créer un token CSRF caché si il n'existe pas
+        if (!document.querySelector('[name=csrfmiddlewaretoken]')) {
+            const token = document.createElement('input');
+            token.type = 'hidden';
+            token.name = 'csrfmiddlewaretoken';
+            token.value = '{{ csrf_token }}';
+            document.body.appendChild(token);
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+
+{% block title %}Détail du Paiement{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-cash-coin"></i> Détail du Paiement
+        </h1>
+        <div>
+            <a href="{% url 'paiements:liste' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Retour à la liste
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Informations du paiement -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-cash-coin"></i> Informations du Paiement
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Référence:</strong></div>
+                        <div class="col-sm-8">{{ paiement.reference_paiement }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Montant:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="h5 text-success">{% include 'includes/montant.html' with montant=paiement.montant devise_source=devise_base %}</span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Date de paiement:</strong></div>
+                        <div class="col-sm-8">{{ paiement.date_paiement|date:"d/m/Y" }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Méthode:</strong></div>
+                        <div class="col-sm-8">{{ paiement.get_methode_paiement_display }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Statut:</strong></div>
+                        <div class="col-sm-8">
+                            {% if paiement.statut == 'valide' %}
+                                <span class="badge bg-success">Validé</span>
+                            {% elif paiement.statut == 'en_attente' %}
+                                <span class="badge bg-warning">En attente</span>
+                            {% else %}
+                                <span class="badge bg-danger">Rejeté</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if paiement.notes %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Notes:</strong></div>
+                        <div class="col-sm-8">{{ paiement.notes }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations du contrat -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-earmark-text"></i> Contrat Associé
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Référence:</strong></div>
+                        <div class="col-sm-8">{{ paiement.contrat.numero_contrat }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Propriété:</strong></div>
+                        <div class="col-sm-8">
+                            {{ paiement.contrat.propriete.titre }}<br>
+                            <span class="text-muted">Adresse: {{ paiement.contrat.propriete.adresse }}</span>
+                        </div>
+                    </div>
+                    {% if paiement.contrat.unite_locative %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Unité locative:</strong></div>
+                        <div class="col-sm-8">
+                            {{ paiement.contrat.unite_locative.nom }}<br>
+                            <span class="text-muted">Type: {{ paiement.contrat.unite_locative.type_unite }} | Surface: {{ paiement.contrat.unite_locative.surface }} m²</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Locataire:</strong></div>
+                        <div class="col-sm-8">{{ paiement.contrat.locataire.nom }} {{ paiement.contrat.locataire.prenom }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Bailleur:</strong></div>
+                        <div class="col-sm-8">{{ paiement.contrat.propriete.bailleur.nom }} {{ paiement.contrat.propriete.bailleur.prenom }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Reçu - Améliorée et plus pratique -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-receipt"></i> Reçu de Paiement
+            </h5>
+            {% if paiement.recu %}
+                <div class="btn-group" role="group">
+                    <a href="{% url 'paiements:recu_impression_directe' paiement.recu.pk %}" 
+                       class="btn btn-sm btn-success" target="_blank"
+                       title="Imprimer directement le reçu">
+                        <i class="bi bi-printer"></i> Imprimer
+                    </a>
+                    <a href="{% url 'paiements:recu_telecharger_pdf' paiement.recu.pk %}" 
+                       class="btn btn-sm btn-outline-success"
+                       title="Télécharger le PDF">
+                        <i class="bi bi-download"></i> PDF
+                    </a>
+                    <a href="{% url 'paiements:envoyer_recu_email' paiement.recu.pk %}" 
+                       class="btn btn-sm btn-info"
+                       title="Envoyer par email">
+                        <i class="bi bi-envelope"></i> Email
+                    </a>
+                    <a href="{% url 'paiements:recu_detail' paiement.recu.pk %}" 
+                       class="btn btn-sm btn-primary"
+                       title="Voir le détail complet">
+                        <i class="bi bi-eye"></i> Détail
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            {% if paiement.recu %}
+                <div class="row">
+                    <!-- Informations principales du reçu -->
+                    <div class="col-md-8">
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="row mb-3">
+                                    <div class="col-sm-5"><strong>Numéro:</strong></div>
+                                    <div class="col-sm-7">
+                                        <span class="badge bg-primary fs-6">{{ paiement.recu.numero_recu }}</span>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-sm-5"><strong>Date de génération:</strong></div>
+                                    <div class="col-sm-7">{{ paiement.recu.date_creation|date:"d/m/Y H:i" }}</div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-sm-5"><strong>Template:</strong></div>
+                                    <div class="col-sm-7">{{ paiement.recu.get_template_utilise_display }}</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="row mb-3">
+                                    <div class="col-sm-5"><strong>Statut:</strong></div>
+                                    <div class="col-sm-7">
+                                        {% if paiement.recu.valide %}
+                                            <span class="badge bg-success">Validé</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">En attente</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-sm-5"><strong>Impressions:</strong></div>
+                                    <div class="col-sm-7">
+                                        {% if paiement.recu.nombre_impressions > 0 %}
+                                            <span class="badge bg-info">{{ paiement.recu.nombre_impressions }} fois</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Jamais imprimé</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-sm-5"><strong>Emails envoyés:</strong></div>
+                                    <div class="col-sm-7">
+                                        {% if paiement.recu.nombre_emails > 0 %}
+                                            <span class="badge bg-info">{{ paiement.recu.nombre_emails }} fois</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Aucun email</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Actions rapides -->
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">Actions rapides</h6>
+                                <div class="d-grid gap-2">
+                                    {% if not paiement.recu.valide %}
+                                        <a href="{% url 'paiements:valider_recu' paiement.recu.pk %}" 
+                                           class="btn btn-success btn-sm">
+                                            <i class="bi bi-check-circle"></i> Valider le reçu
+                                        </a>
+                                    {% else %}
+                                        <a href="{% url 'paiements:invalider_recu' paiement.recu.pk %}" 
+                                           class="btn btn-warning btn-sm">
+                                            <i class="bi bi-x-circle"></i> Invalider le reçu
+                                        </a>
+                                    {% endif %}
+                                    <a href="{% url 'paiements:changer_template_recu' paiement.recu.pk %}" 
+                                       class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-palette"></i> Changer de template
+                                    </a>
+                                    <a href="{% url 'paiements:recu_impression_directe' paiement.recu.pk %}" 
+                                       class="btn btn-outline-success btn-sm" target="_blank">
+                                        <i class="bi bi-printer"></i> Impression directe
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Aperçu du reçu -->
+                <div class="mt-4">
+                    <h6>Aperçu du reçu :</h6>
+                    <div class="border rounded p-3 bg-light">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="text-muted">Reçu généré automatiquement</small>
+                                <br>
+                                <strong>{{ paiement.recu.numero_recu }}</strong>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <small class="text-muted">Montant : {{ paiement.montant }} F CFA</small>
+                                <br>
+                                <small class="text-muted">Date : {{ paiement.date_paiement|date:"d/m/Y" }}</small>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Locataire :</strong><br>
+                                {{ paiement.contrat.locataire.nom }} {{ paiement.contrat.locataire.prenom }}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Propriété :</strong><br>
+                                {{ paiement.contrat.propriete.adresse }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-receipt display-1 text-muted"></i>
+                    <h4 class="mt-3">Aucun reçu généré</h4>
+                    <p class="text-muted">Ce paiement n'a pas encore de reçu associé.</p>
+                    
+                    {% if paiement.statut == 'valide' %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> 
+                            <strong>Le reçu sera généré automatiquement lors de la validation du paiement.</strong>
+                            <br>
+                            <small>Vous pouvez également le générer manuellement si nécessaire.</small>
+                        </div>
+                        <a href="{% url 'paiements:generer_recu' paiement.pk %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Générer le reçu maintenant
+                        </a>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> 
+                            <strong>Le paiement doit être validé pour générer un reçu.</strong>
+                        </div>
+                        <a href="{% url 'paiements:modifier' paiement.pk %}" class="btn btn-warning">
+                            <i class="bi bi-pencil"></i> Modifier le statut du paiement
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

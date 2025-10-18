@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}Configuration Tableau de Bord{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-cog"></i>
+                        Configuration du Tableau de Bord
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="config-form">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="nom_tableau">Nom du tableau</label>
+                                    <input type="text" class="form-control" id="nom_tableau" name="nom_tableau" 
+                                           value="{{ config.nom_tableau|default:'Tableau Principal' }}" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <h5>Widgets disponibles</h5>
+                                <div class="row">
+                                    {% for widget in widgets_disponibles %}
+                                    <div class="col-md-4 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   name="widgets_actifs" value="{{ widget }}" 
+                                                   id="widget_{{ forloop.counter }}"
+                                                   {% if widget in config.widgets_actifs %}checked{% endif %}>
+                                            <label class="form-check-label" for="widget_{{ forloop.counter }}">
+                                                {{ widget|title|replace_underscores }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="masquer_montants" 
+                                           name="masquer_montants" 
+                                           {% if config.masquer_montants_sensibles %}checked{% endif %}>
+                                    <label class="form-check-label" for="masquer_montants">
+                                        Masquer les montants sensibles
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="affichage_anonymise" 
+                                           name="affichage_anonymise" 
+                                           {% if config.affichage_anonymise %}checked{% endif %}>
+                                    <label class="form-check-label" for="affichage_anonymise">
+                                        Affichage anonymisé
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="limite_jours">Limiter aux données récentes (jours)</label>
+                                    <input type="number" class="form-control" id="limite_jours" name="limite_jours" 
+                                           value="{{ config.limite_donnees_recentes|default:30 }}" min="1" max="365">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Sauvegarder
+                                </button>
+                                <a href="{% url 'core:tableau_bord_principal' %}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> Retour
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('config-form');
+    
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Afficher un indicateur de chargement
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sauvegarde...';
+        submitBtn.disabled = true;
+        
+        // Soumettre le formulaire
+        fetch(form.action || window.location.href, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Afficher un message de succès
+                showAlert('Configuration sauvegardée avec succès!', 'success');
+                setTimeout(() => {
+                    window.location.href = '{% url "core:tableau_bord_principal" %}';
+                }, 1500);
+            } else {
+                showAlert('Erreur lors de la sauvegarde: ' + data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showAlert('Erreur lors de la sauvegarde', 'danger');
+        })
+        .finally(() => {
+            // Restaurer le bouton
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        });
+    });
+});
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.container-fluid');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    // Auto-dismiss après 5 secondes
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

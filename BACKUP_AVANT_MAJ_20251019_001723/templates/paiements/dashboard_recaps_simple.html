@@ -1,0 +1,196 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Tableau de Bord Récapitulatifs - Gestion Immobilière{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-graph-up text-primary"></i>
+            Tableau de Bord Récapitulatifs
+        </h1>
+        <p class="text-muted mb-0">Vue d'ensemble simplifiée des récapitulatifs et paiements</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'paiements:generer_recap_mensuel_automatique' %}" class="btn btn-success">
+            <i class="bi bi-magic me-1"></i> Génération Auto
+        </a>
+        <a href="{% url 'paiements:liste_recaps_mensuels' %}" class="btn btn-primary">
+            <i class="bi bi-list me-1"></i> Voir Tous
+        </a>
+    </div>
+</div>
+
+<!-- Statistiques principales -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-primary">
+            <div class="card-body text-center">
+                <i class="bi bi-calendar-month text-primary display-6 mb-2"></i>
+                <h4 class="text-primary">{{ stats.total_recaps }}</h4>
+                <small class="text-muted">Récapitulatifs</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <i class="bi bi-check-circle text-success display-6 mb-2"></i>
+                <h4 class="text-success">{{ stats.recaps_valides }}</h4>
+                <small class="text-muted">Validés</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <i class="bi bi-cash-coin text-warning display-6 mb-2"></i>
+                <h4 class="text-warning">{{ stats.recaps_a_payer }}</h4>
+                <small class="text-muted">À Payer</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <i class="bi bi-arrow-up-circle text-info display-6 mb-2"></i>
+                <h4 class="text-info">{{ stats.montant_total|floatformat:0|intcomma }} F CFA</h4>
+                <small class="text-muted">Total à Payer</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Récapitulatifs récents -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-clock-history me-2"></i>
+                    Récapitulatifs Récents
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recaps_recents %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Bailleur</th>
+                                    <th>Mois</th>
+                                    <th>Montant</th>
+                                    <th>Statut</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for recap in recaps_recents %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ recap.bailleur.get_nom_complet }}</strong>
+                                    </td>
+                                    <td>{{ recap.mois_recap|date:"F Y" }}</td>
+                                    <td class="text-end">
+                                        <span class="fw-bold text-primary">
+                                            {{ recap.total_net_a_payer|floatformat:0|intcomma }} F CFA
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if recap.statut == 'brouillon' %}
+                                            <span class="badge bg-secondary">Brouillon</span>
+                                        {% elif recap.statut == 'valide' %}
+                                            <span class="badge bg-success">Validé</span>
+                                        {% elif recap.statut == 'envoye' %}
+                                            <span class="badge bg-info">Envoyé</span>
+                                        {% elif recap.statut == 'paye' %}
+                                            <span class="badge bg-primary">Payé</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'paiements:detail_recap_mensuel_auto' recap_id=recap.id %}" 
+                                               class="btn btn-outline-primary" title="Voir">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            {% if recap.statut == 'valide' and recap.total_net_a_payer > 0 %}
+                                                <a href="{% url 'paiements:creer_retrait_depuis_recap' recap_id=recap.id %}" 
+                                                   class="btn btn-success" title="Payer">
+                                                    <i class="bi bi-cash-coin"></i>
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-inbox display-4"></i>
+                        <p class="mt-2">Aucun récapitulatif récent</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>
+                    Actions Rapides
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'paiements:generer_recap_mensuel_automatique' %}" 
+                       class="btn btn-success btn-lg">
+                        <i class="bi bi-magic me-2"></i>
+                        Générer Récapitulatifs
+                    </a>
+                    
+                    <a href="{% url 'paiements:liste_recaps_mensuels' %}" 
+                       class="btn btn-outline-primary">
+                        <i class="bi bi-list me-2"></i>
+                        Voir Tous les Récapitulatifs
+                    </a>
+                    
+                    <a href="{% url 'paiements:retraits_bailleur' %}" 
+                       class="btn btn-outline-warning">
+                        <i class="bi bi-cash-coin me-2"></i>
+                        Voir les Retraits
+                    </a>
+                    
+                    <a href="{% url 'paiements:dashboard' %}" 
+                       class="btn btn-outline-secondary">
+                        <i class="bi bi-house me-2"></i>
+                        Retour Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Aide -->
+        <div class="card mt-3">
+            <div class="card-header bg-info text-white">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-question-circle me-2"></i>
+                    Aide Rapide
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="small">
+                    <p><strong>1. Génération :</strong> Cliquez sur "Générer Récapitulatifs" pour créer automatiquement tous les récapitulatifs du mois.</p>
+                    <p><strong>2. Validation :</strong> Vérifiez et validez les récapitulatifs avant paiement.</p>
+                    <p><strong>3. Paiement :</strong> Utilisez le bouton vert pour payer directement un bailleur.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

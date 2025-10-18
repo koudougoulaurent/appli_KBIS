@@ -1,0 +1,375 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Ajouter un Retrait - Gestion Immobilière{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête avec navigation -->
+    <div class="dashboard-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1><i class="bi bi-plus-circle"></i> Ajouter un Retrait</h1>
+                <p>Créer un nouveau retrait pour un bailleur</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'paiements:retraits_liste' %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Retour à la liste
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Affichage des erreurs -->
+    {% if form.errors %}
+        <div class="alert alert-danger">
+            <h5><i class="bi bi-exclamation-triangle"></i> Erreurs dans le formulaire :</h5>
+            {% for field, errors in form.errors.items %}
+                <div class="mb-2">
+                    <strong>{{ field|capfirst }} :</strong>
+                    <ul class="mb-0">
+                        {% for error in errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Formulaire principal -->
+    <div class="form-container">
+        <form method="POST" class="needs-validation" novalidate>
+            {% csrf_token %}
+            
+            <!-- Section Informations générales -->
+            <div class="form-section">
+                <h5><i class="bi bi-person-badge"></i> Informations Générales</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form.bailleur|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.mois_retrait|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Montants -->
+            <div class="form-section">
+                <h5><i class="bi bi-cash-coin"></i> Montants</h5>
+                <div class="row">
+                    <div class="col-md-4">
+                        {{ form.montant_loyers_bruts|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.montant_charges_deductibles|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.montant_net_a_payer|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Type et mode -->
+            <div class="form-section">
+                <h5><i class="bi bi-gear"></i> Type et Mode</h5>
+                <div class="row">
+                    <div class="col-md-4">
+                        {{ form.type_retrait|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.statut|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.mode_retrait|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Dates -->
+            <div class="form-section">
+                <h5><i class="bi bi-calendar"></i> Dates</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form.mois_retrait|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        <!-- Champ masqué pour la date de demande (auto_now_add) -->
+                        <div class="form-group">
+                            <label class="form-label">Date de demande</label>
+                            <input type="text" class="form-control" value="Automatique" readonly>
+                            <small class="form-text text-muted">La date de demande sera automatiquement définie lors de la création</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Informations bancaires -->
+            <div class="form-section">
+                <h5><i class="bi bi-bank"></i> Informations Bancaires</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">Mode de retrait</label>
+                            <select class="form-select" disabled>
+                                <option>{{ form.instance.mode_retrait|default:"Virement bancaire" }}</option>
+                            </select>
+                            <small class="form-text text-muted">Le mode de retrait est défini ci-dessus</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">Type de retrait</label>
+                            <select class="form-select" disabled>
+                                <option>{{ form.instance.type_retrait|default:"Mensuel" }}</option>
+                            </select>
+                            <small class="form-text text-muted">Le type de retrait est défini ci-dessus</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Notes -->
+            <div class="form-section">
+                <h5><i class="bi bi-journal-text"></i> Notes</h5>
+                <div class="row">
+                    <div class="col-12">
+                        {{ form.notes|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions du formulaire -->
+            <div class="form-actions">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <a href="{% url 'paiements:retraits_liste' %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Annuler
+                        </a>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="reset" class="btn btn-warning">
+                            <i class="bi bi-arrow-clockwise"></i> Réinitialiser
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle"></i> Créer le Retrait
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Aide contextuelle -->
+    <div class="help-section mt-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-question-circle"></i> Aide - Création de Retrait</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6><i class="bi bi-info-circle"></i> Informations obligatoires</h6>
+                        <p class="text-muted">Les champs marqués d'un astérisque (*) sont obligatoires.</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="bi bi-cash-coin"></i> Montants</h6>
+                        <p class="text-muted">Les montants doivent être positifs et en F CFA (francs CFA).</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="bi bi-calendar"></i> Dates</h6>
+                        <p class="text-muted">La date de versement peut être ajoutée ultérieurement.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion du champ mois de retrait
+    const moisRetrait = document.getElementById('id_mois_retrait');
+    
+    // Initialiser avec le premier jour du mois courant
+    const today = new Date();
+    const premierJourMoisCourant = new Date(today.getFullYear(), today.getMonth(), 1);
+    moisRetrait.value = premierJourMoisCourant.toISOString().split('T')[0];
+    
+    // Ajuster automatiquement au premier du mois quand l'utilisateur change la date
+    moisRetrait.addEventListener('change', function() {
+        if (this.value) {
+            const dateSelectionnee = new Date(this.value);
+            const premierJourMois = new Date(dateSelectionnee.getFullYear(), dateSelectionnee.getMonth(), 1);
+            this.value = premierJourMois.toISOString().split('T')[0];
+        }
+    });
+    
+    // Calcul automatique du montant net
+    const montantLoyersBruts = document.getElementById('id_montant_loyers_bruts');
+    const montantChargesDeductibles = document.getElementById('id_montant_charges_deductibles');
+    const montantNetAPayer = document.getElementById('id_montant_net_a_payer');
+    
+    // Vérifier que tous les éléments existent
+    if (!montantLoyersBruts || !montantChargesDeductibles || !montantNetAPayer) {
+        console.error('Erreur: Un ou plusieurs champs du formulaire sont introuvables');
+        console.log('montantLoyersBruts:', montantLoyersBruts);
+        console.log('montantChargesDeductibles:', montantChargesDeductibles);
+        console.log('montantNetAPayer:', montantNetAPayer);
+        return;
+    }
+    
+    function calculerMontantNet() {
+        const loyers = parseFloat(montantLoyersBruts.value) || 0;
+        const charges = parseFloat(montantChargesDeductibles.value) || 0;
+        const net = loyers - charges;
+        
+        // Mettre à jour le champ montant net
+        montantNetAPayer.value = net.toFixed(2);
+        
+        // Changer la couleur selon la valeur
+        if (net > 0) {
+            montantNetAPayer.style.backgroundColor = '#d4edda';
+            montantNetAPayer.style.borderColor = '#c3e6cb';
+        } else if (net < 0) {
+            montantNetAPayer.style.backgroundColor = '#f8d7da';
+            montantNetAPayer.style.borderColor = '#f5c6cb';
+        } else {
+            montantNetAPayer.style.backgroundColor = '#f8f9fa';
+            montantNetAPayer.style.borderColor = '#dee2e6';
+        }
+        
+        // Afficher un message d'information
+        const formText = montantNetAPayer.parentNode.querySelector('.form-text');
+        if (net < 0) {
+            formText.innerHTML = '<i class="bi bi-exclamation-triangle text-warning"></i> Attention : Le montant net est négatif (charges > loyers)';
+            formText.className = 'form-text text-warning';
+        } else if (net === 0) {
+            formText.innerHTML = '<i class="bi bi-info-circle text-info"></i> Montant net : 0 (loyers = charges)';
+            formText.className = 'form-text text-info';
+        } else {
+            formText.innerHTML = '<i class="bi bi-check-circle text-success"></i> Montant net calculé : ' + net.toFixed(2) + ' F CFA';
+            formText.className = 'form-text text-success';
+        }
+    }
+    
+    // Calculer au chargement de la page
+    calculerMontantNet();
+    
+    // Calculer à chaque modification des champs
+    montantLoyersBruts.addEventListener('input', calculerMontantNet);
+    montantChargesDeductibles.addEventListener('input', calculerMontantNet);
+    
+    // Calculer aussi quand on perd le focus
+    montantLoyersBruts.addEventListener('blur', calculerMontantNet);
+    montantChargesDeductibles.addEventListener('blur', calculerMontantNet);
+    
+    // Validation en temps réel
+    const form = document.querySelector('form');
+    const inputs = form.querySelectorAll('input, select, textarea');
+    
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            validateField(this);
+        });
+        
+        input.addEventListener('input', function() {
+            if (this.classList.contains('is-invalid')) {
+                validateField(this);
+            }
+        });
+    });
+    
+    function validateField(field) {
+        const value = field.value.trim();
+        const isRequired = field.hasAttribute('required');
+        
+        if (isRequired && !value) {
+            field.classList.add('is-invalid');
+            field.classList.remove('is-valid');
+        } else if (value) {
+            field.classList.add('is-valid');
+            field.classList.remove('is-invalid');
+        } else {
+            field.classList.remove('is-valid', 'is-invalid');
+        }
+    }
+    
+    // Validation du formulaire avant soumission
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // Vérifier que le montant net est positif
+        const net = parseFloat(montantNetAPayer.value) || 0;
+        if (net <= 0) {
+            e.preventDefault();
+            alert('Le montant net à payer doit être positif. Veuillez ajuster les montants des loyers ou des charges.');
+            return;
+        }
+        
+        inputs.forEach(input => {
+            validateField(input);
+            if (input.classList.contains('is-invalid')) {
+                isValid = false;
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Veuillez corriger les erreurs dans le formulaire avant de continuer.');
+        }
+    });
+    
+    // Ajouter des indicateurs visuels pour les champs obligatoires
+    const requiredFields = form.querySelectorAll('[required]');
+    requiredFields.forEach(field => {
+        const label = field.parentNode.querySelector('label');
+        if (label) {
+            label.innerHTML += ' <span class="text-danger">*</span>';
+        }
+    });
+});
+</script>
+
+<style>
+.form-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid #e9ecef;
+}
+
+.form-section h5 {
+    color: #495057;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 10px;
+}
+
+.form-actions {
+    background: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 30px;
+}
+
+.help-section .card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.help-section .card-header {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    border: none;
+}
+
+.help-section .card-body {
+    background: #f8f9fa;
+}
+</style>
+{% endblock %} 

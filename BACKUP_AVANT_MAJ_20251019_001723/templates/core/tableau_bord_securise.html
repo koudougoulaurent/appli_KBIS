@@ -1,0 +1,486 @@
+{% extends 'base_dashboard.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}{{ titre_page }} - Niveau {{ niveau_securite.niveau|title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/tableau_bord_securise.css' %}">
+<style>
+    .niveau-securite {
+        position: fixed;
+        top: 70px;
+        right: 20px;
+        z-index: 1000;
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-size: 0.85em;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+    
+    .niveau-public { background: #6c757d; color: white; }
+    .niveau-interne { background: #17a2b8; color: white; }
+    .niveau-confidentiel { background: #ffc107; color: black; }
+    .niveau-secret { background: #fd7e14; color: white; }
+    .niveau-top_secret { background: #dc3545; color: white; }
+    
+    .widget-securise {
+        position: relative;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .widget-securise.niveau-restreint {
+        border-color: #ffc107;
+        background: rgba(255, 193, 7, 0.1);
+    }
+    
+    .widget-securise.acces-refuse {
+        border-color: #dc3545;
+        background: rgba(220, 53, 69, 0.1);
+    }
+    
+    .donnees-masquees {
+        background: repeating-linear-gradient(
+            45deg,
+            #f8f9fa,
+            #f8f9fa 10px,
+            #e9ecef 10px,
+            #e9ecef 20px
+        );
+        padding: 20px;
+        text-align: center;
+        color: #6c757d;
+        border-radius: 8px;
+        margin: 10px 0;
+    }
+    
+    .indicateur-securite {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+    
+    .securite-ok { background: #28a745; }
+    .securite-limite { background: #ffc107; }
+    .securite-refuse { background: #dc3545; }
+    
+    .montant-masque {
+        background: #333;
+        color: transparent;
+        border-radius: 4px;
+        position: relative;
+    }
+    
+    .montant-masque::after {
+        content: "***";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        color: #666;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Indicateur de niveau de sécurité -->
+<div class="niveau-securite niveau-{{ niveau_securite.niveau }}">
+    <i class="bi bi-shield-lock"></i> {{ niveau_securite.niveau|title }}
+    <small>(Niveau {{ niveau_securite.priorite }})</small>
+</div>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h3 mb-0">
+                    <i class="bi bi-speedometer2"></i> Tableau de Bord Sécurisé
+                </h1>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'core:configuration_tableau_bord' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-gear"></i> Configuration
+                    </a>
+                    {% if niveau_securite.peut_exporter %}
+                    <div class="dropdown">
+                        <button class="btn btn-outline-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-download"></i> Export
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="exporterDonnees('statistiques')">Statistiques</a></li>
+                            {% if niveau_securite.priorite >= 5 %}
+                            <li><a class="dropdown-item" href="#" onclick="exporterDonnees('financier')">Données financières</a></li>
+                            {% endif %}
+                            {% if niveau_securite.priorite >= 7 %}
+                            <li><a class="dropdown-item" href="#" onclick="exporterDonnees('audit')">Logs d'audit</a></li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Widgets du tableau de bord -->
+    <div class="row" id="widgets-container">
+        
+        <!-- Widget Statistiques Générales -->
+        {% if 'statistiques_generales' in config_tableau.widgets_actifs %}
+        <div class="col-lg-6 col-xl-4 mb-4">
+            <div class="widget-securise card h-100">
+                <div class="indicateur-securite securite-ok"></div>
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-bar-chart"></i> Statistiques Générales
+                    </h5>
+                </div>
+                <div class="card-body" id="widget-statistiques">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Widget Activité Récente -->
+        {% if 'activite_recente' in config_tableau.widgets_actifs %}
+        <div class="col-lg-6 col-xl-4 mb-4">
+            <div class="widget-securise card h-100 {% if niveau_securite.priorite < 4 %}niveau-restreint{% endif %}">
+                <div class="indicateur-securite {% if niveau_securite.priorite >= 4 %}securite-ok{% else %}securite-limite{% endif %}"></div>
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history"></i> Activité Récente
+                    </h5>
+                </div>
+                <div class="card-body" id="widget-activite">
+                    {% if niveau_securite.priorite < 4 %}
+                    <div class="donnees-masquees">
+                        <i class="bi bi-lock fs-3 mb-2"></i>
+                        <p>Niveau d'accès insuffisant</p>
+                        <small>Niveau Confidentiel requis</small>
+                    </div>
+                    {% else %}
+                    <div class="text-center">
+                        <div class="spinner-border text-info" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Widget Graphiques Financiers -->
+        {% if 'graphiques_financiers' in config_tableau.widgets_actifs %}
+        <div class="col-lg-6 col-xl-4 mb-4">
+            <div class="widget-securise card h-100 {% if not niveau_securite.peut_voir_montants %}acces-refuse{% endif %}">
+                <div class="indicateur-securite {% if niveau_securite.peut_voir_montants %}securite-ok{% else %}securite-refuse{% endif %}"></div>
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up"></i> Graphiques Financiers
+                    </h5>
+                </div>
+                <div class="card-body" id="widget-financier">
+                    {% if not niveau_securite.peut_voir_montants %}
+                    <div class="donnees-masquees">
+                        <i class="bi bi-shield-x fs-3 mb-2"></i>
+                        <p>Accès aux données financières refusé</p>
+                        <small>Autorisations insuffisantes</small>
+                    </div>
+                    {% else %}
+                    <canvas id="graphique-revenus" width="300" height="200"></canvas>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Widget Alertes Sécurité -->
+        {% if 'alertes_securite' in config_tableau.widgets_actifs and niveau_securite.priorite >= 7 %}
+        <div class="col-12 mb-4">
+            <div class="widget-securise card">
+                <div class="indicateur-securite securite-ok"></div>
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> Alertes de Sécurité
+                        <span class="badge bg-danger ms-2" id="compteur-alertes">0</span>
+                    </h5>
+                </div>
+                <div class="card-body" id="widget-alertes">
+                    <div class="text-center">
+                        <div class="spinner-border text-warning" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- Informations sur le niveau d'accès -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="bi bi-info-circle"></i> Informations sur votre niveau d'accès
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <strong>Niveau actuel :</strong><br>
+                            <span class="badge bg-secondary">{{ niveau_securite.niveau|title }}</span>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Priorité :</strong><br>
+                            {{ niveau_securite.priorite }}/10
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Voir montants :</strong><br>
+                            {% if niveau_securite.peut_voir_montants %}
+                                <i class="bi bi-check-circle text-success"></i> Autorisé
+                            {% else %}
+                                <i class="bi bi-x-circle text-danger"></i> Refusé
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Export autorisé :</strong><br>
+                            {% if niveau_securite.peut_exporter %}
+                                <i class="bi bi-check-circle text-success"></i> Oui
+                            {% else %}
+                                <i class="bi bi-x-circle text-danger"></i> Non
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if config_tableau.masquer_montants_sensibles %}
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-eye-slash"></i> 
+                        <strong>Mode sécurisé activé :</strong> Les montants sensibles sont masqués selon vos préférences.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/chart.min.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Charger les widgets selon les autorisations
+    chargerWidgetStatistiques();
+    
+    {% if niveau_securite.priorite >= 4 %}
+    chargerWidgetActivite();
+    {% endif %}
+    
+    {% if niveau_securite.peut_voir_montants %}
+    chargerWidgetFinancier();
+    {% endif %}
+    
+    {% if niveau_securite.priorite >= 7 %}
+    chargerWidgetAlertes();
+    {% endif %}
+    
+    // Actualiser toutes les 30 secondes
+    setInterval(function() {
+        actualiserWidgets();
+    }, 30000);
+});
+
+function chargerWidgetStatistiques() {
+    fetch('{% url "core:widget_statistiques_generales" %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                afficherStatistiques(data.data);
+            } else {
+                afficherErreur('widget-statistiques', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            afficherErreur('widget-statistiques', 'Erreur de chargement');
+        });
+}
+
+function chargerWidgetActivite() {
+    fetch('{% url "core:widget_activite_recente" %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                afficherActivite(data.data);
+            } else {
+                afficherErreur('widget-activite', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+        });
+}
+
+function chargerWidgetAlertes() {
+    fetch('{% url "core:widget_alertes_securite" %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                afficherAlertes(data.data);
+                document.getElementById('compteur-alertes').textContent = data.data.length;
+            } else {
+                afficherErreur('widget-alertes', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+        });
+}
+
+function afficherStatistiques(stats) {
+    const container = document.getElementById('widget-statistiques');
+    let html = '<div class="row text-center">';
+    
+    Object.keys(stats).forEach(key => {
+        const valeur = stats[key];
+        let affichage = valeur;
+        
+        // Masquer les valeurs sensibles si nécessaire
+        {% if config_tableau.masquer_montants_sensibles %}
+        if (key.includes('montant') || key.includes('revenu')) {
+            affichage = '<span class="montant-masque">' + valeur + '</span>';
+        }
+        {% endif %}
+        
+        html += `
+            <div class="col-6 col-md-3 mb-3">
+                <div class="stat-item">
+                    <div class="stat-value h4">${affichage}</div>
+                    <div class="stat-label text-muted">${formatLabel(key)}</div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function afficherActivite(activites) {
+    const container = document.getElementById('widget-activite');
+    let html = '<div class="list-group list-group-flush">';
+    
+    activites.forEach(activite => {
+        html += `
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>${activite.description}</strong><br>
+                    <small class="text-muted">${formatDate(activite.date)}</small>
+                </div>
+                <span class="badge bg-primary">${activite.montant}</span>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function afficherAlertes(alertes) {
+    const container = document.getElementById('widget-alertes');
+    let html = '';
+    
+    if (alertes.length === 0) {
+        html = '<div class="text-center text-success"><i class="bi bi-shield-check fs-3"></i><p>Aucune alerte de sécurité</p></div>';
+    } else {
+        alertes.forEach(alerte => {
+            const classe = alerte.type === 'danger' ? 'alert-danger' : 'alert-warning';
+            html += `
+                <div class="alert ${classe} d-flex justify-content-between align-items-center">
+                    <div>${alerte.message}</div>
+                    ${alerte.action_requise ? '<i class="bi bi-exclamation-triangle"></i>' : ''}
+                </div>
+            `;
+        });
+    }
+    
+    container.innerHTML = html;
+}
+
+function afficherErreur(containerId, message) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = `
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle"></i> ${message}
+        </div>
+    `;
+}
+
+function exporterDonnees(type) {
+    if (!confirm('Confirmer l\'export des données ' + type + ' ?')) return;
+    
+    fetch(`{% url 'core:export_donnees_securise' 'TYPE' %}`.replace('TYPE', type))
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Déclencher le téléchargement
+                const blob = new Blob([JSON.stringify(data.data, null, 2)], {type: 'application/json'});
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `export_${type}_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } else {
+                alert('Erreur lors de l\'export: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de l\'export');
+        });
+}
+
+function formatLabel(key) {
+    const labels = {
+        'nombre_proprietes_actives': 'Propriétés actives',
+        'nombre_contrats_actifs': 'Contrats actifs',
+        'taux_occupation': 'Taux occupation (%)',
+        'revenus_mois_courant': 'Revenus du mois',
+        'nombre_paiements_mois': 'Paiements reçus'
+    };
+    return labels[key] || key;
+}
+
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString('fr-FR');
+}
+
+function actualiserWidgets() {
+    // Actualiser seulement les widgets visibles
+    chargerWidgetStatistiques();
+    
+    {% if niveau_securite.priorite >= 4 %}
+    chargerWidgetActivite();
+    {% endif %}
+    
+    {% if niveau_securite.priorite >= 7 %}
+    chargerWidgetAlertes();
+    {% endif %}
+}
+</script>
+{% endblock %}

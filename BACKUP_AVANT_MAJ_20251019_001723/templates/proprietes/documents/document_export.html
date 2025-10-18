@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Export des Documents{% endblock %}
+
+{% block extra_css %}
+<style>
+    .export-format-card {
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border: 2px solid transparent;
+    }
+    
+    .export-format-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        border-color: #007bff;
+    }
+    
+    .export-format-card.selected {
+        border-color: #007bff;
+        background-color: #f8f9fa;
+    }
+    
+    .export-stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .export-stats-card .card-body {
+        padding: 1.5rem;
+    }
+    
+    .export-stats-card h3 {
+        color: white;
+        margin-bottom: 0.5rem;
+    }
+    
+    .export-stats-card .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 0.25rem;
+    }
+    
+    .export-stats-card .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    
+    .search-filters {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .export-preview {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .document-preview-item {
+        border-left: 4px solid #007bff;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: white;
+        border-radius: 0 5px 5px 0;
+    }
+    
+    .document-preview-item:hover {
+        background: #f8f9fa;
+    }
+    
+    .export-progress {
+        display: none;
+    }
+    
+    .export-progress.show {
+        display: block;
+    }
+    
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="fas fa-download text-primary me-2"></i>
+                Export des Documents
+            </h1>
+            <p class="text-muted">Exportez vos documents dans différents formats</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'proprietes:document_search_advanced' %}" class="btn btn-outline-primary">
+                <i class="fas fa-search me-2"></i>Recherche Avancée
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtres de recherche -->
+    <div class="search-filters">
+        <h5 class="mb-3">
+            <i class="fas fa-filter me-2"></i>Filtres de Recherche
+        </h5>
+        <form method="get" id="exportForm" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Recherche textuelle</label>
+                {{ form.search }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Type de document</label>
+                {{ form.type_document }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Statut</label>
+                {{ form.statut }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Propriété</label>
+                {{ form.propriete }}
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">Date début</label>
+                {{ form.date_debut }}
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">Date fin</label>
+                {{ form.date_fin }}
+            </div>
+            <div class="col-12">
+                <button type="button" class="btn btn-primary me-2" onclick="updatePreview()">
+                    <i class="fas fa-search me-2"></i>Rechercher
+                </button>
+                <button type="button" class="btn btn-outline-secondary me-2" onclick="resetForm()">
+                    <i class="fas fa-times me-2"></i>Réinitialiser
+                </button>
+                <button type="button" class="btn btn-outline-info" onclick="showStatistics()">
+                    <i class="fas fa-chart-bar me-2"></i>Statistiques
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card export-stats-card">
+                <div class="card-body text-center">
+                    <h3 class="stat-value">{{ total_documents }}</h3>
+                    <p class="stat-label">Documents trouvés</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card export-stats-card">
+                <div class="card-body text-center">
+                    <h3 class="stat-value" id="totalSize">0</h3>
+                    <p class="stat-label">Taille totale (MB)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card export-stats-card">
+                <div class="card-body text-center">
+                    <h3 class="stat-value" id="typeCount">0</h3>
+                    <p class="stat-label">Types différents</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card export-stats-card">
+                <div class="card-body text-center">
+                    <h3 class="stat-value" id="statusCount">0</h3>
+                    <p class="stat-label">Statuts différents</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formats d'export -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h5 class="mb-3">
+                <i class="fas fa-file-export me-2"></i>Formats d'Export
+            </h5>
+        </div>
+        {% for format in export_formats %}
+        <div class="col-md-4 mb-3">
+            <div class="card export-format-card" data-format="{{ format.value }}" onclick="selectFormat('{{ format.value }}')">
+                <div class="card-body text-center">
+                    <i class="{{ format.icon }} fa-3x text-primary mb-3"></i>
+                    <h5 class="card-title">{{ format.label }}</h5>
+                    <p class="card-text text-muted">
+                        {% if format.value == 'excel' %}
+                        Format Excel avec mise en forme avancée
+                        {% elif format.value == 'pdf' %}
+                        Document PDF professionnel
+                        {% elif format.value == 'csv' %}
+                        Fichier CSV compatible Excel
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Aperçu des documents -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-eye me-2"></i>Aperçu des Documents
+                    </h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary" onclick="updatePreview()">
+                            <i class="fas fa-sync me-1"></i>Actualiser
+                        </button>
+                        <button class="btn btn-sm btn-success" onclick="exportDocuments()" id="exportBtn" disabled>
+                            <i class="fas fa-download me-1"></i>Exporter
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="export-preview" id="exportPreview">
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-search fa-3x mb-3"></i>
+                            <p>Utilisez les filtres ci-dessus pour rechercher des documents à exporter</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barre de progression -->
+    <div class="export-progress" id="exportProgress">
+        <div class="card">
+            <div class="card-body text-center">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Export en cours...</span>
+                </div>
+                <h5>Export en cours...</h5>
+                <p class="text-muted">Veuillez patienter pendant la génération du fichier</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedFormat = null;
+let currentDocuments = [];
+
+// Sélectionner un format d'export
+function selectFormat(format) {
+    selectedFormat = format;
+    
+    // Mettre à jour l'interface
+    document.querySelectorAll('.export-format-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    document.querySelector(`[data-format="${format}"]`).classList.add('selected');
+    
+    // Activer le bouton d'export
+    document.getElementById('exportBtn').disabled = false;
+}
+
+// Mettre à jour l'aperçu
+function updatePreview() {
+    const form = document.getElementById('exportForm');
+    const formData = new FormData(form);
+    
+    // Afficher le loading
+    const preview = document.getElementById('exportPreview');
+    preview.innerHTML = `
+        <div class="text-center text-muted py-5">
+            <div class="spinner-border text-primary mb-3" role="status">
+                <span class="visually-hidden">Recherche en cours...</span>
+            </div>
+            <p>Recherche des documents...</p>
+        </div>
+    `;
+    
+    // Faire la requête
+    fetch('{% url "proprietes:document_export_preview" %}?' + new URLSearchParams(formData), {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        preview.innerHTML = html;
+        updateStatistics();
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        preview.innerHTML = `
+            <div class="text-center text-danger py-5">
+                <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                <p>Erreur lors de la recherche des documents</p>
+            </div>
+        `;
+    });
+}
+
+// Mettre à jour les statistiques
+function updateStatistics() {
+    const form = document.getElementById('exportForm');
+    const formData = new FormData(form);
+    
+    fetch('{% url "proprietes:document_export_statistics" %}?' + new URLSearchParams(formData), {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('totalSize').textContent = data.total_size_mb || 0;
+        document.getElementById('typeCount').textContent = Object.keys(data.type_statistics || {}).length;
+        document.getElementById('statusCount').textContent = Object.keys(data.statut_statistics || {}).length;
+    })
+    .catch(error => {
+        console.error('Erreur lors du chargement des statistiques:', error);
+    });
+}
+
+// Exporter les documents
+function exportDocuments() {
+    if (!selectedFormat) {
+        alert('Veuillez sélectionner un format d\'export');
+        return;
+    }
+    
+    const form = document.getElementById('exportForm');
+    const formData = new FormData(form);
+    formData.append('format', selectedFormat);
+    
+    // Afficher la barre de progression
+    document.getElementById('exportProgress').classList.add('show');
+    document.getElementById('exportBtn').disabled = true;
+    
+    // Faire la requête d'export
+    fetch('{% url "proprietes:document_export" %}?' + new URLSearchParams(formData), {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.blob();
+        } else {
+            throw new Error('Erreur lors de l\'export');
+        }
+    })
+    .then(blob => {
+        // Créer un lien de téléchargement
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `documents_export_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.${selectedFormat === 'excel' ? 'xlsx' : selectedFormat}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        // Masquer la barre de progression
+        document.getElementById('exportProgress').classList.remove('show');
+        document.getElementById('exportBtn').disabled = false;
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de l\'export: ' + error.message);
+        
+        // Masquer la barre de progression
+        document.getElementById('exportProgress').classList.remove('show');
+        document.getElementById('exportBtn').disabled = false;
+    });
+}
+
+// Réinitialiser le formulaire
+function resetForm() {
+    document.getElementById('exportForm').reset();
+    document.querySelectorAll('.export-format-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    document.getElementById('exportBtn').disabled = true;
+    selectedFormat = null;
+    
+    // Réinitialiser l'aperçu
+    document.getElementById('exportPreview').innerHTML = `
+        <div class="text-center text-muted py-5">
+            <i class="fas fa-search fa-3x mb-3"></i>
+            <p>Utilisez les filtres ci-dessus pour rechercher des documents à exporter</p>
+        </div>
+    `;
+}
+
+// Afficher les statistiques
+function showStatistics() {
+    // Cette fonction pourrait ouvrir une modal avec des statistiques détaillées
+    alert('Fonctionnalité de statistiques détaillées à implémenter');
+}
+
+// Auto-submit du formulaire lors du changement des filtres
+document.querySelectorAll('.search-filters select, .search-filters input[type="date"]').forEach(function(element) {
+    element.addEventListener('change', function() {
+        updatePreview();
+    });
+});
+
+// Initialiser l'aperçu au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    updatePreview();
+});
+</script>
+{% endblock %}

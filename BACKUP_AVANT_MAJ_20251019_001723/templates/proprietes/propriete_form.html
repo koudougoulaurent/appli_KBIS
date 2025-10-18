@@ -1,0 +1,693 @@
+{% extends 'base_dashboard.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}
+    {% if form.instance.pk %}
+        Modifier la propriété - {{ form.instance.titre }}
+    {% else %}
+        Ajouter une nouvelle propriété
+    {% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/form_required_fields.css' %}">
+<style>
+    .document-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 2px dashed #6f42c1;
+        border-radius: 15px;
+        padding: 25px;
+        margin: 20px 0;
+        transition: all 0.3s ease;
+    }
+    .document-section:hover {
+        border-color: #5a32a3;
+        box-shadow: 0 4px 15px rgba(111, 66, 193, 0.1);
+    }
+    .document-section h4 {
+        color: #6f42c1;
+        font-weight: 600;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .document-required {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        border-color: #ffc107;
+    }
+    .document-optional {
+        background: linear-gradient(135deg, #e2e3e5 0%, #d6d8db 100%);
+        border-color: #6c757d;
+    }
+    .file-input-wrapper {
+        position: relative;
+        margin-bottom: 15px;
+    }
+    .file-input-wrapper input[type="file"] {
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px;
+        transition: border-color 0.3s ease;
+    }
+    .file-input-wrapper input[type="file"]:focus {
+        border-color: #6f42c1;
+        box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
+    }
+    .form-section {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    .form-section h3 {
+        color: #495057;
+        font-weight: 600;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 10px;
+    }
+    .btn-custom {
+        border-radius: 25px;
+        padding: 12px 30px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s ease;
+    }
+    .btn-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    .alert-primary {
+        background: linear-gradient(135deg, #cce7ff 0%, #b3d9ff 100%);
+        border: none;
+        border-radius: 15px;
+        color: #004085;
+    }
+    .property-summary {
+        background: linear-gradient(135deg, #e2e3e5 0%, #d6d8db 100%);
+        border-radius: 15px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+    .property-summary h5 {
+        color: #495057;
+        font-weight: 600;
+        margin-bottom: 15px;
+    }
+    .feature-checkbox {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 10px;
+        transition: all 0.3s ease;
+    }
+    .feature-checkbox:hover {
+        background: #e9ecef;
+        transform: translateY(-1px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Boutons de navigation professionnels -->
+    {% include 'includes/navigation_buttons.html' with 
+        page_title=page_title|default:""
+        page_subtitle=page_subtitle|default:""
+        back_url='proprietes:liste'
+        back_text="Retour à la liste"
+        show_dashboard_button=True
+        show_list_button=True %}
+    
+    <div class="row">
+        <div class="col-12">
+            <!-- En-tête -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-0">
+                        <i class="bi bi-building-fill me-2"></i>
+                        {% if form.instance.pk %}
+                            Modifier la propriété
+                        {% else %}
+                            Nouvelle propriété
+                        {% endif %}
+                    </h2>
+                    <p class="text-muted mb-0">Gestion documentaire intégrée - Dossier complet de la propriété</p>
+                </div>
+                <a href="{% url 'proprietes:liste' %}" class="btn btn-outline-secondary btn-custom">
+                    <i class="bi bi-arrow-left me-2"></i>Retour à la liste
+                </a>
+            </div>
+
+            <!-- Alerte d'information -->
+            <div class="alert alert-primary" role="alert">
+                <i class="bi bi-house-check me-2"></i>
+                <strong>Dossier propriété complet :</strong> 
+                Tous les documents légaux et diagnostics seront automatiquement archivés. 
+                Les diagnostics obligatoires sont requis pour la mise en location.
+            </div>
+
+            <!-- Formulaire -->
+            <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                {% csrf_token %}
+
+                <!-- Section 1: Informations générales -->
+                <div class="form-section has-required">
+                    <h3><i class="bi bi-info-circle me-2"></i>Informations générales</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.numero_propriete|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.titre|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.type_bien|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.bailleur|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.type_gestion|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.etat|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <!-- Messages d'aide contextuels -->
+                    <div id="type-gestion-help" class="alert alert-info mt-3" style="display: none;">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <span id="help-text"></span>
+                    </div>
+                </div>
+
+                <!-- Section 2: Localisation -->
+                <div class="form-section has-required">
+                    <h3><i class="bi bi-geo-alt me-2"></i>Localisation</h3>
+                    <div class="row">
+                        <div class="col-12">
+                            {{ form.adresse|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            {{ form.code_postal|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.ville|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.pays|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Caractéristiques -->
+                <div class="form-section has-required">
+                    <h3><i class="bi bi-rulers me-2"></i>Caractéristiques</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.surface|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.nombre_pieces|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.nombre_chambres|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.nombre_salles_bain|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Équipements -->
+                <div class="form-section optional-only">
+                    <h3><i class="bi bi-gear me-2"></i>Équipements et commodités</h3>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="feature-checkbox">
+                                {{ form.ascenseur|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="feature-checkbox">
+                                {{ form.parking|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="feature-checkbox">
+                                {{ form.balcon|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="feature-checkbox">
+                                {{ form.jardin|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="feature-checkbox">
+                                {{ form.cuisine|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 5: Informations financières -->
+                <div class="form-section optional-only">
+                    <h3><i class="bi bi-currency-exchange me-2"></i>Informations financières</h3>
+                    
+                    <!-- Section pour propriété entière -->
+                    <div id="propriete-entiere-financial" class="type-gestion-section" style="display: none;">
+                        <div class="alert alert-success">
+                            <i class="bi bi-house me-2"></i>
+                            <strong>Propriété entière :</strong> Cette propriété sera louée dans son intégralité. Le loyer indiqué s'applique à l'ensemble de la propriété.
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.prix_achat|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.loyer_actuel|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.charges_locataire|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                <div class="feature-checkbox">
+                                    {{ form.disponible|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Section pour unités multiples -->
+                    <div id="unites-multiples-financial" class="type-gestion-section" style="display: none;">
+                        <div class="alert alert-warning">
+                            <i class="bi bi-building me-2"></i>
+                            <strong>Unités multiples :</strong> Cette propriété contient plusieurs unités locatives (appartements, studios, bureaux, etc.). Chaque unité locative aura son propre loyer défini lors de sa création.
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.prix_achat|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <strong>Loyer global :</strong> Pour les unités multiples, chaque unité locative aura son propre loyer défini lors de sa création.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.charges_locataire|as_crispy_field }}
+                                <small class="form-text text-muted">Charges communes (seront réparties entre les unités)</small>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="feature-checkbox">
+                                    {{ form.disponible|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 6: Gestion des pièces (conditionnelle) -->
+                <div id="pieces-management-section" class="form-section" style="display: none;">
+                    <h3><i class="bi bi-door-open me-2"></i>Gestion des pièces</h3>
+                    
+                    <!-- Section pour propriété entière -->
+                    <div id="propriete-entiere-pieces" class="type-gestion-section" style="display: none;">
+                        <div class="alert alert-info">
+                            <i class="bi bi-house me-2"></i>
+                            <strong>Propriété entière :</strong> Les pièces de cette propriété ne peuvent pas être louées individuellement. Elles sont incluses dans la location de la propriété entière.
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Pièces de la propriété</h6>
+                                        <p class="card-text text-muted">
+                                            Vous pourrez ajouter et gérer les pièces de cette propriété après sa création. 
+                                            Ces pièces seront automatiquement marquées comme "incluses dans la propriété" 
+                                            et ne pourront pas être louées séparément.
+                                        </p>
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-info-circle text-primary me-2"></i>
+                                            <small class="text-muted">
+                                                Les pièces seront visibles dans la fiche de la propriété mais ne seront pas proposées 
+                                                pour des locations individuelles.
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Section pour unités multiples -->
+                    <div id="unites-multiples-pieces" class="type-gestion-section" style="display: none;">
+                        <div class="alert alert-warning">
+                            <i class="bi bi-building me-2"></i>
+                            <strong>Unités multiples :</strong> Les pièces de cette propriété peuvent être louées individuellement. Chaque pièce peut avoir son propre loyer et ses propres conditions de location.
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Unités locatives</h6>
+                                        <p class="card-text text-muted">
+                                            Après la création de cette propriété, vous pourrez :
+                                        </p>
+                                        <ul class="list-unstyled">
+                                            <li><i class="bi bi-check-circle text-success me-2"></i>Créer des unités locatives individuelles</li>
+                                            <li><i class="bi bi-check-circle text-success me-2"></i>Définir des loyers spécifiques pour chaque unité</li>
+                                            <li><i class="bi bi-check-circle text-success me-2"></i>Gérer la disponibilité de chaque unité indépendamment</li>
+                                            <li><i class="bi bi-check-circle text-success me-2"></i>Créer des contrats de location par unité</li>
+                                        </ul>
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-lightbulb text-warning me-2"></i>
+                                            <small class="text-muted">
+                                                <strong>Conseil :</strong> Pensez à bien définir les caractéristiques de chaque unité 
+                                                (surface, équipements, etc.) pour faciliter la gestion des locations.
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Résumé de la propriété -->
+                <div class="property-summary">
+                    <h5><i class="bi bi-calculator me-2"></i>Résumé de la propriété</h5>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 text-primary mb-0" id="prix-m2">-</div>
+                                <small class="text-muted">Prix/m²</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 text-success mb-0" id="loyer-m2">-</div>
+                                <small class="text-muted">Loyer/m²</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 text-info mb-0" id="rendement">-</div>
+                                <small class="text-muted">Rendement brut</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 text-warning mb-0" id="total-mensuel">-</div>
+                                <small class="text-muted">Total mensuel</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 6: Documents légaux optionnels -->
+                <div class="document-section document-optional">
+                    <h4><i class="bi bi-file-earmark-check"></i>Documents légaux optionnels</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="file-input-wrapper">
+                                {{ form.acte_propriete|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="file-input-wrapper">
+                                {{ form.diagnostic_energetique|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 7: Diagnostics optionnels -->
+                <div class="document-section document-optional">
+                    <h4><i class="bi bi-file-earmark-medical"></i>Diagnostics complémentaires</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="file-input-wrapper">
+                                {{ form.diagnostic_plomb|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="file-input-wrapper">
+                                {{ form.diagnostic_amiante|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 8: Photos -->
+                <div class="document-section document-optional">
+                    <h4><i class="bi bi-camera"></i>Photos de la propriété</h4>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="file-input-wrapper">
+                                {{ form.photos_propriete|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 9: Notes -->
+                <div class="form-section">
+                    <h3><i class="bi bi-chat-text me-2"></i>Notes additionnelles</h3>
+                    {{ form.notes|as_crispy_field }}
+                </div>
+
+                <!-- Boutons d'action -->
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'proprietes:liste' %}" class="btn btn-outline-secondary btn-custom">
+                        <i class="bi bi-x-circle me-2"></i>Annuler
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-custom" style="background: #6f42c1; border-color: #6f42c1;">
+                        <i class="bi bi-check-circle me-2"></i>
+                        {% if form.instance.pk %}
+                            Modifier la propriété
+                        {% else %}
+                            Créer la propriété
+                        {% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validation des formulaires Bootstrap
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        });
+    });
+
+    // Calculs automatiques
+    function updatePropertySummary() {
+        const surface = parseFloat(document.getElementById('id_surface')?.value) || 0;
+        const prixAchat = parseFloat(document.getElementById('id_prix_achat')?.value) || 0;
+        const loyerActuel = parseFloat(document.getElementById('id_loyer_actuel')?.value) || 0;
+        const charges = parseFloat(document.getElementById('id_charges_locataire')?.value) || 0;
+        
+        // Calculs
+        const prixM2 = surface > 0 ? prixAchat / surface : 0;
+        const loyerM2 = surface > 0 ? loyerActuel / surface : 0;
+        const rendementBrut = prixAchat > 0 ? (loyerActuel * 12 / prixAchat * 100) : 0;
+        const totalMensuel = loyerActuel + charges;
+        
+        // Fonction utilitaire pour formater les montants sans décimales
+        function formatMontant(montant) {
+            return Math.round(montant).toLocaleString('fr-FR', {maximumFractionDigits: 0}) + ' F CFA';
+        }
+        
+        // Mise à jour de l'affichage
+        document.getElementById('prix-m2').textContent = prixM2 > 0 ? formatMontant(prixM2).replace(' F CFA', ' F CFA/m²') : '-';
+        document.getElementById('loyer-m2').textContent = loyerM2 > 0 ? formatMontant(loyerM2).replace(' F CFA', ' F CFA/m²') : '-';
+        document.getElementById('rendement').textContent = rendementBrut > 0 ? rendementBrut.toFixed(2) + '%' : '-';
+        document.getElementById('total-mensuel').textContent = totalMensuel > 0 ? formatMontant(totalMensuel) : '-';
+    }
+
+    // Écouter les changements sur les champs financiers
+    const financialInputs = ['id_surface', 'id_prix_achat', 'id_loyer_actuel', 'id_charges_locataire'];
+    financialInputs.forEach(inputId => {
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.addEventListener('input', updatePropertySummary);
+            input.addEventListener('change', updatePropertySummary);
+        }
+    });
+
+    // Calcul initial
+    updatePropertySummary();
+
+    // Prévisualisation des fichiers
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    fileInputs.forEach(input => {
+        input.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const fileName = file.name;
+                const fileSize = (file.size / 1024 / 1024).toFixed(2);
+                
+                let infoElement = e.target.parentNode.querySelector('.file-info');
+                if (!infoElement) {
+                    infoElement = document.createElement('div');
+                    infoElement.className = 'file-info mt-2 p-2 bg-light rounded';
+                    e.target.parentNode.appendChild(infoElement);
+                }
+                
+                infoElement.innerHTML = `
+                    <small class="text-success">
+                        <i class="bi bi-check-circle me-1"></i>
+                        Fichier sélectionné : <strong>${fileName}</strong> (${fileSize} MB)
+                    </small>
+                `;
+            }
+        });
+    });
+
+    // Validation cohérence nombre de pièces/chambres
+    const piecesInput = document.getElementById('id_nombre_pieces');
+    const chambresInput = document.getElementById('id_nombre_chambres');
+    
+    function validateRoomNumbers() {
+        if (piecesInput && chambresInput) {
+            const pieces = parseInt(piecesInput.value) || 0;
+            const chambres = parseInt(chambresInput.value) || 0;
+            
+            if (chambres > pieces && pieces > 0) {
+                chambresInput.setCustomValidity('Le nombre de chambres ne peut pas être supérieur au nombre de pièces');
+            } else {
+                chambresInput.setCustomValidity('');
+            }
+        }
+    }
+    
+    if (piecesInput) piecesInput.addEventListener('input', validateRoomNumbers);
+    if (chambresInput) chambresInput.addEventListener('input', validateRoomNumbers);
+    
+    // Gestion dynamique du type de gestion
+    const typeGestionSelect = document.getElementById('id_type_gestion');
+    const typeGestionHelp = document.getElementById('type-gestion-help');
+    const helpText = document.getElementById('help-text');
+    const piecesManagementSection = document.getElementById('pieces-management-section');
+    
+    // Récupérer le champ loyer_actuel
+    const loyerActuelField = document.getElementById('id_loyer_actuel');
+    const loyerActuelLabel = document.querySelector('label[for="id_loyer_actuel"]');
+    
+    
+    // Messages d'aide pour chaque type de gestion
+    const helpMessages = {
+        'propriete_entiere': 'Cette propriété sera louée dans son intégralité. Aucune gestion d\'unités ou de pièces individuelles n\'est nécessaire.',
+        'unites_multiples': 'Cette propriété contient plusieurs unités locatives (appartements, studios, bureaux). Chaque unité aura son propre loyer et pourra être louée indépendamment.'
+    };
+    
+    // Fonction pour gérer le changement de type de gestion
+    function handleTypeGestionChange() {
+        const selectedValue = typeGestionSelect.value;
+        
+        // Masquer toutes les sections conditionnelles
+        document.querySelectorAll('.type-gestion-section').forEach(section => {
+            section.style.display = 'none';
+        });
+        
+        // Masquer la section de gestion des pièces par défaut
+        piecesManagementSection.style.display = 'none';
+        
+        if (selectedValue) {
+            // Afficher le message d'aide
+            helpText.textContent = helpMessages[selectedValue];
+            typeGestionHelp.style.display = 'block';
+            
+            // Afficher la section appropriée pour les informations financières
+            const financialSectionId = selectedValue.replace('_', '-') + '-financial';
+            const financialSection = document.getElementById(financialSectionId);
+            if (financialSection) {
+                financialSection.style.display = 'block';
+            }
+            
+            // Afficher la section appropriée pour la gestion des pièces
+            const piecesSection = document.getElementById(selectedValue + '-pieces');
+            if (piecesSection) {
+                piecesSection.style.display = 'block';
+                piecesManagementSection.style.display = 'block';
+            }
+            
+            // Gestion du champ loyer_actuel selon le type de gestion
+            if (loyerActuelField && loyerActuelLabel) {
+                if (selectedValue === 'propriete_entiere') {
+                    // Propriété entière : loyer obligatoire
+                    loyerActuelField.disabled = false;
+                    loyerActuelField.required = true;
+                    loyerActuelField.classList.remove('form-control', 'disabled');
+                    loyerActuelField.classList.add('form-control');
+                    loyerActuelLabel.classList.remove('text-muted');
+                    loyerActuelLabel.innerHTML = 'Loyer mensuel <span class="text-danger">*</span>';
+                } else if (selectedValue === 'unites_multiples') {
+                    // Unités multiples : loyer grisé et non obligatoire
+                    loyerActuelField.disabled = true;
+                    loyerActuelField.required = false;
+                    loyerActuelField.value = '';
+                    loyerActuelField.classList.remove('form-control');
+                    loyerActuelField.classList.add('form-control', 'disabled');
+                    loyerActuelLabel.classList.add('text-muted');
+                    loyerActuelLabel.innerHTML = 'Loyer mensuel (non utilisé pour les unités multiples)';
+                }
+            }
+        } else {
+            // Masquer le message d'aide si aucun type n'est sélectionné
+            typeGestionHelp.style.display = 'none';
+            
+            // Réinitialiser le champ loyer_actuel
+            if (loyerActuelField && loyerActuelLabel) {
+                loyerActuelField.disabled = false;
+                loyerActuelField.required = false;
+                loyerActuelField.classList.remove('disabled');
+                loyerActuelField.classList.add('form-control');
+                loyerActuelLabel.classList.remove('text-muted');
+                loyerActuelLabel.innerHTML = 'Loyer mensuel';
+            }
+        }
+    }
+    
+    // Écouter les changements du select
+    if (typeGestionSelect) {
+        typeGestionSelect.addEventListener('change', handleTypeGestionChange);
+        
+        // Déclencher le changement au chargement de la page si une valeur est déjà sélectionnée
+        handleTypeGestionChange();
+    }
+});
+</script>
+{% endblock %}

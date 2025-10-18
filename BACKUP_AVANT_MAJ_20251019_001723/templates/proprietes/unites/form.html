@@ -1,0 +1,573 @@
+{% extends "base.html" %}
+{% load static %}
+{% load core_extras %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }} - Gestion Immobilière{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-section {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-left: 4px solid #007bff;
+}
+
+.form-section h5 {
+    color: #007bff;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.form-section .form-group {
+    margin-bottom: 15px;
+}
+
+.required-field {
+    border-left: 3px solid #dc3545;
+}
+
+.optional-field {
+    border-left: 3px solid #28a745;
+}
+
+.form-help {
+    background: #e3f2fd;
+    border: 1px solid #bbdefb;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.form-help .fa-info-circle {
+    color: #1976d2;
+    margin-right: 8px;
+}
+
+.checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    transition: all 0.2s;
+}
+
+.checkbox-item:hover {
+    background: #f8f9fa;
+    border-color: #007bff;
+}
+
+.checkbox-item input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.btn-group-custom {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 30px;
+    padding: 20px 0;
+}
+
+.preview-section {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.currency-input {
+    position: relative;
+}
+
+.currency-input::after {
+    content: "F CFA";
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    font-size: 0.9em;
+    pointer-events: none;
+}
+
+.form-floating .currency-input::after {
+    top: 60%;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="fas fa-{% if unite %}edit{% else %}plus{% endif %}"></i> 
+                {{ title }}
+            </h2>
+            <p class="text-muted mb-0">
+                {% if unite %}
+                    Modification de l'unité {{ unite.numero_unite }}
+                {% else %}
+                    Création d'une nouvelle unité locative
+                {% endif %}
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'proprietes:unites_liste' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Retour à la liste
+            </a>
+        </div>
+    </div>
+
+    <!-- Aide contextuelle -->
+    <div class="form-help">
+        <i class="fas fa-info-circle"></i>
+        <strong>Aide :</strong>
+        {% if unite %}
+            Modifiez les informations de l'unité locative. Les champs marqués en rouge sont obligatoires.
+        {% else %}
+            Créez une nouvelle unité locative en remplissant les informations ci-dessous. 
+            Les champs marqués en rouge sont obligatoires.
+        {% endif %}
+        {% if propriete %}
+            Cette unité sera créée dans la propriété <strong>{{ propriete.titre }}</strong>.
+        {% endif %}
+    </div>
+
+    <!-- Suggestions intelligentes -->
+    {% if suggestion %}
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <i class="fas fa-lightbulb"></i>
+        <strong>Suggestion intelligente :</strong> {{ suggestion }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <!-- Workflow de création depuis propriété -->
+    {% if from_property %}
+    <div class="alert alert-success" role="alert">
+        <i class="fas fa-magic"></i>
+        <strong>Création automatisée :</strong> 
+        Vous êtes en train de créer des unités locatives pour une propriété qui semble en avoir besoin. 
+        Le bailleur et la propriété ont été pré-sélectionnés pour vous faciliter la tâche.
+    </div>
+    {% endif %}
+
+    <!-- Affichage des erreurs de validation -->
+    {% if form.errors %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>Erreurs de validation :</strong>
+        <ul class="mb-0 mt-2">
+            {% for field, errors in form.errors.items %}
+                {% for error in errors %}
+                    <li><strong>{{ field|title }}:</strong> {{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    <form method="post" class="needs-validation" novalidate>
+        {% csrf_token %}
+        
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Section Identification -->
+                <div class="form-section required-field">
+                    <h5><i class="fas fa-id-card"></i> Identification</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                {{ form.propriete }}
+                                <label for="{{ form.propriete.id_for_label }}">{{ form.propriete.label }}</label>
+                                {% if form.propriete.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.propriete.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                {{ form.bailleur }}
+                                <label for="{{ form.bailleur.id_for_label }}">{{ form.bailleur.label }}</label>
+                                {% if form.bailleur.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.bailleur.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-info-circle"></i> 
+                                    Optionnel. Si non spécifié, le bailleur de la propriété sera utilisé.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                {{ form.type_unite }}
+                                <label for="{{ form.type_unite.id_for_label }}">{{ form.type_unite.label }}</label>
+                                {% if form.type_unite.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.type_unite.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                {{ form.numero_unite }}
+                                <label for="{{ form.numero_unite.id_for_label }}">{{ form.numero_unite.label }}</label>
+                                {% if form.numero_unite.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.numero_unite.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-floating mb-3">
+                                {{ form.nom }}
+                                <label for="{{ form.nom.id_for_label }}">{{ form.nom.label }}</label>
+                                {% if form.nom.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.nom.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Caractéristiques physiques -->
+                <div class="form-section optional-field">
+                    <h5><i class="fas fa-ruler-combined"></i> Caractéristiques Physiques</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-floating mb-3">
+                                {{ form.etage|as_crispy_field_old }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-floating mb-3">
+                                {{ form.surface|as_crispy_field_old }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-floating mb-3">
+                                {{ form.nombre_pieces|as_crispy_field_old }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                {{ form.nombre_chambres|as_crispy_field_old }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                {{ form.nombre_salles_bain|as_crispy_field_old }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Équipements -->
+                <div class="form-section optional-field">
+                    <h5><i class="fas fa-tools"></i> Équipements et Services</h5>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            {{ form.meuble }}
+                            <label for="{{ form.meuble.id_for_label }}" class="form-check-label">
+                                <i class="fas fa-couch"></i> {{ form.meuble.label }}
+                            </label>
+                        </div>
+                        <div class="checkbox-item">
+                            {{ form.balcon }}
+                            <label for="{{ form.balcon.id_for_label }}" class="form-check-label">
+                                <i class="fas fa-home"></i> {{ form.balcon.label }}
+                            </label>
+                        </div>
+                        <div class="checkbox-item">
+                            {{ form.parking_inclus }}
+                            <label for="{{ form.parking_inclus.id_for_label }}" class="form-check-label">
+                                <i class="fas fa-car"></i> {{ form.parking_inclus.label }}
+                            </label>
+                        </div>
+                        <div class="checkbox-item">
+                            {{ form.climatisation }}
+                            <label for="{{ form.climatisation.id_for_label }}" class="form-check-label">
+                                <i class="fas fa-snowflake"></i> {{ form.climatisation.label }}
+                            </label>
+                        </div>
+                        <div class="checkbox-item">
+                            {{ form.internet_inclus }}
+                            <label for="{{ form.internet_inclus.id_for_label }}" class="form-check-label">
+                                <i class="fas fa-wifi"></i> {{ form.internet_inclus.label }}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Informations Financières -->
+                <div class="form-section required-field">
+                    <h5><i class="fas fa-euro-sign"></i> Informations Financières</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-floating mb-3 currency-input">
+                                {{ form.loyer_mensuel|as_crispy_field_old }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-floating mb-3 currency-input">
+                                {{ form.charges_mensuelles|as_crispy_field_old }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-floating mb-3 currency-input">
+                                {{ form.caution_demandee|as_crispy_field_old }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section État et Disponibilité -->
+                <div class="form-section optional-field">
+                    <h5><i class="fas fa-info-circle"></i> État et Disponibilité</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                {{ form.statut|as_crispy_field_old }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                {{ form.date_disponibilite|as_crispy_field_old }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Descriptions -->
+                <div class="form-section optional-field">
+                    <h5><i class="fas fa-file-alt"></i> Descriptions</h5>
+                    <div class="mb-3">
+                        {{ form.description|as_crispy_field_old }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.notes_privees|as_crispy_field_old }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar avec aperçu -->
+            <div class="col-lg-4">
+                <div class="preview-section sticky-top">
+                    <h5><i class="fas fa-eye"></i> Aperçu de l'Unité</h5>
+                    <div id="unit-preview">
+                        <div class="mb-3">
+                            <strong>Numéro :</strong> 
+                            <span id="preview-numero">{% if unite %}{{ unite.numero_unite }}{% else %}[À définir]{% endif %}</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Nom :</strong> 
+                            <span id="preview-nom">{% if unite %}{{ unite.nom }}{% else %}[À définir]{% endif %}</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Type :</strong> 
+                            <span id="preview-type">{% if unite %}{{ unite.get_type_unite_display }}{% else %}[À sélectionner]{% endif %}</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Étage :</strong> 
+                            <span id="preview-etage">{% if unite.etage is not None %}{{ unite.etage }}{% else %}[Non spécifié]{% endif %}</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Surface :</strong> 
+                            <span id="preview-surface">{% if unite.surface %}{{ unite.surface }} m²{% else %}[Non spécifiée]{% endif %}</span>
+                        </div>
+                        <hr>
+                        <div class="mb-3">
+                            <strong>Loyer mensuel :</strong> 
+                            <span id="preview-loyer" class="text-primary">{% if unite %}{{ unite.loyer_mensuel|format_currency_fcfa }}{% else %}0 F CFA{% endif %}</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Charges :</strong> 
+                            <span id="preview-charges">{% if unite %}{{ unite.charges_mensuelles|format_currency_fcfa }}{% else %}0 F CFA{% endif %}</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong class="text-success">Total mensuel :</strong> 
+                            <span id="preview-total" class="text-success fw-bold">{% if unite %}{{ unite.get_loyer_total|format_currency_fcfa }}{% else %}0 F CFA{% endif %}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Boutons d'action -->
+        <div class="btn-group-custom">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save"></i> 
+                {% if unite %}Mettre à jour{% else %}Créer l'unité{% endif %}
+            </button>
+            
+            {% if from_property and propriete %}
+                <!-- Boutons spéciaux pour le workflow depuis propriété -->
+                <a href="{% url 'proprietes:unite_create_propriete' propriete.pk %}?from_property=1" class="btn btn-success btn-lg">
+                    <i class="fas fa-plus"></i> Créer une autre unité
+                </a>
+                <a href="{% url 'proprietes:detail' propriete.pk %}" class="btn btn-info btn-lg">
+                    <i class="fas fa-eye"></i> Voir la propriété
+                </a>
+            {% endif %}
+            
+            <a href="{% if propriete %}{% url 'proprietes:detail' propriete.pk %}{% else %}{% url 'proprietes:unites_liste' %}{% endif %}" class="btn btn-secondary btn-lg">
+                <i class="fas fa-times"></i> 
+                {% if propriete %}Retour à la propriété{% else %}Annuler{% endif %}
+            </a>
+            
+            {% if unite %}
+            <a href="{% url 'proprietes:unite_detail' unite.pk %}" class="btn btn-info btn-lg">
+                <i class="fas fa-eye"></i> Voir l'unité
+            </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Mise à jour de l'aperçu en temps réel
+    function updatePreview() {
+        // Numéro d'unité
+        const numero = $('#id_numero_unite').val() || '[À définir]';
+        $('#preview-numero').text(numero);
+        
+        // Nom
+        const nom = $('#id_nom').val() || '[À définir]';
+        $('#preview-nom').text(nom);
+        
+        // Type
+        const typeSelect = $('#id_type_unite');
+        const typeText = typeSelect.find('option:selected').text() || '[À sélectionner]';
+        $('#preview-type').text(typeText);
+        
+        // Étage
+        const etage = $('#id_etage').val();
+        let etageText = '[Non spécifié]';
+        if (etage !== '') {
+            const etageNum = parseInt(etage);
+            if (etageNum === 0) etageText = 'Rez-de-chaussée';
+            else if (etageNum === -1) etageText = 'Sous-sol';
+            else if (etageNum > 0) etageText = etageNum + (etageNum === 1 ? 'er' : 'ème') + ' étage';
+            else etageText = etage;
+        }
+        $('#preview-etage').text(etageText);
+        
+        // Surface
+        const surface = $('#id_surface').val();
+        const surfaceText = surface ? surface + ' m²' : '[Non spécifiée]';
+        $('#preview-surface').text(surfaceText);
+        
+        // Calculs financiers
+        const loyer = parseFloat($('#id_loyer_mensuel').val()) || 0;
+        const charges = parseFloat($('#id_charges_mensuelles').val()) || 0;
+        const total = loyer + charges;
+        
+        $('#preview-loyer').text(formatCurrency(loyer));
+        $('#preview-charges').text(formatCurrency(charges));
+        $('#preview-total').text(formatCurrency(total));
+    }
+    
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('fr-FR', {
+            style: 'decimal',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+        }).format(amount).replace(',', ' ') + ' F CFA';
+    }
+    
+    // Écouter les changements sur tous les champs pertinents
+    $('#id_numero_unite, #id_nom, #id_type_unite, #id_etage, #id_surface, #id_loyer_mensuel, #id_charges_mensuelles').on('input change', updatePreview);
+    
+    // Validation du formulaire
+    $('form').on('submit', function(e) {
+        console.log('Form submission started');
+        const form = this;
+        let isValid = true;
+        
+        // Vérifier tous les champs requis
+        $('input[required], select[required]').each(function() {
+            if (!this.checkValidity()) {
+                isValid = false;
+                $(this).addClass('is-invalid');
+                // Afficher le message d'erreur
+                const feedback = $(this).siblings('.invalid-feedback');
+                if (feedback.length === 0) {
+                    $(this).after('<div class="invalid-feedback">Ce champ est obligatoire.</div>');
+                }
+            } else {
+                $(this).removeClass('is-invalid').addClass('is-valid');
+            }
+        });
+        
+        if (!isValid) {
+            console.log('Form validation failed, preventing submission');
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Afficher un message d'erreur global
+            if ($('.alert-danger').length === 0) {
+                $('form').prepend(`
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Erreur de validation :</strong> Veuillez remplir tous les champs obligatoires.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `);
+            }
+        } else {
+            console.log('Form validation passed, submitting...');
+        }
+        
+        form.classList.add('was-validated');
+    });
+    
+    // Validation en temps réel
+    $('input[required], select[required]').on('blur', function() {
+        if (this.checkValidity()) {
+            $(this).removeClass('is-invalid').addClass('is-valid');
+            $(this).siblings('.invalid-feedback').remove();
+        } else {
+            $(this).removeClass('is-valid').addClass('is-invalid');
+            if ($(this).siblings('.invalid-feedback').length === 0) {
+                $(this).after('<div class="invalid-feedback">Ce champ est obligatoire.</div>');
+            }
+        }
+    });
+    
+    // Initialiser l'aperçu
+    updatePreview();
+});
+</script>
+{% endblock %}

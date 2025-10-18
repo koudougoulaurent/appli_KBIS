@@ -1,0 +1,608 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load document_filters %}
+
+{% block title %}Visualiseur - {{ document.nom }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .viewer-container {
+        height: calc(100vh - 200px);
+        min-height: 600px;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #f8f9fa;
+    }
+    
+    .viewer-toolbar {
+        background: #343a40;
+        color: white;
+        padding: 10px 15px;
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .viewer-content {
+        height: calc(100% - 60px);
+        overflow: auto;
+        background: white;
+        position: relative;
+    }
+    
+    .viewer-iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+    
+    .image-viewer {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        padding: 20px;
+    }
+    
+    .image-viewer img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-radius: 4px;
+    }
+    
+    .text-viewer {
+        padding: 20px;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        background: #ffffff;
+    }
+    
+    .unsupported-viewer {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        text-align: center;
+        color: #6c757d;
+    }
+    
+    .file-icon-large {
+        font-size: 5rem;
+        margin-bottom: 20px;
+        opacity: 0.5;
+    }
+    
+    .zoom-controls {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+    }
+    
+    .zoom-btn {
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+    
+    .zoom-btn:hover {
+        background: rgba(255,255,255,0.3);
+    }
+    
+    .viewer-loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        z-index: 10;
+    }
+    
+    .loading-spinner {
+        width: 3rem;
+        height: 3rem;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #007bff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .office-viewer-options {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    
+    .viewer-tab {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: all 0.3s ease;
+    }
+    
+    .viewer-tab.active {
+        background: rgba(255,255,255,0.3);
+        border-color: rgba(255,255,255,0.5);
+    }
+    
+    .viewer-tab:hover {
+        background: rgba(255,255,255,0.2);
+    }
+    
+    @media (max-width: 768px) {
+        .viewer-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+            text-align: center;
+        }
+        
+        .zoom-controls {
+            justify-content: center;
+        }
+        
+        .office-viewer-options {
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête du document -->
+    <div class="row mb-3">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        <i class="{{ document.fichier.name|file_icon }} me-2"></i>
+                        {{ document.nom }}
+                    </h4>
+                    <div class="text-muted">
+                        <small>
+                            {{ file_info.filename }} • {{ file_info.size|filesizeformat }} • 
+                            {{ file_info.mime_type|default:"Type inconnu" }}
+                        </small>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'proprietes:document_detail' document.pk %}" 
+                       class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Retour
+                    </a>
+                    <a href="{% url 'proprietes:document_download' document.pk %}" 
+                       class="btn btn-primary">
+                        <i class="bi bi-download me-1"></i>Télécharger
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Visualiseur principal -->
+    <div class="row">
+        <div class="col">
+            <div class="viewer-container">
+                <!-- Barre d'outils -->
+                <div class="viewer-toolbar">
+                    <div class="d-flex align-items-center flex-grow-1">
+                        <strong>{{ document.nom|truncatechars:50 }}</strong>
+                        {% if document.confidentiel %}
+                        <span class="badge bg-danger ms-2">
+                            <i class="bi bi-lock-fill me-1"></i>CONFIDENTIEL
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Contrôles selon le type de fichier -->
+                    {% if file_info.viewer_type == 'image' %}
+                    <div class="zoom-controls">
+                        <button class="zoom-btn" onclick="zoomImage(0.8)">
+                            <i class="bi bi-zoom-out"></i> -
+                        </button>
+                        <button class="zoom-btn" onclick="zoomImage(1.0)">
+                            <i class="bi bi-arrows-angle-contract"></i> 100%
+                        </button>
+                        <button class="zoom-btn" onclick="zoomImage(1.2)">
+                            <i class="bi bi-zoom-in"></i> +
+                        </button>
+                    </div>
+                    {% endif %}
+                    
+                    {% if can_print %}
+                    <button class="zoom-btn" onclick="printDocument()">
+                        <i class="bi bi-printer me-1"></i>Imprimer
+                    </button>
+                    {% endif %}
+                </div>
+
+                <!-- Contenu du visualiseur -->
+                <div class="viewer-content" id="viewerContent">
+                    <div class="viewer-loading" id="viewerLoading">
+                        <div class="loading-spinner"></div>
+                        <p>Chargement du document...</p>
+                    </div>
+                    
+                    <!-- Visualiseur PDF -->
+                    {% if file_info.viewer_type == 'pdf' %}
+                    <iframe id="pdfViewer" 
+                            class="viewer-iframe" 
+                            src="{% url 'proprietes:document_pdf_viewer' document.pk %}"
+                            onload="hideLoading()">
+                    </iframe>
+                    
+                    <!-- Visualiseur d'images -->
+                    {% elif file_info.viewer_type == 'image' %}
+                    <div class="image-viewer">
+                        <img id="imageViewer" 
+                             src="{% url 'proprietes:document_secure_proxy' document.pk %}" 
+                             alt="{{ document.nom }}"
+                             onload="hideLoading()"
+                             onerror="showError('Erreur lors du chargement de l\'image')">
+                    </div>
+                    
+                    <!-- Visualiseur Office -->
+                    {% elif file_info.viewer_type == 'office' %}
+                    <div class="office-viewer-options">
+                        <div class="viewer-tab active" onclick="switchOfficeViewer('microsoft')" id="tab-microsoft">
+                            <i class="bi bi-microsoft me-1"></i>Microsoft Online
+                        </div>
+                        <div class="viewer-tab" onclick="switchOfficeViewer('google')" id="tab-google">
+                            <i class="bi bi-google me-1"></i>Google Docs
+                        </div>
+                        {% if not use_external_viewers %}
+                        <div class="viewer-tab" onclick="switchOfficeViewer('native')" id="tab-native">
+                            <i class="bi bi-file-earmark me-1"></i>Natif
+                        </div>
+                        {% endif %}
+                        <div class="viewer-tab" onclick="switchOfficeViewer('download')" id="tab-download">
+                            <i class="bi bi-download me-1"></i>Télécharger
+                        </div>
+                    </div>
+                    
+                    <iframe id="officeViewer" 
+                            class="viewer-iframe" 
+                            src="{% if use_external_viewers %}{{ external_office_url }}{% else %}{{ office_viewer_url }}{% endif %}"
+                            onload="hideLoading()"
+                            onerror="handleViewerError()">
+                    </iframe>
+                    
+                    <!-- Visualiseur de code -->
+                    {% elif file_info.viewer_type == 'code' %}
+                    <div class="text-viewer" id="codeViewer">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Chargement du code...</span>
+                            </div>
+                            <p class="mt-2">Chargement du contenu...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Visualiseur de texte -->
+                    {% elif file_info.viewer_type == 'text' and can_show_content %}
+                    <div class="text-viewer" id="textViewer">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Chargement...</span>
+                            </div>
+                            <p class="mt-2">Chargement du contenu...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Visualiseur web -->
+                    {% elif file_info.viewer_type == 'web' %}
+                    <iframe id="webViewer" 
+                            class="viewer-iframe" 
+                            src="{% url 'proprietes:document_secure_proxy' document.pk %}"
+                            onload="hideLoading()">
+                    </iframe>
+                    
+                    <!-- Format non supporté -->
+                    {% else %}
+                    <div class="unsupported-viewer">
+                        <div class="file-icon-large">
+                            <i class="{{ document.fichier.name|file_icon }}"></i>
+                        </div>
+                        <h5>Aperçu non disponible</h5>
+                        <p class="mb-3">
+                            Ce type de fichier ({{ file_info.extension|upper }}) ne peut pas être visualisé directement.<br>
+                            Téléchargez le fichier pour l'ouvrir avec l'application appropriée.
+                        </p>
+                        <div class="d-flex gap-2 justify-content-center">
+                            <a href="{% url 'proprietes:document_download' document.pk %}" 
+                               class="btn btn-primary">
+                                <i class="bi bi-download me-1"></i>Télécharger le fichier
+                            </a>
+                            {% if is_privilege_user %}
+                            <button class="btn btn-outline-info" onclick="showFileInfo()">
+                                <i class="bi bi-info-circle me-1"></i>Informations
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'informations du fichier -->
+{% if is_privilege_user %}
+<div class="modal fade" id="fileInfoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-info-circle me-2"></i>Informations du fichier
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th>Nom du fichier :</th>
+                        <td>{{ file_info.filename }}</td>
+                    </tr>
+                    <tr>
+                        <th>Taille :</th>
+                        <td>{{ file_info.size|filesizeformat }}</td>
+                    </tr>
+                    <tr>
+                        <th>Type MIME :</th>
+                        <td>{{ file_info.mime_type|default:"Non détecté" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Extension :</th>
+                        <td>{{ file_info.extension|upper }}</td>
+                    </tr>
+                    <tr>
+                        <th>Visualisable :</th>
+                        <td>
+                            {% if file_info.is_viewable %}
+                            <span class="text-success"><i class="bi bi-check-circle"></i> Oui</span>
+                            {% else %}
+                            <span class="text-warning"><i class="bi bi-x-circle"></i> Non</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Variables globales
+let currentZoom = 1.0;
+let currentOfficeViewer = 'microsoft';
+
+// Masquer l'indicateur de chargement
+function hideLoading() {
+    const loading = document.getElementById('viewerLoading');
+    if (loading) {
+        loading.style.display = 'none';
+    }
+}
+
+// Afficher une erreur
+function showError(message) {
+    const loading = document.getElementById('viewerLoading');
+    if (loading) {
+        loading.innerHTML = `
+            <div class="text-danger">
+                <i class="bi bi-exclamation-triangle fs-1 mb-3"></i>
+                <h5>Erreur de chargement</h5>
+                <p>${message}</p>
+            </div>
+        `;
+    }
+}
+
+// Zoom pour les images
+function zoomImage(factor) {
+    const img = document.getElementById('imageViewer');
+    if (!img) return;
+    
+    if (factor === 1.0) {
+        currentZoom = 1.0;
+        img.style.transform = 'scale(1)';
+    } else {
+        currentZoom *= factor;
+        currentZoom = Math.max(0.1, Math.min(5.0, currentZoom)); // Limites
+        img.style.transform = `scale(${currentZoom})`;
+    }
+}
+
+// Changer de visualiseur Office
+function switchOfficeViewer(type) {
+    const iframe = document.getElementById('officeViewer');
+    const tabs = document.querySelectorAll('.viewer-tab');
+    
+    // Mettre à jour les onglets
+    tabs.forEach(tab => tab.classList.remove('active'));
+    document.getElementById(`tab-${type}`).classList.add('active');
+    
+    // Afficher le loading
+    document.getElementById('viewerLoading').style.display = 'block';
+    
+    if (type === 'microsoft') {
+        iframe.src = '{% if use_external_viewers %}{{ external_office_url|escapejs }}{% else %}{{ office_viewer_url|escapejs }}{% endif %}';
+    } else if (type === 'google') {
+        iframe.src = '{% if use_external_viewers %}{{ external_google_url|escapejs }}{% else %}{{ google_viewer_url|escapejs }}{% endif %}';
+    } else if (type === 'native') {
+        iframe.src = '{% url "proprietes:document_secure_proxy" document.pk %}';
+    } else if (type === 'download') {
+        window.open('{% url "proprietes:document_download" document.pk %}', '_blank');
+        hideLoading();
+        return;
+    }
+    
+    currentOfficeViewer = type;
+}
+
+// Gérer les erreurs de visualiseur
+function handleViewerError() {
+    console.warn('Erreur du visualiseur principal, tentative de fallback...');
+    
+    // En cas d'erreur, proposer des alternatives
+    if (currentOfficeViewer === 'microsoft') {
+        // Essayer Google Docs
+        switchOfficeViewer('google');
+    } else if (currentOfficeViewer === 'google') {
+        // Proposer le téléchargement
+        showError('Les visualiseurs en ligne ne sont pas disponibles. Veuillez télécharger le fichier.');
+    } else {
+        showError('Impossible de charger le document. Veuillez télécharger le fichier.');
+    }
+}
+
+// Imprimer le document
+function printDocument() {
+    {% if file_info.viewer_type == 'pdf' %}
+    // Pour les PDFs, ouvrir dans un nouvel onglet pour impression
+    window.open('{% url "proprietes:document_pdf_viewer" document.pk %}', '_blank');
+    {% elif file_info.viewer_type == 'image' %}
+    // Pour les images, créer une fenêtre d'impression
+    const img = document.getElementById('imageViewer');
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+            <head><title>{{ document.nom|escapejs }}</title></head>
+            <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh;">
+                <img src="${img.src}" style="max-width:100%; max-height:100%; object-fit:contain;">
+            </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    {% else %}
+    // Pour les autres types, télécharger
+    window.open('{% url "proprietes:document_download" document.pk %}', '_blank');
+    {% endif %}
+}
+
+// Afficher les informations du fichier
+function showFileInfo() {
+    const modal = new bootstrap.Modal(document.getElementById('fileInfoModal'));
+    modal.show();
+}
+
+// Charger le contenu textuel ou de code
+{% if file_info.viewer_type == 'text' and can_show_content %}
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('{% url "proprietes:document_content_view" document.pk %}')
+        .then(response => response.text())
+        .then(content => {
+            document.getElementById('textViewer').textContent = content;
+            hideLoading();
+        })
+        .catch(error => {
+            showError('Erreur lors du chargement du contenu textuel');
+        });
+});
+{% elif file_info.viewer_type == 'code' %}
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('{% url "proprietes:document_content_view" document.pk %}')
+        .then(response => response.text())
+        .then(content => {
+            const codeViewer = document.getElementById('codeViewer');
+            codeViewer.innerHTML = `<pre><code class="language-{{ file_info.extension|slice:"1:" }}">${escapeHtml(content)}</code></pre>`;
+            
+            // Ajouter la coloration syntaxique si Prism.js est disponible
+            if (typeof Prism !== 'undefined') {
+                Prism.highlightAll();
+            }
+            
+            hideLoading();
+        })
+        .catch(error => {
+            showError('Erreur lors du chargement du code');
+        });
+});
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+{% endif %}
+
+// Gestion des erreurs d'iframe
+document.addEventListener('DOMContentLoaded', function() {
+    const iframes = document.querySelectorAll('iframe');
+    iframes.forEach(iframe => {
+        iframe.addEventListener('error', function() {
+            showError('Erreur lors du chargement du document');
+        });
+        
+        // Timeout pour les iframes qui ne se chargent pas
+        setTimeout(() => {
+            if (iframe.contentDocument && iframe.contentDocument.readyState !== 'complete') {
+                showError('Le document met trop de temps à se charger');
+            }
+        }, 30000); // 30 secondes
+    });
+});
+
+// Raccourcis clavier
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey || e.metaKey) {
+        switch(e.key) {
+            case '+':
+            case '=':
+                e.preventDefault();
+                {% if file_info.viewer_type == 'image' %}
+                zoomImage(1.2);
+                {% endif %}
+                break;
+            case '-':
+                e.preventDefault();
+                {% if file_info.viewer_type == 'image' %}
+                zoomImage(0.8);
+                {% endif %}
+                break;
+            case '0':
+                e.preventDefault();
+                {% if file_info.viewer_type == 'image' %}
+                zoomImage(1.0);
+                {% endif %}
+                break;
+            case 'p':
+                e.preventDefault();
+                printDocument();
+                break;
+        }
+    }
+});
+</script>
+{% endblock %}

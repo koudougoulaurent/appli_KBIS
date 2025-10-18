@@ -1,0 +1,722 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}{{ title }} - Gestion Immobilière{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Reset et base */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+}
+
+/* Container principal */
+.main-container {
+    background: #f8f9fa;
+    min-height: 100vh;
+    padding: 20px 0;
+}
+
+.form-wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+/* En-tête */
+.form-header {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: white;
+    padding: 30px;
+    text-align: center;
+}
+
+.form-header h1 {
+    margin: 0 0 10px 0;
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.form-header p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 16px;
+}
+
+/* Corps du formulaire */
+.form-content {
+    padding: 40px;
+}
+
+/* Sections */
+.section {
+    margin-bottom: 40px;
+    padding: 30px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #4f46e5;
+}
+
+.section-title {
+    color: #1f2937;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 25px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-title i {
+    color: #4f46e5;
+    font-size: 22px;
+}
+
+/* Grille de champs */
+.field-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+.field-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.field-label {
+    color: #374151;
+    font-weight: 500;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.field-label.required::after {
+    content: " *";
+    color: #dc2626;
+}
+
+.field-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 16px;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.field-input:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.field-input.error {
+    border-color: #dc2626;
+}
+
+.field-error {
+    color: #dc2626;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+.field-help {
+    color: #6b7280;
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+/* Champs spéciaux */
+.field-textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.field-select {
+    cursor: pointer;
+}
+
+/* Checkboxes */
+.checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.checkbox-item:hover {
+    border-color: #4f46e5;
+    background: #f8fafc;
+}
+
+.checkbox-item input[type="checkbox"] {
+    margin-right: 10px;
+    transform: scale(1.2);
+}
+
+.checkbox-item label {
+    margin: 0;
+    cursor: pointer;
+    font-weight: 500;
+    color: #374151;
+}
+
+/* Messages */
+.alert {
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    border: 1px solid transparent;
+}
+
+.alert-danger {
+    background-color: #fef2f2;
+    border-color: #fecaca;
+    color: #dc2626;
+}
+
+.alert-info {
+    background-color: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+}
+
+.alert-warning {
+    background-color: #fffbeb;
+    border-color: #fed7aa;
+    color: #d97706;
+}
+
+/* Actions du formulaire */
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 30px 40px;
+    background: #f8f9fa;
+    border-top: 1px solid #e5e7eb;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: white;
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+}
+
+.btn-secondary {
+    background: #6b7280;
+    color: white;
+    box-shadow: 0 4px 14px rgba(107, 114, 128, 0.3);
+}
+
+.btn-secondary:hover {
+    background: #4b5563;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(107, 114, 128, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .main-container {
+        padding: 10px;
+    }
+    
+    .form-content {
+        padding: 20px;
+    }
+    
+    .section {
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+    
+    .field-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .checkbox-group {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        gap: 15px;
+        padding: 20px;
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.form-wrapper {
+    animation: fadeIn 0.5s ease-out;
+}
+
+.section {
+    animation: fadeIn 0.6s ease-out;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <div class="form-wrapper">
+        <!-- En-tête -->
+        <div class="form-header">
+            <h1>
+                <i class="fas fa-{% if unite %}edit{% else %}plus-circle{% endif %}"></i>
+                {{ title }}
+            </h1>
+            <p>
+                {% if unite %}
+                    Modification de l'unité {{ unite.numero_unite }}
+                {% else %}
+                    Création d'une nouvelle unité locative
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Corps du formulaire -->
+        <div class="form-content">
+            <!-- Messages d'information -->
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>Information :</strong>
+                {% if unite %}
+                    Modifiez les informations ci-dessous. Les champs marqués d'un astérisque (*) sont obligatoires.
+                {% else %}
+                    Remplissez les informations ci-dessous. Les champs marqués d'un astérisque (*) sont obligatoires.
+                {% endif %}
+                {% if propriete %}
+                    Cette unité sera ajoutée à la propriété <strong>{{ propriete.titre }}</strong>.
+                {% endif %}
+            </div>
+
+            <!-- Suggestions -->
+            {% if suggestion %}
+            <div class="alert alert-warning">
+                <i class="fas fa-lightbulb"></i>
+                <strong>Suggestion :</strong> {{ suggestion }}
+            </div>
+            {% endif %}
+
+            <!-- Erreurs -->
+            {% if form.errors %}
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Erreurs détectées :</strong>
+                <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                            <li><strong>{{ field|title }}:</strong> {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <form method="post" id="uniteForm">
+                {% csrf_token %}
+                
+                <!-- INFORMATIONS ESSENTIELLES -->
+                <div class="section">
+                    <h2 class="section-title">
+                        <i class="fas fa-id-card"></i>
+                        Informations essentielles
+                    </h2>
+                    <div class="field-grid">
+                        <div class="field-group">
+                            <label class="field-label required" for="{{ form.type_unite.id_for_label }}">
+                                Type d'unité
+                            </label>
+                            <select name="{{ form.type_unite.name }}" id="{{ form.type_unite.id_for_label }}" class="field-input field-select" required>
+                                <option value="">Sélectionnez un type</option>
+                                <option value="appartement" {% if form.type_unite.value == 'appartement' %}selected{% endif %}>Appartement</option>
+                                <option value="maison" {% if form.type_unite.value == 'maison' %}selected{% endif %}>Maison</option>
+                                <option value="studio" {% if form.type_unite.value == 'studio' %}selected{% endif %}>Studio</option>
+                                <option value="t1" {% if form.type_unite.value == 't1' %}selected{% endif %}>T1</option>
+                                <option value="t2" {% if form.type_unite.value == 't2' %}selected{% endif %}>T2</option>
+                                <option value="t3" {% if form.type_unite.value == 't3' %}selected{% endif %}>T3</option>
+                                <option value="t4" {% if form.type_unite.value == 't4' %}selected{% endif %}>T4</option>
+                                <option value="t5+" {% if form.type_unite.value == 't5+' %}selected{% endif %}>T5+</option>
+                                <option value="bureau" {% if form.type_unite.value == 'bureau' %}selected{% endif %}>Bureau</option>
+                                <option value="local_commercial" {% if form.type_unite.value == 'local_commercial' %}selected{% endif %}>Local commercial</option>
+                                <option value="entrepot" {% if form.type_unite.value == 'entrepot' %}selected{% endif %}>Entrepôt</option>
+                                <option value="parking" {% if form.type_unite.value == 'parking' %}selected{% endif %}>Parking</option>
+                                <option value="cave" {% if form.type_unite.value == 'cave' %}selected{% endif %}>Cave</option>
+                                <option value="grenier" {% if form.type_unite.value == 'grenier' %}selected{% endif %}>Grenier</option>
+                                <option value="terrain" {% if form.type_unite.value == 'terrain' %}selected{% endif %}>Terrain</option>
+                                <option value="immeuble" {% if form.type_unite.value == 'immeuble' %}selected{% endif %}>Immeuble</option>
+                                <option value="residence" {% if form.type_unite.value == 'residence' %}selected{% endif %}>Résidence</option>
+                                <option value="villa" {% if form.type_unite.value == 'villa' %}selected{% endif %}>Villa</option>
+                                <option value="duplex" {% if form.type_unite.value == 'duplex' %}selected{% endif %}>Duplex</option>
+                                <option value="loft" {% if form.type_unite.value == 'loft' %}selected{% endif %}>Loft</option>
+                            </select>
+                            {% if form.type_unite.errors %}
+                                {% for error in form.type_unite.errors %}
+                                    <div class="field-error">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="field-group">
+                            <label class="field-label required" for="{{ form.numero_unite.id_for_label }}">
+                                Numéro d'unité
+                            </label>
+                            <input type="text" name="{{ form.numero_unite.name }}" id="{{ form.numero_unite.id_for_label }}" 
+                                   class="field-input" value="{{ form.numero_unite.value|default:'' }}" 
+                                   placeholder="Ex: A1, T2-1, Studio-3" required>
+                            {% if form.numero_unite.errors %}
+                                {% for error in form.numero_unite.errors %}
+                                    <div class="field-error">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if not propriete %}
+                    <div class="field-grid">
+                        <div class="field-group">
+                            <label class="field-label required" for="{{ form.propriete.id_for_label }}">
+                                Propriété
+                            </label>
+                            {{ form.propriete }}
+                            {% if form.propriete.errors %}
+                                {% for error in form.propriete.errors %}
+                                    <div class="field-error">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="field-group">
+                            <label class="field-label" for="{{ form.bailleur.id_for_label }}">
+                                Bailleur
+                            </label>
+                            {{ form.bailleur }}
+                            {% if form.bailleur.errors %}
+                                {% for error in form.bailleur.errors %}
+                                    <div class="field-error">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                            <div class="field-help">
+                                <i class="fas fa-info-circle"></i>
+                                Optionnel. Si non spécifié, le bailleur de la propriété sera utilisé.
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- CARACTÉRISTIQUES PHYSIQUES -->
+                <div class="section">
+                    <h2 class="section-title">
+                        <i class="fas fa-ruler-combined"></i>
+                        Caractéristiques physiques
+                    </h2>
+                    <div class="field-grid">
+                        <div class="field-group">
+                            <label class="field-label" for="{{ form.surface.id_for_label }}">
+                                Surface (m²)
+                            </label>
+                            {{ form.surface }}
+                            {% if form.surface.errors %}
+                                {% for error in form.surface.errors %}
+                                    <div class="field-error">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="field-group">
+                            <label class="field-label" for="{{ form.nombre_pieces.id_for_label }}">
+                                Nombre de pièces
+                            </label>
+                            {{ form.nombre_pieces }}
+                            {% if form.nombre_pieces.errors %}
+                                {% for error in form.nombre_pieces.errors %}
+                                    <div class="field-error">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="field-group">
+                            <label class="field-label" for="{{ form.etage.id_for_label }}">
+                                Étage
+                            </label>
+                            {{ form.etage }}
+                            {% if form.etage.errors %}
+                                {% for error in form.etage.errors %}
+                                    <div class="field-error">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="field-group">
+                            <label class="field-label" for="{{ form.nombre_chambres.id_for_label }}">
+                                Nombre de chambres
+                            </label>
+                            {{ form.nombre_chambres }}
+                            {% if form.nombre_chambres.errors %}
+                                {% for error in form.nombre_chambres.errors %}
+                                    <div class="field-error">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="field-group">
+                            <label class="field-label" for="{{ form.nombre_salles_bain.id_for_label }}">
+                                Nombre de salles de bain
+                            </label>
+                            {{ form.nombre_salles_bain }}
+                            {% if form.nombre_salles_bain.errors %}
+                                {% for error in form.nombre_salles_bain.errors %}
+                                    <div class="field-error">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- INFORMATIONS FINANCIÈRES -->
+                <div class="section">
+                    <h2 class="section-title">
+                        <i class="fas fa-euro-sign"></i>
+                        Informations financières
+                    </h2>
+                    <div class="field-grid">
+                        <div class="field-group">
+                            <label class="field-label required" for="{{ form.loyer_mensuel.id_for_label }}">
+                                Loyer mensuel (F CFA)
+                            </label>
+                            {{ form.loyer_mensuel }}
+                            {% if form.loyer_mensuel.errors %}
+                                {% for error in form.loyer_mensuel.errors %}
+                                    <div class="field-error">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="field-group">
+                            <label class="field-label" for="{{ form.charges_mensuelles.id_for_label }}">
+                                Charges mensuelles (F CFA)
+                            </label>
+                            {{ form.charges_mensuelles }}
+                            {% if form.charges_mensuelles.errors %}
+                                {% for error in form.charges_mensuelles.errors %}
+                                    <div class="field-error">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="field-group">
+                            <label class="field-label" for="{{ form.caution_demandee.id_for_label }}">
+                                Caution demandée (F CFA)
+                            </label>
+                            {{ form.caution_demandee }}
+                            {% if form.caution_demandee.errors %}
+                                {% for error in form.caution_demandee.errors %}
+                                    <div class="field-error">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="field-group">
+                            <label class="field-label" for="{{ form.date_disponibilite.id_for_label }}">
+                                Date de disponibilité
+                            </label>
+                            {{ form.date_disponibilite }}
+                            {% if form.date_disponibilite.errors %}
+                                {% for error in form.date_disponibilite.errors %}
+                                    <div class="field-error">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ÉQUIPEMENTS -->
+                <div class="section">
+                    <h2 class="section-title">
+                        <i class="fas fa-cogs"></i>
+                        Équipements et caractéristiques
+                    </h2>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            {{ form.meuble }}
+                            <label for="{{ form.meuble.id_for_label }}">Meublé</label>
+                        </div>
+                        <div class="checkbox-item">
+                            {{ form.balcon }}
+                            <label for="{{ form.balcon.id_for_label }}">Balcon</label>
+                        </div>
+                        <div class="checkbox-item">
+                            {{ form.parking_inclus }}
+                            <label for="{{ form.parking_inclus.id_for_label }}">Parking inclus</label>
+                        </div>
+                        <div class="checkbox-item">
+                            {{ form.climatisation }}
+                            <label for="{{ form.climatisation.id_for_label }}">Climatisation</label>
+                        </div>
+                        <div class="checkbox-item">
+                            {{ form.internet_inclus }}
+                            <label for="{{ form.internet_inclus.id_for_label }}">Internet inclus</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DESCRIPTION -->
+                <div class="section">
+                    <h2 class="section-title">
+                        <i class="fas fa-align-left"></i>
+                        Description et notes
+                    </h2>
+                    <div class="field-group">
+                        <label class="field-label" for="{{ form.description.id_for_label }}">
+                            Description de l'unité
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            {% for error in form.description.errors %}
+                                <div class="field-error">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="field-group">
+                        <label class="field-label" for="{{ form.notes_privees.id_for_label }}">
+                            Notes privées
+                        </label>
+                        {{ form.notes_privees }}
+                        {% if form.notes_privees.errors %}
+                            {% for error in form.notes_privees.errors %}
+                                <div class="field-error">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="form-actions">
+                    <a href="{% url 'proprietes:unites_liste' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i>
+                        Annuler
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-{% if unite %}save{% else %}plus{% endif %}"></i>
+                        {% if unite %}
+                            Modifier l'unité
+                        {% else %}
+                            Créer l'unité
+                        {% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Appliquer les classes CSS aux champs
+    const inputs = document.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+        input.classList.add('field-input');
+        if (input.type === 'checkbox') {
+            input.classList.remove('field-input');
+        }
+    });
+    
+    // Auto-remplissage du numéro d'unité
+    const typeUniteSelect = document.getElementById('id_type_unite');
+    const numeroUniteInput = document.getElementById('id_numero_unite');
+    
+    if (typeUniteSelect && numeroUniteInput && !numeroUniteInput.value) {
+        typeUniteSelect.addEventListener('change', function() {
+            const type = this.value.toLowerCase();
+            if (type && !numeroUniteInput.value) {
+                numeroUniteInput.value = type + '1';
+            }
+        });
+    }
+    
+    // Validation en temps réel
+    const form = document.getElementById('uniteForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const requiredFields = form.querySelectorAll('[required]');
+            let hasErrors = false;
+            
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.classList.add('error');
+                    hasErrors = true;
+                } else {
+                    field.classList.remove('error');
+                }
+            });
+            
+            if (hasErrors) {
+                e.preventDefault();
+                alert('Veuillez remplir tous les champs obligatoires.');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

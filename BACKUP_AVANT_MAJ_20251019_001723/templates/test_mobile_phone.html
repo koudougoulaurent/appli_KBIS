@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Test Mobile Phone Widget{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/phone_input_widget.css' %}">
+<style>
+    .test-container {
+        max-width: 600px;
+        margin: 2rem auto;
+        padding: 1rem;
+    }
+    
+    .test-section {
+        background: white;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .test-title {
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+    
+    .device-info {
+        background: #e3f2fd;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="test-container">
+    <h1 class="text-center mb-4">Test du Widget Téléphone Mobile</h1>
+    
+    <div class="device-info">
+        <strong>Informations de l'appareil :</strong><br>
+        <span id="device-info">Chargement...</span>
+    </div>
+    
+    <div class="test-section">
+        <h2 class="test-title">Test 1: Widget Téléphone Standard</h2>
+        <form>
+            <div class="mb-3">
+                <label class="form-label">Téléphone</label>
+                {% include 'includes/phone_input_widget.html' with field=phone_field %}
+            </div>
+        </form>
+    </div>
+    
+    <div class="test-section">
+        <h2 class="test-title">Test 2: Widget Téléphone avec Validation</h2>
+        <form>
+            <div class="mb-3">
+                <label class="form-label">Téléphone (Requis)</label>
+                {% include 'includes/phone_input_widget.html' with field=phone_required_field %}
+            </div>
+            <button type="submit" class="btn btn-primary">Tester la validation</button>
+        </form>
+    </div>
+    
+    <div class="test-section">
+        <h2 class="test-title">Instructions de Test</h2>
+        <ol>
+            <li><strong>Sélection du pays :</strong> Cliquez sur le dropdown "Code pays" et sélectionnez un pays</li>
+            <li><strong>Saisie du numéro :</strong> Le champ téléphone doit se remplir automatiquement avec le code pays</li>
+            <li><strong>Focus mobile :</strong> Le curseur doit se placer après le code pays pour faciliter la saisie</li>
+            <li><strong>Validation :</strong> Le champ doit valider le format du numéro en temps réel</li>
+            <li><strong>Responsive :</strong> L'interface doit s'adapter correctement sur mobile</li>
+        </ol>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Afficher les informations de l'appareil
+    const deviceInfo = document.getElementById('device-info');
+    const userAgent = navigator.userAgent;
+    const screenWidth = window.screen.width;
+    const screenHeight = window.screen.height;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    deviceInfo.innerHTML = `
+        <strong>User Agent:</strong> ${userAgent}<br>
+        <strong>Résolution écran:</strong> ${screenWidth}x${screenHeight}<br>
+        <strong>Taille viewport:</strong> ${viewportWidth}x${viewportHeight}<br>
+        <strong>Type d'appareil:</strong> ${screenWidth < 768 ? 'Mobile' : screenWidth < 1024 ? 'Tablet' : 'Desktop'}
+    `;
+    
+    // Détecter les changements d'orientation
+    window.addEventListener('orientationchange', function() {
+        setTimeout(() => {
+            const newViewportWidth = window.innerWidth;
+            const newViewportHeight = window.innerHeight;
+            deviceInfo.innerHTML = `
+                <strong>User Agent:</strong> ${userAgent}<br>
+                <strong>Résolution écran:</strong> ${screenWidth}x${screenHeight}<br>
+                <strong>Taille viewport:</strong> ${newViewportWidth}x${newViewportHeight}<br>
+                <strong>Type d'appareil:</strong> ${newViewportWidth < 768 ? 'Mobile' : newViewportWidth < 1024 ? 'Tablet' : 'Desktop'}
+            `;
+        }, 100);
+    });
+});
+</script>
+{% endblock %}
+

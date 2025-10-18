@@ -1,0 +1,330 @@
+{% load static %}
+
+<!-- Navigation Dynamique et Contextuelle -->
+<div class="dynamic-navigation" id="dynamicNav">
+    <!-- Navigation Principale -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4">
+        <div class="container-fluid">
+            <!-- Logo et Titre -->
+            <a class="navbar-brand fw-bold text-primary" href="{% url 'core:dashboard' %}">
+                <i class="bi bi-building me-2"></i>GESTIMMOB
+            </a>
+            
+            <!-- Navigation Principale -->
+            <div class="navbar-nav me-auto">
+                {% for link in navigation.primary %}
+                <a class="nav-link {% if link.active %}active{% endif %}" href="{{ link.url }}">
+                    <i class="bi bi-{{ link.icon }} me-1"></i>{{ link.label }}
+                    {% if link.badge %}
+                    <span class="badge bg-warning ms-1">{{ link.badge }}</span>
+                    {% endif %}
+                </a>
+                {% endfor %}
+            </div>
+            
+            <!-- Actions Rapides -->
+            <div class="navbar-nav">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-lightning me-1"></i>Actions Rapides
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        {% for action in navigation.quick_actions %}
+                        <li>
+                            <a class="dropdown-item" href="{{ action.url }}">
+                                <i class="bi bi-{{ action.icon }} me-2"></i>{{ action.label }}
+                                {% if action.shortcut %}
+                                <small class="text-muted ms-auto">{{ action.shortcut }}</small>
+                                {% endif %}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Breadcrumbs Dynamiques -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            {% for crumb in navigation.breadcrumbs %}
+            {% if forloop.last %}
+            <li class="breadcrumb-item active" aria-current="page">
+                <i class="bi bi-{{ crumb.icon }} me-1"></i>{{ crumb.label }}
+            </li>
+            {% else %}
+            <li class="breadcrumb-item">
+                <a href="{{ crumb.url }}">
+                    <i class="bi bi-{{ crumb.icon }} me-1"></i>{{ crumb.label }}
+                </a>
+            </li>
+            {% endif %}
+            {% endfor %}
+        </ol>
+    </nav>
+    
+    <!-- Liens Secondaires -->
+    {% if navigation.secondary %}
+    <div class="secondary-navigation mb-4">
+        <div class="row">
+            {% for link in navigation.secondary %}
+            <div class="col-md-3 mb-2">
+                <a href="{{ link.url }}" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="bi bi-{{ link.icon }} me-2"></i>{{ link.label }}
+                    {% if link.description %}
+                    <small class="d-block text-muted">{{ link.description }}</small>
+                    {% endif %}
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Recherche Intelligente Flottante -->
+<div class="floating-search" id="floatingSearch" style="display: none;">
+    <div class="search-overlay"></div>
+    <div class="search-container">
+        <div class="search-header">
+            <h5><i class="bi bi-search me-2"></i>Recherche Intelligente</h5>
+            <button type="button" class="btn-close" onclick="closeFloatingSearch()"></button>
+        </div>
+        <div class="search-body">
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" id="smartSearchInput" placeholder="Rechercher dans tous les modules...">
+                <button class="btn btn-primary" onclick="performSmartSearch()">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+            
+            <!-- Résultats de recherche -->
+            <div id="searchResults" class="search-results">
+                <!-- Les résultats seront chargés ici -->
+            </div>
+            
+            <!-- Recherches récentes -->
+            <div class="recent-searches">
+                <h6>Recherches Récentes</h6>
+                <div id="recentSearches">
+                    <!-- Les recherches récentes seront chargées ici -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.dynamic-navigation {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background: white;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.secondary-navigation {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.floating-search {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+}
+
+.search-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.search-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 800px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    max-height: 80vh;
+    overflow: hidden;
+}
+
+.search-header {
+    padding: 20px;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: between;
+    align-items: center;
+}
+
+.search-body {
+    padding: 20px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.search-results {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.search-result-item {
+    padding: 10px;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    margin-bottom: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.search-result-item:hover {
+    background: #f8f9fa;
+    border-color: #007bff;
+}
+
+.recent-searches {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+}
+
+.recent-search-item {
+    padding: 5px 10px;
+    background: #f8f9fa;
+    border-radius: 15px;
+    margin: 2px;
+    display: inline-block;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.recent-search-item:hover {
+    background: #e9ecef;
+}
+</style>
+
+<script>
+// Raccourcis clavier
+document.addEventListener('keydown', function(e) {
+    // Ctrl+K pour ouvrir la recherche
+    if (e.ctrlKey && e.key === 'k') {
+        e.preventDefault();
+        openFloatingSearch();
+    }
+    
+    // Échap pour fermer
+    if (e.key === 'Escape') {
+        closeFloatingSearch();
+    }
+});
+
+function openFloatingSearch() {
+    document.getElementById('floatingSearch').style.display = 'block';
+    document.getElementById('smartSearchInput').focus();
+    loadRecentSearches();
+}
+
+function closeFloatingSearch() {
+    document.getElementById('floatingSearch').style.display = 'none';
+    document.getElementById('searchResults').innerHTML = '';
+}
+
+function performSmartSearch() {
+    const query = document.getElementById('smartSearchInput').value;
+    if (!query.trim()) return;
+    
+    // Sauvegarder la recherche
+    saveSearch(query);
+    
+    // Effectuer la recherche
+    fetch(`/core/api/smart-search/?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            displaySearchResults(data);
+        })
+        .catch(error => {
+            console.error('Erreur de recherche:', error);
+        });
+}
+
+function displaySearchResults(data) {
+    const container = document.getElementById('searchResults');
+    let html = '';
+    
+    // Afficher les résultats par catégorie
+    Object.keys(data).forEach(category => {
+        if (category === 'suggestions' || category === 'total') return;
+        
+        const items = data[category];
+        if (items.length > 0) {
+            html += `<div class="search-category mb-3">`;
+            html += `<h6 class="text-muted">${category.charAt(0).toUpperCase() + category.slice(1)}</h6>`;
+            
+            items.forEach(item => {
+                html += `
+                    <div class="search-result-item" onclick="window.location.href='${item.url}'">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-${item.icon} me-2"></i>
+                                <strong>${item.title}</strong>
+                                <small class="text-muted d-block">${item.subtitle}</small>
+                            </div>
+                            <span class="badge bg-secondary">${item.badge}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `</div>`;
+        }
+    });
+    
+    container.innerHTML = html || '<p class="text-muted">Aucun résultat trouvé</p>';
+}
+
+function loadRecentSearches() {
+    fetch('/core/api/recent-searches/')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('recentSearches');
+            let html = '';
+            
+            data.forEach(search => {
+                html += `<span class="recent-search-item" onclick="searchRecent('${search.query}')">${search.query}</span>`;
+            });
+            
+            container.innerHTML = html;
+        });
+}
+
+function searchRecent(query) {
+    document.getElementById('smartSearchInput').value = query;
+    performSmartSearch();
+}
+
+function saveSearch(query) {
+    fetch('/core/api/save-search/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({query: query})
+    });
+}
+</script>
+

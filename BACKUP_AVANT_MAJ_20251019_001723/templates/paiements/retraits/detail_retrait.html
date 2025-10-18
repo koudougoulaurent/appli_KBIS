@@ -1,0 +1,404 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Détails du Retrait - {{ retrait.bailleur.get_nom_complet }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-card {
+        border-left: 4px solid #007bff;
+        transition: all 0.3s ease;
+    }
+    .detail-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .montant-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .montant-value {
+        font-size: 3rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    .montant-label {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+    .btn-retirer {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        padding: 1rem 2rem;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    }
+    .btn-retirer:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        color: white;
+    }
+    .btn-retirer:active {
+        transform: translateY(0);
+    }
+    .status-badge {
+        font-size: 1rem;
+        padding: 0.6rem 1.2rem;
+        border-radius: 25px;
+        font-weight: 500;
+    }
+    .propriete-item {
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    .propriete-item:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 10px rgba(0,123,255,0.1);
+    }
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    .info-label {
+        font-weight: 600;
+        color: #6c757d;
+    }
+    .info-value {
+        color: #212529;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1 text-dark">
+                        <i class="fas fa-money-bill-wave text-primary me-2"></i>
+                        Détails du Retrait
+                    </h1>
+                    <p class="text-muted mb-0">Retrait #{{ retrait.id }} - {{ retrait.bailleur.get_nom_complet }}</p>
+                </div>
+                <div>
+                    <a href="{% url 'paiements:retraits_liste' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Retour à la liste
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Colonne principale -->
+        <div class="col-lg-8">
+            <!-- Informations du retrait -->
+            <div class="card detail-card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Informations du Retrait
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="info-row">
+                                <span class="info-label">Bailleur:</span>
+                                <span class="info-value">
+                                    <i class="fas fa-user me-2"></i>{{ retrait.bailleur.get_nom_complet }}
+                                </span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Type de retrait:</span>
+                                <span class="info-value">
+                                    <span class="badge bg-secondary">{{ retrait.get_type_retrait_display }}</span>
+                                </span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Statut:</span>
+                                <span class="info-value">
+                                    {% if retrait.statut == 'en_attente' %}
+                                    <span class="status-badge bg-warning text-dark">En attente</span>
+                                    {% elif retrait.statut == 'valide' %}
+                                    <span class="status-badge bg-info text-white">Validé</span>
+                                    {% elif retrait.statut == 'paye' %}
+                                    <span class="status-badge bg-success text-white">Payé</span>
+                                    {% elif retrait.statut == 'annule' %}
+                                    <span class="status-badge bg-danger text-white">Annulé</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-row">
+                                <span class="info-label">Mois de retrait:</span>
+                                <span class="info-value">
+                                    <span class="badge bg-primary">{{ retrait.mois_retrait|date:"F Y" }}</span>
+                                </span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Mode de retrait:</span>
+                                <span class="info-value">
+                                    <i class="fas fa-university me-2"></i>{{ retrait.get_mode_retrait_display }}
+                                </span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Date de demande:</span>
+                                <span class="info-value">{{ retrait.date_demande|date:"d/m/Y" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Détail des montants -->
+            <div class="card detail-card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calculator me-2"></i>
+                        Détail des Montants
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="text-center p-3 border rounded">
+                                <div class="text-muted mb-2">Loyers Bruts</div>
+                                <div class="h4 text-primary">{{ retrait.montant_loyers_bruts|floatformat:0|intcomma }} F CFA</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center p-3 border rounded">
+                                <div class="text-muted mb-2">Charges Déductibles</div>
+                                <div class="h4 text-danger">-{{ retrait.montant_charges_deductibles|floatformat:0|intcomma }} F CFA</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center p-3 border rounded">
+                                <div class="text-muted mb-2">Charges Bailleur</div>
+                                <div class="h4 text-warning">-{{ retrait.montant_charges_bailleur|floatformat:0|intcomma }} F CFA</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Propriétés concernées -->
+            <div class="card detail-card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-home me-2"></i>
+                        Propriétés Concernées
+                        <span class="badge bg-primary ms-2">{{ proprietes.count }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if proprietes %}
+                    <div class="row">
+                        {% for propriete in proprietes %}
+                        <div class="col-md-6">
+                            <div class="propriete-item">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-home text-primary me-2"></i>
+                                    <strong>{{ propriete.titre }}</strong>
+                                </div>
+                                <div class="text-muted small mb-2">{{ propriete.adresse }}, {{ propriete.ville }}</div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Loyer:</span>
+                                    <span class="fw-bold">{{ propriete.get_loyer_actuel_calcule|floatformat:0|intcomma }} F CFA</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-home display-4 text-muted"></i>
+                        <p class="text-muted mt-2">Aucune propriété trouvée</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Paiements du mois -->
+            <div class="card detail-card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-credit-card me-2"></i>
+                        Paiements du Mois
+                        <span class="badge bg-primary ms-2">{{ paiements.count }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if paiements %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Locataire</th>
+                                    <th>Propriété</th>
+                                    <th>Montant</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for paiement in paiements %}
+                                <tr>
+                                    <td>{{ paiement.date_paiement|date:"d/m/Y" }}</td>
+                                    <td>{{ paiement.contrat.locataire_prenom }} {{ paiement.contrat.locataire_nom }}</td>
+                                    <td>{{ paiement.contrat.propriete.titre }}</td>
+                                    <td class="text-success fw-bold">{{ paiement.montant|floatformat:0|intcomma }} F CFA</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-credit-card display-4 text-muted"></i>
+                        <p class="text-muted mt-2">Aucun paiement trouvé pour ce mois</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cogs me-2"></i>
+                        Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if retrait.statut == 'en_attente' %}
+                        <a href="{% url 'paiements:valider_retrait' retrait.pk %}" class="btn btn-outline-success">
+                            <i class="fas fa-check me-2"></i>Valider
+                        </a>
+                        {% elif retrait.statut == 'valide' %}
+                        <a href="{% url 'paiements:marquer_retrait_paye' retrait.pk %}" class="btn btn-success">
+                            <i class="fas fa-money-bill-wave me-2"></i>Marquer Payé
+                        </a>
+                        {% endif %}
+                        
+                        <a href="{% url 'paiements:generer_quittance_retrait' retrait.pk %}" class="btn btn-outline-info">
+                            <i class="fas fa-receipt me-2"></i>Générer Quittance
+                        </a>
+                        
+                        {% if retrait.statut != 'paye' %}
+                        <a href="{% url 'paiements:supprimer_retrait' retrait.pk %}" class="btn btn-outline-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce retrait ?')">
+                            <i class="fas fa-trash me-2"></i>Supprimer
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Montant net à payer -->
+            <div class="montant-card">
+                <div class="montant-value">{{ retrait.montant_net_a_payer|floatformat:0|intcomma }}</div>
+                <div class="montant-label">F CFA</div>
+                <div class="mt-3">
+                    <button class="btn btn-retirer" onclick="retirerMontant()">
+                        <i class="fas fa-hand-holding-usd me-2"></i>
+                        RETIRER
+                    </button>
+                </div>
+            </div>
+
+            <!-- Informations du bailleur -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user me-2"></i>
+                        Informations du Bailleur
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="info-row">
+                        <span class="info-label">Nom:</span>
+                        <span class="info-value">{{ retrait.bailleur.get_nom_complet }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Téléphone:</span>
+                        <span class="info-value">{{ retrait.bailleur.telephone|default:"Non renseigné" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Email:</span>
+                        <span class="info-value">{{ retrait.bailleur.email|default:"Non renseigné" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Propriétés:</span>
+                        <span class="info-value">
+                            <span class="badge bg-success">{{ proprietes.count }}</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function retirerMontant() {
+    // Animation du bouton
+    const btn = document.querySelector('.btn-retirer');
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Génération...';
+    btn.disabled = true;
+    
+    // Simuler la génération de la quittance
+    setTimeout(() => {
+        // Rediriger vers la génération de quittance
+        window.location.href = "{% url 'paiements:generer_quittance_retrait' retrait.pk %}";
+    }, 1500);
+}
+
+$(document).ready(function() {
+    // Animation des cartes
+    $('.detail-card').hover(
+        function() {
+            $(this).addClass('shadow-lg');
+        },
+        function() {
+            $(this).removeClass('shadow-lg');
+        }
+    );
+    
+    // Confirmation pour les actions
+    $('.btn-outline-danger').click(function(e) {
+        if (!confirm('Êtes-vous sûr de vouloir effectuer cette action ?')) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

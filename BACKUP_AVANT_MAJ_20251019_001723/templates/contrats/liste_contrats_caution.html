@@ -1,0 +1,296 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gestion des Cautions - Gestion Immobilière{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="bi bi-shield-check text-primary"></i>
+        Gestion des Cautions
+    </h1>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="statut_caution" class="form-label">STATUT CAUTION</label>
+                <select name="statut_caution" id="statut_caution" class="form-select">
+                    <option value="">Tous</option>
+                    {% for value, label in statuts_caution %}
+                        <option value="{{ value }}" {% if filtres_actifs.statut_caution == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="statut_avance" class="form-label">STATUT AVANCE</label>
+                <select name="statut_avance" id="statut_avance" class="form-select">
+                    <option value="">Tous</option>
+                    {% for value, label in statuts_avance %}
+                        <option value="{{ value }}" {% if filtres_actifs.statut_avance == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="bailleur" class="form-label">BAILLEUR</label>
+                <select name="bailleur" id="bailleur" class="form-select">
+                    <option value="">Tous les bailleurs</option>
+                    {% for bailleur in bailleurs %}
+                        <option value="{{ bailleur.id }}" {% if filtres_actifs.bailleur == bailleur.id|stringformat:"s" %}selected{% endif %}>
+                            {{ bailleur.get_nom_complet }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-funnel"></i> Filtrer
+                    </button>
+                    <a href="{% url 'contrats:liste_contrats_caution' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> Reset
+                    </a>
+                    {% if user.groupe_travail.nom|upper == 'PRIVILEGE' %}
+                    <form method="post" action="{% url 'contrats:forcer_correction_statuts' %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-warning" onclick="return confirm('Êtes-vous sûr de vouloir forcer la correction des statuts ? Cette action va recalculer tous les statuts de paiement.');">
+                            <i class="bi bi-arrow-clockwise"></i> Corriger Statuts
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Liste des contrats -->
+<div class="card">
+    <div class="card-body">
+        {% if page_obj %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Contrat</th>
+                            <th>Locataire</th>
+                            <th>Propriété</th>
+                            <th>Bailleur</th>
+                            <th>Caution</th>
+                            <th>Avance</th>
+                            <th>Total</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for contrat in page_obj %}
+                        <tr>
+                            <td>
+                                <strong>{{ contrat.numero_contrat }}</strong>
+                                <br>
+                                <small class="text-muted">{{ contrat.date_signature|date:"d/m/Y" }}</small>
+                            </td>
+                            <td>
+                                <strong>{{ contrat.locataire.get_nom_complet }}</strong>
+                                <br>
+                                <small class="text-muted">{{ contrat.locataire.telephone }}</small>
+                            </td>
+                            <td>
+                                {{ contrat.propriete.titre }}
+                                <br>
+                                <small class="text-muted">{{ contrat.propriete.ville }}</small>
+                            </td>
+                            <td>
+                                {{ contrat.propriete.bailleur.get_nom_complet }}
+                            </td>
+                            <td class="text-end">
+                                <span class="fw-bold text-warning">
+                                    {{ contrat.get_depot_garantie_formatted }}
+                                </span>
+                                <br>
+                                {% if contrat.montant_caution_requis > 0 %}
+                                    {% if contrat.get_caution_payee_dynamique == True %}
+                                        <small class="badge bg-success">Payée</small>
+                                    {% elif contrat.get_caution_payee_dynamique == False %}
+                                        <small class="badge bg-danger">Non payée</small>
+                                    {% else %}
+                                        <small class="badge bg-warning">En cours</small>
+                                    {% endif %}
+                                {% else %}
+                                    <small class="badge bg-secondary">Non requise</small>
+                                {% endif %}
+                                <!-- Debug info -->
+                                <br><small class="text-muted">Payé: {{ contrat.montant_caution_paye|floatformat:0 }} / Requis: {{ contrat.montant_caution_requis|floatformat:0 }}</small>
+                            </td>
+                            <td class="text-end">
+                                <span class="fw-bold text-info">
+                                    {{ contrat.get_avance_loyer_formatted }}
+                                </span>
+                                <br>
+                                {% if contrat.montant_avance_requis > 0 %}
+                                    {% if contrat.get_avance_payee_dynamique == True %}
+                                        <small class="badge bg-success">Payée</small>
+                                    {% elif contrat.get_avance_payee_dynamique == False %}
+                                        <small class="badge bg-danger">Non payée</small>
+                                    {% else %}
+                                        <small class="badge bg-warning">En cours</small>
+                                    {% endif %}
+                                {% else %}
+                                    <small class="badge bg-secondary">Non requise</small>
+                                {% endif %}
+                                <!-- Debug info -->
+                                <br><small class="text-muted">Payé: {{ contrat.montant_avance_paye|floatformat:0 }} / Requis: {{ contrat.montant_avance_requis|floatformat:0 }}</small>
+                            </td>
+                            <td class="text-end">
+                                <span class="fw-bold text-primary">
+                                    {{ contrat.get_total_caution_avance_formatted }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if contrat.montant_caution_requis > 0 and contrat.montant_avance_requis > 0 %}
+                                    <!-- Les deux sont requis : les deux doivent être payés -->
+                                    {% if contrat.get_caution_payee_dynamique and contrat.get_avance_payee_dynamique %}
+                                        <span class="badge bg-success">Complet</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">En attente</span>
+                                    {% endif %}
+                                {% elif contrat.montant_caution_requis > 0 %}
+                                    <!-- Seule la caution est requise : elle doit être payée -->
+                                    {% if contrat.get_caution_payee_dynamique %}
+                                        <span class="badge bg-success">Complet</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">En attente</span>
+                                    {% endif %}
+                                {% elif contrat.montant_avance_requis > 0 %}
+                                    <!-- Seule l'avance est requise : elle doit être payée -->
+                                    {% if contrat.get_avance_payee_dynamique %}
+                                        <span class="badge bg-success">Complet</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">En attente</span>
+                                    {% endif %}
+                                {% else %}
+                                    <!-- Aucun paiement requis -->
+                                    <span class="badge bg-info">Aucun paiement requis</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'contrats:detail_contrat_caution' contrat.id %}" 
+                                       class="btn btn-outline-primary" title="Voir les détails">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if contrat.montant_caution_requis > 0 and contrat.montant_caution_paye < contrat.montant_caution_requis %}
+                                        <a href="{% url 'contrats:marquer_caution_payee' contrat.id %}" 
+                                           class="btn btn-outline-success" title="Marquer caution payée">
+                                            <i class="bi bi-shield-check"></i>
+                                        </a>
+                                    {% endif %}
+                                    {% if contrat.montant_avance_requis > 0 and contrat.montant_avance_paye < contrat.montant_avance_requis %}
+                                        <a href="{% url 'contrats:marquer_avance_payee' contrat.id %}" 
+                                           class="btn btn-outline-info" title="Marquer avance payée">
+                                            <i class="bi bi-cash-coin"></i>
+                                        </a>
+                                    {% endif %}
+                                    {% if contrat.montant_caution_paye >= contrat.montant_caution_requis or contrat.montant_avance_paye >= contrat.montant_avance_requis %}
+                                        <a href="{% url 'contrats:imprimer_recu_caution' contrat.id %}" 
+                                           class="btn btn-outline-secondary" title="Imprimer reçu" target="_blank">
+                                            <i class="bi bi-printer"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <nav aria-label="Navigation des pages">
+                <ul class="pagination justify-content-center mt-4">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.statut_caution %}&statut_caution={{ request.GET.statut_caution }}{% endif %}{% if request.GET.statut_avance %}&statut_avance={{ request.GET.statut_avance }}{% endif %}{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.statut_caution %}&statut_caution={{ request.GET.statut_caution }}{% endif %}{% if request.GET.statut_avance %}&statut_avance={{ request.GET.statut_avance }}{% endif %}{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.statut_caution %}&statut_caution={{ request.GET.statut_caution }}{% endif %}{% if request.GET.statut_avance %}&statut_avance={{ request.GET.statut_avance }}{% endif %}{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.statut_caution %}&statut_caution={{ request.GET.statut_caution }}{% endif %}{% if request.GET.statut_avance %}&statut_avance={{ request.GET.statut_avance }}{% endif %}{% if request.GET.bailleur %}&bailleur={{ request.GET.bailleur }}{% endif %}">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-shield-check text-muted" style="font-size: 4rem;"></i>
+                <h4 class="text-muted mt-3">Aucun contrat trouvé</h4>
+                <p class="text-muted">Les contrats avec leurs cautions et avances apparaîtront ici.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Résumé statistique -->
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <h3 class="text-success">{{ statistiques.contrats_complets }}</h3>
+                <p class="card-text">Contrats Complets</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <h3 class="text-warning">{{ statistiques.contrats_en_attente }}</h3>
+                <p class="card-text">En Attente</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <h3 class="text-info">{{ statistiques.cautions_payees }}</h3>
+                <p class="card-text">Cautions Payées</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-primary">
+            <div class="card-body text-center">
+                <h3 class="text-primary">{{ statistiques.avances_payees }}</h3>
+                <p class="card-text">Avances Payées</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

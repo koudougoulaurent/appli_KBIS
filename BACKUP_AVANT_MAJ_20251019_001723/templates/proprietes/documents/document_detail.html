@@ -1,0 +1,255 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+
+{% block title %}{{ document.nom }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="fas fa-file-alt text-primary me-2"></i>
+                {{ document.nom }}
+            </h1>
+            <p class="text-muted">{{ document.get_type_document_display }}</p>
+        </div>
+        <div>
+            <a href="{% url 'proprietes:document_update' document.pk %}" class="btn btn-primary me-2">
+                <i class="fas fa-edit me-2"></i>Modifier
+            </a>
+            <a href="{% url 'proprietes:document_download' document.pk %}" class="btn btn-success me-2">
+                <i class="fas fa-download me-2"></i>Télécharger
+            </a>
+            <a href="{% url 'proprietes:document_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Retour
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Informations du document
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Nom :</dt>
+                                <dd class="col-sm-8">{{ document.nom }}</dd>
+                                
+                                <dt class="col-sm-4">Type :</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-secondary">{{ document.get_type_document_display }}</span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Statut :</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-{% if document.statut == 'valide' %}success{% elif document.statut == 'en_attente' %}warning{% elif document.statut == 'expire' %}danger{% else %}secondary{% endif %}">
+                                        {{ document.get_statut_display }}
+                                    </span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Date création :</dt>
+                                <dd class="col-sm-8">{{ document.date_creation|date:"d/m/Y H:i" }}</dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Taille :</dt>
+                                <dd class="col-sm-8">{{ document.get_taille_fichier_lisible }}</dd>
+                                
+                                <dt class="col-sm-4">Date expiration :</dt>
+                                <dd class="col-sm-8">
+                                    {% if document.date_expiration %}
+                                        {{ document.date_expiration|date:"d/m/Y" }}
+                                        {% if document.is_expired %}
+                                            <span class="badge bg-danger ms-2">Expiré</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">Non définie</span>
+                                    {% endif %}
+                                </dd>
+                                
+                                <dt class="col-sm-4">Confidentiel :</dt>
+                                <dd class="col-sm-8">
+                                    {% if document.confidentiel %}
+                                        <span class="badge bg-danger">Oui</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Non</span>
+                                    {% endif %}
+                                </dd>
+                                
+                                <dt class="col-sm-4">Créé par :</dt>
+                                <dd class="col-sm-8">{{ document.cree_par.get_full_name|default:document.cree_par.username }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                    
+                    {% if document.description %}
+                    <div class="mt-3">
+                        <h6>Description :</h6>
+                        <p class="text-muted">{{ document.description }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if document.tags %}
+                    <div class="mt-3">
+                        <h6>Tags :</h6>
+                        <div>
+                            {% for tag in document.tags.split|slice:":10" %}
+                            <span class="badge bg-light text-dark me-1">{{ tag }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if document.fichier %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-file me-2"></i>Aperçu du fichier
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if document.fichier.name|lower|slice:"-4:" == '.pdf' %}
+                    <embed src="{{ document.fichier.url }}" type="application/pdf" width="100%" height="600px">
+                    {% elif document.fichier.name|lower|slice:"-4:" in '.jpg,.jpeg,.png'|split:',' %}
+                    <img src="{{ document.fichier.url }}" class="img-fluid" alt="{{ document.nom }}">
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-file fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Aperçu non disponible pour ce type de fichier</p>
+                        <a href="{% url 'proprietes:document_download' document.pk %}" class="btn btn-primary">
+                            <i class="fas fa-download me-2"></i>Télécharger le fichier
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-link me-2"></i>Liens associés
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if document.propriete %}
+                    <div class="mb-3">
+                        <h6>Propriété :</h6>
+                        <a href="{% url 'proprietes:detail_propriete' document.propriete.pk %}" class="btn btn-outline-primary btn-sm w-100">
+                            <i class="fas fa-home me-2"></i>{{ document.propriete.titre }}
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    {% if document.bailleur %}
+                    <div class="mb-3">
+                        <h6>Bailleur :</h6>
+                        <a href="{% url 'proprietes:detail_bailleur' document.bailleur.pk %}" class="btn btn-outline-success btn-sm w-100">
+                            <i class="fas fa-user me-2"></i>{{ document.bailleur.nom }}
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    {% if document.locataire %}
+                    <div class="mb-3">
+                        <h6>Locataire :</h6>
+                        <a href="{% url 'proprietes:detail_locataire' document.locataire.pk %}" class="btn btn-outline-warning btn-sm w-100">
+                            <i class="fas fa-user me-2"></i>{{ document.locataire.nom }}
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-history me-2"></i>Historique
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-primary"></div>
+                            <div class="timeline-content">
+                                <h6 class="timeline-title">Document créé</h6>
+                                <p class="timeline-text">{{ document.date_creation|date:"d/m/Y H:i" }}</p>
+                            </div>
+                        </div>
+                        
+                        {% if document.date_modification != document.date_creation %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-info"></div>
+                            <div class="timeline-content">
+                                <h6 class="timeline-title">Dernière modification</h6>
+                                <p class="timeline-text">{{ document.date_modification|date:"d/m/Y H:i" }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if document.date_expiration %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-{% if document.is_expired %}danger{% else %}warning{% endif %}"></div>
+                            <div class="timeline-content">
+                                <h6 class="timeline-title">Date d'expiration</h6>
+                                <p class="timeline-text">{{ document.date_expiration|date:"d/m/Y" }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.timeline {
+    position: relative;
+    padding-left: 20px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -30px;
+    top: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.timeline-content {
+    margin-left: 10px;
+}
+
+.timeline-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.timeline-text {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 0;
+}
+</style>
+{% endblock %}

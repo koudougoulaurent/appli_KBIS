@@ -1,0 +1,452 @@
+{% load static %}
+<!-- Notifications Rapides -->
+<div id="quick-notifications" class="quick-notifications">
+    <div class="notifications-toggle" onclick="toggleNotifications()">
+        <i class="bi bi-bell"></i>
+        <span class="notification-count" id="notification-count">0</span>
+    </div>
+    
+    <div class="notifications-panel" id="notifications-panel">
+        <div class="notifications-header">
+            <h6><i class="bi bi-bell"></i> Notifications</h6>
+            <button class="btn-clear-all" onclick="clearAllNotifications()">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+        
+        <div class="notifications-content" id="notifications-content">
+            <!-- Notifications dynamiques -->
+            <div class="notification-item">
+                <div class="notification-icon">
+                    <i class="bi bi-info-circle text-info"></i>
+                </div>
+                <div class="notification-content">
+                    <div class="notification-title">Bienvenue dans KBIS</div>
+                    <div class="notification-message">Utilisez les actions rapides pour naviguer facilement</div>
+                    <div class="notification-time">Maintenant</div>
+                </div>
+                <button class="notification-close" onclick="removeNotification(this)">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+            
+            <div class="notification-item">
+                <div class="notification-icon">
+                    <i class="bi bi-lightning-charge text-warning"></i>
+                </div>
+                <div class="notification-content">
+                    <div class="notification-title">Actions Rapides</div>
+                    <div class="notification-message">Utilisez Ctrl+K pour la recherche globale</div>
+                    <div class="notification-time">Il y a 2 min</div>
+                </div>
+                <button class="notification-close" onclick="removeNotification(this)">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="notifications-footer">
+            <a href="#" class="view-all-link">Voir toutes les notifications</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.quick-notifications {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.notifications-toggle {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.notifications-toggle:hover {
+    border-color: #007bff;
+    box-shadow: 0 6px 20px rgba(0, 123, 255, 0.2);
+    transform: scale(1.05);
+}
+
+.notifications-toggle i {
+    font-size: 1.2em;
+    color: #6c757d;
+    transition: color 0.3s ease;
+}
+
+.notifications-toggle:hover i {
+    color: #007bff;
+}
+
+.notification-count {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #dc3545;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7em;
+    font-weight: 600;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.notifications-panel {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 10px;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    width: 350px;
+    max-height: 400px;
+    overflow: hidden;
+    display: none;
+    border: 1px solid #e9ecef;
+    animation: slideInDown 0.3s ease;
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.notifications-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+}
+
+.notifications-header h6 {
+    margin: 0;
+    font-size: 0.9em;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-clear-all {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    transition: background 0.2s ease;
+}
+
+.btn-clear-all:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.notifications-content {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 10px 0;
+}
+
+.notification-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 15px 20px;
+    border-bottom: 1px solid #f8f9fa;
+    transition: background 0.2s ease;
+    animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.notification-item:hover {
+    background: #f8f9fa;
+}
+
+.notification-item:last-child {
+    border-bottom: none;
+}
+
+.notification-icon {
+    margin-right: 12px;
+    margin-top: 2px;
+}
+
+.notification-icon i {
+    font-size: 1.2em;
+}
+
+.notification-content {
+    flex: 1;
+}
+
+.notification-title {
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.9em;
+    margin-bottom: 4px;
+}
+
+.notification-message {
+    color: #6c757d;
+    font-size: 0.8em;
+    line-height: 1.4;
+    margin-bottom: 4px;
+}
+
+.notification-time {
+    color: #adb5bd;
+    font-size: 0.7em;
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    color: #adb5bd;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    margin-left: 8px;
+}
+
+.notification-close:hover {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.notifications-footer {
+    padding: 15px 20px;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    text-align: center;
+}
+
+.view-all-link {
+    color: #007bff;
+    text-decoration: none;
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
+.view-all-link:hover {
+    text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .quick-notifications {
+        right: 10px;
+        top: 10px;
+    }
+    
+    .notifications-panel {
+        width: 300px;
+        right: -10px;
+    }
+    
+    .notifications-toggle {
+        width: 45px;
+        height: 45px;
+    }
+}
+
+/* Mode sombre */
+@media (prefers-color-scheme: dark) {
+    .notifications-toggle {
+        background: #2d3748;
+        border-color: #4a5568;
+    }
+    
+    .notifications-toggle i {
+        color: #e2e8f0;
+    }
+    
+    .notifications-panel {
+        background: #2d3748;
+        border-color: #4a5568;
+    }
+    
+    .notification-item {
+        border-bottom-color: #4a5568;
+    }
+    
+    .notification-item:hover {
+        background: #4a5568;
+    }
+    
+    .notification-title {
+        color: #e2e8f0;
+    }
+    
+    .notification-message {
+        color: #a0aec0;
+    }
+    
+    .notification-time {
+        color: #718096;
+    }
+    
+    .notifications-footer {
+        background: #4a5568;
+        border-top-color: #718096;
+    }
+}
+</style>
+
+<script>
+let notificationCount = 2; // Nombre initial de notifications
+
+function toggleNotifications() {
+    const panel = document.getElementById('notifications-panel');
+    const toggle = document.querySelector('.notifications-toggle');
+    
+    if (panel.style.display === 'block') {
+        panel.style.display = 'none';
+        toggle.classList.remove('active');
+    } else {
+        panel.style.display = 'block';
+        toggle.classList.add('active');
+    }
+}
+
+function removeNotification(button) {
+    const notification = button.closest('.notification-item');
+    notification.style.animation = 'slideOutRight 0.3s ease forwards';
+    
+    setTimeout(() => {
+        notification.remove();
+        updateNotificationCount();
+    }, 300);
+}
+
+function clearAllNotifications() {
+    const content = document.getElementById('notifications-content');
+    const notifications = content.querySelectorAll('.notification-item');
+    
+    notifications.forEach((notification, index) => {
+        setTimeout(() => {
+            notification.style.animation = 'slideOutRight 0.3s ease forwards';
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }, index * 100);
+    });
+    
+    setTimeout(() => {
+        updateNotificationCount();
+    }, notifications.length * 100);
+}
+
+function updateNotificationCount() {
+    const content = document.getElementById('notifications-content');
+    const count = content.querySelectorAll('.notification-item').length;
+    const countElement = document.getElementById('notification-count');
+    
+    countElement.textContent = count;
+    
+    if (count === 0) {
+        countElement.style.display = 'none';
+    } else {
+        countElement.style.display = 'flex';
+    }
+}
+
+function addNotification(title, message, type = 'info') {
+    const content = document.getElementById('notifications-content');
+    const iconClass = {
+        'info': 'bi-info-circle text-info',
+        'success': 'bi-check-circle text-success',
+        'warning': 'bi-exclamation-triangle text-warning',
+        'error': 'bi-x-circle text-danger'
+    }[type] || 'bi-info-circle text-info';
+    
+    const notification = document.createElement('div');
+    notification.className = 'notification-item';
+    notification.innerHTML = `
+        <div class="notification-icon">
+            <i class="bi ${iconClass}"></i>
+        </div>
+        <div class="notification-content">
+            <div class="notification-title">${title}</div>
+            <div class="notification-message">${message}</div>
+            <div class="notification-time">Maintenant</div>
+        </div>
+        <button class="notification-close" onclick="removeNotification(this)">
+            <i class="bi bi-x"></i>
+        </button>
+    `;
+    
+    content.insertBefore(notification, content.firstChild);
+    updateNotificationCount();
+}
+
+// Fermer en cliquant à l'extérieur
+document.addEventListener('click', function(event) {
+    const panel = document.getElementById('notifications-panel');
+    const toggle = document.querySelector('.notifications-toggle');
+    
+    if (panel.style.display === 'block' && !panel.contains(event.target) && !toggle.contains(event.target)) {
+        panel.style.display = 'none';
+        toggle.classList.remove('active');
+    }
+});
+
+// Animation de sortie
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideOutRight {
+        from {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+    }
+`;
+document.head.appendChild(style);
+
+// Initialiser le compteur
+updateNotificationCount();
+</script>

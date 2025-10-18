@@ -1,0 +1,170 @@
+{% load static %}
+<!-- Messages d'erreur explicites -->
+<script>
+// Améliorer les messages d'erreur Django
+document.addEventListener('DOMContentLoaded', function() {
+    // Remplacer les messages d'erreur génériques par des messages explicites
+    const errorMessages = {
+        'required': 'Ce champ est obligatoire. Veuillez le remplir.',
+        'invalid': 'La valeur saisie n\'est pas valide. Vérifiez le format.',
+        'min_length': 'Le texte est trop court. Veuillez saisir au moins {min} caractères.',
+        'max_length': 'Le texte est trop long. Maximum {max} caractères autorisés.',
+        'invalid_email': 'Adresse email invalide. Format attendu : exemple@domaine.com',
+        'invalid_phone': 'Numéro de téléphone invalide. Format attendu : 0123456789',
+        'invalid_date': 'Date invalide. Format attendu : JJ/MM/AAAA',
+        'invalid_number': 'Nombre invalide. Utilisez le point (.) pour les décimales.',
+        'unique': 'Cette valeur existe déjà. Veuillez en choisir une autre.',
+        'permission_denied': 'Vous n\'avez pas les droits pour effectuer cette action.',
+        'retrait_period': 'Les retraits ne peuvent être générés que du 25 au 5 du mois suivant.',
+        'retrait_duplicate': 'Un retrait existe déjà pour ce bailleur ce mois-ci.',
+        'contract_active': 'Ce contrat est déjà actif.',
+        'contract_expired': 'Ce contrat a expiré.',
+        'payment_duplicate': 'Ce paiement existe déjà.',
+        'insufficient_funds': 'Fonds insuffisants pour cette opération.',
+        'network_error': 'Erreur de connexion. Vérifiez votre connexion internet.',
+        'server_error': 'Erreur du serveur. Veuillez réessayer plus tard.',
+        'validation_error': 'Erreur de validation. Vérifiez les champs marqués en rouge.',
+        'file_too_large': 'Fichier trop volumineux. Taille maximum : {max} MB.',
+        'file_type_invalid': 'Type de fichier non autorisé. Formats acceptés : {types}',
+        'database_error': 'Erreur de base de données. Contactez l\'administrateur.',
+        'timeout': 'Opération trop longue. Veuillez réessayer.',
+        'not_found': 'Élément introuvable. Il a peut-être été supprimé.',
+        'access_denied': 'Accès refusé. Vérifiez vos permissions.',
+        'maintenance': 'Maintenance en cours. Veuillez réessayer plus tard.'
+    };
+
+    // Fonction pour améliorer un message d'erreur
+    function improveErrorMessage(element, errorType, details = {}) {
+        let message = errorMessages[errorType] || 'Erreur inconnue.';
+        
+        // Remplacer les placeholders
+        Object.keys(details).forEach(key => {
+            message = message.replace(`{${key}}`, details[key]);
+        });
+        
+        // Ajouter des conseils spécifiques
+        const suggestions = getSuggestions(errorType, element);
+        if (suggestions) {
+            message += '<br><small class="text-muted">💡 ' + suggestions + '</small>';
+        }
+        
+        return message;
+    }
+
+    // Conseils spécifiques par type d'erreur
+    function getSuggestions(errorType, element) {
+        const suggestions = {
+            'required': 'Tous les champs marqués d\'un astérisque (*) sont obligatoires.',
+            'invalid_email': 'Exemple : jean.dupont@email.com',
+            'invalid_phone': 'Exemple : 0123456789 ou +226 12 34 56 78',
+            'invalid_date': 'Utilisez le format JJ/MM/AAAA ou cliquez sur le calendrier',
+            'invalid_number': 'Exemple : 150000 ou 150000.50',
+            'min_length': 'Ajoutez plus de détails pour clarifier l\'information',
+            'max_length': 'Résumez votre texte en gardant l\'essentiel',
+            'unique': 'Vérifiez la liste existante ou modifiez la valeur',
+            'retrait_period': 'Consultez le calendrier pour voir les périodes autorisées',
+            'retrait_duplicate': 'Vérifiez la liste des retraits existants',
+            'file_too_large': 'Compressez votre fichier ou choisissez un autre format',
+            'file_type_invalid': 'Convertissez votre fichier au format demandé',
+            'network_error': 'Vérifiez votre connexion et réessayez',
+            'server_error': 'L\'équipe technique a été notifiée. Réessayez dans quelques minutes'
+        };
+        
+        return suggestions[errorType];
+    }
+
+    // Améliorer les messages d'erreur existants
+    const errorElements = document.querySelectorAll('.invalid-feedback, .errorlist, .alert-danger');
+    errorElements.forEach(element => {
+        const text = element.textContent.toLowerCase();
+        
+        if (text.includes('required') || text.includes('obligatoire')) {
+            element.innerHTML = improveErrorMessage(element, 'required');
+        } else if (text.includes('email') || text.includes('courriel')) {
+            element.innerHTML = improveErrorMessage(element, 'invalid_email');
+        } else if (text.includes('téléphone') || text.includes('phone')) {
+            element.innerHTML = improveErrorMessage(element, 'invalid_phone');
+        } else if (text.includes('date')) {
+            element.innerHTML = improveErrorMessage(element, 'invalid_date');
+        } else if (text.includes('nombre') || text.includes('number')) {
+            element.innerHTML = improveErrorMessage(element, 'invalid_number');
+        } else if (text.includes('unique') || text.includes('existe déjà')) {
+            element.innerHTML = improveErrorMessage(element, 'unique');
+        } else if (text.includes('période') || text.includes('retrait')) {
+            element.innerHTML = improveErrorMessage(element, 'retrait_period');
+        } else if (text.includes('doublon') || text.includes('duplicate')) {
+            element.innerHTML = improveErrorMessage(element, 'retrait_duplicate');
+        } else if (text.includes('fichier') || text.includes('file')) {
+            if (text.includes('trop gros') || text.includes('too large')) {
+                element.innerHTML = improveErrorMessage(element, 'file_too_large', { max: '10' });
+            } else if (text.includes('type') || text.includes('format')) {
+                element.innerHTML = improveErrorMessage(element, 'file_type_invalid', { types: 'PDF, JPG, PNG' });
+            }
+        } else if (text.includes('connexion') || text.includes('network')) {
+            element.innerHTML = improveErrorMessage(element, 'network_error');
+        } else if (text.includes('serveur') || text.includes('server')) {
+            element.innerHTML = improveErrorMessage(element, 'server_error');
+        } else if (text.includes('permission') || text.includes('accès')) {
+            element.innerHTML = improveErrorMessage(element, 'access_denied');
+        }
+    });
+
+    // Améliorer les messages de succès
+    const successElements = document.querySelectorAll('.alert-success');
+    successElements.forEach(element => {
+        const text = element.textContent.toLowerCase();
+        
+        if (text.includes('paiement') && text.includes('enregistré')) {
+            element.innerHTML = `
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <strong>Paiement enregistré avec succès !</strong><br>
+                <small>Vous pouvez maintenant générer un récépissé ou une quittance. Utilisez les boutons d'action dans la liste.</small>
+            `;
+        } else if (text.includes('contrat') && text.includes('créé')) {
+            element.innerHTML = `
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <strong>Contrat créé avec succès !</strong><br>
+                <small>Le contrat est maintenant actif. Vous pouvez ajouter des paiements ou générer des quittances.</small>
+            `;
+        } else if (text.includes('propriété') && text.includes('ajoutée')) {
+            element.innerHTML = `
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <strong>Propriété ajoutée avec succès !</strong><br>
+                <small>Vous pouvez maintenant créer des unités locatives et des contrats pour cette propriété.</small>
+            `;
+        } else if (text.includes('bailleur') && text.includes('ajouté')) {
+            element.innerHTML = `
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <strong>Bailleur ajouté avec succès !</strong><br>
+                <small>Le bailleur peut maintenant être associé à des propriétés et des contrats.</small>
+            `;
+        } else if (text.includes('locataire') && text.includes('ajouté')) {
+            element.innerHTML = `
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <strong>Locataire ajouté avec succès !</strong><br>
+                <small>Le locataire peut maintenant être associé à des contrats et des paiements.</small>
+            `;
+        }
+    });
+
+    // Améliorer les messages d'information
+    const infoElements = document.querySelectorAll('.alert-info');
+    infoElements.forEach(element => {
+        const text = element.textContent.toLowerCase();
+        
+        if (text.includes('recherche')) {
+            element.innerHTML = `
+                <i class="bi bi-info-circle-fill me-2"></i>
+                <strong>Astuce de recherche</strong><br>
+                <small>Utilisez Ctrl+K pour rechercher rapidement. Vous pouvez chercher par nom, téléphone, ou adresse.</small>
+            `;
+        } else if (text.includes('raccourci') || text.includes('shortcut')) {
+            element.innerHTML = `
+                <i class="bi bi-keyboard-fill me-2"></i>
+                <strong>Raccourcis clavier disponibles</strong><br>
+                <small>Ctrl+P: Propriétés | Ctrl+C: Contrats | Ctrl+M: Paiements | Ctrl+B: Bailleurs | Ctrl+L: Locataires</small>
+            `;
+        }
+    });
+});
+</script>

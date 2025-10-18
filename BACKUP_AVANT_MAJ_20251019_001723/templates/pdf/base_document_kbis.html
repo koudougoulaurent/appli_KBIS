@@ -1,0 +1,373 @@
+{% load static %}
+{% load core_extras %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Document KBIS{% endblock %}</title>
+    <style>
+        /* Reset et base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+            background: white;
+        }
+        
+        /* En-tête KBIS */
+        .kbis-document-header {
+            width: 100%;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #1e3c72;
+            padding-bottom: 20px;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            width: 100%;
+        }
+        
+        .logo-section {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+        
+        .kbis-logo {
+            width: 120px;
+            height: 80px;
+            margin-right: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #1e3c72;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .kbis-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        .logo-graphic {
+            position: relative;
+            width: 50px;
+            height: 50px;
+        }
+        
+        .house {
+            position: absolute;
+            bottom: 5px;
+            left: 5px;
+            width: 20px;
+            height: 15px;
+            background: #1e3c72;
+            border-radius: 2px;
+        }
+        
+        .house::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: -2px;
+            width: 24px;
+            height: 8px;
+            background: #1e3c72;
+            clip-path: polygon(0% 100%, 50% 0%, 100% 100%);
+        }
+        
+        .house::after {
+            content: '';
+            position: absolute;
+            top: -6px;
+            right: 2px;
+            width: 3px;
+            height: 6px;
+            background: #1e3c72;
+        }
+        
+        .buildings {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            width: 25px;
+            height: 20px;
+            background: #1e3c72;
+            border-radius: 2px;
+        }
+        
+        .buildings::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 0;
+            width: 8px;
+            height: 8px;
+            background: #1e3c72;
+            border-radius: 1px;
+        }
+        
+        .buildings::after {
+            content: '';
+            position: absolute;
+            top: -8px;
+            right: 0;
+            width: 8px;
+            height: 8px;
+            background: #1e3c72;
+            border-radius: 1px;
+        }
+        
+        .sun {
+            position: absolute;
+            top: 0;
+            right: -5px;
+            width: 15px;
+            height: 15px;
+            background: #f59e0b;
+            border-radius: 50%;
+        }
+        
+        .sun::before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            right: -3px;
+            bottom: -3px;
+            border: 2px solid #f59e0b;
+            border-radius: 50%;
+            opacity: 0.3;
+        }
+        
+        .company-info {
+            flex: 2;
+            margin-left: 20px;
+        }
+        
+        .company-name {
+            font-size: 42px;
+            font-weight: 900;
+            color: #1e3c72;
+            margin: 0;
+            line-height: 1;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .slogan-box {
+            display: inline-block;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 700;
+            margin: 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 3px 6px rgba(245, 158, 11, 0.3);
+        }
+        
+        .services {
+            color: #1e3c72;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 8px 0 0 0;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        
+        .logo-text {
+            color: #1e3c72;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+            margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .footer-info {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 2px solid #e2e8f0;
+            font-size: 13px;
+            color: #374151;
+            line-height: 1.4;
+        }
+        
+        .footer-info p {
+            margin: 3px 0;
+        }
+        
+        .footer-info strong {
+            color: #1e3c72;
+            font-weight: 700;
+        }
+        
+        /* Contenu du document */
+        .document-content {
+            margin-top: 20px;
+            padding: 0 10px;
+        }
+        
+        .document-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e3c72;
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+            border-radius: 8px;
+            border-left: 5px solid #1e3c72;
+        }
+        
+        /* Styles pour les tableaux */
+        .document-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 11px;
+        }
+        
+        .document-table th,
+        .document-table td {
+            border: 1px solid #1e3c72;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .document-table th {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+        }
+        
+        .document-table tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .document-table tr:nth-child(odd) {
+            background: white;
+        }
+        
+        /* Styles pour les informations */
+        .info-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-left: 4px solid #1e3c72;
+        }
+        
+        .info-section h3 {
+            color: #1e3c72;
+            font-size: 16px;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .info-row {
+            display: flex;
+            margin: 5px 0;
+        }
+        
+        .info-label {
+            font-weight: 700;
+            color: #1e3c72;
+            min-width: 120px;
+        }
+        
+        .info-value {
+            color: #374151;
+        }
+        
+        /* Pied de page */
+        .document-footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e2e8f0;
+            text-align: center;
+            font-size: 10px;
+            color: #6b7280;
+        }
+        
+        /* Print styles */
+        @media print {
+            body {
+                font-size: 11px;
+            }
+            
+            .kbis-document-header {
+                break-inside: avoid;
+                page-break-inside: avoid;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            .document-title {
+                break-after: avoid;
+            }
+            
+            .document-table {
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="kbis-document-header">
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="kbis-logo">
+                    <img src="{% static 'images/enteteEnImage.png' %}" alt="{{ config_entreprise.nom_entreprise|default:'KBIS Immobilier & Construction' }}" />
+                </div>
+                <div class="logo-text">Immobilier & Construction</div>
+            </div>
+            
+            <div class="company-info">
+                <h1 class="company-name">{{ config_entreprise.nom_entreprise|default:'KBIS' }}</h1>
+                <div class="slogan-box">{{ config_entreprise.slogan|default:'Immobilier & Construction' }}</div>
+                <p class="services">Achat & Vente location - Gestion - Nettoyage</p>
+            </div>
+        </div>
+        
+        <div class="footer-info">
+            <p><strong>Adresse :</strong> {{ config_entreprise.get_adresse_complete|default:'BP 440 Ouaga pissy 10050 ouagadougou burkina faso' }}</p>
+            <p><strong>{{ config_entreprise.get_contact_complet|default:'Tél: +226 79 18 32 32 / 66 66 45 60 / 79 18 39 39 / 70 14 55 55' }}</p>
+            {% if config_entreprise.get_informations_legales %}
+            <p><strong>{{ config_entreprise.get_informations_legales }}</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="document-content">
+        {% block content %}{% endblock %}
+    </div>
+    
+    <div class="document-footer">
+        <p>Document généré le {% now "d/m/Y à H:i" %} - KBIS Immobilier & Construction</p>
+    </div>
+</body>
+</html>

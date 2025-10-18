@@ -1,0 +1,318 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        transition: transform 0.2s ease-in-out;
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    .caution-status {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .status-payee { background-color: #d4edda; color: #155724; }
+    .status-en-attente { background-color: #fff3cd; color: #856404; }
+    .status-remboursee { background-color: #d1ecf1; color: #0c5460; }
+    
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .caution-amount {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #2c3e50;
+    }
+    
+    .progress-bar-custom {
+        height: 8px;
+        border-radius: 10px;
+        background-color: #e9ecef;
+    }
+    
+    .progress-bar-custom .progress-bar {
+        border-radius: 10px;
+        transition: width 0.6s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- En-tête de la page -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-0">
+                <i class="bi bi-shield-check text-primary"></i> {{ title }}
+            </h1>
+            <p class="text-muted mb-0">Gestion complète des cautions et dépôts de garantie</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'contrats:ajouter' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Nouveau Contrat
+            </a>
+            <a href="{% url 'contrats:liste' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-list"></i> Tous les Contrats
+            </a>
+        </div>
+    </div>
+
+    <!-- Cartes de statistiques -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card stats-card bg-primary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-white-50 mb-1">Total Cautions</h6>
+                            <h3 class="mb-0">{{ statistiques.total_cautions|floatformat:0 }} F CFA</h3>
+                        </div>
+                        <div class="fs-1">
+                            <i class="bi bi-shield-check"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card stats-card bg-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-white-50 mb-1">Cautions Payées</h6>
+                            <h3 class="mb-0">{{ statistiques.cautions_payees|floatformat:0 }} F CFA</h3>
+                        </div>
+                        <div class="fs-1">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card stats-card bg-warning text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-white-50 mb-1">En Attente</h6>
+                            <h3 class="mb-0">{{ statistiques.cautions_en_attente|floatformat:0 }} F CFA</h3>
+                        </div>
+                        <div class="fs-1">
+                            <i class="bi bi-clock"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card stats-card bg-info text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-white-50 mb-1">Remboursées</h6>
+                            <h3 class="mb-0">{{ statistiques.cautions_remboursees|floatformat:0 }} F CFA</h3>
+                        </div>
+                        <div class="fs-1">
+                            <i class="bi bi-arrow-return-left"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barre de progression globale -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="card-title mb-3">
+                <i class="bi bi-graph-up"></i> Progression des Cautions
+            </h6>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted">Taux de paiement</span>
+                <span class="fw-bold">
+                    {{ statistiques.pourcentage_paiement|floatformat:1 }}%
+                </span>
+            </div>
+            <div class="progress progress-bar-custom">
+                <div class="progress-bar bg-success" role="progressbar" 
+                     style="width: {{ statistiques.pourcentage_paiement }}%">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des contrats avec cautions -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-list-ul"></i> Contrats avec Cautions
+                <span class="badge bg-primary ms-2">{{ statistiques.nombre_contrats }}</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if contrats_avec_cautions %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Contrat</th>
+                                <th>Propriété</th>
+                                <th>Locataire</th>
+                                <th>Montant Caution</th>
+                                <th>Statut</th>
+                                <th>Dernier Paiement</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for contrat in contrats_avec_cautions %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold">{{ contrat.numero_contrat }}</div>
+                                        <small class="text-muted">Signé le {{ contrat.date_signature|date:"d/m/Y" }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold">{{ contrat.propriete.titre }}</div>
+                                        <small class="text-muted">{{ contrat.propriete.adresse }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold">{{ contrat.locataire.get_nom_complet }}</div>
+                                        <small class="text-muted">{{ contrat.locataire.telephone }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="caution-amount">{{ contrat.depot_garantie }} F CFA</span>
+                                    </td>
+                                    <td>
+                                        <span class="caution-status status-en-attente">
+                                            <i class="bi bi-clock"></i> En Attente
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">Aucun paiement</span>
+                                    </td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <a href="{% url 'contrats:detail_contrat_caution' contrat.id %}" 
+                                               class="btn btn-sm btn-outline-primary" title="Voir détails">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{% url 'contrats:marquer_caution_payee' contrat.id %}" 
+                                               class="btn btn-sm btn-success" title="Marquer comme payée">
+                                                <i class="bi bi-check"></i>
+                                            </a>
+                                            <a href="{% url 'contrats:imprimer_recu_caution' contrat.id %}" 
+                                               class="btn btn-sm btn-outline-secondary" title="Imprimer reçu">
+                                                <i class="bi bi-printer"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-shield-x display-1 text-muted"></i>
+                    <h5 class="text-muted mt-3">Aucune caution enregistrée</h5>
+                    <p class="text-muted">Commencez par créer des contrats avec des dépôts de garantie.</p>
+                    <a href="{% url 'contrats:ajouter' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Créer un Contrat
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Historique des remboursements -->
+    {% if remboursements_caution %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-arrow-return-left"></i> Historique des Remboursements
+                    <span class="badge bg-info ms-2">{{ statistiques.nombre_remboursements }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Contrat</th>
+                                <th>Locataire</th>
+                                <th>Montant</th>
+                                <th>Mode</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for remboursement in remboursements_caution %}
+                                <tr>
+                                    <td>{{ remboursement.date_paiement|date:"d/m/Y" }}</td>
+                                    <td>{{ remboursement.contrat.numero_contrat }}</td>
+                                    <td>{{ remboursement.contrat.locataire.get_nom_complet }}</td>
+                                    <td class="text-success fw-bold">{{ remboursement.montant }} F CFA</td>
+                                    <td>{{ remboursement.mode_paiement|title }}</td>
+                                    <td>{{ remboursement.notes|default:"-" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation des cartes de statistiques
+    const statsCards = document.querySelectorAll('.stats-card');
+    statsCards.forEach((card, index) => {
+        setTimeout(() => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'all 0.5s ease';
+            
+            setTimeout(() => {
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, 100);
+        }, index * 100);
+    });
+    
+    // Animation de la barre de progression
+    const progressBar = document.querySelector('.progress-bar');
+    if (progressBar) {
+        setTimeout(() => {
+            progressBar.style.transition = 'width 1s ease-in-out';
+        }, 500);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% load static %}
+
+<!-- Composant de navigation contextuelle (Breadcrumbs) -->
+{% if breadcrumbs %}
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb bg-light rounded-pill px-3 py-2 shadow-sm">
+        <li class="breadcrumb-item">
+            <a href="{% url 'core:dashboard' %}" class="text-decoration-none">
+                <i class="bi bi-house-door"></i>
+                <span class="d-none d-sm-inline">Accueil</span>
+            </a>
+        </li>
+        
+        {% for breadcrumb in breadcrumbs %}
+            {% if forloop.last %}
+                <li class="breadcrumb-item active" aria-current="page">
+                    <i class="bi bi-{{ breadcrumb.icon|default:'chevron-right' }}"></i>
+                    {{ breadcrumb.label }}
+                </li>
+            {% else %}
+                <li class="breadcrumb-item">
+                    {% if breadcrumb.url %}
+                        <a href="{{ breadcrumb.url }}" class="text-decoration-none">
+                            <i class="bi bi-{{ breadcrumb.icon|default:'chevron-right' }}"></i>
+                            {{ breadcrumb.label }}
+                        </a>
+                    {% else %}
+                        <i class="bi bi-{{ breadcrumb.icon|default:'chevron-right' }}"></i>
+                        {{ breadcrumb.label }}
+                    {% endif %}
+                </li>
+            {% endif %}
+        {% endfor %}
+    </ol>
+</nav>
+{% endif %}
+
+<style>
+.breadcrumb {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.breadcrumb-item a {
+    color: #6366f1;
+    transition: color 0.3s ease;
+}
+
+.breadcrumb-item a:hover {
+    color: #4f46e5;
+}
+
+.breadcrumb-item.active {
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: "›";
+    color: #9ca3af;
+    font-weight: bold;
+}
+
+@media (max-width: 576px) {
+    .breadcrumb {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+    }
+}
+</style>

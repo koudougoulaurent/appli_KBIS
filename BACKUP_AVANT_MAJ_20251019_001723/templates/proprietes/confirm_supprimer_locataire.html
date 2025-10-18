@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}Supprimer le Locataire{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="card border-danger">
+        <div class="card-header bg-danger text-white">
+            <h4 class="mb-0"><i class="bi bi-trash"></i> Supprimer le Locataire</h4>
+        </div>
+        <div class="card-body">
+            <p>Êtes-vous sûr de vouloir supprimer le locataire <strong>{{ locataire.nom }} {{ locataire.prenom }}</strong> ?</p>
+            <form method="post">{% csrf_token %}
+                <button type="submit" class="btn btn-danger">Oui, supprimer</button>
+                <a href="{% url 'proprietes:locataires_liste' %}" class="btn btn-secondary">Annuler</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

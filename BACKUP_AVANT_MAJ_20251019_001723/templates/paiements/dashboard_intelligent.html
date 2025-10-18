@@ -1,0 +1,443 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-card {
+        transition: all 0.3s ease;
+        border-radius: 1rem;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.2);
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+    }
+    
+    .stat-card.success {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    }
+    
+    .stat-card.warning {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    
+    .stat-card.info {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    
+    .contrat-card {
+        border-left: 4px solid #007bff;
+        transition: all 0.3s ease;
+    }
+    
+    .contrat-card:hover {
+        border-left-color: #0056b3;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    
+    .contrat-card.high-priority {
+        border-left-color: #dc3545;
+    }
+    
+    .contrat-card.normal-priority {
+        border-left-color: #28a745;
+    }
+    
+    .badge-priority {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .alert-card {
+        border-radius: 0.75rem;
+        border: none;
+        box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+    }
+    
+    .quick-actions {
+        position: sticky;
+        top: 2rem;
+    }
+    
+    .action-btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .progress-ring {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .progress-ring circle {
+        fill: none;
+        stroke-width: 4;
+        stroke-linecap: round;
+    }
+    
+    .progress-ring .progress-ring-circle {
+        stroke: #007bff;
+        stroke-dasharray: 157;
+        stroke-dashoffset: 157;
+        transition: stroke-dashoffset 0.35s;
+        transform: rotate(-90deg);
+        transform-origin: 50% 50%;
+    }
+    
+    .progress-ring .progress-ring-circle.complete {
+        stroke: #28a745;
+    }
+    
+    .progress-ring .progress-ring-circle.warning {
+        stroke: #ffc107;
+    }
+    
+    .progress-ring .progress-ring-circle.danger {
+        stroke: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête du dashboard -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h2 mb-1">
+                        <i class="fas fa-brain text-primary"></i> {{ title }}
+                    </h1>
+                    <p class="text-muted mb-0">{{ subtitle }}</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'paiements:paiement_intelligent_create' %}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-plus"></i> Nouveau paiement
+                    </a>
+                    <a href="{% url 'paiements:recherche_contrats_intelligente' %}" class="btn btn-outline-primary btn-lg">
+                        <i class="fas fa-search"></i> Recherche
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistiques globales -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card dashboard-card stat-card h-100">
+                <div class="card-body text-center">
+                    <div class="stat-number">{{ statistiques.total_contrats }}</div>
+                    <div class="stat-label">Contrats actifs</div>
+                    <i class="fas fa-file-contract fa-2x mt-3 opacity-75"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card dashboard-card stat-card success h-100">
+                <div class="card-body text-center">
+                    <div class="stat-number">{{ statistiques.total_paiements }}</div>
+                    <div class="stat-label">Paiements validés</div>
+                    <i class="fas fa-check-circle fa-2x mt-3 opacity-75"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card dashboard-card stat-card warning h-100">
+                <div class="card-body text-center">
+                    <div class="stat-number">{{ statistiques.total_charges }}</div>
+                    <div class="stat-label">Charges en attente</div>
+                    <i class="fas fa-tools fa-2x mt-3 opacity-75"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card dashboard-card stat-card info h-100">
+                <div class="card-body text-center">
+                    <div class="stat-number">{{ contrats_attention|length }}</div>
+                    <div class="stat-label">Contrats à surveiller</div>
+                    <i class="fas fa-exclamation-triangle fa-2x mt-3 opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Contrats nécessitant attention -->
+        <div class="col-lg-8">
+            <div class="card dashboard-card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> Contrats nécessitant attention
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if contrats_attention %}
+                        <div class="row">
+                            {% for item in contrats_attention %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card contrat-card h-100 {{ item.priorite }}-priority">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title mb-0">
+                                                    <i class="fas fa-file-contract text-primary"></i>
+                                                    {{ item.contrat.numero_contrat }}
+                                                </h6>
+                                                <span class="badge badge-priority bg-{{ item.priorite == 'haute'|yesno:'danger,success' }}">
+                                                    {{ item.priorite|title }}
+                                                </span>
+                                            </div>
+                                            
+                                            <p class="card-text mb-2">
+                                                <strong>{{ item.contrat.locataire.prenom }} {{ item.contrat.locataire.nom }}</strong><br>
+                                                <small class="text-muted">{{ item.contrat.propriete.titre }}</small>
+                                            </p>
+                                            
+                                            {% if item.contexte.alertes %}
+                                                <div class="mb-2">
+                                                    {% for alerte in item.contexte.alertes|slice:":2" %}
+                                                        <span class="badge bg-{{ alerte.niveau }} me-1">
+                                                            <i class="fas fa-{{ alerte.type|yesno:'exclamation-triangle,info-circle' }}"></i>
+                                                            {{ alerte.message|truncatechars:30 }}
+                                                        </span>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                            
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-calendar"></i>
+                                                    Échéance: {{ item.contexte.calculs_automatiques.prochaine_echeance }}
+                                                </small>
+                                                <a href="{% url 'paiements:contexte_contrat_rapide' item.contrat.id %}" 
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye"></i> Voir
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                            <h5 class="text-success">Aucun contrat nécessite d'attention</h5>
+                            <p class="text-muted">Tous vos contrats sont à jour !</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Contrats avec solde négatif -->
+            {% if contrats_solde_negatif %}
+                <div class="card dashboard-card mt-4">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-exclamation-triangle"></i> Contrats avec solde négatif
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for item in contrats_solde_negatif %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card border-danger h-100">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-danger">
+                                                <i class="fas fa-file-contract"></i>
+                                                {{ item.contrat.numero_contrat }}
+                                            </h6>
+                                            
+                                            <p class="card-text mb-2">
+                                                <strong>{{ item.contrat.locataire.prenom }} {{ item.contrat.locataire.nom }}</strong><br>
+                                                <small class="text-muted">{{ item.contrat.propriete.titre }}</small>
+                                            </p>
+                                            
+                                            <div class="alert alert-danger mb-2">
+                                                <strong>Solde négatif:</strong> {{ item.calculs.montant_du }} FCfa
+                                            </div>
+                                            
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-calculator"></i>
+                                                    Solde: {{ item.calculs.solde_actuel }} FCfa
+                                                </small>
+                                                <a href="{% url 'paiements:suggestions_paiement_automatiques' item.contrat.id %}" 
+                                                   class="btn btn-sm btn-danger">
+                                                    <i class="fas fa-lightbulb"></i> Suggestions
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Actions rapides et informations -->
+        <div class="col-lg-4">
+            <div class="quick-actions">
+                <!-- Actions rapides -->
+                <div class="card dashboard-card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-bolt"></i> Actions rapides
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <a href="{% url 'paiements:paiement_intelligent_create' %}" class="btn btn-primary action-btn">
+                            <i class="fas fa-plus"></i> Nouveau paiement
+                        </a>
+                        <a href="{% url 'paiements:charge_intelligente_create' %}" class="btn btn-warning action-btn">
+                            <i class="fas fa-tools"></i> Nouvelle charge
+                        </a>
+                        <a href="{% url 'paiements:recherche_contrats_intelligente' %}" class="btn btn-info action-btn">
+                            <i class="fas fa-search"></i> Recherche contrats
+                        </a>
+                        <a href="{% url 'paiements:dashboard' %}" class="btn btn-secondary action-btn">
+                            <i class="fas fa-chart-bar"></i> Dashboard classique
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Résumé des alertes -->
+                <div class="card dashboard-card">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0">
+                            <i class="fas fa-bell"></i> Résumé des alertes
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        {% if contrats_attention %}
+                            <div class="mb-3">
+                                <h6 class="text-danger">
+                                    <i class="fas fa-exclamation-triangle"></i> 
+                                    {{ contrats_attention|length }} contrat(s) à surveiller
+                                </h6>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-danger" style="width: {{ contrats_attention|length|divisibleby:10|yesno:100,contrats_attention|length|multiply:10 }}%"></div>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        {% if contrats_solde_negatif %}
+                            <div class="mb-3">
+                                <h6 class="text-warning">
+                                    <i class="fas fa-exclamation-circle"></i> 
+                                    {{ contrats_solde_negatif|length }} contrat(s) avec solde négatif
+                                </h6>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-warning" style="width: {{ contrats_solde_negatif|length|multiply:20 }}%"></div>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        {% if statistiques.total_charges > 0 %}
+                            <div class="mb-3">
+                                <h6 class="text-info">
+                                    <i class="fas fa-tools"></i> 
+                                    {{ statistiques.total_charges }} charge(s) en attente
+                                </h6>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-info" style="width: {{ statistiques.total_charges|multiply:10 }}%"></div>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        {% if not contrats_attention and not contrats_solde_negatif and statistiques.total_charges == 0 %}
+                            <div class="text-center py-3">
+                                <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                                <p class="text-success mb-0">Aucune alerte !</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Conseils intelligents -->
+                <div class="card dashboard-card mt-4">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-lightbulb"></i> Conseils intelligents
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info alert-sm">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Astuce:</strong> Utilisez les formulaires intelligents pour un gain de temps maximal.
+                        </div>
+                        
+                        <div class="alert alert-success alert-sm">
+                            <i class="fas fa-check-circle"></i>
+                            <strong>Rappel:</strong> Vérifiez régulièrement les alertes pour maintenir votre portefeuille à jour.
+                        </div>
+                        
+                        <div class="alert alert-warning alert-sm">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Attention:</strong> Les contrats avec solde négatif nécessitent une action immédiate.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Animation des cartes au chargement
+    $('.dashboard-card').each(function(index) {
+        $(this).css('opacity', '0').css('transform', 'translateY(20px)');
+        setTimeout(() => {
+            $(this).css('transition', 'all 0.5s ease').css('opacity', '1').css('transform', 'translateY(0)');
+        }, index * 100);
+    });
+    
+    // Mise à jour automatique des statistiques (toutes les 5 minutes)
+    setInterval(function() {
+        // Ici vous pourriez ajouter une requête AJAX pour mettre à jour les données
+        console.log('Mise à jour automatique des données...');
+    }, 300000);
+    
+    // Gestion des clics sur les cartes de contrat
+    $('.contrat-card').on('click', function() {
+        const contratId = $(this).data('contrat-id');
+        if (contratId) {
+            window.location.href = `/paiements/intelligent/contexte/${contratId}/`;
+        }
+    });
+});
+</script>
+{% endblock %}

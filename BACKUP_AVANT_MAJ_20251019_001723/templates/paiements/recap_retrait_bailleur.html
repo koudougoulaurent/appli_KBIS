@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .recap-card {
+        border-left: 4px solid #007bff;
+        background: #f8f9fa;
+    }
+    .charges-card {
+        border-left: 4px solid #dc3545;
+        background: #fff5f5;
+    }
+    .montant-card {
+        border-left: 4px solid #28a745;
+        background: #f0fff4;
+    }
+    .charge-item {
+        border-bottom: 1px solid #dee2e6;
+        padding: 10px 0;
+    }
+    .charge-item:last-child {
+        border-bottom: none;
+    }
+    .montant-total {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #28a745;
+    }
+    .montant-charges {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #dc3545;
+    }
+    .btn-confirm {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        font-size: 1.1rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+        transition: all 0.3s ease;
+    }
+    .btn-confirm:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(40, 167, 69, 0.4);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="fas fa-calculator text-primary"></i>
+                        Récapitulatif Retrait Mensuel
+                    </h2>
+                    <p class="text-muted mb-0">
+                        <strong>Bailleur:</strong> {{ bailleur.get_nom_complet }}
+                        | <strong>Période:</strong> {{ mois_retrait|date:"F Y" }}
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'paiements:retraits_liste' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Retour à la liste
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Récapitulatif financier -->
+        <div class="col-lg-8">
+            <div class="card recap-card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line"></i>
+                        Récapitulatif Financier
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Loyers Bruts</label>
+                                <div class="montant-total">{{ calcul_retrait.total_loyers|floatformat:0|intcomma }} F CFA</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Charges Déductibles (Contrats)</label>
+                                <div class="text-info">{{ calcul_retrait.total_charges_deductibles|floatformat:0|intcomma }} F CFA</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Charges Bailleur</label>
+                                <div class="montant-charges">{{ calcul_retrait.total_charges_bailleur|floatformat:0|intcomma }} F CFA</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Montant Net à Payer</label>
+                                <div class="montant-total">{{ calcul_retrait.montant_net|floatformat:0|intcomma }} F CFA</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Détail des charges bailleur -->
+            {% if charges_calcul.charges_details %}
+            <div class="card charges-card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Charges Bailleur à Déduire Automatiquement
+                        <span class="badge bg-light text-dark ms-2">{{ charges_calcul.nombre_charges }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Information:</strong> Ces charges seront automatiquement déduites du montant du retrait lors de la création.
+                    </div>
+                    
+                    {% for detail in charges_calcul.charges_details %}
+                    <div class="charge-item">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <h6 class="mb-1">{{ detail.charge.titre }}</h6>
+                                <small class="text-muted">
+                                    <i class="fas fa-building"></i> {{ detail.propriete.titre }}
+                                    | <i class="fas fa-tag"></i> {{ detail.charge.get_type_charge_display }}
+                                    | <i class="fas fa-calendar"></i> {{ detail.charge.date_charge|date:"d/m/Y" }}
+                                </small>
+                                {% if detail.charge.description %}
+                                <br><small class="text-muted">{{ detail.charge.description|truncatechars:100 }}</small>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-end">
+                                    <div class="text-danger fw-bold">{{ detail.montant_deductible|floatformat:0|intcomma }} F CFA</div>
+                                    <small class="text-muted">Montant déductible</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-end">
+                                    <span class="badge bg-{{ detail.charge.get_priorite_color }}">
+                                        {{ detail.charge.get_priorite_display }}
+                                    </span>
+                                    <br>
+                                    <span class="badge bg-{{ detail.charge.get_statut_color }}">
+                                        {{ detail.charge.get_statut_display }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    <div class="mt-3 pt-3 border-top">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Total des charges à déduire:</strong>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <span class="montant-charges">{{ charges_calcul.total_charges|floatformat:0|intcomma }} F CFA</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
+                    <h5 class="text-success">Aucune charge à déduire</h5>
+                    <p class="text-muted">Aucune charge de bailleur en attente pour ce mois.</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Actions et informations -->
+        <div class="col-lg-4">
+            <div class="card montant-card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-money-bill-wave"></i>
+                        Montant Final
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-4">
+                        <div class="display-4 text-success">{{ calcul_retrait.montant_net|floatformat:0|intcomma }}</div>
+                        <div class="text-muted">F CFA</div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <small class="text-muted">Montant qui sera versé au bailleur</small>
+                    </div>
+                    
+                    <form method="post" action="{% url 'paiements:creer_retrait_depuis_recap' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="bailleur" value="{{ bailleur.id }}">
+                        <input type="hidden" name="mois_retrait" value="{{ mois_retrait|date:'Y-m-d' }}">
+                        <input type="hidden" name="montant_loyers_bruts" value="{{ calcul_retrait.total_loyers }}">
+                        <input type="hidden" name="montant_charges_deductibles" value="{{ calcul_retrait.total_charges_deductibles }}">
+                        <input type="hidden" name="montant_net_a_payer" value="{{ calcul_retrait.montant_net }}">
+                        <input type="hidden" name="type_retrait" value="mensuel">
+                        <input type="hidden" name="statut" value="en_attente">
+                        <input type="hidden" name="mode_retrait" value="virement">
+                        <input type="hidden" name="date_demande" value="{% now 'Y-m-d' %}">
+                        
+                        <button type="submit" class="btn btn-confirm w-100 mb-3">
+                            <i class="fas fa-check"></i>
+                            Créer le Retrait
+                        </button>
+                    </form>
+                    
+                    <div class="text-muted small">
+                        <i class="fas fa-info-circle"></i>
+                        Les charges seront automatiquement déduites
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations sur les propriétés -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-building"></i>
+                        Propriétés du Bailleur
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% for propriete in proprietes %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <strong>{{ propriete.propriete.titre }}</strong>
+                            <br><small class="text-muted">{{ propriete.propriete.type_bien.nom }}</small>
+                            {% if propriete.unites_locatives %}
+                                <br><small class="text-info">{{ propriete.unites_locatives.count }} unité{{ propriete.unites_locatives.count|pluralize }}</small>
+                            {% endif %}
+                        </div>
+                        <div class="text-end">
+                            <div class="text-success">{{ propriete.loyer_total|floatformat:0|intcomma }} F CFA</div>
+                            <small class="text-muted">/mois</small>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted text-center">Aucune propriété trouvée</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Animation des montants
+        $('.montant-total, .montant-charges').each(function() {
+            $(this).css('opacity', '0').animate({'opacity': '1'}, 1000);
+        });
+        
+        // Confirmation avant création
+        $('form').on('submit', function(e) {
+            e.preventDefault();
+            
+            Swal.fire({
+                title: 'Confirmer la création du retrait',
+                text: 'Le retrait sera créé avec déduction automatique des charges. Voulez-vous continuer ?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Oui, créer le retrait',
+                cancelButtonText: 'Annuler'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.submit();
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

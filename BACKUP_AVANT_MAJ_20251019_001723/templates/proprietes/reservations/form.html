@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+{% load static %}
+{% load core_extras %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }} - Gestion Immobilière{% endblock %}
+
+{% block extra_css %}
+<style>
+.reservation-header {
+    background: linear-gradient(135deg, #ffc107 0%, #ff8c00 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 25px;
+}
+
+.form-section {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-left: 4px solid #ffc107;
+}
+
+.form-section h5 {
+    color: #e67e00;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.unite-info {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.reservation-summary {
+    background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+    border-radius: 10px;
+    padding: 20px;
+    border: 2px solid #ffb74d;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #ffcc80;
+}
+
+.summary-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    font-weight: bold;
+    font-size: 1.1rem;
+    border-top: 2px solid #ff9800;
+    padding-top: 15px;
+}
+
+.btn-reservation {
+    background: linear-gradient(135deg, #ffc107 0%, #ff8c00 100%);
+    border: none;
+    color: white;
+    font-weight: 600;
+    padding: 12px 30px;
+    border-radius: 25px;
+    transition: all 0.3s;
+}
+
+.btn-reservation:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4);
+    color: white;
+}
+
+.alert-reservation {
+    border: none;
+    border-radius: 10px;
+    padding: 15px 20px;
+    background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+    border-left: 4px solid #28a745;
+}
+
+.date-input-group {
+    position: relative;
+}
+
+.date-input-group .form-control {
+    padding-right: 40px;
+}
+
+.date-input-group::after {
+    content: "\f073";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    pointer-events: none;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="reservation-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2><i class="fas fa-calendar-plus"></i> {{ title }}</h2>
+                <p class="mb-0 opacity-90">
+                    Créer une réservation pour l'unité <strong>{{ unite.numero_unite }}</strong>
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'proprietes:unite_detail' unite.pk %}" class="btn btn-light">
+                    <i class="fas fa-arrow-left"></i> Retour à l'unité
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Informations sur l'unité -->
+            <div class="unite-info">
+                <h5><i class="fas fa-home"></i> Informations de l'Unité</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Numéro :</strong> {{ unite.numero_unite }}</p>
+                        <p><strong>Nom :</strong> {{ unite.nom }}</p>
+                        <p><strong>Type :</strong> {{ unite.get_type_unite_display }}</p>
+                        {% if unite.surface %}
+                            <p><strong>Surface :</strong> {{ unite.surface }} m²</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Loyer :</strong> {{ unite.loyer_mensuel|format_currency_fcfa }}</p>
+                        {% if unite.charges_mensuelles > 0 %}
+                            <p><strong>Charges :</strong> {{ unite.charges_mensuelles|format_currency_fcfa }}</p>
+                            <p><strong>Total :</strong> <span class="text-success fw-bold">{{ unite.get_loyer_total|format_currency_fcfa }}</span></p>
+                        {% endif %}
+                        <p><strong>Caution :</strong> {{ unite.caution_demandee|format_currency_fcfa }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulaire de réservation -->
+            <form method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                
+                <!-- Section Unité (affichage seulement) -->
+                <div class="form-section">
+                    <h5><i class="fas fa-home"></i> Unité à Réserver</h5>
+                    <div class="alert alert-info">
+                        <strong>{{ unite.numero_unite }}</strong> - {{ unite.nom }}<br>
+                        <small class="text-muted">{{ unite.get_type_unite_display }} • {{ unite.surface }} m² • {{ unite.get_loyer_total|format_currency_fcfa }}/mois</small>
+                    </div>
+                </div>
+
+                <!-- Section Locataire -->
+                <div class="form-section">
+                    <h5><i class="fas fa-user"></i> Informations du Locataire</h5>
+                    <div class="form-floating mb-3">
+                        {{ form.locataire_potentiel|as_crispy_field }}
+                    </div>
+                </div>
+
+                <!-- Section Dates -->
+                <div class="form-section">
+                    <h5><i class="fas fa-calendar"></i> Dates de Réservation</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3 date-input-group">
+                                {{ form.date_debut_souhaitee|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3 date-input-group">
+                                {{ form.date_fin_prevue|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                {{ form.date_expiration|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                {{ form.statut|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Financière -->
+                <div class="form-section">
+                    <h5><i class="fas fa-euro-sign"></i> Informations Financières</h5>
+                    <div class="form-floating mb-3 currency-input">
+                        {{ form.montant_reservation|as_crispy_field }}
+                    </div>
+                </div>
+
+                <!-- Section Conversion -->
+                <div class="form-section">
+                    <h5><i class="fas fa-sync-alt"></i> Conversion en Contrat</h5>
+                    <div class="form-check form-switch mb-3">
+                        {{ form.convertir_en_contrat|as_crispy_field }}
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        Si vous cochez cette case, la réservation sera immédiatement convertie en contrat de bail.
+                    </div>
+                </div>
+
+                <!-- Section Notes -->
+                <div class="form-section">
+                    <h5><i class="fas fa-sticky-note"></i> Notes</h5>
+                    <div class="mb-3">
+                        <label for="{{ form.notes.id_for_label }}" class="form-label">{{ form.notes.label }}</label>
+                        {{ form.notes|as_crispy_field }}
+                    </div>
+                </div>
+
+                <!-- Boutons d'action -->
+                <div class="text-center">
+                    <button type="submit" class="btn btn-reservation btn-lg">
+                        <i class="fas fa-calendar-check"></i> Créer la Réservation
+                    </button>
+                    <a href="{% url 'proprietes:unite_detail' unite.pk %}" class="btn btn-secondary btn-lg ms-3">
+                        <i class="fas fa-times"></i> Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Résumé de la réservation -->
+            <div class="reservation-summary sticky-top">
+                <h5><i class="fas fa-clipboard-check"></i> Résumé de la Réservation</h5>
+                
+                <div class="summary-item">
+                    <span>Unité :</span>
+                    <span class="fw-bold">{{ unite.numero_unite }}</span>
+                </div>
+                
+                <div class="summary-item">
+                    <span>Type :</span>
+                    <span>{{ unite.get_type_unite_display }}</span>
+                </div>
+                
+                <div class="summary-item">
+                    <span>Loyer mensuel :</span>
+                    <span class="text-primary">{{ unite.get_loyer_total|format_currency_fcfa }}</span>
+                </div>
+                
+                <div class="summary-item">
+                    <span>Caution demandée :</span>
+                    <span class="text-warning">{{ unite.caution_demandee|format_currency_fcfa }}</span>
+                </div>
+                
+                <div class="summary-item">
+                    <span><strong>Total à prévoir :</strong></span>
+                    <span class="text-success"><strong>{{ unite.get_loyer_total|add:unite.caution_demandee|format_currency_fcfa }}</strong></span>
+                </div>
+            </div>
+
+            <!-- Aide -->
+            <div class="alert alert-reservation">
+                <h6><i class="fas fa-lightbulb"></i> Informations Importantes</h6>
+                <ul class="mb-0 ps-3">
+                    <li>La réservation expire automatiquement après 7 jours</li>
+                    <li>Un montant de réservation peut être demandé</li>
+                    <li>La réservation peut être convertie en contrat</li>
+                    <li>Le statut de l'unité sera mis à jour automatiquement</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Calcul automatique du montant de réservation (10% du loyer)
+    $('#id_montant_reservation').on('focus', function() {
+        if ($(this).val() === '' || $(this).val() === '0' || $(this).val() === '0.00') {
+            const loyer = parseFloat("{{ unite.loyer_mensuel }}") || 0;
+            const suggestion = Math.round(loyer * 0.1);
+            $(this).val(suggestion);
+        }
+    });
+    
+    // Validation du formulaire
+    $('form').on('submit', function(e) {
+        const form = this;
+        if (!form.checkValidity()) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+    
+    // Validation en temps réel
+    $('input[required], select[required]').on('blur', function() {
+        if (this.checkValidity()) {
+            $(this).removeClass('is-invalid').addClass('is-valid');
+        } else {
+            $(this).removeClass('is-valid').addClass('is-invalid');
+        }
+    });
+    
+    // Mise à jour de la date d'expiration automatique
+    $('#id_date_debut_souhaitee').on('change', function() {
+        const dateDebut = new Date($(this).val());
+        if (!isNaN(dateDebut)) {
+            // Ajouter 7 jours
+            dateDebut.setDate(dateDebut.getDate() + 7);
+            const dateExpiration = dateDebut.toISOString().slice(0, 16);
+            $('#id_date_expiration').val(dateExpiration);
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,466 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Plans de Paiement Partiel{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components.css' %}">
+<style>
+    .plan-card {
+        border: 1px solid #e3e6f0;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        background: white;
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+        transition: all 0.3s ease;
+    }
+    
+    .plan-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.5rem 2rem 0 rgba(58, 59, 69, 0.25);
+    }
+    
+    .plan-header {
+        border-bottom: 1px solid #e3e6f0;
+        padding-bottom: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .plan-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #5a5c69;
+        margin-bottom: 0.5rem;
+    }
+    
+    .plan-subtitle {
+        color: #858796;
+        font-size: 0.875rem;
+    }
+    
+    .progress-container {
+        position: relative;
+        background: #f8f9fc;
+        border-radius: 10px;
+        height: 8px;
+        margin: 1rem 0;
+    }
+    
+    .progress-bar {
+        height: 100%;
+        border-radius: 10px;
+        background: linear-gradient(90deg, #4e73df 0%, #224abe 100%);
+        transition: width 0.5s ease;
+    }
+    
+    .progress-text {
+        position: absolute;
+        top: -25px;
+        right: 0;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #5a5c69;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 0.5rem;
+    }
+    
+    .stat-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #5a5c69;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+        color: #858796;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .status-badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .status-actif {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .status-suspendu {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .status-termine {
+        background: #cce5ff;
+        color: #004085;
+    }
+    
+    .status-annule {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .filter-card {
+        background: #f8f9fc;
+        border: 1px solid #e3e6f0;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .btn-action {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+        border-radius: 6px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-primary-action {
+        background: #4e73df;
+        color: white;
+        border: 1px solid #4e73df;
+    }
+    
+    .btn-primary-action:hover {
+        background: #224abe;
+        color: white;
+        transform: translateY(-1px);
+    }
+    
+    .btn-secondary-action {
+        background: #858796;
+        color: white;
+        border: 1px solid #858796;
+    }
+    
+    .btn-secondary-action:hover {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-success-action {
+        background: #1cc88a;
+        color: white;
+        border: 1px solid #1cc88a;
+    }
+    
+    .btn-success-action:hover {
+        background: #17a673;
+        color: white;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #858796;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0 text-gray-800">
+                        <i class="fas fa-list-alt text-primary me-2"></i>
+                        Plans de Paiement Partiel
+                    </h1>
+                    <p class="text-muted">Gestion des plans de paiement échelonnés</p>
+                </div>
+                <div>
+                    <a href="{% url 'paiements:creer_plan_partiel' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Nouveau Plan
+                    </a>
+                    <a href="{% url 'paiements:dashboard_partiels' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="filter-card">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="{{ form.contrat.id_for_label }}" class="form-label">Contrat</label>
+                        {{ form.contrat }}
+                    </div>
+                    <div class="col-md-2">
+                        <label for="{{ form.statut.id_for_label }}" class="form-label">Statut</label>
+                        {{ form.statut }}
+                    </div>
+                    <div class="col-md-2">
+                        <label for="{{ form.date_debut.id_for_label }}" class="form-label">Date Début</label>
+                        {{ form.date_debut }}
+                    </div>
+                    <div class="col-md-2">
+                        <label for="{{ form.date_fin.id_for_label }}" class="form-label">Date Fin</label>
+                        {{ form.date_fin }}
+                    </div>
+                    <div class="col-md-2">
+                        <label for="{{ form.montant_min.id_for_label }}" class="form-label">Montant Min</label>
+                        {{ form.montant_min }}
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                
+                <!-- Recherche textuelle -->
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            {{ form.recherche }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'paiements:liste_plans_partiels' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>Effacer
+                            </a>
+                            <button type="button" class="btn btn-outline-info" onclick="exportPlans()">
+                                <i class="fas fa-download me-1"></i>Exporter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des plans -->
+    <div class="row">
+        {% if plans %}
+            {% for plan in plans %}
+            <div class="col-xl-6 col-lg-12">
+                <div class="plan-card">
+                    <div class="plan-header">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h3 class="plan-title">{{ plan.nom_plan }}</h3>
+                                <p class="plan-subtitle">
+                                    <i class="fas fa-hashtag me-1"></i>{{ plan.numero_plan }} • 
+                                    <i class="fas fa-user me-1"></i>{{ plan.contrat.locataire.nom }} {{ plan.contrat.locataire.prenom }} • 
+                                    <i class="fas fa-calendar me-1"></i>{{ plan.date_creation|date:"d/m/Y" }}
+                                </p>
+                            </div>
+                            <span class="status-badge status-{{ plan.statut }}">
+                                {{ plan.get_statut_display }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- Progression -->
+                    <div class="progress-container">
+                        <div class="progress-bar" style="width: {{ plan.calculer_progression|floatformat:0 }}%"></div>
+                        <div class="progress-text">{{ plan.calculer_progression|floatformat:1 }}%</div>
+                    </div>
+                    
+                    <!-- Statistiques -->
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="stat-item">
+                                <div class="stat-value">{{ plan.montant_total|floatformat:0|intcomma }}</div>
+                                <div class="stat-label">Total (FCFA)</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-item">
+                                <div class="stat-value text-success">{{ plan.montant_deja_paye|floatformat:0|intcomma }}</div>
+                                <div class="stat-label">Payé (FCFA)</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-item">
+                                <div class="stat-value text-warning">{{ plan.montant_restant|floatformat:0|intcomma }}</div>
+                                <div class="stat-label">Restant (FCFA)</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Informations supplémentaires -->
+                    <div class="row mt-3">
+                        <div class="col-6">
+                            <small class="text-muted">
+                                <i class="fas fa-play me-1"></i>
+                                Début: {{ plan.date_debut|date:"d/m/Y" }}
+                            </small>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">
+                                <i class="fas fa-flag-checkered me-1"></i>
+                                Fin: {{ plan.date_fin_prevue|date:"d/m/Y" }}
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="mt-3">
+                        <div class="action-buttons">
+                            <a href="{% url 'paiements:detail_plan_partiel' plan.id %}" 
+                               class="btn-action btn-primary-action">
+                                <i class="fas fa-eye"></i>Détails
+                            </a>
+                            
+                            {% if plan.peut_etre_modifie %}
+                            <a href="{% url 'paiements:modifier_plan_partiel' plan.id %}" 
+                               class="btn-action btn-secondary-action">
+                                <i class="fas fa-edit"></i>Modifier
+                            </a>
+                            {% endif %}
+                            
+                            <a href="{% url 'paiements:ajouter_partiel' %}?plan={{ plan.id }}" 
+                               class="btn-action btn-success-action">
+                                <i class="fas fa-credit-card"></i>Payer
+                            </a>
+                            
+                            <a href="{% url 'paiements:generer_echelons_partiel' plan.id %}" 
+                               class="btn-action btn-secondary-action">
+                                <i class="fas fa-calendar-plus"></i>Échelons
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <h4>Aucun plan de paiement partiel trouvé</h4>
+                    <p>Commencez par créer votre premier plan de paiement partiel.</p>
+                    <a href="{% url 'paiements:creer_plan_partiel' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Créer un Plan
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Pagination -->
+    {% if plans.has_other_pages %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <nav aria-label="Pagination des plans">
+                <ul class="pagination justify-content-center">
+                    {% if plans.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.contrat %}&contrat={{ request.GET.contrat }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ plans.previous_page_number }}{% if request.GET.contrat %}&contrat={{ request.GET.contrat }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in plans.paginator.page_range %}
+                        {% if plans.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > plans.number|add:'-3' and num < plans.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if request.GET.contrat %}&contrat={{ request.GET.contrat }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if plans.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ plans.next_page_number }}{% if request.GET.contrat %}&contrat={{ request.GET.contrat }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ plans.paginator.num_pages }}{% if request.GET.contrat %}&contrat={{ request.GET.contrat }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/components.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation des cartes
+    const planCards = document.querySelectorAll('.plan-card');
+    planCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+    
+    // Initialiser Select2
+    if (typeof $ !== 'undefined' && $.fn.select2) {
+        $('.select2').select2({
+            theme: 'bootstrap-5',
+            width: '100%'
+        });
+    }
+});
+
+function exportPlans() {
+    // Fonction pour exporter les plans
+    const params = new URLSearchParams(window.location.search);
+    params.set('export', 'excel');
+    
+    window.open('?' + params.toString(), '_blank');
+}
+</script>
+{% endblock %}

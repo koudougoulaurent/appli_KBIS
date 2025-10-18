@@ -1,0 +1,255 @@
+{% load static %}
+
+<div class="export-preview-content">
+    {% if page_obj %}
+        <!-- En-tête des résultats -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0">
+                <i class="fas fa-list me-2"></i>{{ total_documents }} document{{ total_documents|pluralize }} trouvé{{ total_documents|pluralize }}
+            </h6>
+            <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-primary active" onclick="changeView('grid')">
+                    <i class="fas fa-th"></i>
+                </button>
+                <button type="button" class="btn btn-outline-primary" onclick="changeView('list')">
+                    <i class="fas fa-list"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Vue grille -->
+        <div id="documents-grid" class="row">
+            {% for document in page_obj %}
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card document-preview-item h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge bg-primary">{{ document.get_type_document_display }}</span>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{% url 'proprietes:document_detail' document.pk %}">
+                                        <i class="fas fa-eye me-2"></i>Voir
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'proprietes:document_download' document.pk %}">
+                                        <i class="fas fa-download me-2"></i>Télécharger
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <h6 class="card-title mb-2">{{ document.nom|truncatechars:50 }}</h6>
+                        
+                        {% if document.description %}
+                        <p class="card-text text-muted small">{{ document.description|truncatechars:100 }}</p>
+                        {% endif %}
+                        
+                        <div class="row text-muted small">
+                            <div class="col-6">
+                                <i class="fas fa-calendar me-1"></i>
+                                {{ document.date_creation|date:"d/m/Y" }}
+                            </div>
+                            <div class="col-6 text-end">
+                                <i class="fas fa-file me-1"></i>
+                                {% if document.taille_fichier %}
+                                    {{ document.taille_fichier|filesizeformat }}
+                                {% else %}
+                                    Taille inconnue
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        {% if document.propriete or document.bailleur or document.locataire %}
+                        <div class="mt-2">
+                            {% if document.propriete %}
+                            <span class="badge bg-info me-1">
+                                <i class="fas fa-building me-1"></i>{{ document.propriete.titre|truncatechars:20 }}
+                            </span>
+                            {% endif %}
+                            {% if document.bailleur %}
+                            <span class="badge bg-success me-1">
+                                <i class="fas fa-user me-1"></i>{{ document.bailleur.nom|truncatechars:15 }}
+                            </span>
+                            {% endif %}
+                            {% if document.locataire %}
+                            <span class="badge bg-warning me-1">
+                                <i class="fas fa-user me-1"></i>{{ document.locataire.nom|truncatechars:15 }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mt-2 d-flex justify-content-between align-items-center">
+                            <span class="badge 
+                                {% if document.statut == 'valide' %}bg-success
+                                {% elif document.statut == 'archive' %}bg-secondary
+                                {% elif document.statut == 'expire' %}bg-danger
+                                {% else %}bg-warning
+                                {% endif %}">
+                                {{ document.get_statut_display }}
+                            </span>
+                            {% if document.confidentiel %}
+                            <i class="fas fa-lock text-danger" title="Document confidentiel"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Vue liste -->
+        <div id="documents-list" class="d-none">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nom</th>
+                            <th>Type</th>
+                            <th>Propriété</th>
+                            <th>Statut</th>
+                            <th>Date</th>
+                            <th>Taille</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for document in page_obj %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-file me-2 text-muted"></i>
+                                    <div>
+                                        <div class="fw-bold">{{ document.nom }}</div>
+                                        {% if document.description %}
+                                        <small class="text-muted">{{ document.description|truncatechars:50 }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-primary">{{ document.get_type_document_display }}</span>
+                            </td>
+                            <td>
+                                {% if document.propriete %}
+                                    {{ document.propriete.titre|truncatechars:30 }}
+                                {% elif document.bailleur %}
+                                    <span class="text-success">{{ document.bailleur.nom }}</span>
+                                {% elif document.locataire %}
+                                    <span class="text-warning">{{ document.locataire.nom }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if document.statut == 'valide' %}bg-success
+                                    {% elif document.statut == 'archive' %}bg-secondary
+                                    {% elif document.statut == 'expire' %}bg-danger
+                                    {% else %}bg-warning
+                                    {% endif %}">
+                                    {{ document.get_statut_display }}
+                                </span>
+                            </td>
+                            <td>{{ document.date_creation|date:"d/m/Y" }}</td>
+                            <td>
+                                {% if document.taille_fichier %}
+                                    {{ document.taille_fichier|filesizeformat }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'proprietes:document_detail' document.pk %}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'proprietes:document_download' document.pk %}" class="btn btn-outline-success btn-sm">
+                                        <i class="fas fa-download"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Pagination des documents">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type_document %}&type_document={{ request.GET.type_document }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.propriete %}&propriete={{ request.GET.propriete }}{% endif %}{% if request.GET.date_debut %}&date_debut={{ request.GET.date_debut }}{% endif %}{% if request.GET.date_fin %}&date_fin={{ request.GET.date_fin }}{% endif %}">
+                        <i class="fas fa-angle-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type_document %}&type_document={{ request.GET.type_document }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.propriete %}&propriete={{ request.GET.propriete }}{% endif %}{% if request.GET.date_debut %}&date_debut={{ request.GET.date_debut }}{% endif %}{% if request.GET.date_fin %}&date_fin={{ request.GET.date_fin }}{% endif %}">
+                        <i class="fas fa-angle-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type_document %}&type_document={{ request.GET.type_document }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.propriete %}&propriete={{ request.GET.propriete }}{% endif %}{% if request.GET.date_debut %}&date_debut={{ request.GET.date_debut }}{% endif %}{% if request.GET.date_fin %}&date_fin={{ request.GET.date_fin }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type_document %}&type_document={{ request.GET.type_document }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.propriete %}&propriete={{ request.GET.propriete }}{% endif %}{% if request.GET.date_debut %}&date_debut={{ request.GET.date_debut }}{% endif %}{% if request.GET.date_fin %}&date_fin={{ request.GET.date_fin }}{% endif %}">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.type_document %}&type_document={{ request.GET.type_document }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}{% if request.GET.propriete %}&propriete={{ request.GET.propriete }}{% endif %}{% if request.GET.date_debut %}&date_debut={{ request.GET.date_debut }}{% endif %}{% if request.GET.date_fin %}&date_fin={{ request.GET.date_fin }}{% endif %}">
+                        <i class="fas fa-angle-double-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+    {% else %}
+        <div class="text-center text-muted py-5">
+            <i class="fas fa-search fa-3x mb-3"></i>
+            <h5>Aucun document trouvé</h5>
+            <p>Essayez de modifier vos critères de recherche</p>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+// Changer la vue (grille/liste)
+function changeView(view) {
+    const gridView = document.getElementById('documents-grid');
+    const listView = document.getElementById('documents-list');
+    const gridBtn = document.querySelector('button[onclick="changeView(\'grid\')"]');
+    const listBtn = document.querySelector('button[onclick="changeView(\'list\')"]');
+    
+    if (view === 'grid') {
+        gridView.classList.remove('d-none');
+        listView.classList.add('d-none');
+        gridBtn.classList.add('active');
+        listBtn.classList.remove('active');
+    } else {
+        gridView.classList.add('d-none');
+        listView.classList.remove('d-none');
+        gridBtn.classList.remove('active');
+        listBtn.classList.add('active');
+    }
+}
+</script>

@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+
+{% block title %}Contrats Orphelins{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-exclamation-triangle"></i> Contrats Orphelins
+        </h1>
+        <div class="d-flex gap-2">
+            <a href="{% url 'contrats:liste' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Retour aux Contrats
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ total_contrats }}</h4>
+                    <small>Contrats Orphelins</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ total_locataires }}</h4>
+                    <small>Locataires Supprimés</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ total_contrats|add:total_locataires }}</h4>
+                    <small>Total Éléments</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ total_contrats|add:total_locataires }}</h4>
+                    <small>À Nettoyer</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions en masse -->
+    {% if contrats_orphelins %}
+    <div class="card border-danger mb-4">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0"><i class="bi bi-gear"></i> Actions en Masse</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="supprimer_tous">
+                        <button type="submit" class="btn btn-danger w-100" 
+                                onclick="return confirm('⚠️ ATTENTION : Cette action supprimera définitivement TOUS les contrats orphelins. Êtes-vous sûr ?')">
+                            <i class="bi bi-trash"></i> Supprimer Tous les Contrats
+                        </button>
+                    </form>
+                </div>
+                <div class="col-md-4">
+                    <a href="{% url 'proprietes:corbeille_locataires' %}" class="btn btn-warning w-100">
+                        <i class="bi bi-trash"></i> Gérer la Corbeille
+                    </a>
+                </div>
+                <div class="col-md-4">
+                    <a href="{% url 'proprietes:locataires_liste' %}" class="btn btn-info w-100">
+                        <i class="bi bi-person-check"></i> Gérer les Locataires
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Liste des contrats orphelins groupés par locataire -->
+    {% if locataires_orphelins %}
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-list"></i> Contrats Orphelins par Locataire</h5>
+        </div>
+        <div class="card-body p-0">
+            {% for locataire_id, data in locataires_orphelins.items %}
+            <div class="border-bottom p-3 {% if not forloop.last %}border-bottom{% endif %}">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h6 class="mb-1">
+                            <i class="bi bi-person-x text-danger"></i>
+                            {{ data.locataire.nom }} {{ data.locataire.prenom }}
+                            <span class="badge bg-danger ms-2">Supprimé</span>
+                        </h6>
+                        <small class="text-muted">
+                            Email: {{ data.locataire.email|default:"Non renseigné" }} | 
+                            Téléphone: {{ data.locataire.telephone|default:"Non renseigné" }}
+                        </small>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="restaurer_locataire">
+                            <input type="hidden" name="locataire_id" value="{{ data.locataire.pk }}">
+                            <button type="submit" class="btn btn-success btn-sm" 
+                                    onclick="return confirm('Restaurer ce locataire et tous ses contrats ?')">
+                                <i class="bi bi-arrow-clockwise"></i> Restaurer
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Contrat</th>
+                                <th>Propriété</th>
+                                <th>Période</th>
+                                <th>Loyer</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for contrat in data.contrats %}
+                            <tr class="table-warning">
+                                <td>
+                                    <strong>{{ contrat.numero_contrat }}</strong>
+                                </td>
+                                <td>{{ contrat.propriete.titre|default:contrat.propriete.adresse }}</td>
+                                <td>
+                                    Du {{ contrat.date_debut|date:"d/m/Y" }}<br>
+                                    Au {{ contrat.date_fin|date:"d/m/Y" }}
+                                </td>
+                                <td>{{ contrat.loyer_mensuel }} F CFA</td>
+                                <td>
+                                    <form method="post" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="supprimer_contrat">
+                                        <input type="hidden" name="contrat_id" value="{{ contrat.pk }}">
+                                        <button type="submit" class="btn btn-danger btn-sm" 
+                                                onclick="return confirm('Supprimer définitivement ce contrat ?')"
+                                                title="Supprimer le contrat">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-check-circle display-1 text-success"></i>
+        <h4 class="text-success mt-3">Aucun Contrat Orphelin</h4>
+        <p class="text-muted">Tous les contrats ont des locataires valides.</p>
+        <a href="{% url 'contrats:liste' %}" class="btn btn-primary">
+            <i class="bi bi-arrow-left"></i> Retour aux Contrats
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal d'information -->
+<div class="modal fade" id="infoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-info-circle"></i> Information sur les Contrats Orphelins
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" title="Fermer le modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Qu'est-ce qu'un contrat orphelin ?</strong></p>
+                <p>Un contrat est considéré comme "orphelin" lorsque le locataire associé a été supprimé du système mais que le contrat existe encore.</p>
+                
+                <p><strong>Pourquoi cela arrive-t-il ?</strong></p>
+                <ul>
+                    <li>Suppression d'un locataire sans supprimer ses contrats</li>
+                    <li>Problème lors de la suppression en cascade</li>
+                    <li>Import de données avec des références invalides</li>
+                </ul>
+                
+                <p><strong>Comment résoudre ?</strong></p>
+                <ul>
+                    <li><strong>Restaurer le locataire :</strong> Récupère le locataire et tous ses contrats</li>
+                    <li><strong>Supprimer les contrats :</strong> Nettoie les contrats orphelins</li>
+                    <li><strong>Gérer la corbeille :</strong> Accède à la corbeille des locataires</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Afficher le modal d'information au premier chargement
+    if (localStorage.getItem('contrats_orphelins_info_shown') !== 'true') {
+        const modal = new bootstrap.Modal(document.getElementById('infoModal'));
+        modal.show();
+        localStorage.setItem('contrats_orphelins_info_shown', 'true');
+    }
+});
+</script>
+{% endblock %}

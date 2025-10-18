@@ -1,0 +1,1422 @@
+/* ===== Système de Design Simplifié pour l'Application de Gestion Immobilière ===== */
+
+/* Variables CSS pour une palette unifiée avec de meilleurs contrastes */
+:root {
+    /* Palette de couleurs principale */
+    --primary-color: #2563eb;        /* Bleu roi - Meilleur contraste */
+    --secondary-color: #475569;      /* Gris bleuté - Meilleur contraste */
+    --success-color: #059669;        /* Vert émeraude - Meilleur contraste */
+    --warning-color: #d97706;        /* Orange - Meilleur contraste */
+    --danger-color: #dc2626;         /* Rouge - Meilleur contraste */
+    --info-color: #0284c7;           /* Bleu ciel - Meilleur contraste */
+    
+    /* Nuances de couleurs */
+    --primary-light: #93c5fd;
+    --primary-dark: #1d4ed8;
+    --success-light: #6ee7b7;
+    --success-dark: #047857;
+    --warning-light: #fde68a;
+    --warning-dark: #b45309;
+    --danger-light: #fca5a5;
+    --danger-dark: #b91c1c;
+    --info-light: #7dd3fc;
+    --info-dark: #0284c7;
+    
+    /* Couleurs neutres */
+    --light-color: #f1f5f9;
+    --dark-color: #0f172a;           /* Meilleur contraste */
+    --white: #ffffff;
+    --black: #000000;
+    
+    /* Couleurs pour les bordures */
+    --border-color: #cbd5e1;
+    --border-color-dark: #94a3b8;
+    
+    /* Couleurs pour l'arrière-plan */
+    --bg-color: #f8fafc;
+    --bg-color-dark: #e2e8f0;
+    
+    /* Espacements */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-xxl: 3rem;
+    
+    /* Bordures */
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+    --border-radius-xl: 16px;
+    
+    /* Ombres */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    
+    /* Typographie */
+    --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-md: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-xxl: 1.5rem;
+    --font-weight-light: 300;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+}
+
+/* Styles généraux */
+body {
+    font-family: var(--font-family);
+    background-color: var(--bg-color);
+    color: var(--dark-color);
+    min-height: 100vh;
+}
+
+/* Amélioration du contraste pour text-primary */
+.text-primary {
+    color: var(--primary-color) !important;
+    font-weight: var(--font-weight-semibold);
+}
+
+/* En-tête du dashboard */
+.dashboard-header {
+    background: var(--white);
+    padding: var(--spacing-xl);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-lg);
+    margin-bottom: var(--spacing-xl);
+    border-left: 5px solid var(--primary-color);
+}
+
+.dashboard-header h1 {
+    color: var(--dark-color);
+    margin-bottom: 0.5rem;
+    font-weight: var(--font-weight-bold);
+}
+
+.dashboard-header p {
+    color: var(--secondary-color);
+    margin-bottom: 0;
+    font-size: var(--font-size-lg);
+}
+
+/* Cartes de statistiques */
+.stat-card {
+    background: var(--white);
+    padding: var(--spacing-lg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card.primary {
+    border-top: 3px solid var(--primary-color);
+}
+
+.stat-card.success {
+    border-top: 3px solid var(--success-color);
+}
+
+.stat-card.warning {
+    border-top: 3px solid var(--warning-color);
+}
+
+.stat-card.danger {
+    border-top: 3px solid var(--danger-color);
+}
+
+.stat-card.info {
+    border-top: 3px solid var(--info-color);
+}
+
+.stat-number {
+    font-size: var(--font-size-xxl);
+    font-weight: var(--font-weight-bold);
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: var(--font-size-sm);
+    opacity: 0.9;
+    font-weight: var(--font-weight-medium);
+}
+
+.stat-icon {
+    font-size: 2rem;
+    opacity: 0.8;
+}
+
+/* Barre de recherche et filtres */
+.search-filter-bar {
+    background: var(--white);
+    padding: var(--spacing-lg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    margin-bottom: var(--spacing-xl);
+    border-left: 5px solid var(--success-color);
+}
+
+.search-filter-bar .form-control,
+.search-filter-bar .form-select {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    padding: 0.75rem 1rem;
+}
+
+.search-filter-bar .form-control:focus,
+.search-filter-bar .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+}
+
+.search-filter-bar .input-group-text {
+    background: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    color: var(--white);
+    border-radius: var(--border-radius-md) 0 0 var(--border-radius-md);
+}
+
+/* Tableau des propriétés */
+.card {
+    border: none;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+}
+
+.card-header {
+    background: var(--primary-color);
+    color: var(--white);
+    border: none;
+    padding: var(--spacing-lg);
+}
+
+.card-header h5 {
+    margin: 0;
+    font-weight: var(--font-weight-semibold);
+}
+
+.table {
+    margin: 0;
+}
+
+.table thead th {
+    background: var(--light-color);
+    border: none;
+    padding: var(--spacing-md);
+    font-weight: var(--font-weight-semibold);
+    color: var(--dark-color);
+    border-bottom: 2px solid var(--border-color-dark);
+}
+
+.table tbody td {
+    padding: var(--spacing-md);
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+}
+
+/* Badges de statut */
+.badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: var(--font-weight-medium);
+    font-size: var(--font-size-sm);
+}
+
+.badge.bg-success {
+    background: var(--success-color) !important;
+    color: var(--white) !important;
+}
+
+.badge.bg-primary {
+    background: var(--primary-color) !important;
+    color: var(--white) !important;
+}
+
+.badge.bg-warning {
+    background: var(--warning-color) !important;
+    color: var(--white) !important;
+}
+
+.badge.bg-danger {
+    background: var(--danger-color) !important;
+    color: var(--white) !important;
+}
+
+.badge.bg-info {
+    background: var(--info-color) !important;
+    color: var(--white) !important;
+}
+
+.badge.bg-secondary {
+    background: var(--secondary-color) !important;
+    color: var(--white) !important;
+}
+
+/* Boutons d'action */
+.btn-group .btn {
+    border-radius: var(--border-radius-md);
+    margin: 0 2px;
+}
+
+/* Actions rapides */
+.quick-actions .card {
+    border-left: 5px solid var(--warning-color);
+}
+
+.quick-actions .btn {
+    border-radius: var(--border-radius-lg);
+    font-weight: var(--font-weight-semibold);
+    border: 1px solid transparent;
+}
+
+.quick-actions .btn-success {
+    background: var(--success-color);
+    border-color: var(--success-color);
+    color: var(--white);
+}
+
+.quick-actions .btn-primary {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--white);
+}
+
+.quick-actions .btn-info {
+    background: var(--info-color);
+    border-color: var(--info-color);
+    color: var(--white);
+}
+
+.quick-actions .btn-warning {
+    background: var(--warning-color);
+    border-color: var(--warning-color);
+    color: var(--white);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .stat-card {
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .search-filter-bar .row > div {
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .table-responsive {
+        font-size: var(--font-size-sm);
+    }
+    
+    .btn-group .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* États de focus améliorés */
+.form-control:focus,
+.form-select:focus,
+.btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+}
+
+/* Styles pour les messages d'état vide */
+.table tbody tr td.text-center {
+    padding: 3rem 1rem;
+}
+
+.table tbody tr td.text-center i {
+    opacity: 0.5;
+}
+
+/* Amélioration des contrastes pour l'accessibilité */
+.text-muted {
+    color: var(--secondary-color) !important;
+}
+
+.fw-bold {
+    font-weight: var(--font-weight-bold) !important;
+}
+
+/* Styles pour les icônes */
+.bi {
+    vertical-align: middle;
+}
+
+/* Amélioration de la lisibilité */
+.table tbody td small {
+    line-height: 1.4;
+}
+
+/* Styles pour les formulaires */
+.form-control,
+.form-select {
+    font-size: var(--font-size-md);
+}
+
+/* Amélioration de l'espacement */
+.mb-4 {
+    margin-bottom: var(--spacing-xl) !important;
+}
+
+.mt-4 {
+    margin-top: var(--spacing-xl) !important;
+}
+
+/* Styles pour les liens */
+a {
+    text-decoration: none;
+    color: var(--primary-color);
+}
+
+a:hover {
+    text-decoration: none;
+    color: var(--primary-dark);
+}
+
+/* Amélioration de la navigation */
+.navbar {
+    box-shadow: var(--shadow-md);
+    background: var(--white) !important;
+}
+
+/* Styles pour les modales (si utilisées) */
+.modal-content {
+    border-radius: var(--border-radius-lg);
+    border: none;
+    box-shadow: var(--shadow-lg);
+}
+
+.modal-header {
+    background: var(--primary-color);
+    color: var(--white);
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+}
+
+/* Amélioration de la performance */
+* {
+    box-sizing: border-box;
+}
+
+/* Styles pour les notifications */
+.alert {
+    border-radius: var(--border-radius-md);
+    border: none;
+    box-shadow: var(--shadow-md);
+}
+
+/* Amélioration de la typographie */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.3;
+}
+
+/* Styles pour les listes */
+.list-group-item {
+    border: none;
+    border-radius: var(--border-radius-md);
+    margin-bottom: 0.5rem;
+    box-shadow: var(--shadow-sm);
+}
+
+/* Amélioration de la navigation par onglets */
+.nav-tabs {
+    border: none;
+    border-radius: var(--border-radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    border-radius: 0;
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-weight: var(--font-weight-medium);
+}
+
+.nav-tabs .nav-link.active {
+    background: var(--primary-color);
+    color: var(--white);
+}
+
+/* Styles pour les paginations */
+.pagination {
+    border-radius: var(--border-radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.page-link {
+    border: none;
+    padding: 0.75rem 1rem;
+    color: var(--primary-color);
+}
+
+.page-item.active .page-link {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--white);
+}
+
+/* ===== FORMULAIRES AMÉLIORÉS ===== */
+
+/* Container de formulaire */
+.form-container {
+    background: var(--white);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    margin-bottom: var(--spacing-xl);
+}
+
+/* Sections de formulaire */
+.form-section {
+    background: var(--light-color);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+    border-left: 4px solid var(--primary-color);
+    position: relative;
+}
+
+.form-section h5 {
+    color: var(--primary-color);
+    font-weight: var(--font-weight-bold);
+    margin-bottom: var(--spacing-lg);
+    font-size: var(--font-size-lg);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.form-section h5 i {
+    margin-right: 0.5rem;
+    font-size: 1.2rem;
+}
+
+/* Groupes de champs */
+.form-group {
+    margin-bottom: var(--spacing-lg);
+    position: relative;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
+/* Labels améliorés */
+.form-label {
+    font-weight: var(--font-weight-semibold);
+    color: var(--dark-color);
+    margin-bottom: 0.75rem;
+    font-size: var(--font-size-sm);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.form-label i {
+    color: var(--primary-color);
+    font-size: 1rem;
+    width: 1.25rem;
+    text-align: center;
+}
+
+.form-label.required::after {
+    content: ' *';
+    color: var(--danger-color);
+    font-weight: var(--font-weight-bold);
+}
+
+/* Champs de saisie améliorés */
+.form-control, .form-select {
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--border-color);
+    padding: 0.875rem 1rem;
+    font-size: var(--font-size-sm);
+    background: var(--white);
+    color: var(--dark-color);
+    font-weight: var(--font-weight-normal);
+    position: relative;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+    outline: none;
+    color: var(--dark-color);
+}
+
+.form-control::placeholder, .form-select::placeholder {
+    color: var(--secondary-color);
+    font-weight: var(--font-weight-normal);
+}
+
+.form-control:disabled, .form-select:disabled {
+    background: var(--light-color);
+    color: var(--secondary-color);
+    cursor: not-allowed;
+}
+
+/* États des champs */
+.form-control.is-valid {
+    border-color: var(--success-color);
+    background: var(--success-light);
+}
+
+.form-control.is-invalid {
+    border-color: var(--danger-color);
+    background: var(--danger-light);
+}
+
+.form-control.is-warning {
+    border-color: var(--warning-color);
+    background: var(--warning-light);
+}
+
+/* Messages de validation */
+.form-text {
+    color: var(--secondary-color);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.valid-feedback {
+    color: var(--success-color);
+    font-weight: var(--font-weight-semibold);
+}
+
+.invalid-feedback {
+    color: var(--danger-color);
+    font-weight: var(--font-weight-semibold);
+}
+
+.warning-feedback {
+    color: var(--warning-color);
+    font-weight: var(--font-weight-semibold);
+}
+
+/* Checkboxes et radios améliorés */
+.form-check {
+    margin-bottom: var(--spacing-md);
+    padding-left: 2rem;
+    position: relative;
+}
+
+.form-check-input {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-left: -2rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.form-check-input:checked {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+}
+
+.form-check-input:focus {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+}
+
+.form-check-label {
+    font-weight: var(--font-weight-medium);
+    color: var(--dark-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-check-label i {
+    color: var(--primary-color);
+}
+
+/* Textarea amélioré */
+textarea.form-control {
+    min-height: 120px;
+    resize: vertical;
+    font-family: inherit;
+    line-height: 1.6;
+}
+
+/* Groupes d'inputs */
+.input-group {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    width: 100%;
+}
+
+.input-group-text {
+    background: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    border-right: none;
+    border-radius: var(--border-radius-md) 0 0 var(--border-radius-md);
+    color: var(--white);
+    font-weight: var(--font-weight-semibold);
+    padding: 0.875rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 3rem;
+}
+
+.input-group .form-control {
+    border-left: none;
+    border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0;
+    flex: 1 1 auto;
+    width: 1%;
+    min-width: 0;
+}
+
+/* Séparateurs de sections */
+.form-divider {
+    height: 2px;
+    background: var(--primary-color);
+    border-radius: 1px;
+    margin: var(--spacing-xl) 0;
+    position: relative;
+}
+
+.form-divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2rem;
+    height: 2rem;
+    background: var(--primary-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--white);
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-bold);
+}
+
+/* Boutons d'action de formulaire */
+.form-actions {
+    background: var(--light-color);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-lg);
+    margin-top: var(--spacing-xl);
+    border-top: 3px solid var(--primary-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+}
+
+.form-actions .btn {
+    min-width: 140px;
+    justify-content: center;
+}
+
+/* Responsive pour formulaires */
+@media (max-width: 768px) {
+    .form-container {
+        padding: var(--spacing-md);
+    }
+    
+    .form-section {
+        padding: var(--spacing-md);
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .form-actions .btn {
+        width: 100%;
+    }
+}
+
+/* Section d'aide */
+.help-section .card {
+    border-left: 5px solid var(--info-color);
+}
+
+.help-section h6 {
+    color: var(--primary-color);
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: 0.5rem;
+}
+
+.help-section h6 i {
+    margin-right: 0.5rem;
+}
+
+/* Validation en temps réel */
+.form-control.required:invalid {
+    border-color: var(--danger-color);
+}
+
+.form-control.required:valid {
+    border-color: var(--success-color);
+}
+
+/* ===== RESPONSIVE DESIGN OPTIMISÉ ===== */
+
+/* Variables pour les breakpoints */
+:root {
+    --breakpoint-xs: 0;
+    --breakpoint-sm: 576px;
+    --breakpoint-md: 768px;
+    --breakpoint-lg: 992px;
+    --breakpoint-xl: 1200px;
+    --breakpoint-xxl: 1400px;
+}
+
+/* ===== MOBILE FIRST APPROACH ===== */
+
+/* Base mobile (jusqu'à 575.98px) */
+@media (max-width: 575.98px) {
+    /* Navigation mobile */
+    .navbar {
+        padding: 0.5rem 1rem;
+    }
+    
+    .navbar-brand {
+        font-size: 1.2rem;
+    }
+    
+    .navbar-toggler {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    /* Sidebar mobile */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: -100%;
+        width: 280px;
+        height: 100vh;
+        z-index: 1050;
+        background: var(--white);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .sidebar.show {
+        left: 0;
+    }
+    
+    /* Overlay pour fermer la sidebar */
+    .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1040;
+        display: none;
+    }
+    
+    .sidebar-overlay.show {
+        display: block;
+    }
+    
+    /* Contenu principal mobile */
+    .main-content {
+        margin: 0.5rem;
+        padding: 1rem;
+        border-radius: var(--border-radius-md);
+    }
+    
+    /* Cartes de statistiques mobile */
+    .stat-card {
+        margin-bottom: 1rem;
+        padding: 1rem;
+    }
+    
+    .stat-number {
+        font-size: 1.8rem;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem;
+    }
+    
+    /* Tableaux mobile */
+    .table-responsive {
+        font-size: 0.8rem;
+    }
+    
+    .table th,
+    .table td {
+        padding: 0.5rem 0.25rem;
+    }
+    
+    /* Boutons mobile */
+    .btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+    
+    .btn-group .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+    
+    /* Formulaires mobile */
+    .form-container {
+        padding: 1rem;
+    }
+    
+    .form-section {
+        padding: 1rem;
+    }
+    
+    .form-control,
+    .form-select {
+        padding: 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    /* Actions de formulaire mobile */
+    .form-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .form-actions .btn {
+        width: 100%;
+    }
+    
+    /* Messages d'alerte mobile */
+    .alert {
+        padding: 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    /* Badges mobile */
+    .badge {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+    
+    /* Modales mobile */
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+    
+    .modal-content {
+        border-radius: var(--border-radius-md);
+    }
+    
+    /* Pagination mobile */
+    .pagination {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .page-link {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    /* Recherche et filtres mobile */
+    .search-filter-bar {
+        padding: 1rem;
+    }
+    
+    .search-filter-bar .row > div {
+        margin-bottom: 1rem;
+    }
+    
+    /* Actions rapides mobile */
+    .quick-actions .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Navigation par onglets mobile */
+    .nav-tabs {
+        flex-wrap: wrap;
+    }
+    
+    .nav-tabs .nav-link {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    /* Dropdown mobile */
+    .dropdown-menu {
+        font-size: 0.875rem;
+    }
+    
+    /* Icônes mobile */
+    .bi {
+        font-size: 0.9em;
+    }
+    
+    /* Espacement mobile */
+    .mb-4 {
+        margin-bottom: 1.5rem !important;
+    }
+    
+    .mt-4 {
+        margin-top: 1.5rem !important;
+    }
+    
+    .p-4 {
+        padding: 1rem !important;
+    }
+}
+
+/* ===== TABLET (576px - 767px) ===== */
+@media (min-width: 576px) and (max-width: 767.98px) {
+    /* Navigation tablet */
+    .navbar-brand {
+        font-size: 1.3rem;
+    }
+    
+    /* Sidebar tablet */
+    .sidebar {
+        width: 300px;
+    }
+    
+    /* Contenu principal tablet */
+    .main-content {
+        margin: 1rem;
+        padding: 1.5rem;
+    }
+    
+    /* Cartes de statistiques tablet */
+    .stat-card {
+        padding: 1.5rem;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+    }
+    
+    /* Tableaux tablet */
+    .table-responsive {
+        font-size: 0.85rem;
+    }
+    
+    /* Formulaires tablet */
+    .form-container {
+        padding: 1.5rem;
+    }
+    
+    .form-section {
+        padding: 1.25rem;
+    }
+    
+    /* Actions de formulaire tablet */
+    .form-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    
+    .form-actions .btn {
+        width: auto;
+        min-width: 120px;
+    }
+    
+    /* Recherche et filtres tablet */
+    .search-filter-bar {
+        padding: 1.25rem;
+    }
+    
+    /* Actions rapides tablet */
+    .quick-actions .btn {
+        width: auto;
+        margin-bottom: 0;
+    }
+}
+
+/* ===== DESKTOP SMALL (768px - 991px) ===== */
+@media (min-width: 768px) and (max-width: 991.98px) {
+    /* Sidebar desktop small */
+    .sidebar {
+        width: 250px;
+    }
+    
+    /* Contenu principal desktop small */
+    .main-content {
+        margin: 1.5rem;
+        padding: 2rem;
+    }
+    
+    /* Cartes de statistiques desktop small */
+    .stat-card {
+        padding: 1.75rem;
+    }
+    
+    .stat-number {
+        font-size: 2.2rem;
+    }
+    
+    /* Tableaux desktop small */
+    .table-responsive {
+        font-size: 0.9rem;
+    }
+    
+    /* Formulaires desktop small */
+    .form-container {
+        padding: 2rem;
+    }
+    
+    .form-section {
+        padding: 1.5rem;
+    }
+}
+
+/* ===== DESKTOP LARGE (992px et plus) ===== */
+@media (min-width: 992px) {
+    /* Sidebar desktop large */
+    .sidebar {
+        width: 280px;
+    }
+    
+    /* Contenu principal desktop large */
+    .main-content {
+        margin: 2rem;
+        padding: 2.5rem;
+    }
+    
+    /* Cartes de statistiques desktop large */
+    .stat-card {
+        padding: 2rem;
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+    }
+    
+    /* Tableaux desktop large */
+    .table-responsive {
+        font-size: 1rem;
+    }
+    
+    /* Formulaires desktop large */
+    .form-container {
+        padding: 2.5rem;
+    }
+    
+    .form-section {
+        padding: 2rem;
+    }
+}
+
+/* ===== LANDSCAPE MOBILE ===== */
+@media (max-width: 767.98px) and (orientation: landscape) {
+    /* Ajustements pour mobile en mode paysage */
+    .main-content {
+        margin: 0.25rem;
+        padding: 0.75rem;
+    }
+    
+    .stat-card {
+        padding: 0.75rem;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+    }
+    
+    .form-container {
+        padding: 0.75rem;
+    }
+    
+    .form-section {
+        padding: 0.75rem;
+    }
+}
+
+/* ===== IMPRESSION ===== */
+@media print {
+    /* Masquer les éléments non nécessaires à l'impression */
+    .navbar,
+    .sidebar,
+    .btn,
+    .form-actions,
+    .search-filter-bar {
+        display: none !important;
+    }
+    
+    /* Ajuster le contenu pour l'impression */
+    .main-content {
+        margin: 0;
+        padding: 0;
+        background: white;
+        box-shadow: none;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+    
+    .table {
+        font-size: 0.8rem;
+    }
+    
+    .table th,
+    .table td {
+        padding: 0.25rem;
+    }
+}
+
+/* ===== ACCESSIBILITÉ ===== */
+
+/* Réduction des animations pour les utilisateurs préférant moins de mouvement */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Mode sombre automatique */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --light-color: #1e293b;
+        --dark-color: #f1f5f9;
+        --white: #0f172a;
+        --black: #ffffff;
+    }
+    
+    body {
+        background-color: #0f172a;
+        color: #f1f5f9;
+    }
+    
+    .main-content,
+    .sidebar,
+    .navbar {
+        background: #1e293b;
+        color: #f1f5f9;
+    }
+    
+    .card {
+        background: #334155;
+        color: #f1f5f9;
+    }
+    
+    .form-control,
+    .form-select {
+        background: #334155;
+        color: #f1f5f9;
+        border-color: #475569;
+    }
+    
+    .stat-card {
+        background: #334155;
+        color: #f1f5f9;
+    }
+}
+
+/* ===== UTILITAIRES RESPONSIVE ===== */
+
+/* Masquer/afficher selon la taille d'écran */
+.d-none-mobile {
+    display: none;
+}
+
+.d-block-mobile {
+    display: block;
+}
+
+@media (min-width: 768px) {
+    .d-none-mobile {
+        display: block;
+    }
+    
+    .d-block-mobile {
+        display: none;
+    }
+}
+
+/* Texte responsive */
+.text-responsive {
+    font-size: clamp(0.875rem, 2vw, 1rem);
+}
+
+.text-responsive-lg {
+    font-size: clamp(1rem, 3vw, 1.25rem);
+}
+
+.text-responsive-xl {
+    font-size: clamp(1.25rem, 4vw, 1.5rem);
+}
+
+/* Espacement responsive */
+.spacing-responsive {
+    padding: clamp(1rem, 3vw, 2rem);
+    margin: clamp(0.5rem, 2vw, 1rem);
+}
+
+/* Grille responsive personnalisée */
+.grid-responsive {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+/* Flexbox responsive */
+.flex-responsive {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.flex-responsive > * {
+    flex: 1 1 250px;
+}
+
+/* ===== CORRECTIONS SPÉCIFIQUES ===== */
+
+/* Correction pour les tableaux sur mobile */
+@media (max-width: 767.98px) {
+    .table-responsive {
+        border: none;
+    }
+    
+    .table-responsive .table {
+        margin-bottom: 0;
+    }
+    
+    /* Transformer les tableaux en cartes sur mobile */
+    .table-responsive .table thead {
+        display: none;
+    }
+    
+    .table-responsive .table tbody tr {
+        display: block;
+        margin-bottom: 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-md);
+        padding: 1rem;
+        background: var(--white);
+    }
+    
+    .table-responsive .table tbody td {
+        display: block;
+        text-align: left;
+        border: none;
+        padding: 0.5rem 0;
+    }
+    
+    .table-responsive .table tbody td::before {
+        content: attr(data-label) ": ";
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+}
+
+/* Correction pour les formulaires sur mobile */
+@media (max-width: 767.98px) {
+    .input-group {
+        flex-direction: column;
+    }
+    
+    .input-group-text {
+        border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
+        border-right: 1px solid var(--primary-color);
+        border-bottom: none;
+    }
+    
+    .input-group .form-control {
+        border-radius: 0 0 var(--border-radius-md) var(--border-radius-md);
+        border-left: 1px solid var(--border-color);
+    }
+}
+
+/* Correction pour les modales sur mobile */
+@media (max-width: 767.98px) {
+    .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+    
+    .modal-body {
+        padding: 1rem;
+    }
+    
+    .modal-footer {
+        padding: 1rem;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .modal-footer .btn {
+        width: 100%;
+    }
+}
+
+/* Correction pour les dropdowns sur mobile */
+@media (max-width: 767.98px) {
+    .dropdown-menu {
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 90% !important;
+        max-width: 400px;
+        margin: 0;
+    }
+}
+
+/* ===== PERFORMANCE ===== */
+
+/* Optimisation pour les écrans haute densité */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .card,
+    .btn,
+    .form-control {
+        border-width: 0.5px;
+    }
+}
+
+/* Optimisation pour les écrans tactiles */
+@media (hover: none) and (pointer: coarse) {
+    .btn,
+    .nav-link,
+    .form-control {
+        min-height: 44px;
+    }
+    
+    .btn-group .btn {
+        min-height: 38px;
+    }
+    
+    /* Ajout d'espace à droite des liens de navigation dans la sidebar */
+    .sidebar .nav-link {
+        padding-right: 1rem;
+    }
+}

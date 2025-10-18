@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+
+{% block title %}Gérer le Locataire - {{ locataire.nom }} {{ locataire.prenom }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <!-- En-tête -->
+            <div class="card border-danger mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> 
+                        Gestion du Locataire : {{ locataire.nom }} {{ locataire.prenom }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">
+                        <strong>Attention :</strong> Ce locataire a des références actives dans le système. 
+                        Choisissez l'action la plus appropriée ci-dessous.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Analyse des références -->
+            <div class="card border-info mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Analyse des Références</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Contrats Actifs</h6>
+                            {% if contrats_actifs %}
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    <strong>{{ contrats_actifs.count }}</strong> contrat(s) actif(s)
+                                </div>
+                                <ul class="list-unstyled">
+                                    {% for contrat in contrats_actifs %}
+                                        <li class="mb-2">
+                                            <i class="bi bi-file-earmark-text"></i>
+                                            <strong>{{ contrat.numero_contrat }}</strong> - 
+                                            {{ contrat.propriete.titre }}
+                                            <br>
+                                            <small class="text-muted">
+                                                Du {{ contrat.date_debut|date:"d/m/Y" }} 
+                                                au {{ contrat.date_fin|date:"d/m/Y" }}
+                                            </small>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <div class="alert alert-success">
+                                    <i class="bi bi-check-circle"></i> Aucun contrat actif
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Autres Références</h6>
+                            {% if contrats_inactifs %}
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i>
+                                    <strong>{{ contrats_inactifs.count }}</strong> contrat(s) inactif(s)
+                                </div>
+                            {% endif %}
+                            {% if paiements_count > 0 %}
+                                <div class="alert alert-info">
+                                    <i class="bi bi-cash-coin"></i>
+                                    <strong>{{ paiements_count }}</strong> paiement(s) associé(s)
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recommandation -->
+            <div class="card border-warning mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-lightbulb"></i> Recommandation</h5>
+                </div>
+                <div class="card-body">
+                    {% if recommandation == 'desactiver' %}
+                        <div class="alert alert-warning mb-0">
+                            <i class="bi bi-lightbulb"></i>
+                            <strong>Recommandé :</strong> Désactiver le locataire plutôt que de le supprimer 
+                            car il a des contrats actifs. Cela préservera l'historique et les données.
+                        </div>
+                    {% else %}
+                        <div class="alert alert-success mb-0">
+                            <i class="bi bi-lightbulb"></i>
+                            <strong>Recommandé :</strong> Supprimer le locataire car il n'a pas de références actives.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Options d'action -->
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-gear"></i> Options d'Action</h5>
+                </div>
+                <div class="card-body">
+                    
+                    <!-- Option 1: Désactiver -->
+                    <div class="mb-4">
+                        <h6 class="text-warning">
+                            <i class="bi bi-toggle-off"></i> Option 1 : Désactiver le Locataire
+                        </h6>
+                        <p class="text-muted">
+                            Le locataire sera marqué comme inactif mais restera dans le système. 
+                            Ses contrats et paiements seront préservés.
+                        </p>
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="desactiver">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-toggle-off"></i> Désactiver le Locataire
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Option 2: Transférer les contrats -->
+                    {% if contrats_actifs and autres_locataires %}
+                        <div class="mb-4">
+                            <h6 class="text-info">
+                                <i class="bi bi-arrow-left-right"></i> Option 2 : Transférer les Contrats
+                            </h6>
+                            <p class="text-muted">
+                                Transférer tous les contrats actifs vers un autre locataire, 
+                                puis supprimer ce locataire.
+                            </p>
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="transferer_contrats">
+                                <div class="row g-3 align-items-end">
+                                    <div class="col-md-6">
+                                        <label for="nouveau_locataire_id" class="form-label">Nouveau locataire :</label>
+                                        <select name="nouveau_locataire_id" id="nouveau_locataire_id" class="form-select" required>
+                                            <option value="">Sélectionner un locataire...</option>
+                                            {% for autre_loc in autres_locataires %}
+                                                <option value="{{ autre_loc.pk }}">
+                                                    {{ autre_loc.nom }} {{ autre_loc.prenom }} 
+                                                    ({{ autre_loc.email|default:"Pas d'email" }})
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <button type="submit" class="btn btn-info">
+                                            <i class="bi bi-arrow-left-right"></i> Transférer et Supprimer
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    {% endif %}
+
+                    <!-- Option 3: Supprimer définitivement -->
+                    <div class="mb-4">
+                        <h6 class="text-danger">
+                            <i class="bi bi-trash"></i> Option 3 : Supprimer Définitivement
+                        </h6>
+                        <p class="text-muted">
+                            <strong>Attention :</strong> Cette action placera le locataire en corbeille. 
+                            {% if contrats_actifs %}
+                                <span class="text-danger">Il aura des contrats orphelins qui pourront causer des problèmes.</span>
+                            {% endif %}
+                        </p>
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="supprimer_definitivement">
+                            <button type="submit" class="btn btn-danger" 
+                                    {% if contrats_actifs %}onclick="return confirm('⚠️ ATTENTION : Ce locataire a des contrats actifs. Êtes-vous sûr de vouloir le supprimer ?')"{% endif %}>
+                                <i class="bi bi-trash"></i> Supprimer Définitivement
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Annuler -->
+                    <hr>
+                    <div class="text-center">
+                        <a href="{% url 'proprietes:locataires_liste' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Retour à la Liste
+                        </a>
+                        <a href="{% url 'proprietes:detail_locataire' locataire.pk %}" class="btn btn-outline-primary">
+                            <i class="bi bi-eye"></i> Voir le Détail
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmation pour la suppression avec contrats actifs -->
+{% if contrats_actifs %}
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle"></i> Confirmation Requise
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" title="Fermer le modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Attention :</strong> Ce locataire a des contrats actifs.</p>
+                <p>La suppression créera des contrats orphelins qui pourront causer des problèmes dans le système.</p>
+                <p><strong>Êtes-vous vraiment sûr de vouloir continuer ?</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Oui, Supprimer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion de la confirmation pour la suppression avec contrats actifs
+    const deleteButtons = document.querySelectorAll('button[value="supprimer_definitivement"]');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            if ({{ contrats_actifs.count }} > 0) {
+                e.preventDefault();
+                const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+                modal.show();
+                
+                document.getElementById('confirmDelete').addEventListener('click', function() {
+                    modal.hide();
+                    // Soumettre le formulaire
+                    button.closest('form').submit();
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

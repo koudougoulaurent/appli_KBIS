@@ -1,0 +1,534 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Créer un Plan de Paiement Partiel{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components.css' %}">
+<style>
+    .form-container {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        border: 1px solid #e3e6f0;
+    }
+    
+    .form-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #f8f9fc;
+    }
+    
+    .form-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #5a5c69;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-subtitle {
+        color: #858796;
+        font-size: 1.1rem;
+    }
+    
+    .form-section {
+        margin-bottom: 2rem;
+        padding: 1.5rem;
+        background: #f8f9fc;
+        border-radius: 10px;
+        border: 1px solid #e3e6f0;
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #5a5c69;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .section-title i {
+        color: #4e73df;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #5a5c69;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control {
+        border: 2px solid #e3e6f0;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus {
+        border-color: #4e73df;
+        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+    }
+    
+    .form-control.is-invalid {
+        border-color: #e74a3b;
+    }
+    
+    .form-control.is-valid {
+        border-color: #1cc88a;
+    }
+    
+    .invalid-feedback {
+        display: block;
+        width: 100%;
+        margin-top: 0.25rem;
+        font-size: 0.875rem;
+        color: #e74a3b;
+    }
+    
+    .valid-feedback {
+        display: block;
+        width: 100%;
+        margin-top: 0.25rem;
+        font-size: 0.875rem;
+        color: #1cc88a;
+    }
+    
+    .btn-submit {
+        background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 2rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(78, 115, 223, 0.3);
+    }
+    
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(78, 115, 223, 0.4);
+        color: white;
+    }
+    
+    .btn-cancel {
+        background: #858796;
+        border: none;
+        color: white;
+        padding: 0.75rem 2rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .btn-cancel:hover {
+        background: #6c757d;
+        color: white;
+        transform: translateY(-1px);
+    }
+    
+    .help-text {
+        font-size: 0.875rem;
+        color: #858796;
+        margin-top: 0.25rem;
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 2px solid #f8f9fc;
+    }
+    
+    .preview-card {
+        background: #f8f9fc;
+        border: 2px dashed #e3e6f0;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+        text-align: center;
+        color: #858796;
+    }
+    
+    .preview-card.has-content {
+        background: #e8f5e8;
+        border-color: #1cc88a;
+        color: #155724;
+    }
+    
+    .loading-spinner {
+        display: none;
+    }
+    
+    .form-loading .loading-spinner {
+        display: inline-block;
+    }
+    
+    .form-loading .btn-submit {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+    
+    .contract-info {
+        background: #e3f2fd;
+        border: 1px solid #bbdefb;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 0.5rem;
+        display: none;
+    }
+    
+    .contract-info.show {
+        display: block;
+    }
+    
+    .contract-details {
+        font-size: 0.875rem;
+        color: #1976d2;
+    }
+    
+    .contract-details strong {
+        color: #0d47a1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-xl-8 col-lg-10">
+            <div class="form-container">
+                <!-- Header -->
+                <div class="form-header">
+                    <h1 class="form-title">
+                        <i class="fas fa-calendar-check text-primary me-2"></i>
+                        {{ title }}
+                    </h1>
+                    <p class="form-subtitle">Créez un plan de paiement partiel pour faciliter le règlement des loyers</p>
+                </div>
+
+                <!-- Formulaire -->
+                <form method="post" id="planForm" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Informations de base -->
+                    <div class="form-section">
+                        <h3 class="section-title">
+                            <i class="fas fa-info-circle"></i>
+                            Informations Principales
+                        </h3>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.contrat.id_for_label }}" class="form-label">
+                                        Contrat <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.contrat }}
+                                    <div class="help-text">Sélectionnez le contrat concerné par ce plan de paiement</div>
+                                    
+                                    <!-- Informations du contrat -->
+                                    <div class="contract-info" id="contractInfo">
+                                        <div class="contract-details">
+                                            <strong>Locataire:</strong> <span id="locataireName">-</span><br>
+                                            <strong>Propriété:</strong> <span id="proprieteAdresse">-</span><br>
+                                            <strong>Loyer mensuel:</strong> <span id="loyerMensuel">-</span> FCFA
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.nom_plan.id_for_label }}" class="form-label">
+                                        Nom du Plan <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.nom_plan }}
+                                    <div class="help-text">Ex: Plan de paiement partiel - Janvier 2025</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">
+                                Description
+                            </label>
+                            {{ form.description }}
+                            <div class="help-text">Description du plan de paiement partiel (optionnel)</div>
+                        </div>
+                    </div>
+
+                    <!-- Montants et dates -->
+                    <div class="form-section">
+                        <h3 class="section-title">
+                            <i class="fas fa-calculator"></i>
+                            Montant et Dates
+                        </h3>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.montant_total.id_for_label }}" class="form-label">
+                                        Montant à Payer <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.montant_total }}
+                                    <div class="help-text">Montant total à payer dans cet accord</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.statut.id_for_label }}" class="form-label">
+                                        Statut Initial
+                                    </label>
+                                    {{ form.statut }}
+                                    <div class="help-text">Statut initial du plan</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.date_debut.id_for_label }}" class="form-label">
+                                        Date de Début <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.date_debut }}
+                                    <div class="help-text">Date de début du plan de paiement</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.date_fin_prevue.id_for_label }}" class="form-label">
+                                        Date Limite <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.date_fin_prevue }}
+                                    <div class="help-text">Date limite pour terminer l'accord</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aperçu du plan -->
+                    <div class="form-section">
+                        <h3 class="section-title">
+                            <i class="fas fa-eye"></i>
+                            Aperçu du Plan
+                        </h3>
+                        
+                        <div class="preview-card" id="planPreview">
+                            <i class="fas fa-info-circle fa-2x mb-2"></i>
+                            <p class="mb-0">Remplissez le formulaire pour voir l'aperçu du plan</p>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="form-actions">
+                        <a href="{% url 'paiements:liste_plans_partiels' %}" class="btn-cancel">
+                            <i class="fas fa-times me-2"></i>Annuler
+                        </a>
+                        <button type="submit" class="btn-submit" id="submitBtn">
+                            <span class="loading-spinner me-2">
+                                <i class="fas fa-spinner fa-spin"></i>
+                            </span>
+                            <i class="fas fa-calendar-check me-2"></i>Créer le Plan
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/components.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('planForm');
+    const contractSelect = document.getElementById('id_contrat');
+    const contractInfo = document.getElementById('contractInfo');
+    const planPreview = document.getElementById('planPreview');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Données des contrats (seraient normalement chargées via AJAX)
+    const contratsData = {
+        // Ces données seraient chargées dynamiquement
+    };
+    
+    // Gestion du changement de contrat
+    contractSelect.addEventListener('change', function() {
+        const contratId = this.value;
+        if (contratId) {
+            // Ici on ferait une requête AJAX pour récupérer les infos du contrat
+            // Pour l'instant, on simule
+            contractInfo.classList.add('show');
+            document.getElementById('locataireName').textContent = 'Chargement...';
+            document.getElementById('proprieteAdresse').textContent = 'Chargement...';
+            document.getElementById('loyerMensuel').textContent = 'Chargement...';
+            
+            // Simulation d'un chargement
+            setTimeout(() => {
+                document.getElementById('locataireName').textContent = 'Nom du locataire';
+                document.getElementById('proprieteAdresse').textContent = 'Adresse de la propriété';
+                document.getElementById('loyerMensuel').textContent = '150000';
+            }, 500);
+        } else {
+            contractInfo.classList.remove('show');
+        }
+        updatePreview();
+    });
+    
+    // Mise à jour de l'aperçu
+    function updatePreview() {
+        const contrat = contractSelect.value;
+        const nomPlan = document.getElementById('id_nom_plan').value;
+        const montantTotal = document.getElementById('id_montant_total').value;
+        const dateDebut = document.getElementById('id_date_debut').value;
+        const dateFin = document.getElementById('id_date_fin_prevue').value;
+        
+        if (contrat && nomPlan && montantTotal && dateDebut && dateFin) {
+            planPreview.classList.add('has-content');
+            planPreview.innerHTML = `
+                <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
+                <h6 class="text-success mb-2">Aperçu du Plan</h6>
+                <p class="mb-1"><strong>Nom:</strong> ${nomPlan}</p>
+                <p class="mb-1"><strong>Montant:</strong> ${parseFloat(montantTotal).toLocaleString()} FCFA</p>
+                <p class="mb-1"><strong>Période:</strong> ${formatDate(dateDebut)} - ${formatDate(dateFin)}</p>
+                <p class="mb-0"><strong>Durée:</strong> ${calculateDuration(dateDebut, dateFin)} jours</p>
+            `;
+        } else {
+            planPreview.classList.remove('has-content');
+            planPreview.innerHTML = `
+                <i class="fas fa-info-circle fa-2x mb-2"></i>
+                <p class="mb-0">Remplissez le formulaire pour voir l'aperçu du plan</p>
+            `;
+        }
+    }
+    
+    // Fonction pour formater les dates
+    function formatDate(dateString) {
+        if (!dateString) return '-';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('fr-FR');
+    }
+    
+    // Fonction pour calculer la durée
+    function calculateDuration(startDate, endDate) {
+        if (!startDate || !endDate) return '-';
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const diffTime = Math.abs(end - start);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays;
+    }
+    
+    // Écouter les changements sur tous les champs
+    const formFields = form.querySelectorAll('input, select, textarea');
+    formFields.forEach(field => {
+        field.addEventListener('input', updatePreview);
+        field.addEventListener('change', updatePreview);
+    });
+    
+    // Gestion de la soumission du formulaire
+    form.addEventListener('submit', function(e) {
+        // Validation côté client
+        if (!form.checkValidity()) {
+            e.preventDefault();
+            e.stopPropagation();
+        } else {
+            // Afficher le spinner de chargement
+            form.classList.add('form-loading');
+            submitBtn.disabled = true;
+        }
+        
+        form.classList.add('was-validated');
+    });
+    
+    // Validation en temps réel
+    const inputs = form.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            validateField(this);
+        });
+        
+        input.addEventListener('input', function() {
+            if (this.classList.contains('is-invalid')) {
+                validateField(this);
+            }
+        });
+    });
+    
+    function validateField(field) {
+        const value = field.value.trim();
+        let isValid = true;
+        let message = '';
+        
+        // Validation spécifique selon le champ
+        if (field.hasAttribute('required') && !value) {
+            isValid = false;
+            message = 'Ce champ est obligatoire';
+        } else if (field.type === 'number' && value && parseFloat(value) <= 0) {
+            isValid = false;
+            message = 'La valeur doit être supérieure à zéro';
+        } else if (field.type === 'date' && value) {
+            const date = new Date(value);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (field.id === 'id_date_debut' && date < today) {
+                isValid = false;
+                message = 'La date de début ne peut pas être dans le passé';
+            } else if (field.id === 'id_date_fin_prevue' && value) {
+                const dateDebut = document.getElementById('id_date_debut').value;
+                if (dateDebut && date <= new Date(dateDebut)) {
+                    isValid = false;
+                    message = 'La date de fin doit être postérieure à la date de début';
+                }
+            }
+        }
+        
+        // Appliquer les styles de validation
+        if (isValid) {
+            field.classList.remove('is-invalid');
+            field.classList.add('is-valid');
+        } else {
+            field.classList.remove('is-valid');
+            field.classList.add('is-invalid');
+        }
+        
+        // Afficher le message d'erreur
+        let feedback = field.parentNode.querySelector('.invalid-feedback');
+        if (!isValid) {
+            if (!feedback) {
+                feedback = document.createElement('div');
+                feedback.className = 'invalid-feedback';
+                field.parentNode.appendChild(feedback);
+            }
+            feedback.textContent = message;
+        } else if (feedback) {
+            feedback.remove();
+        }
+    }
+    
+    // Initialiser l'aperçu
+    updatePreview();
+});
+</script>
+{% endblock %}

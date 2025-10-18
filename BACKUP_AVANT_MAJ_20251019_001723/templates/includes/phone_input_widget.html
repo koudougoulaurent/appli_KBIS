@@ -1,0 +1,150 @@
+{% comment %}
+Composant de sélection de pays et numéro de téléphone pour l'Afrique de l'Ouest
+Usage: {% include 'includes/phone_input_widget.html' with field=form.telephone %}
+{% endcomment %}
+
+<div class="phone-input-widget">
+    <!-- Champ caché pour le code pays -->
+    <input type="hidden" name="country_code" id="country_code_{{ field.id_for_label }}" value="">
+    
+    <div class="row mb-2">
+        <div class="col-12 col-md-4 mb-3 mb-md-0">
+            <label for="country_selector_{{ field.id_for_label }}" class="form-label">
+                <i class="bi bi-flag"></i> Code pays
+            </label>
+            <select id="country_selector_{{ field.id_for_label }}" class="form-select country-selector" data-target="{{ field.id_for_label }}">
+                <option value="">Sélectionner un pays</option>
+                <option value="229" data-flag="🇧🇯" data-format="+229" data-placeholder="90123456">🇧🇯 Bénin (+229)</option>
+                <option value="226" data-flag="🇧🇫" data-format="+226" data-placeholder="70123456">🇧🇫 Burkina Faso (+226)</option>
+                <option value="238" data-flag="🇨🇻" data-format="+238" data-placeholder="99123456">🇨🇻 Cap-Vert (+238)</option>
+                <option value="225" data-flag="🇨🇮" data-format="+225" data-placeholder="07123456">🇨🇮 Côte d'Ivoire (+225)</option>
+                <option value="220" data-flag="🇬🇲" data-format="+220" data-placeholder="77712345">🇬🇲 Gambie (+220)</option>
+                <option value="233" data-flag="🇬🇭" data-format="+233" data-placeholder="201234567">🇬🇭 Ghana (+233)</option>
+                <option value="224" data-flag="🇬🇳" data-format="+224" data-placeholder="623123456">🇬🇳 Guinée (+224)</option>
+                <option value="245" data-flag="🇬🇼" data-format="+245" data-placeholder="95512345">🇬🇼 Guinée-Bissau (+245)</option>
+                <option value="231" data-flag="🇱🇷" data-format="+231" data-placeholder="771234567">🇱🇷 Libéria (+231)</option>
+                <option value="223" data-flag="🇲🇱" data-format="+223" data-placeholder="76123456">🇲🇱 Mali (+223)</option>
+                <option value="222" data-flag="🇲🇷" data-format="+222" data-placeholder="22123456">🇲🇷 Mauritanie (+222)</option>
+                <option value="227" data-flag="🇳🇪" data-format="+227" data-placeholder="90123456">🇳🇪 Niger (+227)</option>
+                <option value="234" data-flag="🇳🇬" data-format="+234" data-placeholder="801234567">🇳🇬 Nigeria (+234)</option>
+                <option value="221" data-flag="🇸🇳" data-format="+221" data-placeholder="771234567">🇸🇳 Sénégal (+221)</option>
+                <option value="232" data-flag="🇸🇱" data-format="+232" data-placeholder="77123456">🇸🇱 Sierra Leone (+232)</option>
+                <option value="228" data-flag="🇹🇬" data-format="+228" data-placeholder="90123456">🇹🇬 Togo (+228)</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-8">
+            <label for="{{ field.id_for_label }}" class="form-label">
+                <i class="bi bi-telephone"></i> {{ field.label }}
+            </label>
+            <div class="input-group">
+                <span class="input-group-text country-flag" id="flag_{{ field.id_for_label }}">🌍</span>
+                <input type="tel" id="{{ field.id_for_label }}" name="{{ field.name }}" class="form-control phone-number-input" placeholder="Sélectionnez d'abord un pays" maxlength="15" {% if field.value %}value="{{ field.value }}"{% endif %} {% if field.required %}required{% endif %}>
+                <span class="input-group-text format-info" id="format_{{ field.id_for_label }}">Format</span>
+            </div>
+            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+            {% if field.errors %}<div class="invalid-feedback d-block">{% for error in field.errors %}{{ error }}{% endfor %}</div>{% endif %}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info country-info" id="info_{{ field.id_for_label }}" style="display: none;">
+                <small><i class="bi bi-info-circle"></i> <strong id="country_name_{{ field.id_for_label }}"></strong> - Format: <span id="country_format_{{ field.id_for_label }}"></span></small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const countrySelector = document.getElementById('country_selector_{{ field.id_for_label }}');
+    const countryCodeHidden = document.getElementById('country_code_{{ field.id_for_label }}');
+    const phoneInput = document.getElementById('{{ field.id_for_label }}');
+    const flagSpan = document.getElementById('flag_{{ field.id_for_label }}');
+    const formatSpan = document.getElementById('format_{{ field.id_for_label }}');
+    const infoDiv = document.getElementById('info_{{ field.id_for_label }}');
+    const countryNameSpan = document.getElementById('country_name_{{ field.id_for_label }}');
+    const countryFormatSpan = document.getElementById('country_format_{{ field.id_for_label }}');
+    
+    countrySelector.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const countryCode = this.value;
+        const flag = selectedOption.getAttribute('data-flag');
+        const format = selectedOption.getAttribute('data-format');
+        const placeholder = selectedOption.getAttribute('data-placeholder');
+        const countryName = selectedOption.textContent.split('(')[0].trim();
+        
+        if (countryCode) {
+            // Mettre à jour le champ caché
+            countryCodeHidden.value = countryCode;
+            
+            // Mettre à jour l'interface
+            flagSpan.textContent = flag;
+            formatSpan.textContent = format;
+            
+            // Pré-remplir automatiquement le code pays
+            phoneInput.value = format;
+            phoneInput.placeholder = `Saisissez le numéro local (ex: ${placeholder})`;
+            
+            // Afficher les informations du pays
+            countryNameSpan.textContent = countryName;
+            countryFormatSpan.textContent = format;
+            infoDiv.style.display = 'block';
+            
+            // Activer le champ téléphone et placer le curseur après le code pays
+            phoneInput.disabled = false;
+            
+            // Délai pour mobile pour éviter les problèmes de focus
+            setTimeout(() => {
+                phoneInput.focus();
+                phoneInput.setSelectionRange(format.length, format.length);
+            }, 100);
+        } else {
+            // Réinitialiser
+            countryCodeHidden.value = '';
+            flagSpan.textContent = '🌍';
+            formatSpan.textContent = 'Format';
+            phoneInput.value = '';
+            phoneInput.placeholder = 'Sélectionnez d\'abord un pays';
+            phoneInput.disabled = true;
+            infoDiv.style.display = 'none';
+        }
+    });
+    
+    // Initialiser l'état
+    if (!countrySelector.value) {
+        phoneInput.disabled = true;
+    }
+    
+    // Validation en temps réel
+    phoneInput.addEventListener('input', function() {
+        const value = this.value;
+        const countryCode = countrySelector.value;
+        
+        if (countryCode && value) {
+            // Vérifier que le numéro commence par le code pays
+            if (!value.startsWith('+')) {
+                this.value = '+' + value;
+            }
+            
+            // Vérifier la longueur totale (code pays + numéro)
+            const cleanValue = value.replace(/[^0-9]/g, '');
+            if (cleanValue.length > 15) {
+                this.value = value.substring(0, value.length - 1);
+            }
+            
+            // Validation visuelle
+            const digitsAfterPlus = value.substring(1).replace(/[^0-9]/g, '');
+            if (digitsAfterPlus.length >= 9 && digitsAfterPlus.length <= 15) {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            } else if (digitsAfterPlus.length > 0) {
+                this.classList.remove('is-valid');
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-valid', 'is-invalid');
+            }
+        }
+    });
+});
+</script>

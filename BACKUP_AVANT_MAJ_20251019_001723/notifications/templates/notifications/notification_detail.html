@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ notification.title }} - Notifications{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'notifications:notification_list' %}">
+                                <i class="fas fa-bell me-1"></i>
+                                Notifications
+                            </a>
+                        </li>
+                        <li class="breadcrumb-item active" aria-current="page">Détail</li>
+                    </ol>
+                </nav>
+                <div class="btn-group" role="group">
+                    <a href="{% url 'notifications:notification_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        Retour
+                    </a>
+                    {% if not notification.is_read %}
+                    <button type="button" class="btn btn-outline-success mark-read" data-id="{{ notification.pk }}">
+                        <i class="fas fa-check me-1"></i>
+                        Marquer comme lu
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">
+                            {% if not notification.is_read %}
+                            <i class="fas fa-circle text-danger me-2"></i>
+                            {% endif %}
+                            {{ notification.title }}
+                        </h4>
+                        <div>
+                            <span class="badge 
+                                {% if notification.priority == 'low' %}bg-secondary{% endif %}
+                                {% if notification.priority == 'medium' %}bg-primary{% endif %}
+                                {% if notification.priority == 'high' %}bg-warning{% endif %}
+                                {% if notification.priority == 'urgent' %}bg-danger{% endif %}">
+                                {{ notification.get_priority_display }}
+                            </span>
+                            <span class="badge bg-info ms-2">
+                                {{ notification.get_type_display }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h6 class="card-subtitle mb-3 text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                Créée le {{ notification.created_at|date:"d/m/Y à H:i" }}
+                                {% if notification.is_read %}
+                                <br>
+                                <i class="fas fa-check text-success me-1"></i>
+                                Lue le {{ notification.read_at|date:"d/m/Y à H:i" }}
+                                {% endif %}
+                            </h6>
+                            
+                            <div class="notification-content mb-4">
+                                <p class="card-text">{{ notification.message|linebreaks }}</p>
+                            </div>
+
+                            {% if notification.content_object %}
+                            <div class="related-object mb-4">
+                                <h6>Objet lié :</h6>
+                                <div class="card">
+                                    <div class="card-body">
+                                        <p class="mb-1">
+                                            <strong>Type :</strong> 
+                                            {{ notification.content_type.model|title }}
+                                        </p>
+                                        <p class="mb-1">
+                                            <strong>ID :</strong> 
+                                            {{ notification.object_id }}
+                                        </p>
+                                        {% if notification.content_type.model == 'contrat' %}
+                                        <a href="{% url 'admin:contrats_contrat_change' notification.object_id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-external-link-alt me-1"></i>
+                                            Voir le contrat
+                                        </a>
+                                        {% elif notification.content_type.model == 'paiement' %}
+                                        <a href="{% url 'admin:paiements_paiement_change' notification.object_id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-external-link-alt me-1"></i>
+                                            Voir le paiement
+                                        </a>
+                                        {% elif notification.content_type.model == 'propriete' %}
+                                        <a href="{% url 'admin:proprietes_propriete_change' notification.object_id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-external-link-alt me-1"></i>
+                                            Voir la propriété
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Informations</h6>
+                                </div>
+                                <div class="card-body">
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2">
+                                            <strong>Destinataire :</strong><br>
+                                            {{ notification.recipient.get_full_name|default:notification.recipient.username }}
+                                        </li>
+                                        <li class="mb-2">
+                                            <strong>Type :</strong><br>
+                                            {{ notification.get_type_display }}
+                                        </li>
+                                        <li class="mb-2">
+                                            <strong>Priorité :</strong><br>
+                                            <span class="badge 
+                                                {% if notification.priority == 'low' %}bg-secondary{% endif %}
+                                                {% if notification.priority == 'medium' %}bg-primary{% endif %}
+                                                {% if notification.priority == 'high' %}bg-warning{% endif %}
+                                                {% if notification.priority == 'urgent' %}bg-danger{% endif %}">
+                                                {{ notification.get_priority_display }}
+                                            </span>
+                                        </li>
+                                        <li class="mb-2">
+                                            <strong>État :</strong><br>
+                                            {% if notification.is_read %}
+                                            <span class="badge bg-success">Lue</span>
+                                            {% else %}
+                                            <span class="badge bg-warning">Non lue</span>
+                                            {% endif %}
+                                        </li>
+                                        {% if notification.is_sent_email %}
+                                        <li class="mb-2">
+                                            <strong>Email :</strong><br>
+                                            <span class="badge bg-info">Envoyé</span>
+                                        </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Marquer comme lu
+    $('.mark-read').click(function() {
+        var notificationId = $(this).data('id');
+        var button = $(this);
+        
+        $.ajax({
+            url: '/notifications/' + notificationId + '/mark-read/',
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                if (response.status === 'success') {
+                    button.remove();
+                    location.reload();
+                }
+            },
+            error: function() {
+                alert('Erreur lors du marquage de la notification');
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 

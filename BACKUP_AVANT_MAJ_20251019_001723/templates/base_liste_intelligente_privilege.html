@@ -1,0 +1,331 @@
+{% extends 'base_liste_intelligente.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    /* Styles spécifiques aux boutons de privilège */
+    .privilege-actions-column {
+        min-width: 200px;
+        text-align: center;
+    }
+    
+    .privilege-actions-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        text-align: center;
+        font-weight: bold;
+        padding: 0.5rem;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .privilege-actions-header i {
+        margin-right: 0.5rem;
+    }
+    
+    /* Animation pour les actions de privilège */
+    .privilege-action-animation {
+        animation: slideInRight 0.3s ease-out;
+    }
+    
+    @keyframes slideInRight {
+        from {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    
+    /* Indicateur de statut PRIVILEGE */
+    .privilege-status-badge {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        color: white;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: bold;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        animation: pulse 2s infinite;
+    }
+    
+    /* Responsive pour les boutons de privilège */
+    @media (max-width: 768px) {
+        .privilege-actions-column {
+            min-width: 120px;
+        }
+        
+        .privilege-actions-header {
+            font-size: 0.8rem;
+            padding: 0.25rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block table_content %}
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                {% for column in columns %}
+                <th class="{% if column.sortable %}sortable{% endif %} {% if request.GET.sort == column.field %}sort-{{ request.GET.order|default:'asc' }}{% endif %}"
+                    data-field="{{ column.field }}"
+                    data-order="{{ request.GET.order|default:'asc' }}">
+                    {{ column.label }}
+                </th>
+                {% endfor %}
+                
+                <!-- Colonne des actions standard -->
+                <th>Actions</th>
+                
+                <!-- Colonne des actions de privilège -->
+                {% if is_privilege_user %}
+                <th class="privilege-actions-column">
+                    <div class="privilege-actions-header">
+                        <i class="bi bi-shield-check"></i>
+                        Actions Admin
+                    </div>
+                </th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for object in object_list %}
+            <tr data-id="{{ object.id }}" class="privilege-action-animation">
+                {% for column in columns %}
+                <td>
+                    {% if column.template %}
+                        {% include column.template with object=object column=column %}
+                    {% else %}
+                        {{ object|get_attribute:column.field }}
+                    {% endif %}
+                </td>
+                {% endfor %}
+                
+                <!-- Actions standard -->
+                <td>
+                    <div class="btn-group" role="group">
+                        {% for action in actions %}
+                        <a href="{% url action.url_name object.id %}" 
+                           class="btn btn-sm btn-{{ action.style|default:'outline-primary' }}"
+                           title="{{ action.title }}">
+                            <i class="bi bi-{{ action.icon }}"></i>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </td>
+                
+                <!-- Actions de privilège -->
+                {% if is_privilege_user %}
+                <td class="privilege-actions-column">
+                    {% if privilege_actions and privilege_actions|get_item:object.id %}
+                        {% include 'includes/privilege_buttons.html' with object=object %}
+                    {% else %}
+                        <div class="text-muted">
+                            <small>
+                                <i class="bi bi-dash-circle"></i>
+                                Aucune action
+                            </small>
+                        </div>
+                    {% endif %}
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+// Initialisation des fonctionnalités de privilège
+document.addEventListener('DOMContentLoaded', function() {
+    initializePrivilegeFeatures();
+});
+
+function initializePrivilegeFeatures() {
+    // Ajouter des indicateurs visuels pour les éléments avec actions de privilège
+    const privilegeRows = document.querySelectorAll('.privilege-actions-container');
+    
+    privilegeRows.forEach(container => {
+        const row = container.closest('tr');
+        if (row) {
+            // Ajouter un indicateur de statut PRIVILEGE
+            const statusBadge = document.createElement('div');
+            statusBadge.className = 'privilege-status-badge';
+            statusBadge.innerHTML = '<i class="bi bi-shield-check"></i>';
+            statusBadge.title = 'Actions Admin disponibles';
+            
+            container.style.position = 'relative';
+            container.appendChild(statusBadge);
+            
+            // Ajouter une classe pour le style
+            row.classList.add('has-privilege-actions');
+        }
+    });
+    
+    // Ajouter des événements pour les actions de privilège
+    addPrivilegeEventListeners();
+}
+
+function addPrivilegeEventListeners() {
+    // Écouter les clics sur les boutons de privilège
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.btn-delete-privilege')) {
+            e.preventDefault();
+            const button = e.target.closest('.btn-delete-privilege');
+            handlePrivilegeDelete(button);
+        }
+        
+        if (e.target.closest('.btn-disable-privilege')) {
+            e.preventDefault();
+            const button = e.target.closest('.btn-disable-privilege');
+            handlePrivilegeDisable(button);
+        }
+    });
+}
+
+function handlePrivilegeDelete(button) {
+    const objectId = button.dataset.objectId;
+    const objectName = button.dataset.objectName;
+    const modelName = button.dataset.modelName;
+    
+    // Afficher une confirmation personnalisée
+    if (confirm(`Êtes-vous sûr de vouloir supprimer définitivement "${objectName}" ?\n\nCette action est irréversible et sera tracée dans l'audit.`)) {
+        performPrivilegeAction('delete', objectId, modelName, objectName, button);
+    }
+}
+
+function handlePrivilegeDisable(button) {
+    const objectId = button.dataset.objectId;
+    const objectName = button.dataset.objectName;
+    const modelName = button.dataset.modelName;
+    const reason = button.dataset.reason || 'référencé ailleurs';
+    
+    // Afficher une confirmation personnalisée
+    if (confirm(`Êtes-vous sûr de vouloir désactiver "${objectName}" ?\n\nRaison: ${reason}\n\nCette action sera tracée dans l'audit.`)) {
+        performPrivilegeAction('disable', objectId, modelName, objectName, button);
+    }
+}
+
+function performPrivilegeAction(actionType, objectId, modelName, objectName, button) {
+    // Afficher un indicateur de chargement
+    const originalContent = button.innerHTML;
+    button.innerHTML = '<i class="bi bi-hourglass-split"></i> <span class="d-none d-sm-inline">En cours...</span>';
+    button.disabled = true;
+    
+    // Construire l'URL de l'action
+    const actionUrl = `/utilisateurs/privilege/${actionType}/${modelName}/${objectId}/`;
+    
+    // Effectuer la requête AJAX
+    fetch(actionUrl, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            action: actionType,
+            object_id: objectId,
+            model_name: modelName
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showPrivilegeSuccess(data.message, actionType, button);
+        } else {
+            showPrivilegeError(data.message, button, originalContent);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur lors de l\'action de privilège:', error);
+        showPrivilegeError('Une erreur est survenue lors de l\'exécution de l\'action.', button, originalContent);
+    });
+}
+
+function showPrivilegeSuccess(message, actionType, button) {
+    // Afficher un message de succès
+    const alert = createAlert('success', 'Action réussie', message);
+    document.querySelector('.intelligent-list-container').insertBefore(alert, document.querySelector('.intelligent-list-container').firstChild);
+    
+    // Mettre à jour l'interface selon l'action
+    if (actionType === 'delete') {
+        const row = button.closest('tr');
+        row.style.opacity = '0.5';
+        row.style.backgroundColor = '#f8f9fa';
+        setTimeout(() => row.remove(), 1000);
+    } else if (actionType === 'disable') {
+        const row = button.closest('tr');
+        row.style.opacity = '0.7';
+        row.style.backgroundColor = '#f8f9fa';
+        
+        const container = button.closest('.privilege-actions-container');
+        container.innerHTML = `
+            <div class="text-muted">
+                <i class="bi bi-pause-circle-fill text-secondary"></i>
+                <small>Désactivé</small>
+            </div>
+        `;
+    }
+    
+    // Auto-fermeture de l'alerte
+    setTimeout(() => alert.remove(), 5000);
+}
+
+function showPrivilegeError(message, button, originalContent) {
+    // Afficher un message d'erreur
+    const alert = createAlert('danger', 'Erreur', message);
+    document.querySelector('.intelligent-list-container').insertBefore(alert, document.querySelector('.intelligent-list-container').firstChild);
+    
+    // Restaurer le bouton
+    button.innerHTML = originalContent;
+    button.disabled = false;
+    
+    // Auto-fermeture de l'alerte
+    setTimeout(() => alert.remove(), 5000);
+}
+
+function createAlert(type, title, message) {
+    const alertHtml = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            <strong>${title}:</strong> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `;
+    
+    const alertElement = document.createElement('div');
+    alertElement.innerHTML = alertHtml;
+    return alertElement.firstElementChild;
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

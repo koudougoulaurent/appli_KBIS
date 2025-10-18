@@ -1,0 +1,370 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - KBIS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .search-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .search-input {
+        border-radius: 25px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1.5rem;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .search-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .btn-search {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 25px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        color: white;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-search:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    
+    .result-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .result-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    
+    .result-header {
+        background: #f8f9fa;
+        border-radius: 10px 10px 0 0;
+        padding: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .result-body {
+        padding: 1.5rem;
+    }
+    
+    .badge-status {
+        font-size: 0.8rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+    }
+    
+    .no-results {
+        text-align: center;
+        padding: 3rem;
+        color: #6c757d;
+    }
+    
+    .search-stats {
+        background: #e3f2fd;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 2rem;
+        border-left: 4px solid #2196f3;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-search text-primary"></i>
+                        {{ title }}
+                    </h1>
+                    <p class="text-muted mb-0">Recherchez des paiements par locataire, propriété, type ou statut</p>
+                </div>
+                <div>
+                    <a href="{% url 'paiements:liste' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Retour aux Paiements
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulaire de recherche -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="search-card">
+                <div class="search-header">
+                    <h4 class="mb-0">
+                        <i class="bi bi-search"></i>
+                        Recherche Intelligente
+                    </h4>
+                    <p class="mb-0 mt-2">Tapez votre recherche et appuyez sur Entrée</p>
+                </div>
+
+                <form method="get" class="d-flex gap-3">
+                    <div class="flex-grow-1">
+                        <input type="text" 
+                               name="q" 
+                               value="{{ query }}" 
+                               class="form-control search-input" 
+                               placeholder="Rechercher par nom, prénom, adresse, type de paiement ou statut..."
+                               autofocus>
+                    </div>
+                    <button type="submit" class="btn btn-search">
+                        <i class="bi bi-search"></i> Rechercher
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques de recherche -->
+    {% if query %}
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="search-stats">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>Résultats pour :</strong> "{{ query }}"
+                    </div>
+                    <div>
+                        <span class="badge bg-primary">{{ paiements|length }} résultat{{ paiements|length|pluralize }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Résultats -->
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            {% if query %}
+                {% if paiements %}
+                    {% for paiement in paiements %}
+                    <div class="result-card">
+                        <div class="result-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-0">
+                                        <i class="bi bi-credit-card"></i>
+                                        {{ paiement.get_type_paiement_display }}
+                                    </h5>
+                                    <small class="text-muted">Référence: {{ paiement.reference_paiement }}</small>
+                                </div>
+                                <div>
+                                    <span class="badge badge-status 
+                                        {% if paiement.statut == 'valide' %}bg-success
+                                        {% elif paiement.statut == 'en_attente' %}bg-warning
+                                        {% elif paiement.statut == 'refuse' %}bg-danger
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ paiement.get_statut_display }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="result-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-primary mb-2">
+                                        <i class="bi bi-person"></i> Locataire
+                                    </h6>
+                                    <p class="mb-1">
+                                        <strong>{{ paiement.contrat.locataire.nom }} {{ paiement.contrat.locataire.prenom }}</strong>
+                                    </p>
+                                    <small class="text-muted">
+                                        Contrat: {{ paiement.contrat.numero_contrat }}
+                                    </small>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-primary mb-2">
+                                        <i class="bi bi-house"></i> Propriété
+                                    </h6>
+                                    <p class="mb-1">
+                                        <strong>{{ paiement.contrat.propriete.titre }}</strong>
+                                    </p>
+                                    <small class="text-muted">
+                                        {{ paiement.contrat.propriete.adresse }}, {{ paiement.contrat.propriete.ville }}
+                                    </small>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <h6 class="text-success mb-1">
+                                        <i class="bi bi-currency-exchange"></i> Montant
+                                    </h6>
+                                    <p class="mb-0 h5 text-success">
+                                        {{ paiement.montant|floatformat:0 }} F CFA
+                                    </p>
+                                </div>
+                                <div class="col-md-3">
+                                    <h6 class="text-info mb-1">
+                                        <i class="bi bi-calendar"></i> Date
+                                    </h6>
+                                    <p class="mb-0">
+                                        {{ paiement.date_paiement|date:"d/m/Y" }}
+                                    </p>
+                                </div>
+                                <div class="col-md-3">
+                                    <h6 class="text-warning mb-1">
+                                        <i class="bi bi-clock"></i> Créé le
+                                    </h6>
+                                    <p class="mb-0">
+                                        {{ paiement.created_at|date:"d/m/Y H:i" }}
+                                    </p>
+                                </div>
+                                <div class="col-md-3">
+                                    <h6 class="text-secondary mb-1">
+                                        <i class="bi bi-person-check"></i> Créé par
+                                    </h6>
+                                    <p class="mb-0">
+                                        {{ paiement.cree_par.get_full_name|default:paiement.cree_par.username }}
+                                    </p>
+                                </div>
+                            </div>
+                            {% if paiement.notes %}
+                            <hr>
+                            <div class="row">
+                                <div class="col-12">
+                                    <h6 class="text-muted mb-1">
+                                        <i class="bi bi-chat-text"></i> Commentaire
+                                    </h6>
+                                    <p class="mb-0 text-muted">{{ paiement.notes }}</p>
+                                </div>
+                            </div>
+                            {% endif %}
+                            <hr>
+                            <div class="d-flex justify-content-end gap-2">
+                                <a href="{% url 'paiements:detail' paiement.id %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-eye"></i> Voir détails
+                                </a>
+                                {% if paiement.statut == 'en_attente' %}
+                                <a href="{% url 'paiements:valider_paiement' paiement.id %}" class="btn btn-success btn-sm">
+                                    <i class="bi bi-check-circle"></i> Valider
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="result-card">
+                        <div class="no-results">
+                            <i class="bi bi-search display-1 text-muted"></i>
+                            <h4 class="mt-3">Aucun résultat trouvé</h4>
+                            <p class="text-muted">
+                                Aucun paiement ne correspond à votre recherche "{{ query }}".
+                                <br>Essayez avec d'autres termes de recherche.
+                            </p>
+                            <a href="{% url 'paiements:recherche_intelligente' %}" class="btn btn-primary">
+                                <i class="bi bi-arrow-clockwise"></i> Nouvelle recherche
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="result-card">
+                    <div class="no-results">
+                        <i class="bi bi-search display-1 text-muted"></i>
+                        <h4 class="mt-3">Recherche intelligente des paiements</h4>
+                        <p class="text-muted">
+                            Utilisez la barre de recherche ci-dessus pour trouver des paiements.
+                            <br>Vous pouvez rechercher par :
+                        </p>
+                        <div class="row justify-content-center">
+                            <div class="col-md-10">
+                                <div class="row text-start">
+                                    <div class="col-md-4">
+                                        <ul class="list-unstyled">
+                                            <li><i class="bi bi-check text-success"></i> Nom du locataire</li>
+                                            <li><i class="bi bi-check text-success"></i> Prénom du locataire</li>
+                                            <li><i class="bi bi-check text-success"></i> Adresse de la propriété</li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <ul class="list-unstyled">
+                                            <li><i class="bi bi-check text-success"></i> Titre de la propriété</li>
+                                            <li><i class="bi bi-check text-success"></i> Ville de la propriété</li>
+                                            <li><i class="bi bi-check text-success"></i> Numéro de contrat</li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <ul class="list-unstyled">
+                                            <li><i class="bi bi-check text-success"></i> Type de paiement</li>
+                                            <li><i class="bi bi-check text-success"></i> Statut du paiement</li>
+                                            <li><i class="bi bi-check text-success"></i> <strong>Référence de paiement</strong></li>
+                                            <li><i class="bi bi-check text-success"></i> Commentaire</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus sur le champ de recherche
+    const searchInput = document.querySelector('input[name="q"]');
+    if (searchInput && !searchInput.value) {
+        searchInput.focus();
+    }
+    
+    // Soumission automatique du formulaire avec Enter
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            this.form.submit();
+        }
+    });
+    
+    // Animation des cartes de résultats
+    const resultCards = document.querySelectorAll('.result-card');
+    resultCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            card.style.transition = 'all 0.3s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+</script>
+{% endblock %}

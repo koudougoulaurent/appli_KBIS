@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}Gestion des Charges Déductibles{% endblock %}
+
+{% block extra_css %}
+<style>
+    .charge-card {
+        border-left: 4px solid #007bff;
+        transition: all 0.3s ease;
+    }
+    .charge-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .status-badge {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+    }
+    .status-en_attente { background-color: #ffc107; color: #000; }
+    .status-validee { background-color: #28a745; color: #fff; }
+    .status-deduite { background-color: #17a2b8; color: #fff; }
+    .status-refusee { background-color: #dc3545; color: #fff; }
+    .status-annulee { background-color: #6c757d; color: #fff; }
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- En-tête -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1><i class="bi bi-receipt"></i> Gestion des Charges Déductibles</h1>
+                    <p class="text-muted">Gérez les charges avancées par les locataires</p>
+                </div>
+                <div>
+                    <a href="{% url 'paiements:charge_deductible_ajouter' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Nouvelle Charge
+                    </a>
+                    <a href="{% url 'paiements:liste' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Retour aux Paiements
+                    </a>
+                </div>
+            </div>
+
+            <!-- Statistiques -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card stats-card">
+                        <div class="card-body text-center">
+                            <h3>{{ total_charges }}</h3>
+                            <p class="mb-0">Total Charges</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <h3>{{ total_montant|currency_short }}</h3>
+                            <p class="mb-0">Montant Total</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body text-center">
+                            <h3>{{ statuts_counts.en_attente|default:0 }}</h3>
+                            <p class="mb-0">En Attente</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <h3>{{ statuts_counts.validee|default:0 }}</h3>
+                            <p class="mb-0">Validées</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtres -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="search" class="form-label">Recherche</label>
+                            <input type="text" class="form-control" name="search" value="{{ search }}" 
+                                   placeholder="Libellé, description, contrat...">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="statut" class="form-label">Statut</label>
+                            <select name="statut" class="form-select">
+                                <option value="">Tous les statuts</option>
+                                <option value="en_attente" {% if statut_filter == 'en_attente' %}selected{% endif %}>En attente</option>
+                                <option value="validee" {% if statut_filter == 'validee' %}selected{% endif %}>Validée</option>
+                                <option value="deduite" {% if statut_filter == 'deduite' %}selected{% endif %}>Déduite</option>
+                                <option value="refusee" {% if statut_filter == 'refusee' %}selected{% endif %}>Refusée</option>
+                                <option value="annulee" {% if statut_filter == 'annulee' %}selected{% endif %}>Annulée</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="contrat" class="form-label">Contrat</label>
+                            <select name="contrat" class="form-select">
+                                <option value="">Tous les contrats</option>
+                                {% for contrat in contrats %}
+                                    <option value="{{ contrat.id }}" {% if contrat_filter == contrat.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ contrat.numero_contrat }} - {{ contrat.locataire.nom }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-outline-primary me-2">
+                                <i class="bi bi-search"></i> Filtrer
+                            </button>
+                            <a href="{% url 'paiements:charges_deductibles_liste' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Reset
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Liste des charges -->
+            <div class="row">
+                {% for charge in page_obj %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card charge-card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="card-title mb-0">{{ charge.libelle }}</h6>
+                            <span class="badge status-{{ charge.statut }} status-badge">
+                                {{ charge.get_statut_display }}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-2">
+                                <strong class="text-success">{{ charge.montant|currency_format }}</strong>
+                                <span class="badge bg-secondary ms-2">{{ charge.get_type_charge_display }}</span>
+                            </div>
+                            
+                            <p class="text-muted small mb-2">
+                                <i class="bi bi-file-text"></i> {{ charge.contrat.numero_contrat }}<br>
+                                <i class="bi bi-person"></i> {{ charge.contrat.locataire.nom }} {{ charge.contrat.locataire.prenom }}<br>
+                                <i class="bi bi-calendar"></i> {{ charge.date_charge|date:"d/m/Y" }}
+                            </p>
+                            
+                            {% if charge.description %}
+                            <p class="small text-muted">{{ charge.description|truncatewords:15 }}</p>
+                            {% endif %}
+                            
+                            {% if charge.fournisseur %}
+                            <p class="small"><i class="bi bi-building"></i> {{ charge.fournisseur }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer">
+                            <div class="btn-group w-100" role="group">
+                                <a href="{% url 'paiements:charge_deductible_detail' charge.id %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> Voir
+                                </a>
+                                
+                                {% if charge.statut == 'en_attente' %}
+                                <a href="{% url 'paiements:charge_deductible_valider' charge.id %}" 
+                                   class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-check-circle"></i> Valider
+                                </a>
+                                <a href="{% url 'paiements:charge_deductible_refuser' charge.id %}" 
+                                   class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-x-circle"></i> Refuser
+                                </a>
+                                {% endif %}
+                                
+                                {% if charge.statut in 'en_attente,validee' %}
+                                <a href="{% url 'paiements:charge_deductible_modifier' charge.id %}" 
+                                   class="btn btn-sm btn-outline-warning">
+                                    <i class="bi bi-pencil"></i> Modifier
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info text-center">
+                        <i class="bi bi-info-circle"></i>
+                        <h5>Aucune charge déductible trouvée</h5>
+                        <p>Commencez par <a href="{% url 'paiements:charge_deductible_ajouter' %}">créer une nouvelle charge déductible</a>.</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <nav aria-label="Navigation des pages">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if statut_filter %}&statut={{ statut_filter }}{% endif %}{% if contrat_filter %}&contrat={{ contrat_filter }}{% endif %}">
+                                Précédent
+                            </a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if statut_filter %}&statut={{ statut_filter }}{% endif %}{% if contrat_filter %}&contrat={{ contrat_filter }}{% endif %}">
+                                    {{ num }}
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if statut_filter %}&statut={{ statut_filter }}{% endif %}{% if contrat_filter %}&contrat={{ contrat_filter }}{% endif %}">
+                                Suivant
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

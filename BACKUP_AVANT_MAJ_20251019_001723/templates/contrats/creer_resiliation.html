@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Créer une Résiliation - Gestion Immobilière{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="bi bi-x-circle text-primary"></i>
+        Créer une Résiliation de Contrat
+    </h1>
+    <a href="{% url 'contrats:liste_resiliations' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Retour à la liste
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-form"></i> Informations de la Résiliation
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Contrat à Résilier <span class="text-danger">*</span>
+                        </label>
+                        <div class="form-control-plaintext">
+                            <strong>{{ contrat.numero_contrat }}</strong> - {{ contrat.propriete.titre }} ({{ contrat.locataire.get_nom_complet }})
+                        </div>
+                        <input type="hidden" name="contrat_id" value="{{ contrat.id }}">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.date_resiliation.id_for_label }}" class="form-label">
+                                    Date de Résiliation <span class="text-danger">*</span>
+                                </label>
+                                {{ form.date_resiliation }}
+                                {% if form.date_resiliation.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.date_resiliation.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.type_resiliation.id_for_label }}" class="form-label">
+                                    Type de Résiliation <span class="text-danger">*</span>
+                                </label>
+                                {{ form.type_resiliation }}
+                                {% if form.type_resiliation.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.type_resiliation.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.motif_resiliation.id_for_label }}" class="form-label">
+                            Motif de Résiliation <span class="text-danger">*</span>
+                        </label>
+                        {{ form.motif_resiliation }}
+                        {% if form.motif_resiliation.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.motif_resiliation.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.etat_lieux_sortie.id_for_label }}" class="form-label">
+                            État des Lieux de Sortie
+                        </label>
+                        {{ form.etat_lieux_sortie }}
+                        {% if form.etat_lieux_sortie.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.etat_lieux_sortie.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    {{ form.caution_remboursee }}
+                                    <label class="form-check-label" for="{{ form.caution_remboursee.id_for_label }}">
+                                        Caution remboursée
+                                    </label>
+                                </div>
+                                {% if form.caution_remboursee.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.caution_remboursee.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.montant_remboursement.id_for_label }}" class="form-label">
+                                    Montant de Remboursement
+                                </label>
+                                {{ form.montant_remboursement }}
+                                {% if form.montant_remboursement.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.montant_remboursement.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">
+                                    Requis si la caution est remboursée
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.date_remboursement.id_for_label }}" class="form-label">
+                            Date de Remboursement
+                        </label>
+                        {{ form.date_remboursement }}
+                        {% if form.date_remboursement.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.date_remboursement.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            Requis si la caution est remboursée
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Créer la Résiliation
+                        </button>
+                        <a href="{% url 'contrats:liste_resiliations' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Annuler
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle"></i> Aide
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6>Créer une résiliation</h6>
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Sélectionnez le contrat à résilier
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Choisissez la date de résiliation
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Précisez le type et le motif
+                    </li>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        Indiquez si la caution est remboursée
+                    </li>
+                </ul>
+                
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Attention :</strong> Cette action est définitive et modifiera le statut du contrat.
+                </div>
+            </div>
+        </div>
+
+        <!-- Types de résiliation -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-list-ul"></i> Types de Résiliation
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <span class="badge bg-info">Par le locataire</span>
+                        <br><small class="text-muted">Demande du locataire</small>
+                    </li>
+                    <li class="mb-2">
+                        <span class="badge bg-warning">Par le bailleur</span>
+                        <br><small class="text-muted">Demande du bailleur</small>
+                    </li>
+                    <li class="mb-2">
+                        <span class="badge bg-success">Accord mutuel</span>
+                        <br><small class="text-muted">Accord des deux parties</small>
+                    </li>
+                    <li class="mb-2">
+                        <span class="badge bg-secondary">Fin de bail</span>
+                        <br><small class="text-muted">Échéance du contrat</small>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cautionCheckbox = document.getElementById('{{ form.caution_remboursee.id_for_label }}');
+    const montantInput = document.getElementById('{{ form.montant_remboursement.id_for_label }}');
+    const dateInput = document.getElementById('{{ form.date_remboursement.id_for_label }}');
+    
+    function toggleRemboursementFields() {
+        if (cautionCheckbox.checked) {
+            montantInput.removeAttribute('disabled');
+            dateInput.removeAttribute('disabled');
+            montantInput.parentElement.parentElement.style.display = 'block';
+            dateInput.parentElement.style.display = 'block';
+        } else {
+            montantInput.setAttribute('disabled', 'disabled');
+            dateInput.setAttribute('disabled', 'disabled');
+            montantInput.value = '';
+            dateInput.value = '';
+        }
+    }
+    
+    cautionCheckbox.addEventListener('change', toggleRemboursementFields);
+    toggleRemboursementFields(); // Initialiser l'état
+});
+</script>
+{% endblock %}
