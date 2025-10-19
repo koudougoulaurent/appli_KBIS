@@ -43,25 +43,25 @@ class ServiceSynchronisationAvances:
                 )
                 
                 # Créer ou mettre à jour l'avance
-                    # Calculer le reste
-                    montant_reste = montant_avance % loyer_mensuel
-                    
-                    avance, created = AvanceLoyer.objects.get_or_create(
-                        paiement=paiement,
-                        defaults={
-                            'contrat': paiement.contrat,
-                            'montant_avance': montant_avance,
-                            'loyer_mensuel': loyer_mensuel,
-                            'nombre_mois_couverts': nombre_mois_couverts,
-                            'montant_restant': montant_avance,
-                            'montant_reste': montant_reste,
-                            'date_avance': paiement.date_paiement,
-                            'mois_debut_couverture': mois_debut,
-                            'mois_fin_couverture': mois_fin,
-                            'statut': 'active',
-                            'notes': f"Avance synchronisée avec paiement {paiement.id}",
-                        }
-                    )
+                # Calculer le reste
+                montant_reste = montant_avance % loyer_mensuel
+                
+                avance, created = AvanceLoyer.objects.get_or_create(
+                    paiement=paiement,
+                    defaults={
+                        'contrat': paiement.contrat,
+                        'montant_avance': montant_avance,
+                        'loyer_mensuel': loyer_mensuel,
+                        'nombre_mois_couverts': nombre_mois_couverts,
+                        'montant_restant': montant_avance,
+                        'montant_reste': montant_reste,
+                        'date_avance': paiement.date_paiement,
+                        'mois_debut_couverture': mois_debut,
+                        'mois_fin_couverture': mois_fin,
+                        'statut': 'active',
+                        'notes': f"Avance synchronisée avec paiement {paiement.id}",
+                    }
+                )
                 
                 if not created:
                     # Mettre à jour l'avance existante
