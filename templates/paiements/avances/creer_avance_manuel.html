@@ -509,13 +509,37 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             // Réinitialiser le formulaire
-            contratSelect.value = '';
+            if (contratSelect) {
+                contratSelect.value = '';
+                console.log('✅ Contrat réinitialisé');
+            }
+            
             masquerAvertissementAvanceExistante();
-            document.getElementById('loyer-mensuel-display').style.display = 'none';
-            document.getElementById('calculs-automatiques').style.display = 'none';
-            montantAvance.value = '';
-            document.getElementById('id_notes').value = '';
-            console.log('✅ Formulaire réinitialisé');
+            
+            const loyerDisplay = document.getElementById('loyer-mensuel-display');
+            if (loyerDisplay) {
+                loyerDisplay.style.display = 'none';
+                console.log('✅ Affichage loyer masqué');
+            }
+            
+            const calculsDisplay = document.getElementById('calculs-automatiques');
+            if (calculsDisplay) {
+                calculsDisplay.style.display = 'none';
+                console.log('✅ Calculs automatiques masqués');
+            }
+            
+            if (montantAvance) {
+                montantAvance.value = '';
+                console.log('✅ Montant avance réinitialisé');
+            }
+            
+            const notesField = document.getElementById('id_notes');
+            if (notesField) {
+                notesField.value = '';
+                console.log('✅ Notes réinitialisées');
+            }
+            
+            console.log('✅ Formulaire réinitialisé avec succès');
         } catch (error) {
             console.error('❌ Erreur lors de l\'action Annuler:', error);
         }
