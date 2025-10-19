@@ -396,6 +396,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         detailsDiv.innerHTML = message;
         warningDiv.style.display = 'block';
+        
+        // Reconfigurer les boutons après l'affichage de l'avertissement
+        setTimeout(() => {
+            setupWarningButtons();
+        }, 100);
     }
     
     function masquerAvertissementAvanceExistante() {
@@ -445,25 +450,43 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Événements pour les boutons d'avertissement
-    document.getElementById('btn-continuer-avance').addEventListener('click', function() {
-        // Masquer l'avertissement et permettre la création
-        masquerAvertissementAvanceExistante();
-        // Optionnel : ajouter une note dans le formulaire
-        const notesField = document.getElementById('id_notes');
-        if (notesField) {
-            notesField.value = (notesField.value + '\n\n[PROLONGATION] - Avance supplémentaire ajoutée à une avance existante.').trim();
+    function setupWarningButtons() {
+        const btnContinuer = document.getElementById('btn-continuer-avance');
+        const btnAnnuler = document.getElementById('btn-annuler-avance');
+        
+        if (btnContinuer) {
+            btnContinuer.addEventListener('click', function() {
+                console.log('Bouton Continuer cliqué');
+                // Masquer l'avertissement et permettre la création
+                masquerAvertissementAvanceExistante();
+                // Optionnel : ajouter une note dans le formulaire
+                const notesField = document.getElementById('id_notes');
+                if (notesField) {
+                    notesField.value = (notesField.value + '\n\n[PROLONGATION] - Avance supplémentaire ajoutée à une avance existante.').trim();
+                }
+            });
+        } else {
+            console.log('Bouton Continuer non trouvé');
         }
-    });
+        
+        if (btnAnnuler) {
+            btnAnnuler.addEventListener('click', function() {
+                console.log('Bouton Annuler cliqué');
+                // Réinitialiser le formulaire
+                contratSelect.value = '';
+                masquerAvertissementAvanceExistante();
+                document.getElementById('loyer-mensuel-display').style.display = 'none';
+                document.getElementById('calculs-automatiques').style.display = 'none';
+                montantAvance.value = '';
+                document.getElementById('id_notes').value = '';
+            });
+        } else {
+            console.log('Bouton Annuler non trouvé');
+        }
+    }
     
-    document.getElementById('btn-annuler-avance').addEventListener('click', function() {
-        // Réinitialiser le formulaire
-        contratSelect.value = '';
-        masquerAvertissementAvanceExistante();
-        document.getElementById('loyer-mensuel-display').style.display = 'none';
-        document.getElementById('calculs-automatiques').style.display = 'none';
-        montantAvance.value = '';
-        document.getElementById('id_notes').value = '';
-    });
+    // Appeler la fonction de configuration des boutons
+    setupWarningButtons();
     
     // Initialisation
     toggleModeSelection();
