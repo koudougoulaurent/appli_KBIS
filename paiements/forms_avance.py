@@ -244,7 +244,7 @@ class PaiementAvanceForm(forms.ModelForm):
         return nombre_mois, reste
 
 
-class FiltreAvanceForm(forms.Form):
+class PaiementAvanceForm(forms.ModelForm):
     """
     Formulaire de filtrage des avances
     """
