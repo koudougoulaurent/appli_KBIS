@@ -481,15 +481,15 @@ def creer_avance(request):
             for field, errors in form.errors.items():
                 for error in errors:
                     if field == 'contrat':
-                        messages.error(request, "❌ Contrat : Veuillez sélectionner un contrat valide.")
+                        messages.error(request, "ERREUR - Contrat : Veuillez sélectionner un contrat valide.")
                     elif field == 'montant_avance':
-                        messages.error(request, "❌ Montant : Le montant doit être un nombre positif.")
+                        messages.error(request, "ERREUR - Montant : Le montant doit être un nombre positif.")
                     elif field == 'date_avance':
-                        messages.error(request, "❌ Date : Veuillez sélectionner une date valide.")
+                        messages.error(request, "ERREUR - Date : Veuillez sélectionner une date valide.")
                     elif field == 'notes':
-                        messages.error(request, f"❌ Notes : {error}")
+                        messages.error(request, f"ERREUR - Notes : {error}")
                     else:
-                        messages.error(request, f"❌ {field} : {error}")
+                        messages.error(request, f"ERREUR - {field} : {error}")
         
         if form.is_valid():
             try:
@@ -605,20 +605,20 @@ def creer_avance(request):
                 # Message de confirmation détaillé
                 if avances_contrat.count() > 1:
                     messages.success(request, 
-                        f"✅ AVANCE DE PROLONGATION CRÉÉE AVEC SUCCÈS !\n\n"
-                        f"💰 Montant : {avance.montant_avance:,.0f} F CFA\n"
-                        f"📅 Mois couverts par cette avance : {avance.nombre_mois_couverts}\n"
-                        f"📊 TOTAL CONTRAT : {avances_contrat.count()} avances actives\n"
-                        f"📅 TOTAL MOIS COUVERTS : {total_mois_couverts} mois\n"
-                        f"💰 MONTANT RESTANT TOTAL : {total_montant_restant:,.0f} F CFA\n\n"
-                        f"🔄 Synchronisation automatique effectuée !"
+                        f"SUCCES - AVANCE DE PROLONGATION CREE AVEC SUCCES !\n\n"
+                        f"Montant : {avance.montant_avance:,.0f} F CFA\n"
+                        f"Mois couverts par cette avance : {avance.nombre_mois_couverts}\n"
+                        f"TOTAL CONTRAT : {avances_contrat.count()} avances actives\n"
+                        f"TOTAL MOIS COUVERTS : {total_mois_couverts} mois\n"
+                        f"MONTANT RESTANT TOTAL : {total_montant_restant:,.0f} F CFA\n\n"
+                        f"Synchronisation automatique effectuee !"
                     )
                 else:
                     messages.success(request, 
-                        f"✅ AVANCE CRÉÉE AVEC SUCCÈS !\n\n"
-                        f"💰 Montant : {avance.montant_avance:,.0f} F CFA\n"
-                        f"📅 Mois couverts : {avance.nombre_mois_couverts}\n"
-                        f"🔄 Intégrée au système de paiement !"
+                        f"SUCCES - AVANCE CREE AVEC SUCCES !\n\n"
+                        f"Montant : {avance.montant_avance:,.0f} F CFA\n"
+                        f"Mois couverts : {avance.nombre_mois_couverts}\n"
+                        f"Integree au systeme de paiement !"
                     )
                 
                 return redirect('paiements:avances:detail_avance', avance_id=avance.id)
@@ -629,13 +629,13 @@ def creer_avance(request):
                 
                 # Messages d'erreur plus clairs selon le type d'erreur
                 if "contrat" in str(e).lower():
-                    messages.error(request, "❌ Erreur de contrat : Le contrat sélectionné n'est pas valide.")
+                    messages.error(request, "ERREUR - Contrat : Le contrat selectionne n'est pas valide.")
                 elif "montant" in str(e).lower():
-                    messages.error(request, "❌ Erreur de montant : Le montant saisi n'est pas valide.")
+                    messages.error(request, "ERREUR - Montant : Le montant saisi n'est pas valide.")
                 elif "date" in str(e).lower():
-                    messages.error(request, "❌ Erreur de date : La date sélectionnée n'est pas valide.")
+                    messages.error(request, "ERREUR - Date : La date selectionnee n'est pas valide.")
                 else:
-                    messages.error(request, f"❌ Erreur inattendue : {str(e)}")
+                    messages.error(request, f"ERREUR - Erreur inattendue : {str(e)}")
     else:
         form = AvanceLoyerForm()
     

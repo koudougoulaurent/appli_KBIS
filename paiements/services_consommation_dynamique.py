@@ -99,12 +99,12 @@ class ServiceConsommationDynamique:
             # Un mois est considéré comme écoulé s'il est strictement antérieur au mois actuel
             if mois_courant < mois_actuel and not avance.est_mois_consomme(mois_courant):
                 mois_a_consommer.append(mois_courant)
-                print(f"📅 Mois à consommer: {mois_courant} (mois actuel: {mois_actuel})")
+                print(f"[CONSO] Mois à consommer: {mois_courant} (mois actuel: {mois_actuel})")
             
             # Passer au mois suivant
             mois_courant = mois_courant + relativedelta(months=1)
         
-        print(f"🔍 Avance {avance.id}: {len(mois_a_consommer)} mois à consommer sur {avance.nombre_mois_couverts} total")
+        print(f"[AVANCE] Avance {avance.id}: {len(mois_a_consommer)} mois à consommer sur {avance.nombre_mois_couverts} total")
         return mois_a_consommer
     
     @classmethod
