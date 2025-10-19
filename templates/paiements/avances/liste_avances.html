@@ -239,9 +239,15 @@
                                 <a href="/paiements/avances/rapport-historique-pdf/{{ avance.contrat.id }}/" class="action-btn btn btn-success">
                                     <i class="bi bi-file-pdf"></i> Rapport PDF
                                 </a>
+                                {% if avance.paiement %}
+                                <a href="{% url 'paiements:generer_recu_unifie_a5' avance.paiement.id %}" class="action-btn btn btn-warning" target="_blank">
+                                    <i class="bi bi-receipt"></i> Reçu KBIS
+                                </a>
+                                {% else %}
                                 <a href="/paiements/avances/recu/{{ avance.id }}/" class="action-btn btn btn-warning" target="_blank">
                                     <i class="bi bi-receipt"></i> Reçu KBIS
                                 </a>
+                                {% endif %}
                                 {% if avance.statut == 'active' %}
                                 <a href="/paiements/avances/ajouter/?contrat={{ avance.contrat.id }}" class="action-btn btn btn-primary">
                                     <i class="bi bi-cash-coin"></i> Nouveau Paiement

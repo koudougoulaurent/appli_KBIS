@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="bi bi-arrow-left-right me-2"></i>{{ title }}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    {% if comparaisons %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Avance ID</th>
+                                        <th>Contrat</th>
+                                        <th>Montant</th>
+                                        <th>Ancien - Mois</th>
+                                        <th>Nouveau - Mois</th>
+                                        <th>Ancien - Période</th>
+                                        <th>Nouveau - Période</th>
+                                        <th>Changements</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for comp in comparaisons %}
+                                        <tr class="{% if comp.changements %}table-warning{% endif %}">
+                                            <td>{{ comp.avance.id }}</td>
+                                            <td>{{ comp.avance.contrat.numero_contrat }}</td>
+                                            <td>{{ comp.avance.montant_avance|floatformat:0 }} F CFA</td>
+                                            <td>{{ comp.ancien.nombre_mois }}</td>
+                                            <td>
+                                                <strong>{{ comp.nouveau.nombre_mois }}</strong>
+                                                {% if comp.ancien.nombre_mois != comp.nouveau.nombre_mois %}
+                                                    <span class="badge bg-{% if comp.nouveau.nombre_mois > comp.ancien.nombre_mois %}success{% else %}danger{% endif %}">
+                                                        {% if comp.nouveau.nombre_mois > comp.ancien.nombre_mois %}+{% else %}-{% endif %}{{ comp.nouveau.nombre_mois|add:comp.ancien.nombre_mois|add:"-"|add:comp.ancien.nombre_mois }}
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ comp.ancien.date_debut|date:"M Y" }} - {{ comp.ancien.date_fin|date:"M Y" }}
+                                            </td>
+                                            <td>
+                                                <strong>{{ comp.nouveau.date_debut|date:"M Y" }} - {{ comp.nouveau.date_fin|date:"M Y" }}</strong>
+                                            </td>
+                                            <td>
+                                                {% if comp.changements %}
+                                                    <span class="badge bg-warning">Oui</span>
+                                                {% else %}
+                                                    <span class="badge bg-success">Non</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="{% url 'paiements:test_avance_corrige' comp.avance.paiement.id %}" 
+                                                       class="btn btn-outline-primary" title="Tester">
+                                                        <i class="bi bi-eye"></i>
+                                                    </a>
+                                                    <button type="button" class="btn btn-outline-success" 
+                                                            onclick="corrigerAvance({{ comp.avance.id }})" title="Corriger">
+                                                        <i class="bi bi-arrow-clockwise"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <strong>Légende:</strong>
+                                    <ul class="mb-0">
+                                        <li><span class="badge bg-warning">Oui</span> = Des changements sont nécessaires</li>
+                                        <li><span class="badge bg-success">Non</span> = Aucun changement nécessaire</li>
+                                        <li>Les lignes en jaune indiquent les avances qui nécessitent une correction</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Aucune avance à comparer.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function corrigerAvance(avanceId) {
+    if (confirm('Êtes-vous sûr de vouloir corriger cette avance ?')) {
+        fetch(`/paiements/avances/corriger-ajax/${avanceId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Avance corrigée avec succès !');
+                location.reload();
+            } else {
+                alert('Erreur: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la correction de l\'avance');
+        });
+    }
+}
+</script>
+{% endblock %}

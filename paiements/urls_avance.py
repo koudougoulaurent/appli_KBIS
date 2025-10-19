@@ -17,7 +17,7 @@ urlpatterns = [
     path('suggestions-mois-ajax/', views_avance.get_suggestions_mois_ajax, name='get_suggestions_mois_ajax'),
     path('historique/<int:contrat_id>/', views_avance.historique_paiements_contrat, name='historique_contrat'),
     path('rapport-historique-pdf/<int:contrat_id>/', views_avance.generer_rapport_avances_pdf, name='generer_rapport_avances_pdf'),
-    path('recu/<int:avance_id>/', views_avance.generer_recu_avance, name='generer_recu_avance'),
+    path('recu/<int:avance_id>/', views_avance.generer_recu_avance_unifie, name='generer_recu_avance'),
     
     # URLs pour le monitoring des avances
     path('monitoring/', views_monitoring_avance.monitoring_avances, name='monitoring_avances'),

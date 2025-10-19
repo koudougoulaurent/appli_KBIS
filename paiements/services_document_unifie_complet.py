@@ -117,41 +117,31 @@ class DocumentUnifieA5ServiceComplet:
                 except (ValueError, TypeError, AttributeError):
                     pass
         
-        # Calculer les mois couverts par l'avance (UNIQUEMENT pour les avances, PAS pour les cautions)
+        # Calculer les mois couverts par l'avance (pour tous les documents d'avance)
         mois_couverts = None
-        if (document_type == 'paiement_avance' or paiement.type_paiement == 'avance') and montant_a_afficher and paiement.contrat.loyer_mensuel:
+        if paiement.type_paiement == 'avance' and montant_a_afficher and paiement.contrat.loyer_mensuel:
             try:
-                # CORRECTION CRITIQUE : Utiliser l'avance récupérée si disponible
-                if avance_loyer and hasattr(avance_loyer, 'get_mois_couverts_liste'):
-                    # Utiliser les mois couverts calculés par l'avance
-                    mois_liste = avance_loyer.get_mois_couverts_liste()
-                    if mois_liste:
-                        # Convertir les dates en noms de mois français
-                        mois_noms = []
-                        mois_francais = {
-                            1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
-                            5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
-                            9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
-                        }
-                        for mois_date in mois_liste:
-                            mois_nom = mois_francais.get(mois_date.month, mois_date.strftime("%B"))
-                            mois_noms.append(f"{mois_nom} {mois_date.year}")
-                        
-                        mois_couverts = {
-                            'nombre': avance_loyer.nombre_mois_couverts,
-                            'mois_liste': mois_noms,
-                            'mois_texte': ', '.join(mois_noms)
-                        }
+                # Utiliser le service corrigé pour calculer les mois couverts
+                from .services_avance_corrige import ServiceAvanceCorrige
+                
+                mois_couverts_data = ServiceAvanceCorrige.calculer_mois_couverts_correct(
+                    paiement.contrat, montant_a_afficher, paiement.date_paiement
+                )
+                
+                if mois_couverts_data:
+                    mois_couverts = {
+                        'nombre': mois_couverts_data['nombre'],
+                        'mois_texte': mois_couverts_data['mois_texte'],
+                        'mois_liste': mois_couverts_data['mois_liste'],
+                        'date_debut': mois_couverts_data['date_debut'],
+                        'date_fin': mois_couverts_data['date_fin']
+                    }
+                    print(f"[DEBUG] Mois couverts calculés: {mois_couverts}")
                 else:
-                    # Fallback : calculer manuellement
-                    montant_float = float(montant_a_afficher)
-                    loyer_float = float(paiement.contrat.loyer_mensuel)
-                    if montant_float > 0 and loyer_float > 0:
-                        # Utiliser le montant correct pour le calcul
-                        paiement_temp = paiement
-                        paiement_temp.montant = montant_a_afficher
-                        mois_couverts = self._calculer_mois_couverts_avance(paiement_temp)
-            except (ValueError, TypeError, AttributeError):
+                    print(f"[DEBUG] Impossible de calculer les mois couverts pour le paiement {paiement.id}")
+                    
+            except Exception as e:
+                print(f"[DEBUG] Erreur lors du calcul des mois couverts: {e}")
                 pass
         
         return {
@@ -227,63 +217,28 @@ class DocumentUnifieA5ServiceComplet:
         }
     
     def _calculer_mois_couverts_avance(self, paiement):
-        """Calcule le nombre de mois couverts par l'avance."""
+        """Calcule le nombre de mois couverts par l'avance avec la logique corrigée."""
         try:
-            # Conversion sécurisée des valeurs
-            montant_avance = float(paiement.montant) if paiement.montant else 0
-            loyer_mensuel = float(paiement.contrat.loyer_mensuel) if paiement.contrat.loyer_mensuel else 0
+            # Utiliser le service corrigé
+            from .services_avance_corrige import ServiceAvanceCorrige
             
-            if loyer_mensuel <= 0 or montant_avance <= 0:
+            mois_couverts_data = ServiceAvanceCorrige.calculer_mois_couverts_correct(
+                paiement.contrat, paiement.montant, paiement.date_paiement
+            )
+            
+            if not mois_couverts_data:
                 return None
-                
-            # Calculer le nombre de mois complets
-            mois_entiers = int(montant_avance // loyer_mensuel)
-            
-            # Calculer le reste
-            reste = montant_avance % loyer_mensuel
-            
-            # Si le reste est significatif (plus de 50% du loyer), compter un mois partiel
-            if reste > (loyer_mensuel * 0.5):
-                mois_entiers += 1
-            
-            nombre_mois = max(1, mois_entiers)  # Au minimum 1 mois
-            
-            # Calculer les mois couverts à partir de la date du paiement
-            from datetime import datetime, timedelta
-            from dateutil.relativedelta import relativedelta
-            import locale
-            
-            # Définir la locale française pour les mois
-            try:
-                locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
-            except:
-                try:
-                    locale.setlocale(locale.LC_TIME, 'French_France.1252')
-                except:
-                    pass  # Utiliser les noms par défaut si la locale française n'est pas disponible
-            
-            date_paiement = paiement.date_paiement
-            mois_couverts = []
-            
-            # Dictionnaire de traduction des mois en français
-            mois_francais = {
-                1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
-                5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
-                9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
-            }
-            
-            for i in range(nombre_mois):
-                mois_couvert = date_paiement + relativedelta(months=i)
-                mois_nom = mois_francais.get(mois_couvert.month, mois_couvert.strftime("%B"))
-                mois_couverts.append(f"{mois_nom} {mois_couvert.year}")
             
             return {
-                'nombre': nombre_mois,
-                'mois_liste': mois_couverts,
-                'mois_texte': ', '.join(mois_couverts)
+                'nombre': mois_couverts_data['nombre'],
+                'mois_texte': mois_couverts_data['mois_texte'],
+                'mois_liste': mois_couverts_data['mois_liste'],
+                'date_debut': mois_couverts_data['date_debut'],
+                'date_fin': mois_couverts_data['date_fin']
             }
             
-        except (ValueError, TypeError, ZeroDivisionError, ImportError, AttributeError):
+        except Exception as e:
+            print(f"Erreur lors du calcul des mois couverts: {e}")
             return None
     
     def _convertir_mois_couverts_en_lettres(self, mois_couverts):

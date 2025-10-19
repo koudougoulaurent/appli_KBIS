@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="bi bi-cash-coin me-2"></i>{{ title }}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    {% if donnees_avance %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Informations du Paiement</h5>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td><strong>ID Paiement:</strong></td>
+                                        <td>{{ paiement.id }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Numéro:</strong></td>
+                                        <td>{{ paiement.numero_paiement }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Date:</strong></td>
+                                        <td>{{ paiement.date_paiement|date:"d/m/Y" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Montant:</strong></td>
+                                        <td>{{ paiement.montant|floatformat:0 }} F CFA</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Contrat:</strong></td>
+                                        <td>{{ paiement.contrat.numero_contrat }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Locataire:</strong></td>
+                                        <td>{{ paiement.contrat.locataire.get_nom_complet }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h5>Calcul Corrigé des Mois Couverts</h5>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td><strong>Loyer mensuel:</strong></td>
+                                        <td>{{ donnees_avance.loyer_mensuel|floatformat:0 }} F CFA</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Nombre de mois:</strong></td>
+                                        <td>{{ donnees_avance.mois_couverts.nombre }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Date début:</strong></td>
+                                        <td>{{ donnees_avance.date_debut|date:"d/m/Y" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Date fin:</strong></td>
+                                        <td>{{ donnees_avance.date_fin|date:"d/m/Y" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Mois couverts:</strong></td>
+                                        <td>{{ donnees_avance.mois_couverts.mois_texte }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h5>Actions</h5>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'paiements:generer_recu_avance_corrige' paiement.id %}" 
+                                       class="btn btn-primary" target="_blank">
+                                        <i class="bi bi-file-earmark-text me-2"></i>Générer Récépissé Corrigé
+                                    </a>
+                                    <a href="{% url 'paiements:generer_recu_unifie_a5' paiement.id %}" 
+                                       class="btn btn-secondary" target="_blank">
+                                        <i class="bi bi-file-earmark-text me-2"></i>Récépissé Standard
+                                    </a>
+                                    <button type="button" class="btn btn-info" onclick="corrigerAvance({{ donnees_avance.avance.id }})">
+                                        <i class="bi bi-arrow-clockwise me-2"></i>Corriger l'Avance
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if donnees_avance.avance %}
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <h5>Informations de l'Avance</h5>
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td><strong>ID Avance:</strong></td>
+                                            <td>{{ donnees_avance.avance.id }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Statut:</strong></td>
+                                            <td>
+                                                <span class="badge bg-{% if donnees_avance.avance.statut == 'active' %}success{% else %}secondary{% endif %}">
+                                                    {{ donnees_avance.avance.get_statut_display }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Montant restant:</strong></td>
+                                            <td>{{ donnees_avance.avance.montant_restant|floatformat:0 }} F CFA</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Montant reste:</strong></td>
+                                            <td>{{ donnees_avance.avance.montant_reste|floatformat:0 }} F CFA</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                    {% else %}
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Impossible de calculer les données de l'avance.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function corrigerAvance(avanceId) {
+    if (confirm('Êtes-vous sûr de vouloir corriger cette avance ?')) {
+        fetch(`/paiements/avances/corriger-ajax/${avanceId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Avance corrigée avec succès !');
+                location.reload();
+            } else {
+                alert('Erreur: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la correction de l\'avance');
+        });
+    }
+}
+</script>
+{% endblock %}
