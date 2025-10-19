@@ -13,11 +13,6 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AlterField(
             model_name='utilisateur',
-            name='email',
-            field=models.EmailField(max_length=254, unique=True, verbose_name='Adresse email'),
-        ),
-        migrations.AlterField(
-            model_name='utilisateur',
             name='telephone',
             field=models.CharField(blank=True, help_text='Format international (ex: +226 70 12 34 56)', max_length=20, null=True, validators=[django.core.validators.RegexValidator(message='Format de téléphone invalide. Utilisez le format international.', regex='^(\\+?[1-9]\\d{0,3})?[1-9]\\d{7,14}$')]),
         ),
