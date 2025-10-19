@@ -146,7 +146,13 @@ def liste_avances(request):
     
     # Appliquer les filtres
     if contrat_id:
-        avances = [a for a in avances if a['contrat'].id == int(contrat_id)]
+        try:
+            # Si c'est un ID numérique
+            contrat_id_int = int(contrat_id)
+            avances = [a for a in avances if a['contrat'].id == contrat_id_int]
+        except ValueError:
+            # Si c'est un nom de contrat, chercher par nom
+            avances = [a for a in avances if contrat_id.lower() in a['contrat'].locataire.nom_complet.lower()]
     
     if statut:
         avances = [a for a in avances if a['statut'] == statut]
