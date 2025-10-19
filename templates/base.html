@@ -116,6 +116,23 @@
             border-right: 2px solid #475569 !important;
             box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2) !important;
             padding-top: 0.5rem !important;
+            min-height: calc(100vh - 76px) !important;
+            position: sticky !important;
+            top: 76px !important;
+            z-index: 1000 !important;
+        }
+        
+        /* S'assurer que la sidebar est toujours visible */
+        @media (min-width: 768px) {
+            .sidebar {
+                display: block !important;
+            }
+        }
+        
+        @media (max-width: 767px) {
+            .sidebar {
+                display: none !important;
+            }
         }
         
         .sidebar .nav-link {
@@ -371,7 +388,7 @@
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <nav class="col-lg-2 sidebar collapse d-lg-block" id="sidebar">
+            <nav class="col-lg-2 col-md-3 sidebar d-lg-block d-md-block" id="sidebar">
                 <div class="pt-3">
                     {% if devise_active %}
                     <div class="text-primary fw-bold mb-3 ms-2" style="font-size:1.1rem;">
@@ -582,7 +599,7 @@
             </nav>
 
             <!-- Main Content -->
-            <main class="col-lg-10 main-content">
+            <main class="col-lg-10 col-md-9 main-content">
                 {% if messages %}
                     {% for message in messages %}
                         <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
