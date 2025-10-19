@@ -89,30 +89,58 @@ class DocumentUnifieA5ServiceComplet:
             'contrat__propriete__bailleur'
         ).get(id=paiement_id)
         
+        # CORRECTION CRITIQUE : Récupérer l'avance correspondante pour les avances
+        avance_loyer = None
+        if document_type == 'paiement_avance' or paiement.type_paiement == 'avance':
+            try:
+                from .models_avance import AvanceLoyer
+                avance_loyer = AvanceLoyer.objects.filter(
+                    paiement=paiement,
+                    statut='active'
+                ).first()
+            except Exception:
+                pass
+        
         # CORRECTION CRITIQUE : Calculer le bon montant selon le type de document
         montant_a_afficher = paiement.montant
         
         if document_type == 'paiement_avance' or paiement.type_paiement == 'avance':
-            # Pour un récépissé d'avance, utiliser le montant de l'avance du contrat
-            try:
-                montant_avance_contrat = float(paiement.contrat.avance_loyer) if paiement.contrat.avance_loyer else 0
-                if montant_avance_contrat > 0:
-                    montant_a_afficher = montant_avance_contrat
-            except (ValueError, TypeError, AttributeError):
-                pass
+            # Pour un récépissé d'avance, utiliser le montant de l'avance récupérée
+            if avance_loyer:
+                montant_a_afficher = float(avance_loyer.montant_avance)
+            else:
+                # Fallback : utiliser le montant de l'avance du contrat
+                try:
+                    montant_avance_contrat = float(paiement.contrat.avance_loyer) if paiement.contrat.avance_loyer else 0
+                    if montant_avance_contrat > 0:
+                        montant_a_afficher = montant_avance_contrat
+                except (ValueError, TypeError, AttributeError):
+                    pass
         
         # Calculer les mois couverts par l'avance (UNIQUEMENT pour les avances, PAS pour les cautions)
         mois_couverts = None
         if (document_type == 'paiement_avance' or paiement.type_paiement == 'avance') and montant_a_afficher and paiement.contrat.loyer_mensuel:
             try:
-                montant_float = float(montant_a_afficher)
-                loyer_float = float(paiement.contrat.loyer_mensuel)
-                if montant_float > 0 and loyer_float > 0:
-                    # Utiliser le montant correct pour le calcul
-                    paiement_temp = paiement
-                    paiement_temp.montant = montant_a_afficher
-                    mois_couverts = self._calculer_mois_couverts_avance(paiement_temp)
-            except (ValueError, TypeError):
+                # CORRECTION CRITIQUE : Utiliser l'avance récupérée si disponible
+                if avance_loyer and hasattr(avance_loyer, 'get_mois_couverts_liste'):
+                    # Utiliser les mois couverts calculés par l'avance
+                    mois_liste = avance_loyer.get_mois_couverts_liste()
+                    if mois_liste:
+                        mois_couverts = {
+                            'nombre': avance_loyer.nombre_mois_couverts,
+                            'mois_liste': mois_liste,
+                            'mois_texte': ', '.join(mois_liste)
+                        }
+                else:
+                    # Fallback : calculer manuellement
+                    montant_float = float(montant_a_afficher)
+                    loyer_float = float(paiement.contrat.loyer_mensuel)
+                    if montant_float > 0 and loyer_float > 0:
+                        # Utiliser le montant correct pour le calcul
+                        paiement_temp = paiement
+                        paiement_temp.montant = montant_a_afficher
+                        mois_couverts = self._calculer_mois_couverts_avance(paiement_temp)
+            except (ValueError, TypeError, AttributeError):
                 pass
         
         return {
@@ -135,6 +163,7 @@ class DocumentUnifieA5ServiceComplet:
             'bailleur': paiement.contrat.propriete.bailleur,
             'contrat': paiement.contrat,
             'paiement': paiement,
+            'avance_loyer': avance_loyer,  # NOUVEAU : Ajouter l'avance au contexte
             'charges_deduites': getattr(paiement, 'charges_deduites', []),
         }
     
