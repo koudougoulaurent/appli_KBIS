@@ -470,6 +470,9 @@ def creer_avance(request):
                 print(f"Mode sélection: {mode_selection}")
                 print(f"Mois couverts manuels: {mois_couverts_manuels}")
                 
+                # *** CALCULS AUTOMATIQUES ***
+                nombre_mois_couverts, montant_reste = form.calculer_mois_et_reste(contrat, montant_avance)
+                
                 # *** NOUVELLE LOGIQUE : Gestion des mois sélectionnés manuellement ***
                 mois_effet_personnalise = None
                 if mode_selection == 'manuel' and mois_couverts_manuels:

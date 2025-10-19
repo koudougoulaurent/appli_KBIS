@@ -53,6 +53,14 @@ class AvanceLoyer(models.Model):
         verbose_name=_("Montant restant")
     )
     
+    montant_reste = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Montant restant après division"),
+        help_text=_("Montant qui reste après la division par le loyer mensuel")
+    )
+    
     # Dates
     date_avance = models.DateField(
         verbose_name=_("Date de l'avance")

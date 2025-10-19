@@ -117,6 +117,13 @@
                                     {% if form.contrat.errors %}
                                         <div class="text-danger">{{ form.contrat.errors }}</div>
                                     {% endif %}
+                                    <!-- Affichage du loyer mensuel -->
+                                    <div id="loyer-mensuel-display" class="mt-2" style="display: none;">
+                                        <div class="alert alert-info py-2">
+                                            <i class="bi bi-info-circle me-2"></i>
+                                            <strong>Loyer mensuel :</strong> <span id="loyer-mensuel-montant">0</span> F CFA
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -126,6 +133,17 @@
                                     {% if form.montant_avance.errors %}
                                         <div class="text-danger">{{ form.montant_avance.errors }}</div>
                                     {% endif %}
+                                    <!-- Calculs automatiques -->
+                                    <div id="calculs-automatiques" class="mt-2" style="display: none;">
+                                        <div class="alert alert-success py-2">
+                                            <i class="bi bi-calculator me-2"></i>
+                                            <strong>Calcul automatique :</strong>
+                                            <div class="mt-1">
+                                                <span id="mois-couverts-calcul">0</span> mois couverts
+                                                <span id="reste-calcul" class="ms-3"></span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -315,12 +333,46 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.loyer_mensuel) {
+                    // Afficher le loyer mensuel
+                    const loyerDisplay = document.getElementById('loyer-mensuel-display');
+                    const loyerMontant = document.getElementById('loyer-mensuel-montant');
+                    loyerMontant.textContent = parseFloat(data.loyer_mensuel).toLocaleString('fr-FR');
+                    loyerDisplay.style.display = 'block';
+                    
+                    // Mettre à jour les calculs
                     updateMontantRequis();
+                    updateCalculsAutomatiques();
                 }
             })
             .catch(error => console.error('Erreur:', error));
         
         return 0; // Valeur par défaut
+    }
+    
+    function updateCalculsAutomatiques() {
+        const montantAvance = parseFloat(document.getElementById('id_montant_avance').value) || 0;
+        const loyerMensuel = parseFloat(document.getElementById('loyer-mensuel-montant').textContent.replace(/\s/g, '')) || 0;
+        
+        if (montantAvance > 0 && loyerMensuel > 0) {
+            const moisCouverts = Math.floor(montantAvance / loyerMensuel);
+            const reste = montantAvance % loyerMensuel;
+            
+            const calculsDisplay = document.getElementById('calculs-automatiques');
+            const moisCouvertsCalcul = document.getElementById('mois-couverts-calcul');
+            const resteCalcul = document.getElementById('reste-calcul');
+            
+            moisCouvertsCalcul.textContent = moisCouverts;
+            
+            if (reste > 0) {
+                resteCalcul.innerHTML = `<span class="text-warning">(Reste: ${reste.toLocaleString('fr-FR')} F CFA)</span>`;
+            } else {
+                resteCalcul.innerHTML = '<span class="text-success">(Montant exact)</span>';
+            }
+            
+            calculsDisplay.style.display = 'block';
+        } else {
+            document.getElementById('calculs-automatiques').style.display = 'none';
+        }
     }
     
     // Événements
@@ -329,8 +381,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     anneeSelection.addEventListener('change', updateSelectedMonths);
-    contratSelect.addEventListener('change', updateMontantRequis);
-    montantAvance.addEventListener('input', updateMontantRequis);
+    contratSelect.addEventListener('change', function() {
+        updateMontantRequis();
+        getLoyerMensuel(); // Récupérer le loyer et déclencher les calculs
+    });
+    montantAvance.addEventListener('input', function() {
+        updateMontantRequis();
+        updateCalculsAutomatiques(); // Déclencher les calculs automatiques
+    });
     
     // Initialisation
     toggleModeSelection();
