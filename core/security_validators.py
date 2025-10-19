@@ -2,9 +2,11 @@
 Validateurs de sécurité pour les formulaires Django
 """
 import re
+import html
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import RegexValidator
+from django.utils.html import strip_tags
 
 
 class SecurityValidators:
@@ -45,17 +47,171 @@ class SecurityValidators:
         return clean_number
     
     @staticmethod
-    def validate_email_security(value):
-        """Valide un email avec des règles de sécurité"""
+    def validate_text_security(value):
+        """Valide un texte avec des règles de sécurité anti-XSS"""
         if not value:
             return value
-            
-        # Pattern email strict
-        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         
+        value = str(value)
+        
+        # Détecter les tentatives XSS
+        xss_patterns = [
+            r'<script[^>]*>.*?</script>',
+            r'javascript:',
+            r'vbscript:',
+            r'<iframe[^>]*>.*?</iframe>',
+            r'<object[^>]*>.*?</object>',
+            r'<embed[^>]*>.*?</embed>',
+            r'on\w+\s*=',
+            r'<link[^>]*>',
+            r'<meta[^>]*>',
+            r'<style[^>]*>.*?</style>',
+        ]
+        
+        for pattern in xss_patterns:
+            if re.search(pattern, value, re.IGNORECASE | re.DOTALL):
+                raise ValidationError(
+                    _("Contenu suspect détecté. Caractères non autorisés."),
+                    code='xss_attempt'
+                )
+        
+        # Détecter les injections SQL
+        sql_patterns = [
+            r'union\s+select',
+            r'drop\s+table',
+            r'delete\s+from',
+            r'insert\s+into',
+            r'update\s+set',
+            r'exec\s*\(',
+            r'execute\s*\(',
+            r'sp_',
+            r'xp_',
+            r'--',
+            r'/\*.*?\*/',
+        ]
+        
+        for pattern in sql_patterns:
+            if re.search(pattern, value, re.IGNORECASE):
+                raise ValidationError(
+                    _("Contenu suspect détecté. Caractères non autorisés."),
+                    code='sql_injection_attempt'
+                )
+        
+        # Nettoyer le texte
+        cleaned_value = html.escape(value)
+        
+        return cleaned_value
+    
+    @staticmethod
+    def validate_numeric_security(value):
+        """Valide un nombre avec des règles de sécurité"""
+        if value is None or value == '':
+            return value
+        
+        try:
+            # Convertir en float pour valider
+            numeric_value = float(str(value))
+            
+            # Vérifier les limites
+            if numeric_value < 0:
+                raise ValidationError(
+                    _("La valeur ne peut pas être négative."),
+                    code='negative_value'
+                )
+            
+            if numeric_value > 999999999.99:
+                raise ValidationError(
+                    _("La valeur est trop élevée."),
+                    code='value_too_high'
+                )
+            
+            # Vérifier les décimales (max 2)
+            if '.' in str(value):
+                decimal_part = str(value).split('.')[1]
+                if len(decimal_part) > 2:
+                    raise ValidationError(
+                        _("Maximum 2 décimales autorisées."),
+                        code='too_many_decimals'
+                    )
+            
+            return numeric_value
+            
+        except ValueError:
+            raise ValidationError(
+                _("Valeur numérique invalide."),
+                code='invalid_numeric'
+            )
+    
+    @staticmethod
+    def validate_date_security(value):
+        """Valide une date avec des règles de sécurité"""
+        if not value:
+            return value
+        
+        from datetime import datetime, date
+        
+        if isinstance(value, str):
+            # Vérifier le format de date
+            date_patterns = [
+                r'^\d{4}-\d{2}-\d{2}$',  # YYYY-MM-DD
+                r'^\d{2}/\d{2}/\d{4}$',  # DD/MM/YYYY
+                r'^\d{2}-\d{2}-\d{4}$',  # DD-MM-YYYY
+            ]
+            
+            valid_format = False
+            for pattern in date_patterns:
+                if re.match(pattern, value):
+                    valid_format = True
+                    break
+            
+            if not valid_format:
+                raise ValidationError(
+                    _("Format de date invalide. Utilisez DD/MM/YYYY ou YYYY-MM-DD."),
+                    code='invalid_date_format'
+                )
+        
+        # Vérifier que la date n'est pas dans le futur (pour certaines validations)
+        if isinstance(value, (datetime, date)):
+            from django.utils import timezone
+            now = timezone.now().date()
+            if value > now:
+                raise ValidationError(
+                    _("La date ne peut pas être dans le futur."),
+                    code='future_date'
+                )
+        
+        return value
+    
+    @staticmethod
+    def validate_email_security(value):
+        """Valide un email avec des règles de sécurité"""
+        if not value or (isinstance(value, str) and value.strip() == ''):
+            return value
+            
+        # Pattern email plus flexible et robuste
+        # Accepte les caractères spéciaux courants dans les emails
+        pattern = r'^[a-zA-Z0-9]([a-zA-Z0-9._+-]*[a-zA-Z0-9])?@([a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'
+        
+        # Vérification de base avec un pattern plus permissif
+        basic_pattern = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
+        
+        if not re.match(basic_pattern, value):
+            raise ValidationError(
+                _("Format d'email invalide. Format attendu : nom@domaine.com"),
+                code='invalid_email'
+            )
+        
+        # Vérifications supplémentaires pour les cas spéciaux
+        if '..' in value:  # Double point
+            raise ValidationError(
+                _("Format d'email invalide. Caractères consécutifs non autorisés."),
+                code='invalid_email'
+            )
+        
+        # Vérifications supplémentaires pour les caractères autorisés
         if not re.match(pattern, value):
             raise ValidationError(
-                _("Format d'email invalide."),
+                _("Format d'email invalide. Caractères non autorisés détectés."),
                 code='invalid_email'
             )
         

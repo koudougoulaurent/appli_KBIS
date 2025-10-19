@@ -35,27 +35,7 @@
     <link href="{% static 'css/select_search_enhancement.css' %}" rel="stylesheet">
     
     <style>
-        /* Indicateur de chargement global */
-        #global-loading {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-        }
-        
-        #global-loading.show {
-            opacity: 1;
-            pointer-events: all;
-        }
+        /* Indicateur de chargement global - SUPPRIMÉ pour éviter les grisages */
         
         .spinner {
             width: 3rem;
@@ -63,7 +43,8 @@
             border: 4px solid rgba(59, 130, 246, 0.2);
             border-top: 4px solid #3b82f6;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            animation: none; /* DÉSACTIVÉ */
+            display: none; /* CACHÉ */
         }
         
         @keyframes spin {
@@ -322,10 +303,7 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- Indicateur de chargement global -->
-    <div id="global-loading">
-        <div class="spinner"></div>
-    </div>
+    <!-- Indicateur de chargement global - SUPPRIMÉ pour éviter les grisages -->
     
     <!-- En-tête avec image -->
     {% include 'includes/header_only.html' %}
@@ -703,39 +681,10 @@
             }
         });
         
-        // Gestion de l'indicateur de chargement global
+        // Gestion de l'indicateur de chargement global - COMPLÈTEMENT SUPPRIMÉ
         document.addEventListener('DOMContentLoaded', function() {
-            // Afficher l'indicateur de chargement au démarrage
-            const loadingIndicator = document.getElementById('global-loading');
-            loadingIndicator.classList.add('show');
-            
-            // Masquer l'indicateur de chargement une fois la page chargée
-            window.addEventListener('load', function() {
-                setTimeout(function() {
-                    loadingIndicator.classList.remove('show');
-                }, 500);
-            });
-            
-            // Afficher l'indicateur de chargement lors des soumissions de formulaires
-            const forms = document.querySelectorAll('form');
-            forms.forEach(form => {
-                form.addEventListener('submit', function() {
-                    loadingIndicator.classList.add('show');
-                });
-            });
-            
-            // Afficher l'indicateur de chargement lors des clics sur les liens
-            const links = document.querySelectorAll('a[href]');
-            links.forEach(link => {
-                link.addEventListener('click', function() {
-                    // Vérifier si le lien pointe vers une autre page
-                    if (this.hostname === window.location.hostname && 
-                        !this.getAttribute('data-bs-toggle') && 
-                        !this.classList.contains('no-loading')) {
-                        loadingIndicator.classList.add('show');
-                    }
-                });
-            });
+            // SUPPRIMÉ: Tous les indicateurs de chargement
+            console.log('Tous les indicateurs de chargement supprimés pour éviter les grisages');
         });
         
         // Script ultra-simple pour la visibilité des montants

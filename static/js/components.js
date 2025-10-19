@@ -421,7 +421,18 @@ class ComponentManager {
     }
 
     isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        // Regex plus flexible pour les emails
+        // Accepte les caractères spéciaux courants dans les emails
+        const emailRegex = /^[a-zA-Z0-9]([a-zA-Z0-9._+-]*[a-zA-Z0-9])?@([a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$/;
+        
+        // Vérification de base plus permissive
+        const basicEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        
+        if (!basicEmailRegex.test(email)) {
+            return false;
+        }
+        
+        // Vérification plus stricte pour les caractères autorisés
         return emailRegex.test(email);
     }
 

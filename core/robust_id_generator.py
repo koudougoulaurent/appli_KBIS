@@ -80,6 +80,7 @@ class RobustIDGenerator:
     def _is_id_unique(cls, entity_type, candidate_id, **kwargs):
         """Vérifie si un ID est vraiment unique dans la base de données"""
         from django.apps import apps
+        from django.db import transaction
         
         # Mapping des types d'entités vers les modèles
         model_mapping = {
@@ -97,7 +98,7 @@ class RobustIDGenerator:
         app_label, model_name, field_name = model_mapping[entity_type]
         model = apps.get_model(app_label, model_name)
         
-        # Vérifier l'unicité avec une transaction atomique
+        # Vérifier l'unicité avec une transaction atomique et un verrou
         with transaction.atomic():
             # Utiliser select_for_update pour éviter les conflits de concurrence
             existing = model.objects.filter(

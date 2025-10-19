@@ -5,6 +5,9 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.utils import timezone
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class NiveauAcces(models.Model):
@@ -707,3 +710,53 @@ class HistoriqueGeneration(models.Model):
     def __str__(self):
         status = "✓" if self.succes else "✗"
         return f"{status} {self.nom_fichier} - {self.date_generation.strftime('%d/%m/%Y %H:%M')}"
+
+
+class SecurityEvent(models.Model):
+    """Modèle pour enregistrer les événements de sécurité"""
+    
+    EVENT_TYPES = [
+        ('login_success', 'Connexion réussie'),
+        ('login_failed', 'Échec de connexion'),
+        ('logout', 'Déconnexion'),
+        ('password_change', 'Changement de mot de passe'),
+        ('permission_denied', 'Accès refusé'),
+        ('suspicious_activity', 'Activité suspecte'),
+        ('file_upload', 'Upload de fichier'),
+        ('data_access', 'Accès aux données'),
+        ('data_modification', 'Modification de données'),
+        ('session_invalidated', 'Session invalidée'),
+        ('rate_limit_exceeded', 'Limite de taux dépassée'),
+        ('sql_injection_attempt', 'Tentative d\'injection SQL'),
+        ('xss_attempt', 'Tentative XSS'),
+        ('file_security_violation', 'Violation de sécurité fichier'),
+    ]
+    
+    SEVERITY_LEVELS = [
+        ('low', 'Faible'),
+        ('medium', 'Moyen'),
+        ('high', 'Élevé'),
+        ('critical', 'Critique'),
+    ]
+    
+    event_type = models.CharField(max_length=50, choices=EVENT_TYPES)
+    severity = models.CharField(max_length=20, choices=SEVERITY_LEVELS, default='medium')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    ip_address = models.GenericIPAddressField()
+    user_agent = models.TextField(blank=True)
+    description = models.TextField()
+    details = models.JSONField(default=dict, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    resolved = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['event_type', 'timestamp']),
+            models.Index(fields=['severity', 'timestamp']),
+            models.Index(fields=['user', 'timestamp']),
+            models.Index(fields=['ip_address', 'timestamp']),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_event_type_display()} - {self.user or 'Anonyme'} - {self.timestamp}"

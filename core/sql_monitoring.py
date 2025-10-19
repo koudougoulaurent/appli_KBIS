@@ -271,3 +271,5 @@ def patch_database_connection():
 # Appliquer le monitoring automatiquement
 if getattr(settings, 'SQL_MONITORING_ENABLED', True):
     patch_database_connection()
+
+

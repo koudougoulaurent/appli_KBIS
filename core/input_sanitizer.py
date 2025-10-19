@@ -187,9 +187,18 @@ class InputSanitizer:
         if SQLInjectionProtection.detect_sql_injection(email):
             raise ValidationError(_("Email suspect détecté"))
         
-        # Vérifier le format email
-        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        if not re.match(email_pattern, email):
+        # Vérifier le format email avec validation flexible
+        basic_pattern = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
+        if not re.match(basic_pattern, cleaned_email):
+            raise ValidationError(_("Format d'email invalide"))
+        
+        # Vérification plus stricte pour les caractères autorisés
+        strict_pattern = r'^[a-zA-Z0-9]([a-zA-Z0-9._+-]*[a-zA-Z0-9])?@([a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'
+        if not re.match(strict_pattern, cleaned_email):
+            raise ValidationError(_("Format d'email invalide"))
+        
+        # Vérifier les doubles points
+        if '..' in cleaned_email:
             raise ValidationError(_("Format d'email invalide"))
         
         # Limiter la longueur

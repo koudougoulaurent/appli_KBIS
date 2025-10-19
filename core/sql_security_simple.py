@@ -138,8 +138,18 @@ class InputSanitizer:
         if SQLInjectionProtection.detect_sql_injection(email):
             raise ValidationError(_("Email suspect detecte"))
         
-        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        if not re.match(email_pattern, email):
+        # Validation email flexible
+        basic_pattern = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
+        if not re.match(basic_pattern, email):
+            raise ValidationError(_("Format d'email invalide"))
+        
+        # Vérification plus stricte pour les caractères autorisés
+        strict_pattern = r'^[a-zA-Z0-9]([a-zA-Z0-9._+-]*[a-zA-Z0-9])?@([a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'
+        if not re.match(strict_pattern, email):
+            raise ValidationError(_("Format d'email invalide"))
+        
+        # Vérifier les doubles points
+        if '..' in email:
             raise ValidationError(_("Format d'email invalide"))
         
         if len(email) > 254:
@@ -165,3 +175,7 @@ class InputSanitizer:
             raise ValidationError(_("Format de telephone invalide"))
         
         return cleaned_phone
+
+
+
+

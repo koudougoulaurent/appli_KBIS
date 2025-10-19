@@ -77,9 +77,10 @@ class SecurityMiddleware(MiddlewareMixin):
         if SQLInjectionProtection.detect_sql_injection(request.path):
             raise SuspiciousOperation(f"URL suspecte: {request.path}")
         
-        if request.query_string:
-            if SQLInjectionProtection.detect_sql_injection(request.query_string.decode()):
-                raise SuspiciousOperation(f"Query string suspecte: {request.query_string}")
+        # Analyser les paramètres GET
+        for key, value in request.GET.items():
+            if isinstance(value, str) and SQLInjectionProtection.detect_sql_injection(value):
+                raise SuspiciousOperation(f"Paramètre GET suspect: {key}={value}")
     
     def _create_security_response(self, message):
         """Crée une réponse de sécurité"""
@@ -153,3 +154,4 @@ class SQLInjectionMiddleware(MiddlewareMixin):
                     raise SuspiciousOperation("Tentative d'injection SQL détectée")
         
         return None
+

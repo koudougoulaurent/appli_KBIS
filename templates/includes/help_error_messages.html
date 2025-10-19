@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', function() {
         'invalid_date': 'Date invalide. Format attendu : JJ/MM/AAAA',
         'invalid_number': 'Nombre invalide. Utilisez le point (.) pour les décimales.',
         'unique': 'Cette valeur existe déjà. Veuillez en choisir une autre.',
+        'email_unique': 'Cette adresse email existe déjà. Veuillez en choisir une autre.',
+        'phone_unique': 'Ce numéro de téléphone est déjà utilisé. Veuillez en choisir un autre.',
         'permission_denied': 'Vous n\'avez pas les droits pour effectuer cette action.',
         'retrait_period': 'Les retraits ne peuvent être générés que du 25 au 5 du mois suivant.',
         'retrait_duplicate': 'Un retrait existe déjà pour ce bailleur ce mois-ci.',
@@ -62,6 +64,8 @@ document.addEventListener('DOMContentLoaded', function() {
             'min_length': 'Ajoutez plus de détails pour clarifier l\'information',
             'max_length': 'Résumez votre texte en gardant l\'essentiel',
             'unique': 'Vérifiez la liste existante ou modifiez la valeur',
+            'email_unique': 'Vérifiez la liste des utilisateurs existants ou utilisez une variante de votre email',
+            'phone_unique': 'Vérifiez la liste des utilisateurs existants ou utilisez un autre numéro de téléphone',
             'retrait_period': 'Consultez le calendrier pour voir les périodes autorisées',
             'retrait_duplicate': 'Vérifiez la liste des retraits existants',
             'file_too_large': 'Compressez votre fichier ou choisissez un autre format',
@@ -81,9 +85,19 @@ document.addEventListener('DOMContentLoaded', function() {
         if (text.includes('required') || text.includes('obligatoire')) {
             element.innerHTML = improveErrorMessage(element, 'required');
         } else if (text.includes('email') || text.includes('courriel')) {
-            element.innerHTML = improveErrorMessage(element, 'invalid_email');
+            // Vérifier si c'est une erreur d'unicité ou de format
+            if (text.includes('déjà utilisée') || text.includes('existe déjà') || text.includes('unique')) {
+                element.innerHTML = improveErrorMessage(element, 'email_unique');
+            } else {
+                element.innerHTML = improveErrorMessage(element, 'invalid_email');
+            }
         } else if (text.includes('téléphone') || text.includes('phone')) {
-            element.innerHTML = improveErrorMessage(element, 'invalid_phone');
+            // Vérifier si c'est une erreur d'unicité ou de format
+            if (text.includes('déjà utilisé') || text.includes('existe déjà') || text.includes('unique')) {
+                element.innerHTML = improveErrorMessage(element, 'phone_unique');
+            } else {
+                element.innerHTML = improveErrorMessage(element, 'invalid_phone');
+            }
         } else if (text.includes('date')) {
             element.innerHTML = improveErrorMessage(element, 'invalid_date');
         } else if (text.includes('nombre') || text.includes('number')) {

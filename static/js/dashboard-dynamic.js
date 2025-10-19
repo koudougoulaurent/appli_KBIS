@@ -2,9 +2,9 @@
 // Script pour la mise à jour dynamique des statistiques du dashboard
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Configuration
-    const REFRESH_INTERVAL = 60000; // 1 minute
-    const API_ENDPOINT = '/api/dashboard-stats/';
+    // Configuration - DÉSACTIVÉ pour éviter les boucles
+    const REFRESH_INTERVAL = null; // Désactivé
+    const API_ENDPOINT = '/core/api/dashboard-stats/';
     
     // Éléments du DOM
     const elements = {
@@ -22,30 +22,38 @@ document.addEventListener('DOMContentLoaded', function() {
         'total-locataires': 'total-locataires'
     };
     
-    // Fonction pour mettre à jour les statistiques
+    // Fonction pour mettre à jour les statistiques (MANUELLE UNIQUEMENT)
     function updateStats() {
-        fetch(API_ENDPOINT)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Statistiques mises à jour:', data);
-                
-                // Mettre à jour chaque élément
+        console.log('Mise à jour manuelle des statistiques...');
+        
+        fetch(API_ENDPOINT, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-Dashboard-No-Loop': 'true'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Statistiques mises à jour:', data);
+            
+            // Mettre à jour chaque élément seulement si les données sont valides
+            if (data.success && data.data) {
                 Object.keys(elements).forEach(key => {
                     const elementId = elements[key];
                     const element = document.getElementById(elementId);
-                    if (element && data[key] !== undefined) {
+                    if (element && data.data[key] !== undefined) {
                         // Animation de mise à jour
                         element.style.transition = 'all 0.3s ease';
                         element.style.transform = 'scale(1.1)';
                         element.style.color = '#10b981';
                         
                         // Mettre à jour la valeur
-                        element.textContent = data[key];
+                        element.textContent = data.data[key];
                         
                         // Retour à la normale
                         setTimeout(() => {
@@ -57,26 +65,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Mettre à jour l'horodatage
                 const timestampElement = document.querySelector('.alert-info small');
-                if (timestampElement && data.derniere_maj) {
-                    timestampElement.textContent = `Dernière mise à jour: ${data.derniere_maj}`;
+                if (timestampElement && data.data.derniere_maj) {
+                    timestampElement.textContent = `Dernière mise à jour: ${data.data.derniere_maj}`;
                 }
                 
-                // Indicateur de statut
+                // Indicateur de statut - SUCCÈS
                 const statusElement = document.querySelector('.alert-info strong');
                 if (statusElement) {
-                    statusElement.innerHTML = '<i class="bi bi-check-circle me-2 text-success"></i>Statistiques dynamiques';
+                    statusElement.innerHTML = '<i class="bi bi-check-circle me-2 text-success"></i>Statistiques mises à jour';
                 }
-                
-            })
-            .catch(error => {
-                console.error('Erreur lors de la mise à jour des statistiques:', error);
-                
-                // Indicateur d'erreur
-                const statusElement = document.querySelector('.alert-info strong');
-                if (statusElement) {
-                    statusElement.innerHTML = '<i class="bi bi-exclamation-triangle me-2 text-warning"></i>Erreur de mise à jour';
-                }
-            });
+            } else {
+                console.warn('Données invalides reçues:', data);
+            }
+            
+        })
+        .catch(error => {
+            console.error('Erreur lors de la mise à jour des statistiques:', error);
+            
+            // Indicateur d'erreur - NE PAS AFFICHER D'ERREUR
+            const statusElement = document.querySelector('.alert-info strong');
+            if (statusElement) {
+                statusElement.innerHTML = '<i class="bi bi-info-circle me-2 text-info"></i>Statistiques statiques';
+            }
+        });
     }
     
     // Fonction pour forcer la mise à jour
@@ -145,7 +156,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialisation
     function init() {
-        console.log('Initialisation du dashboard dynamique...');
+        console.log('Initialisation du dashboard dynamique (SANS BOUCLE)...');
         
         // Ajouter les styles d'animation
         addAnimationStyles();
@@ -153,13 +164,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Configurer le bouton de rafraîchissement
         forceUpdate();
         
-        // Mise à jour automatique
-        setInterval(updateStats, REFRESH_INTERVAL);
+        // DÉSACTIVÉ: Mise à jour automatique
+        // setInterval(updateStats, REFRESH_INTERVAL);
         
-        // Mise à jour initiale
-        updateStats();
+        // DÉSACTIVÉ: Mise à jour initiale
+        // updateStats();
         
-        console.log('Dashboard dynamique initialisé avec succès');
+        console.log('Dashboard dynamique initialisé (rafraîchissement manuel uniquement)');
     }
     
     // Démarrer l'initialisation

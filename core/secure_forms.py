@@ -208,3 +208,6 @@ class SecureModelForm(forms.ModelForm, SecureFormMixin):
 class SecureForm(forms.Form, SecureFormMixin):
     """Form sécurisé"""
     pass
+
+
+

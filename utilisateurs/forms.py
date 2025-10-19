@@ -112,6 +112,15 @@ class UtilisateurForm(forms.ModelForm):
                     "Le numéro de téléphone ne peut pas dépasser 15 chiffres."
                 )
             
+            # Vérifier l'unicité
+            from .models import Utilisateur
+            queryset = Utilisateur.objects.filter(telephone=clean_number)
+            if self.instance.pk:
+                queryset = queryset.exclude(pk=self.instance.pk)
+            
+            if queryset.exists():
+                raise forms.ValidationError("Ce numéro de téléphone est déjà utilisé.")
+            
             return clean_number
         
         return telephone
@@ -121,10 +130,11 @@ class UtilisateurForm(forms.ModelForm):
         email = self.cleaned_data.get('email')
         
         if email:
-            # Vérifier le format email
-            import re
-            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-            if not re.match(email_pattern, email):
+            # Utiliser la validation sécurisée améliorée
+            from core.security_validators import SecurityValidators
+            try:
+                email = SecurityValidators.validate_email_security(email)
+            except Exception as e:
                 raise forms.ValidationError("Format d'email invalide.")
             
             # Vérifier l'unicité

@@ -352,6 +352,13 @@ paiement_detail = PaiementDetailView.as_view()
 @login_required
 def ajouter_paiement(request):
     """Ajouter un nouveau paiement avec contexte intelligent."""
+    # Vérification des permissions
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'add')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:liste')
+    
     if request.method == 'POST':
         form = PaiementForm(request.POST)
         print(f"Données POST: {request.POST}")
@@ -696,13 +703,13 @@ def valider_paiement(request, pk):
             }, status=403)
         
         # Vérifier que l'utilisateur est dans un des groupes autorisés
-        user_groups = [group.name for group in request.user.groups.all()]
-        allowed_groups = ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE']
+        from core.utils import check_group_permissions
+        permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'change')
         
-        if not any(group in user_groups for group in allowed_groups):
+        if not permissions['allowed']:
             return JsonResponse({
                 'success': False,
-                'error': f'Permissions insuffisantes. Groupes requis: {", ".join(allowed_groups)}'
+                'error': f'Permissions insuffisantes. {permissions["message"]}'
             }, status=403)
         
         # Vérifier que le paiement n'est pas déjà validé
@@ -752,13 +759,13 @@ def refuser_paiement(request, pk):
             }, status=403)
         
         # Vérifier que l'utilisateur est dans un des groupes autorisés
-        user_groups = [group.name for group in request.user.groups.all()]
-        allowed_groups = ['PRIVILEGE', 'ADMINISTRATION']
+        from core.utils import check_group_permissions
+        permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION'], 'change')
         
-        if not any(group in user_groups for group in allowed_groups):
+        if not permissions['allowed']:
             return JsonResponse({
                 'success': False,
-                'error': f'Permissions insuffisantes. Groupes requis: {", ".join(allowed_groups)}'
+                'error': f'Permissions insuffisantes. {permissions["message"]}'
             }, status=403)
         
         # Vérifier que le paiement n'est pas déjà validé
@@ -832,7 +839,7 @@ def modifier_paiement(request, pk):
     paiement = get_object_or_404(Paiement, pk=pk)
     
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'modify')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'modify')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:paiement_detail', pk=pk)
@@ -1427,7 +1434,7 @@ def detail_retrait(request, pk):
 def modifier_retrait(request, pk):
     """Modifier un retrait bailleur."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'change')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'change')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -1700,7 +1707,7 @@ def detail_recap_mensuel(request, recap_id):
 def valider_recap_mensuel(request, recap_id):
     """Valider un récapitulatif mensuel."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'change')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'change')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
@@ -1726,7 +1733,7 @@ def valider_recap_mensuel(request, recap_id):
 def marquer_recap_envoye(request, recap_id):
     """Marquer un récapitulatif mensuel comme envoyé au bailleur."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'change')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'change')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
@@ -1752,7 +1759,7 @@ def marquer_recap_envoye(request, recap_id):
 def marquer_recap_paye(request, recap_id):
     """Marquer un récapitulatif mensuel comme payé au bailleur."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'change')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'change')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
@@ -2484,7 +2491,7 @@ def tableau_bord_create(request):
 def tableau_bord_update(request, pk):
     """Modifier un tableau de bord financier existant."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'change')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'change')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:tableau_bord_list')

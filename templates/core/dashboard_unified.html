@@ -5,6 +5,8 @@
 {% block title %}GESTION IMMOBILIERE PRO - Gestion Immobilière{% endblock %}
 
 {% block extra_css %}
+<!-- CSS anti-grisage -->
+<link href="{% static 'css/anti-graying.css' %}" rel="stylesheet">
 <style>
     .dashboard-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -503,5 +505,114 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- Nettoyage final des effets de grisage -->
+<script src="{% static 'js/final-cleanup.js' %}"></script>
+<!-- Protection contre les effets de grisage -->
+<script src="{% static 'js/anti-graying.js' %}"></script>
+<!-- Nettoyage des spinners -->
+<script src="{% static 'js/clean-spinners.js' %}"></script>
+<!-- Dashboard sans boucle -->
+<script src="{% static 'js/dashboard-no-loop.js' %}"></script>
 <script src="{% static 'js/dashboard-dynamic.js' %}"></script>
+
+<script>
+    // Scripts optimisés pour le dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🚀 Initialisation du dashboard optimisé');
+        
+        // Initialiser les tooltips avec délai pour éviter les conflits
+        setTimeout(() => {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        }, 500);
+        
+        // Animation des cartes optimisée
+        const cards = document.querySelectorAll('.module-card');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry, index) => {
+                if (entry.isIntersecting) {
+                    setTimeout(() => {
+                        entry.target.style.transition = 'all 0.5s ease';
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }, index * 100);
+                    observer.unobserve(entry.target);
+                }
+            });
+        });
+        
+        cards.forEach((card) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            observer.observe(card);
+        });
+        
+        // Rafraîchissement manuel uniquement (pas de boucle)
+        console.log('Dashboard sans rafraîchissement automatique');
+        
+        // Gérer la visibilité de la page (sans rafraîchissement automatique)
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                console.log('Page cachée');
+            } else {
+                console.log('Page visible - rafraîchissement manuel disponible');
+            }
+        });
+        
+        // Fonction de mise à jour optimisée
+        function updateDashboardStats(stats) {
+            if (!stats) return;
+            
+            const statElements = {
+                'total_proprietes': '.stat-proprietes-total',
+                'proprietes_louees': '.stat-proprietes-louees', 
+                'proprietes_disponibles': '.stat-proprietes-disponibles',
+                'total_paiements': '.stat-paiements-total',
+                'paiements_attente': '.stat-paiements-attente',
+                'paiements_valides': '.stat-paiements-valides',
+                'total_bailleurs': '.stat-bailleurs-total',
+                'total_locataires': '.stat-locataires-total',
+                'total_contrats': '.stat-contrats-total',
+                'contrats_actifs': '.stat-contrats-actifs'
+            };
+            
+            Object.entries(statElements).forEach(([key, selector]) => {
+                const element = document.querySelector(selector);
+                if (element && stats[key] !== undefined) {
+                    const currentValue = parseInt(element.textContent) || 0;
+                    const newValue = stats[key];
+                    
+                    if (currentValue !== newValue) {
+                        // Animation de transition
+                        element.classList.add('stat-number', 'updating');
+                        element.textContent = newValue;
+                        
+                        setTimeout(() => {
+                            element.classList.remove('updating');
+                        }, 1000);
+                    }
+                }
+            });
+        }
+        
+        // Exposer la fonction globalement
+        window.updateDashboardStats = updateDashboardStats;
+        
+        // Précharger les ressources critiques
+        const criticalResources = [
+            '/static/css/dashboard.css',
+            '/static/js/components.js'
+        ];
+        
+        criticalResources.forEach(resource => {
+            const link = document.createElement('link');
+            link.rel = 'preload';
+            link.href = resource;
+            link.as = resource.endsWith('.css') ? 'style' : 'script';
+            document.head.appendChild(link);
+        });
+    });
+</script>
 {% endblock %}

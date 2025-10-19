@@ -1,0 +1,106 @@
+/**
+ * CSS pour supprimer complètement tous les effets de grisage
+ */
+
+/* Supprimer tous les indicateurs de chargement globaux */
+#global-loading,
+.global-loading,
+.page-loader,
+.loading-overlay,
+.loading-indicator {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Supprimer les spinners */
+.spinner,
+.spinner-border,
+.spinner-grow,
+.loading-spinner {
+    display: none !important;
+    animation: none !important;
+}
+
+/* Empêcher les effets de grisage sur le body */
+body {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    filter: none !important;
+    background: none !important;
+}
+
+/* Supprimer les classes de chargement */
+body.loading,
+body.loading-page,
+body.page-loading,
+body.grayed-out,
+body.disabled {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    filter: none !important;
+}
+
+/* Supprimer les overlays de grisage */
+[class*="loading"],
+[id*="loading"],
+[class*="overlay"],
+[id*="overlay"] {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Empêcher les animations de grisage */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.spin,
+.rotate {
+    animation: none !important;
+}
+
+/* Supprimer les transitions de grisage */
+* {
+    transition: none !important;
+}
+
+/* Empêcher les effets de grisage sur les éléments spécifiques */
+.card,
+.dashboard-header,
+.form-section,
+.alert {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    filter: none !important;
+}
+
+/* Supprimer les z-index élevés qui pourraient causer des overlays */
+[style*="z-index: 9999"],
+[style*="z-index: 9998"],
+[style*="z-index: 9997"] {
+    z-index: 1 !important;
+}
+
+/* Empêcher les backgrounds de grisage */
+[style*="background: rgba(255, 255, 255, 0.8)"],
+[style*="background: rgba(0, 0, 0, 0.8)"],
+[style*="background: rgba(0, 0, 0, 0.5)"] {
+    background: transparent !important;
+}
+
+/* Supprimer les pointer-events: none */
+[style*="pointer-events: none"] {
+    pointer-events: auto !important;
+}
+
+/* Empêcher les opacités réduites */
+[style*="opacity: 0.5"],
+[style*="opacity: 0.8"],
+[style*="opacity: 0.9"] {
+    opacity: 1 !important;
+}
