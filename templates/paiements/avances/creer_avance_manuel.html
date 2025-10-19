@@ -360,11 +360,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     loyerMontant.textContent = parseFloat(data.loyer_mensuel).toLocaleString('fr-FR');
                     loyerDisplay.style.display = 'block';
                     
-                    // Vérifier les avances existantes
-                    if (data.avances_existantes && data.avances_existantes.has_avances) {
-                        afficherAvertissementAvanceExistante(data.avances_existantes);
+                    // Vérifier les avances existantes seulement si la vérification n'est pas désactivée
+                    if (!window.verificationAvancesDesactivee) {
+                        if (data.avances_existantes && data.avances_existantes.has_avances) {
+                            afficherAvertissementAvanceExistante(data.avances_existantes);
+                        } else {
+                            masquerAvertissementAvanceExistante();
+                        }
                     } else {
-                        masquerAvertissementAvanceExistante();
+                        console.log('🔍 Vérification d\'avances désactivée - Avertissement ignoré');
                     }
                     
                     // Mettre à jour les calculs
@@ -484,6 +488,10 @@ document.addEventListener('DOMContentLoaded', function() {
         event.stopPropagation();
         
         try {
+            // Désactiver temporairement la vérification d'avances existantes
+            window.verificationAvancesDesactivee = true;
+            console.log('✅ Vérification d\'avances désactivée');
+            
             // Masquer l'avertissement et permettre la création
             masquerAvertissementAvanceExistante();
             console.log('✅ Avertissement masqué');
@@ -508,6 +516,10 @@ document.addEventListener('DOMContentLoaded', function() {
         event.stopPropagation();
         
         try {
+            // Réactiver la vérification d'avances existantes
+            window.verificationAvancesDesactivee = false;
+            console.log('✅ Vérification d\'avances réactivée');
+            
             // Réinitialiser le formulaire
             if (contratSelect) {
                 contratSelect.value = '';
