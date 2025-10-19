@@ -1028,13 +1028,25 @@ class Paiement(models.Model):
             # Générer un numéro de récépissé unique au format KBIS
             numero_recu = f"REC-{datetime.now().strftime('%Y%m%d%H%M%S')}-{self.id if self.id else 'X1DZ'}"
             
+            # CORRECTION CRITIQUE : Utiliser le bon montant selon le type de paiement
+            montant_a_afficher = float(self.montant)
+            
+            # Pour les avances, utiliser le montant de l'avance du contrat si disponible
+            if self.type_paiement == 'avance' and self.contrat and self.contrat.avance_loyer:
+                try:
+                    montant_avance_contrat = float(self.contrat.avance_loyer)
+                    if montant_avance_contrat > 0:
+                        montant_a_afficher = montant_avance_contrat
+                except (ValueError, TypeError, AttributeError):
+                    pass  # Utiliser le montant du paiement si erreur
+            
             # Données du récépissé
             donnees_recu = {
                 'numero': numero_recu,
                 'date': self.date_paiement.strftime('%d-%b-%y') if self.date_paiement else datetime.now().strftime('%d-%b-%y'),
                 'code_location': code_location,
                 'recu_de': recu_de,
-                'montant': float(self.montant),
+                'montant': montant_a_afficher,
                 'mois_regle': self._obtenir_mois_regle(),
                 'type_paiement': self.get_type_paiement_display(),
                 'mode_paiement': self.get_mode_paiement_display(),
@@ -1100,7 +1112,16 @@ class Paiement(models.Model):
             try:
                 # *** CALCUL AUTOMATIQUE DES MOIS COUVERTS POUR LES AVANCES ***
                 loyer_mensuel = float(self.contrat.loyer_mensuel) if self.contrat and self.contrat.loyer_mensuel else 0
+                
+                # CORRECTION : Utiliser le montant de l'avance du contrat si disponible
                 montant_avance = float(self.montant)
+                if self.contrat and self.contrat.avance_loyer:
+                    try:
+                        montant_avance_contrat = float(self.contrat.avance_loyer)
+                        if montant_avance_contrat > 0:
+                            montant_avance = montant_avance_contrat
+                    except (ValueError, TypeError, AttributeError):
+                        pass  # Utiliser le montant du paiement si erreur
                 
                 # Calculer le nombre de mois couverts
                 nombre_mois_couverts = int(montant_avance // loyer_mensuel) if loyer_mensuel > 0 else 0
