@@ -421,10 +421,10 @@ def detail_avance_paiement(request, paiement_id):
     
     if not avance:
         messages.error(request, "Impossible de synchroniser l'avance avec le paiement.")
-        return redirect('paiements:liste_avances')
+        return redirect('avances:liste_avances')
     
     # Rediriger vers la vue de détail normale
-    return redirect('paiements:detail_avance', avance_id=avance.id)
+    return redirect('avances:detail_avance', avance_id=avance.id)
 
 
 @login_required
@@ -528,7 +528,7 @@ def creer_avance(request):
                 
                 messages.success(request, f"✅ Avance de {avance.montant_avance:,.0f} F CFA créée et intégrée au système de paiement ! "
                                         f"Elle couvre {avance.nombre_mois_couverts} mois de loyer.")
-                return redirect('paiements:detail_avance', avance_id=avance.id)
+                return redirect('avances:detail_avance', avance_id=avance.id)
             except Exception as e:
                 print(f"Erreur lors de la création de l'avance: {e}")
                 import traceback
@@ -574,7 +574,7 @@ def paiement_avance(request):
                 
                 messages.success(request, f"Paiement d'avance de {paiement.montant} F CFA enregistré. "
                                         f"Avance créée couvrant {avance.nombre_mois_couverts} mois.")
-                return redirect('paiements:detail_avance', avance_id=avance.id)
+                return redirect('avances:detail_avance', avance_id=avance.id)
             except Exception as e:
                 messages.error(request, f"Erreur lors de l'enregistrement du paiement: {str(e)}")
     else:
