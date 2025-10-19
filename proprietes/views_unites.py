@@ -523,8 +523,6 @@ def recherche_unites(request):
                 default=Value('Adresse non renseignée'),
                 output_field=CharField(max_length=300)
             ),
-            # Nombre de pièces
-            nombre_pieces=Count('pieces', distinct=True),
             # Nombre de réservations
             nombre_reservations=Count('reservations', distinct=True)
         )
