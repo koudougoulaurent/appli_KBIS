@@ -39,8 +39,9 @@ def connexion_groupes(request):
                 messages.error(request, f"Le groupe {groupe_nom} n'existe pas ou n'est pas actif.")
         else:
             messages.error(request, "Veuillez sélectionner un groupe de travail.")
-    # Récupérer tous les groupes actifs
-    groupes = GroupeTravail.objects.filter(actif=True).order_by('nom')
+    # Récupérer seulement les 4 groupes essentiels
+    groupes_essentiels = ['PRIVILEGE', 'CAISSE', 'ADMINISTRATION', 'CONTROLES']
+    groupes = GroupeTravail.objects.filter(nom__in=groupes_essentiels, actif=True).order_by('nom')
     
     context = {
         'groupes': groupes,
