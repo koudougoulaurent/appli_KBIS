@@ -293,38 +293,19 @@
                     </div>
                     
                     <!-- *** NOUVELLE SECTION : Sélection manuelle des mois *** -->
-                    <div id="selectionManuelleMois" class="form-group" style="display: none;">
+                    <div id="mois-selection-container" class="form-group" style="display: none;">
                         <label class="form-label">
                             <i class="bi bi-calendar-check"></i> Mois couverts par l'avance
                         </label>
-                        <div class="row">
-                            <div class="col-md-8">
-                                <div id="suggestionsMois" class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
-                                    <p class="text-muted text-center">
-                                        <i class="bi bi-hourglass-split"></i>
-                                        Sélectionnez un contrat et un montant pour voir les suggestions
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h6 class="mb-0">Mois sélectionnés</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div id="moisSelectionnes" class="mb-2">
-                                            <p class="text-muted small">Aucun mois sélectionné</p>
-                                        </div>
-                                        <button type="button" class="btn btn-sm btn-outline-danger" id="viderSelection" disabled>
-                                            <i class="bi bi-trash"></i> Vider
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
+                            <p class="text-muted text-center">
+                                <i class="bi bi-hourglass-split"></i>
+                                Sélectionnez les mois que vous souhaitez couvrir avec cette avance
+                            </p>
                         </div>
                         <div class="help-text">
                             Cochez les mois que vous souhaitez couvrir avec cette avance. 
-                            Les suggestions sont basées sur l'historique des paiements du contrat.
+                            Vous pouvez sélectionner des mois de l'année actuelle et de l'année suivante.
                         </div>
                     </div>
                     
@@ -418,6 +399,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/selection-mois-avance.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const contratSelect = document.getElementById('{{ form.contrat.id_for_label }}');
@@ -453,7 +435,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (this.checked) {
             selectionManuelleMois.style.display = 'block';
             calculationCard.style.display = 'none';
-            chargerSuggestionsMois();
+            // Initialiser le système de sélection des mois
+            if (window.selectionMoisAvance) {
+                window.selectionMoisAvance.toggleMoisSelection('manuel');
+            }
             // Mettre à jour le champ caché
             document.querySelector('input[name="mode_selection_mois"][value="manuel"]').checked = true;
         }

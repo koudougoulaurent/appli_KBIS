@@ -100,14 +100,14 @@ def liste_avances(request):
         # Synchroniser automatiquement les avances incohérentes
         ServiceSynchronisationAvances.synchroniser_toutes_avances()
     
-    # Récupérer les avances synchronisées
+    # Récupérer les avances synchronisées (sans doublons)
     from .models_avance import AvanceLoyer
     avances_queryset = AvanceLoyer.objects.select_related(
         'contrat__locataire', 
         'contrat__propriete',
         'contrat__propriete__bailleur',
         'paiement'
-    ).order_by('-date_avance')
+    ).distinct().order_by('-date_avance')
     
     # Convertir en format compatible avec le template
     avances = []

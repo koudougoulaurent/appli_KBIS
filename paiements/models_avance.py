@@ -17,12 +17,26 @@ class AvanceLoyer(models.Model):
         ('annulee', 'Annulée'),
     ]
     
+    MODE_SELECTION_CHOICES = [
+        ('automatique', 'Calcul automatique'),
+        ('manuel', 'Sélection manuelle'),
+    ]
+    
     # Relations
     contrat = models.ForeignKey(
         Contrat,
         on_delete=models.CASCADE,
         related_name='avances_loyer',
         verbose_name=_("Contrat")
+    )
+    
+    paiement = models.ForeignKey(
+        'paiements.Paiement',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='avance_loyer',
+        verbose_name=_("Paiement associé")
     )
     
     # Montants
