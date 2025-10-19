@@ -551,7 +551,7 @@ def creer_avance(request):
         'title': 'Créer une avance de loyer'
     }
     
-    return render(request, 'paiements/avances/creer_avance.html', context)
+    return render(request, 'paiements/avances/creer_avance_manuel.html', context)
 
 
 @login_required

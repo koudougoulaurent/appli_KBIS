@@ -19,14 +19,12 @@ class Command(BaseCommand):
         if dry_run:
             self.stdout.write(self.style.WARNING("Mode DRY-RUN - Aucun doublon ne sera supprimé"))
         
-        self.stdout.write('Nettoyage des doublons d\'avances...')
-        
         # Trouver les doublons basés sur contrat, montant et date
         doublons = []
         avances_traitees = set()
         
         for avance in AvanceLoyer.objects.all().order_by('id'):
-            cle_doublon = (avance.contrat_id, float(avance.montant_avance), avance.date_avance)
+            cle_doublon = (avance.contrat.id, float(avance.montant_avance), avance.date_avance)
             
             if cle_doublon in avances_traitees:
                 doublons.append(avance)
@@ -34,17 +32,23 @@ class Command(BaseCommand):
                 avances_traitees.add(cle_doublon)
         
         if not doublons:
-            self.stdout.write(self.style.SUCCESS('Aucun doublon trouvé'))
+            self.stdout.write(self.style.SUCCESS("Aucun doublon trouvé"))
             return
         
-        self.stdout.write(f'Doublons trouvés: {len(doublons)}')
+        self.stdout.write(f"Trouvé {len(doublons)} doublons d'avances")
         
-        if not dry_run:
-            with transaction.atomic():
-                for doublon in doublons:
-                    self.stdout.write(f'Suppression de l\'avance {doublon.id} (contrat {doublon.contrat_id})')
-                    doublon.delete()
-            
-            self.stdout.write(self.style.SUCCESS(f'{len(doublons)} doublons supprimés avec succès'))
+        if dry_run:
+            for avance in doublons:
+                self.stdout.write(f"  - Avance {avance.id}: {avance.contrat.locataire.get_nom_complet()} - {avance.montant_avance} F CFA - {avance.date_avance}")
         else:
-            self.stdout.write(self.style.WARNING(f'DRY-RUN: {len(doublons)} doublons seraient supprimés'))
+            # Supprimer les doublons (garder le plus ancien)
+            supprimees = 0
+            with transaction.atomic():
+                for avance in doublons:
+                    self.stdout.write(f"Suppression de l'avance {avance.id}")
+                    avance.delete()
+                    supprimees += 1
+            
+            self.stdout.write(
+                self.style.SUCCESS(f"{supprimees} doublons supprimés avec succès")
+            )

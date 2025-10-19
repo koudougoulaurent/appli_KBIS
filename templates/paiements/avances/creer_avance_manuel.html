@@ -1,0 +1,340 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Créer une Avance de Loyer{% endblock %}
+
+{% block extra_css %}
+<style>
+    .month-selector {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin: 20px 0;
+    }
+    
+    .month-checkbox {
+        display: none;
+    }
+    
+    .month-label {
+        display: block;
+        padding: 10px;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: white;
+    }
+    
+    .month-label:hover {
+        border-color: #007bff;
+        background-color: #f8f9fa;
+    }
+    
+    .month-checkbox:checked + .month-label {
+        background-color: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+    
+    .year-selector {
+        margin-bottom: 20px;
+    }
+    
+    .mode-selection {
+        margin-bottom: 30px;
+    }
+    
+    .mode-selection .form-check {
+        margin-bottom: 10px;
+    }
+    
+    .month-info {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 20px;
+    }
+    
+    .selected-months {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 10px;
+    }
+    
+    .selected-month {
+        background-color: #007bff;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 0.9em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        Créer une Avance de Loyer
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="avanceForm">
+                        {% csrf_token %}
+                        
+                        <!-- Mode de sélection des mois -->
+                        <div class="mode-selection">
+                            <h5>Mode de sélection des mois couverts</h5>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="mode_selection_mois" 
+                                       id="mode_automatique" value="automatique" checked>
+                                <label class="form-check-label" for="mode_automatique">
+                                    <strong>Calcul automatique</strong> - Le système calcule automatiquement les mois couverts
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="mode_selection_mois" 
+                                       id="mode_manuel" value="manuel">
+                                <label class="form-check-label" for="mode_manuel">
+                                    <strong>Sélection manuelle</strong> - Choisissez manuellement les mois couverts
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Informations de base -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.contrat.id_for_label }}" class="form-label">Contrat *</label>
+                                    {{ form.contrat }}
+                                    {% if form.contrat.errors %}
+                                        <div class="text-danger">{{ form.contrat.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.montant_avance.id_for_label }}" class="form-label">Montant de l'avance (F CFA) *</label>
+                                    {{ form.montant_avance }}
+                                    {% if form.montant_avance.errors %}
+                                        <div class="text-danger">{{ form.montant_avance.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.date_avance.id_for_label }}" class="form-label">Date de l'avance *</label>
+                                    {{ form.date_avance }}
+                                    {% if form.date_avance.errors %}
+                                        <div class="text-danger">{{ form.date_avance.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.notes.id_for_label }}" class="form-label">Notes</label>
+                                    {{ form.notes }}
+                                    {% if form.notes.errors %}
+                                        <div class="text-danger">{{ form.notes.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sélection manuelle des mois -->
+                        <div id="selection-manuelle" style="display: none;">
+                            <h5>Sélection des mois couverts</h5>
+                            
+                            <!-- Sélecteur d'année -->
+                            <div class="year-selector">
+                                <label for="annee-selection" class="form-label">Année :</label>
+                                <select id="annee-selection" class="form-select" style="width: auto; display: inline-block;">
+                                    <option value="2025">2025</option>
+                                    <option value="2026">2026</option>
+                                    <option value="2027">2027</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Grille des mois -->
+                            <div class="month-selector">
+                                <input type="checkbox" class="month-checkbox" id="mois-01" value="01">
+                                <label for="mois-01" class="month-label">Janvier</label>
+                                
+                                <input type="checkbox" class="month-checkbox" id="mois-02" value="02">
+                                <label for="mois-02" class="month-label">Février</label>
+                                
+                                <input type="checkbox" class="month-checkbox" id="mois-03" value="03">
+                                <label for="mois-03" class="month-label">Mars</label>
+                                
+                                <input type="checkbox" class="month-checkbox" id="mois-04" value="04">
+                                <label for="mois-04" class="month-label">Avril</label>
+                                
+                                <input type="checkbox" class="month-checkbox" id="mois-05" value="05">
+                                <label for="mois-05" class="month-label">Mai</label>
+                                
+                                <input type="checkbox" class="month-checkbox" id="mois-06" value="06">
+                                <label for="mois-06" class="month-label">Juin</label>
+                                
+                                <input type="checkbox" class="month-checkbox" id="mois-07" value="07">
+                                <label for="mois-07" class="month-label">Juillet</label>
+                                
+                                <input type="checkbox" class="month-checkbox" id="mois-08" value="08">
+                                <label for="mois-08" class="month-label">Août</label>
+                                
+                                <input type="checkbox" class="month-checkbox" id="mois-09" value="09">
+                                <label for="mois-09" class="month-label">Septembre</label>
+                                
+                                <input type="checkbox" class="month-checkbox" id="mois-10" value="10">
+                                <label for="mois-10" class="month-label">Octobre</label>
+                                
+                                <input type="checkbox" class="month-checkbox" id="mois-11" value="11">
+                                <label for="mois-11" class="month-label">Novembre</label>
+                                
+                                <input type="checkbox" class="month-checkbox" id="mois-12" value="12">
+                                <label for="mois-12" class="month-label">Décembre</label>
+                            </div>
+                            
+                            <!-- Informations sur la sélection -->
+                            <div class="month-info">
+                                <h6>Mois sélectionnés :</h6>
+                                <div id="selected-months-display" class="selected-months">
+                                    Aucun mois sélectionné
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        Montant requis : <span id="montant-requis">0</span> F CFA
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Champ caché pour les mois sélectionnés -->
+                        <input type="hidden" name="mois_couverts_manuels" id="mois-couverts-manuels">
+                        
+                        <!-- Boutons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'paiements:liste_avances' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left me-2"></i>Retour à la liste
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>Créer l'avance
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modeAutomatique = document.getElementById('mode_automatique');
+    const modeManuel = document.getElementById('mode_manuel');
+    const selectionManuelle = document.getElementById('selection-manuelle');
+    const moisCheckboxes = document.querySelectorAll('.month-checkbox');
+    const anneeSelection = document.getElementById('annee-selection');
+    const selectedMonthsDisplay = document.getElementById('selected-months-display');
+    const montantRequis = document.getElementById('montant-requis');
+    const moisCouvertsManuels = document.getElementById('mois-couverts-manuels');
+    const montantAvance = document.getElementById('id_montant_avance');
+    const contratSelect = document.getElementById('id_contrat_avance');
+    
+    // Gestion du mode de sélection
+    function toggleModeSelection() {
+        if (modeManuel.checked) {
+            selectionManuelle.style.display = 'block';
+        } else {
+            selectionManuelle.style.display = 'none';
+        }
+    }
+    
+    modeAutomatique.addEventListener('change', toggleModeSelection);
+    modeManuel.addEventListener('change', toggleModeSelection);
+    
+    // Gestion de la sélection des mois
+    function updateSelectedMonths() {
+        const selectedMonths = [];
+        const annee = anneeSelection.value;
+        
+        moisCheckboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                const mois = checkbox.value;
+                const date = `${annee}-${mois}-01`;
+                selectedMonths.push(date);
+            }
+        });
+        
+        // Mettre à jour l'affichage
+        if (selectedMonths.length === 0) {
+            selectedMonthsDisplay.innerHTML = 'Aucun mois sélectionné';
+        } else {
+            selectedMonthsDisplay.innerHTML = selectedMonths.map(date => {
+                const mois = new Date(date).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+                return `<span class="selected-month">${mois}</span>`;
+            }).join('');
+        }
+        
+        // Mettre à jour le champ caché
+        moisCouvertsManuels.value = JSON.stringify(selectedMonths);
+        
+        // Calculer le montant requis
+        updateMontantRequis();
+    }
+    
+    function updateMontantRequis() {
+        const selectedMonths = JSON.parse(moisCouvertsManuels.value || '[]');
+        const loyerMensuel = getLoyerMensuel();
+        
+        if (loyerMensuel > 0) {
+            const montant = loyerMensuel * selectedMonths.length;
+            montantRequis.textContent = montant.toLocaleString('fr-FR');
+        } else {
+            montantRequis.textContent = '0';
+        }
+    }
+    
+    function getLoyerMensuel() {
+        const contratId = contratSelect.value;
+        if (!contratId) return 0;
+        
+        // Récupérer le loyer mensuel via AJAX
+        fetch(`/paiements/avances/contrat-details-ajax/?contrat_id=${contratId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.loyer_mensuel) {
+                    updateMontantRequis();
+                }
+            })
+            .catch(error => console.error('Erreur:', error));
+        
+        return 0; // Valeur par défaut
+    }
+    
+    // Événements
+    moisCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedMonths);
+    });
+    
+    anneeSelection.addEventListener('change', updateSelectedMonths);
+    contratSelect.addEventListener('change', updateMontantRequis);
+    montantAvance.addEventListener('input', updateMontantRequis);
+    
+    // Initialisation
+    toggleModeSelection();
+    updateSelectedMonths();
+});
+</script>
+{% endblock %}
