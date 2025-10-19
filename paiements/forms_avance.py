@@ -242,22 +242,6 @@ class PaiementAvanceForm(forms.ModelForm):
         reste = montant_avance % loyer_mensuel
         
         return nombre_mois, reste
-    
-    def verifier_avance_existante(self, contrat):
-        """
-        Vérifie s'il y a déjà une avance active sur ce contrat
-        """
-        if not contrat:
-            return None
-        
-        from .models_avance import AvanceLoyer
-        
-        avance_existante = AvanceLoyer.objects.filter(
-            contrat=contrat,
-            statut='active'
-        ).first()
-        
-        return avance_existante
 
 
 class PaiementAvanceForm(forms.ModelForm):
