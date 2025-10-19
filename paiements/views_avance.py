@@ -152,7 +152,7 @@ def liste_avances(request):
             avances = [a for a in avances if a['contrat'].id == contrat_id_int]
         except ValueError:
             # Si c'est un nom de contrat, chercher par nom
-            avances = [a for a in avances if contrat_id.lower() in a['contrat'].locataire.nom_complet.lower()]
+            avances = [a for a in avances if contrat_id.lower() in a['contrat'].locataire.get_nom_complet().lower()]
     
     if statut:
         avances = [a for a in avances if a['statut'] == statut]
