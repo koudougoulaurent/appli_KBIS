@@ -89,49 +89,82 @@ def dashboard_avances(request):
 @login_required
 def liste_avances(request):
     """
-    Liste des avances de loyer
+    Liste des avances de loyer - Affiche les vraies avances de la base de données
     """
-    # Récupérer les avances avec pagination
-    avances = AvanceLoyer.objects.select_related('contrat', 'contrat__locataire', 'contrat__propriete').all()
+    # CORRECTION : Récupérer les paiements d'avance au lieu des AvanceLoyer
+    from .models import Paiement
+    paiements_avance = Paiement.objects.filter(
+        type_paiement='avance',
+        statut='valide'
+    ).select_related(
+        'contrat__locataire', 
+        'contrat__propriete',
+        'contrat__propriete__bailleur'
+    ).order_by('-date_paiement')
     
-    # Filtres
+    # Convertir les paiements en format compatible avec le template
+    avances = []
+    for paiement in paiements_avance:
+        # Calculer les mois couverts
+        loyer_mensuel = float(paiement.contrat.loyer_mensuel) if paiement.contrat.loyer_mensuel else 0
+        montant_avance = float(paiement.montant)
+        nombre_mois = int(montant_avance // loyer_mensuel) if loyer_mensuel > 0 else 0
+        
+        # Créer un objet compatible avec le template
+        avance_data = {
+            'id': paiement.id,
+            'contrat': paiement.contrat,
+            'montant_avance': montant_avance,
+            'montant_restant': montant_avance,  # Pour l'instant, considérer comme non consommé
+            'nombre_mois_couverts': nombre_mois,
+            'date_avance': paiement.date_paiement,
+            'statut': 'active',  # Par défaut actif
+            'notes': paiement.notes or '',
+            'created_at': paiement.created_at,
+            'updated_at': paiement.updated_at,
+        }
+        avances.append(avance_data)
+    
+    # Filtres sur la liste des avances
     contrat_id = request.GET.get('contrat')
     statut = request.GET.get('statut')
     mois_debut = request.GET.get('mois_debut')
     mois_fin = request.GET.get('mois_fin')
     
+    # Appliquer les filtres
     if contrat_id:
-        avances = avances.filter(contrat_id=contrat_id)
+        avances = [a for a in avances if a['contrat'].id == int(contrat_id)]
     
     if statut:
-        avances = avances.filter(statut=statut)
+        avances = [a for a in avances if a['statut'] == statut]
     
     if mois_debut:
         try:
             mois_debut_date = datetime.strptime(mois_debut, '%Y-%m').date()
-            avances = avances.filter(mois_debut_couverture__gte=mois_debut_date)
+            avances = [a for a in avances if a['date_avance'] >= mois_debut_date]
         except ValueError:
             pass
     
     if mois_fin:
         try:
             mois_fin_date = datetime.strptime(mois_fin, '%Y-%m').date()
-            avances = avances.filter(mois_fin_couverture__lte=mois_fin_date)
+            avances = [a for a in avances if a['date_avance'] <= mois_fin_date]
         except ValueError:
             pass
     
     # Pagination
+    from django.core.paginator import Paginator
     paginator = Paginator(avances, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
     # Statistiques
     stats = {
-        'total_avances': avances.count(),
-        'avances_actives': avances.filter(statut='active').count(),
-        'avances_epuisees': avances.filter(statut='epuisee').count(),
-        'montant_total_avances': avances.aggregate(total=Sum('montant_avance'))['total'] or 0,
-        'montant_restant': avances.aggregate(total=Sum('montant_restant'))['total'] or 0,
+        'total_avances': len(avances),
+        'avances_actives': len([a for a in avances if a['statut'] == 'active']),
+        'avances_epuisees': len([a for a in avances if a['statut'] == 'epuisee']),
+        'montant_total_avances': sum(a['montant_avance'] for a in avances),
+        'montant_restant': sum(a['montant_restant'] for a in avances),
     }
     
     # Contrats pour le filtre
