@@ -89,39 +89,42 @@ def dashboard_avances(request):
 @login_required
 def liste_avances(request):
     """
-    Liste des avances de loyer - Affiche les vraies avances de la base de données
+    Liste des avances de loyer - Synchronisées parfaitement avec les paiements
     """
-    # CORRECTION : Récupérer les paiements d'avance au lieu des AvanceLoyer
-    from .models import Paiement
-    paiements_avance = Paiement.objects.filter(
-        type_paiement='avance',
-        statut='valide'
-    ).select_related(
+    # SYNCHRONISATION AUTOMATIQUE : S'assurer que toutes les avances sont synchronisées
+    from .services_synchronisation_avances import ServiceSynchronisationAvances
+    
+    # Vérifier et synchroniser les avances
+    incohérences = ServiceSynchronisationAvances.verifier_coherence_avances()
+    if incohérences:
+        # Synchroniser automatiquement les avances incohérentes
+        ServiceSynchronisationAvances.synchroniser_toutes_avances()
+    
+    # Récupérer les avances synchronisées
+    from .models_avance import AvanceLoyer
+    avances_queryset = AvanceLoyer.objects.select_related(
         'contrat__locataire', 
         'contrat__propriete',
-        'contrat__propriete__bailleur'
-    ).order_by('-date_paiement')
+        'contrat__propriete__bailleur',
+        'paiement'
+    ).order_by('-date_avance')
     
-    # Convertir les paiements en format compatible avec le template
+    # Convertir en format compatible avec le template
     avances = []
-    for paiement in paiements_avance:
-        # Calculer les mois couverts
-        loyer_mensuel = float(paiement.contrat.loyer_mensuel) if paiement.contrat.loyer_mensuel else 0
-        montant_avance = float(paiement.montant)
-        nombre_mois = int(montant_avance // loyer_mensuel) if loyer_mensuel > 0 else 0
-        
-        # Créer un objet compatible avec le template
+    for avance in avances_queryset:
         avance_data = {
-            'id': paiement.id,
-            'contrat': paiement.contrat,
-            'montant_avance': montant_avance,
-            'montant_restant': montant_avance,  # Pour l'instant, considérer comme non consommé
-            'nombre_mois_couverts': nombre_mois,
-            'date_avance': paiement.date_paiement,
-            'statut': 'active',  # Par défaut actif
-            'notes': paiement.notes or '',
-            'created_at': paiement.created_at,
-            'updated_at': paiement.updated_at,
+            'id': avance.id,
+            'contrat': avance.contrat,
+            'montant_avance': float(avance.montant_avance),
+            'montant_restant': float(avance.montant_restant),
+            'nombre_mois_couverts': avance.nombre_mois_couverts,
+            'date_avance': avance.date_avance,
+            'statut': avance.statut,
+            'notes': avance.notes or '',
+            'created_at': avance.created_at,
+            'updated_at': avance.updated_at,
+            'mois_debut_couverture': avance.mois_debut_couverture,
+            'mois_fin_couverture': avance.mois_fin_couverture,
         }
         avances.append(avance_data)
     

@@ -387,16 +387,19 @@ def ajouter_paiement(request):
                     paiement.reference_paiement = paiement.generate_reference_paiement()
                     paiement.save()
                 
-                # *** INTÉGRATION AUTOMATIQUE DES AVANCES ***
-                # Si c'est un paiement d'avance, créer automatiquement l'avance
+                # *** SYNCHRONISATION AUTOMATIQUE DES AVANCES ***
+                # Si c'est un paiement d'avance, synchroniser automatiquement l'avance
                 if paiement.type_paiement == 'avance':
                     try:
-                        from .services_avance import ServiceGestionAvance
-                        avance = ServiceGestionAvance.traiter_paiement_avance(paiement)
-                        messages.success(request, f'Paiement {paiement.reference_paiement} créé avec succès! '
-                                                f'Avance de {avance.nombre_mois_couverts} mois créée automatiquement.')
+                        from .services_synchronisation_avances import ServiceSynchronisationAvances
+                        avance = ServiceSynchronisationAvances.synchroniser_avance_avec_paiement(paiement)
+                        if avance:
+                            messages.success(request, f'Paiement {paiement.reference_paiement} créé avec succès! '
+                                                    f'Avance de {avance.nombre_mois_couverts} mois synchronisée automatiquement.')
+                        else:
+                            messages.warning(request, f'Paiement {paiement.reference_paiement} créé, mais erreur lors de la synchronisation de l\'avance.')
                     except Exception as e:
-                        messages.warning(request, f'Paiement {paiement.reference_paiement} créé, mais erreur lors de la création de l\'avance: {str(e)}')
+                        messages.warning(request, f'Paiement {paiement.reference_paiement} créé, mais erreur lors de la synchronisation de l\'avance: {str(e)}')
                 elif paiement.type_paiement == 'loyer':
                     # *** VALIDATION INTELLIGENTE DES PAIEMENTS DE LOYER ***
                     try:
