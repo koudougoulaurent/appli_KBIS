@@ -56,7 +56,7 @@ class Contrat(models.Model):
         max_digits=12,
         decimal_places=2,
         default=0,
-        verbose_name=_("Dépôt de garantie ou Caution")
+        verbose_name=_("Caution")
     )
     avance_loyer = models.DecimalField(
         max_digits=12,
@@ -172,12 +172,12 @@ class Contrat(models.Model):
     depot_garantie_texte = models.CharField(
         max_length=100,
         blank=True,
-        verbose_name=_("Dépôt de garantie en lettres")
+        verbose_name=_("Caution en lettres")
     )
     depot_garantie_numerique = models.CharField(
         max_length=20,
         blank=True,
-        verbose_name=_("Dépôt de garantie en chiffres")
+        verbose_name=_("Caution en chiffres")
     )
     nombre_mois_caution = models.CharField(
         max_length=50,
@@ -281,7 +281,7 @@ class Contrat(models.Model):
         return format_currency_fcfa(self.get_loyer_total())
     
     def get_depot_garantie_formatted(self):
-        """Retourne le dépôt de garantie formaté en F CFA"""
+        """Retourne la caution formatée en F CFA"""
         from core.utils import format_currency_fcfa
         return format_currency_fcfa(self.depot_garantie)
     
@@ -445,7 +445,7 @@ class Contrat(models.Model):
         # Validation : éviter unité locative ET pièces simultanément
         self._valider_coherence_unite_pieces()
         
-        # Calculer automatiquement le dépôt de garantie et l'avance si non spécifiés
+        # Calculer automatiquement la caution et l'avance si non spécifiés
         from decimal import Decimal
         try:
             loyer_decimal = Decimal(self.loyer_mensuel) if self.loyer_mensuel else Decimal('0')

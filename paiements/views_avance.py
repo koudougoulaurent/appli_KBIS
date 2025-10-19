@@ -354,7 +354,7 @@ def creer_avance(request):
                     contrat=contrat,
                     montant=montant_avance,
                     date_paiement=date_avance,
-                    type_paiement='avance_loyer',
+                    type_paiement='avance',
                     statut='valide',
                     numero_paiement=numero_paiement,
                     notes=f"Paiement d'avance automatique - {avance.nombre_mois_couverts} mois couverts",
@@ -404,7 +404,7 @@ def paiement_avance(request):
             try:
                 # Créer le paiement
                 paiement = form.save(commit=False)
-                paiement.type_paiement = 'avance_loyer'
+                paiement.type_paiement = 'avance'
                 paiement.statut = 'valide'
                 paiement.save()
                 
@@ -438,9 +438,9 @@ def generer_recu_avance(request, avance_id):
         try:
             paiement_avance = Paiement.objects.get(pk=avance_id, type_paiement='avance')
         except Paiement.DoesNotExist:
-            # Si pas trouvé, essayer avec type_paiement='avance_loyer'
+            # Si pas trouvé, essayer avec type_paiement='avance'
             try:
-                paiement_avance = Paiement.objects.get(pk=avance_id, type_paiement='avance_loyer')
+                paiement_avance = Paiement.objects.get(pk=avance_id, type_paiement='avance')
             except Paiement.DoesNotExist:
                 # Si toujours pas trouvé, chercher n'importe quel paiement avec cet ID
                 try:
@@ -495,7 +495,7 @@ def get_contrat_details_ajax(request):
                 'loyer_mensuel': float(contrat.loyer_mensuel or 0),
                 'charges_mensuelles': float(contrat.charges_mensuelles or 0),
                 'depot_garantie': float(contrat.depot_garantie or 0),
-                'avance_loyer': float(contrat.avance_loyer or 0),
+                'avance': float(contrat.avance_loyer or 0),
                 'numero_contrat': contrat.numero_contrat,
                 'locataire_nom': f"{contrat.locataire.nom} {contrat.locataire.prenom}",
                 'propriete_titre': contrat.propriete.titre,

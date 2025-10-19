@@ -500,7 +500,6 @@ class Paiement(models.Model):
         ('loyer', 'Loyer'),
         ('caution', 'Caution'),
         ('avance', 'Avance de loyer'),
-        ('depot_garantie', 'Dépôt de garantie'),
         ('charges', 'Charges'),
         ('regularisation', 'Régularisation'),
         ('paiement_partiel', 'Paiement partiel'),
@@ -935,12 +934,12 @@ class Paiement(models.Model):
             try:
                 donnees_speciales.update({
                     'montant_caution': float(self.montant),
-                    'note_speciale': 'Dépôt de garantie - Remboursable en fin de bail',
+                    'note_speciale': 'Caution - Remboursable en fin de bail',
                 })
             except:
                 donnees_speciales.update({
                     'montant_caution': float(self.montant),
-                    'note_speciale': 'Dépôt de garantie',
+                    'note_speciale': 'Caution',
                 })
         
         elif type_quittance == 'quittance_avance':
@@ -1089,12 +1088,12 @@ class Paiement(models.Model):
             try:
                 donnees_speciales.update({
                     'montant_caution': float(self.montant),
-                    'note_speciale': 'Dépôt de garantie - Remboursable en fin de bail',
+                    'note_speciale': 'Caution - Remboursable en fin de bail',
                 })
             except:
                 donnees_speciales.update({
                     'montant_caution': float(self.montant),
-                    'note_speciale': 'Dépôt de garantie',
+                    'note_speciale': 'Caution',
                 })
         
         elif type_recu == 'recu_avance':

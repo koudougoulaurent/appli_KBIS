@@ -547,7 +547,7 @@ def api_convertir_avances_existantes(request):
             # Trouver tous les paiements d'avance de ce contrat
             paiements_avance = Paiement.objects.filter(
                 contrat=contrat,
-                type_paiement__in=['avance_loyer', 'avance'],
+                type_paiement='avance',
                 statut='valide'
             )
             
@@ -598,7 +598,7 @@ def api_convertir_avances_existantes(request):
                 for contrat_verif in contrats_avec_avances_manquantes:
                     paiements_verif = Paiement.objects.filter(
                         contrat=contrat_verif,
-                        type_paiement__in=['avance_loyer', 'avance'],
+                        type_paiement='avance',
                         statut='valide'
                     )
                     
@@ -647,7 +647,7 @@ def api_convertir_toutes_avances_existantes(request):
             # Trouver tous les contrats qui ont des paiements d'avance
             # Récupérer d'abord tous les paiements d'avance, puis les contrats uniques
             paiements_avance = Paiement.objects.filter(
-                type_paiement__in=['avance_loyer', 'avance'],
+                type_paiement='avance',
                 statut='valide'
             )
             
@@ -666,7 +666,7 @@ def api_convertir_toutes_avances_existantes(request):
                 # Trouver tous les paiements d'avance de ce contrat
                 paiements_avance = Paiement.objects.filter(
                     contrat=contrat,
-                    type_paiement__in=['avance_loyer', 'avance'],
+                    type_paiement='avance',
                     statut='valide'
                 )
                 
@@ -995,7 +995,7 @@ class PaiementCautionAvanceViewSet(viewsets.ModelViewSet):
     ViewSet pour la gestion des paiements de caution et avance via API REST.
     """
     queryset = Paiement.objects.filter(
-        type_paiement__in=['caution', 'avance', 'avance_loyer', 'depot_garantie']
+        type_paiement__in=['caution', 'avance']
     ).select_related(
         'contrat__locataire',
         'contrat__propriete',
@@ -1051,7 +1051,7 @@ class PaiementCautionAvanceViewSet(viewsets.ModelViewSet):
         
         if type_paiement:
             if type_paiement == 'caution_avance':
-                queryset = queryset.filter(type_paiement__in=['caution', 'avance_loyer'])
+                queryset = queryset.filter(type_paiement__in=['caution', 'avance'])
             else:
                 queryset = queryset.filter(type_paiement=type_paiement)
         
@@ -1222,7 +1222,7 @@ class PaiementCautionAvanceViewSet(viewsets.ModelViewSet):
         if paiement.type_paiement == 'caution':
             contrat.caution_payee = True
             contrat.date_paiement_caution = paiement.date_paiement
-        elif paiement.type_paiement == 'avance_loyer':
+        elif paiement.type_paiement == 'avance':
             contrat.avance_payee = True
             contrat.date_paiement_avance = paiement.date_paiement
         

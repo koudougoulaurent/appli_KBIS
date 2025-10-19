@@ -472,7 +472,7 @@
                 <span class="detail-label">Note:</span>
                 <span class="detail-value">
                     {% if document_type == 'paiement_caution' %}
-                        Dépôt de garantie - Garantie remboursable en fin de contrat
+                        Caution - Garantie remboursable en fin de contrat
                     {% elif document_type == 'paiement_avance' %}
                         Avance de loyer - Couvre {% if mois_couverts %}{{ mois_couverts.nombre }} mois de loyer ({{ mois_couverts.mois_texte }}){% else %}plusieurs mois de loyer{% endif %}
                     {% elif document_type == 'paiement_quittance' %}

@@ -388,8 +388,8 @@ def ajouter_paiement(request):
                     paiement.save()
                 
                 # *** INTÉGRATION AUTOMATIQUE DES AVANCES ***
-                # Si c'est un paiement d'avance (avance_loyer ou avance), créer automatiquement l'avance
-                if paiement.type_paiement in ['avance_loyer', 'avance']:
+                # Si c'est un paiement d'avance, créer automatiquement l'avance
+                if paiement.type_paiement == 'avance':
                     try:
                         from .services_avance import ServiceGestionAvance
                         avance = ServiceGestionAvance.traiter_paiement_avance(paiement)
@@ -488,7 +488,7 @@ def ajouter_paiement(request):
                     # Trouver tous les paiements d'avance de ce contrat qui n'ont pas encore d'AvanceLoyer correspondant
                     paiements_avance_manquants = Paiement.objects.filter(
                         contrat=paiement.contrat,
-                        type_paiement__in=['avance_loyer', 'avance'],
+                        type_paiement='avance',
                         statut='valide'
                     )
                     
@@ -572,7 +572,7 @@ def liste_paiements(request):
             'contrat__locataire', 'contrat__propriete', 'contrat__propriete__bailleur', 'cree_par'
         ).exclude(
             # Exclure les paiements de caution qui ne sont pas marqués comme payés
-            Q(type_paiement='depot_garantie') & Q(contrat__caution_payee=False)
+            Q(type_paiement='caution') & Q(contrat__caution_payee=False)
         ).exclude(
             # Exclure les paiements d'avance qui ne sont pas marqués comme payés
             Q(type_paiement='avance') & Q(contrat__avance_loyer_payee=False)
@@ -1982,12 +1982,12 @@ def imprimer_recap_mensuel(request, recap_id):
                 
                 # Récupérer les paiements de caution et d'avance
                 paiements_caution = contrat_actif.paiements.filter(
-                    type_paiement__in=['caution', 'depot_garantie'],
+                    type_paiement='caution',
                     statut='valide'
                 ).aggregate(total=Sum('montant'))['total'] or 0
                 
                 paiements_avance = contrat_actif.paiements.filter(
-                    type_paiement__in=['avance_loyer', 'avance'],
+                    type_paiement='avance',
                     statut='valide'
                 ).aggregate(total=Sum('montant'))['total'] or 0
                 
@@ -3386,12 +3386,12 @@ def generer_pdf_recap_detaille_paysage(request, recap_id):
                 
                 # Récupérer les paiements de caution et d'avance
                 paiements_caution = contrat_actif.paiements.filter(
-                    type_paiement__in=['caution', 'depot_garantie'],
+                    type_paiement='caution',
                     statut='valide'
                 ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
                 
                 paiements_avance = contrat_actif.paiements.filter(
-                    type_paiement__in=['avance_loyer', 'avance'],
+                    type_paiement='avance',
                     statut='valide'
                 ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
                 

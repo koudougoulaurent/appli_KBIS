@@ -175,7 +175,7 @@ def ajouter_contrat(request):
                     from paiements.models import Paiement
                     paiement_caution = Paiement.objects.create(
                         contrat=contrat,
-                        type_paiement='depot_garantie',
+                        type_paiement='caution',
                         montant=contrat.depot_garantie,
                         mode_paiement=form.cleaned_data.get('mode_paiement_caution', 'especes'),
                         date_paiement=form.cleaned_data.get('date_paiement_caution', timezone.now().date()),
@@ -1187,7 +1187,7 @@ def liste_contrats_caution(request):
                 # Calculer les montants payés avec tous les types possibles
                 paiements_caution = Paiement.objects.filter(
                     contrat=contrat,
-                    type_paiement__in=['caution', 'depot_garantie'],
+                    type_paiement='caution',
                     statut='valide'
                 )
                 
@@ -1425,7 +1425,7 @@ def marquer_caution_payee(request, contrat_id):
         
         paiement = Paiement.objects.create(
             contrat=contrat,
-            type_paiement='depot_garantie',
+            type_paiement='caution',
             montant=montant_caution,
             mode_paiement='especes',
             date_paiement=date_paiement,
@@ -2505,7 +2505,7 @@ def forcer_correction_statuts(request):
                     # Calculer les montants payés avec tous les types possibles
                     paiements_caution = Paiement.objects.filter(
                         contrat=contrat,
-                        type_paiement__in=['caution', 'depot_garantie'],
+                        type_paiement='caution',
                         statut='valide'
                     )
                     
