@@ -535,7 +535,7 @@ def creer_avance(request):
                 
                 # *** CRITIQUE : Créer automatiquement le paiement correspondant ***
                 from .models import Paiement
-                from .id_generator import IDGenerator
+                from core.id_generator import IDGenerator
                 
                 # Générer un numéro de paiement unique
                 numero_paiement = IDGenerator.generate_id('paiement', date_paiement=date_avance)
