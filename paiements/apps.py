@@ -11,5 +11,11 @@ class PaiementsConfig(AppConfig):
         # Importer les modèles pour qu'ils soient reconnus par Django
         from . import models
         # Importer les signaux quand l'application est prête
-        from . import signals_retrait
-        from . import signals_quittance
+        try:
+            from . import signals_retrait
+        except ImportError:
+            pass
+        try:
+            from . import signals_quittance
+        except ImportError:
+            pass
