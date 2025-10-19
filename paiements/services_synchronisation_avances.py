@@ -81,6 +81,10 @@ class ServiceSynchronisationAvances:
                 paiement.contrat.save()
                 
                 return avance
+                
+        except Exception as e:
+            print(f"Erreur synchronisation avance: {str(e)}")
+            return None
     
     @classmethod
     def synchroniser_toutes_avances_contrat(cls, contrat):
