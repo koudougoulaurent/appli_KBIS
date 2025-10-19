@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, Http404
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django.core.paginator import Paginator
@@ -112,6 +112,15 @@ def liste_avances(request):
     # Convertir en format compatible avec le template
     avances = []
     for avance in avances_queryset:
+        # Déterminer l'URL de détail appropriée
+        detail_url = None
+        if hasattr(avance, 'paiement') and avance.paiement:
+            # Si l'avance est liée à un paiement, utiliser l'URL du paiement
+            detail_url = f"/paiements/avances/paiement/{avance.paiement.id}/"
+        else:
+            # Sinon, utiliser l'URL de l'avance
+            detail_url = f"/paiements/avances/detail/{avance.id}/"
+        
         avance_data = {
             'id': avance.id,
             'contrat': avance.contrat,
@@ -125,6 +134,7 @@ def liste_avances(request):
             'updated_at': avance.updated_at,
             'mois_debut_couverture': avance.mois_debut_couverture,
             'mois_fin_couverture': avance.mois_fin_couverture,
+            'detail_url': detail_url,
         }
         avances.append(avance_data)
     
@@ -192,9 +202,28 @@ def liste_avances(request):
 @login_required
 def detail_avance(request, avance_id):
     """
-    Détail d'une avance de loyer
+    Détail d'une avance de loyer - Compatible avec le système synchronisé
     """
-    avance = get_object_or_404(AvanceLoyer, id=avance_id)
+    # Essayer d'abord de récupérer l'avance via le modèle AvanceLoyer
+    try:
+        avance = AvanceLoyer.objects.get(id=avance_id)
+    except AvanceLoyer.DoesNotExist:
+        # Si l'avance n'existe pas, essayer de la synchroniser depuis le paiement
+        from .services_synchronisation_avances import ServiceSynchronisationAvances
+        from .models import Paiement
+        
+        # Chercher un paiement d'avance avec cet ID
+        try:
+            paiement = Paiement.objects.get(id=avance_id, type_paiement='avance')
+            # Synchroniser l'avance
+            avance = ServiceSynchronisationAvances.synchroniser_avance_avec_paiement(paiement)
+            if not avance:
+                raise Http404("Avance non trouvée et impossible à synchroniser")
+        except Paiement.DoesNotExist:
+            raise Http404("Avance non trouvée")
+    
+    if not avance:
+        raise Http404("Avance non trouvée")
     
     # Récupérer les consommations
     consommations = ConsommationAvance.objects.filter(avance=avance).order_by('-mois_consomme')
@@ -300,6 +329,28 @@ def detail_avance(request, avance_id):
     }
     
     return render(request, 'paiements/avances/detail_avance.html', context)
+
+
+@login_required
+def detail_avance_paiement(request, paiement_id):
+    """
+    Détail d'une avance via l'ID du paiement - Pour compatibilité avec les liens existants
+    """
+    from .models import Paiement
+    from .services_synchronisation_avances import ServiceSynchronisationAvances
+    
+    # Récupérer le paiement d'avance
+    paiement = get_object_or_404(Paiement, id=paiement_id, type_paiement='avance')
+    
+    # Synchroniser l'avance si nécessaire
+    avance = ServiceSynchronisationAvances.synchroniser_avance_avec_paiement(paiement)
+    
+    if not avance:
+        messages.error(request, "Impossible de synchroniser l'avance avec le paiement.")
+        return redirect('paiements:liste_avances')
+    
+    # Rediriger vers la vue de détail normale
+    return redirect('paiements:detail_avance', avance_id=avance.id)
 
 
 @login_required

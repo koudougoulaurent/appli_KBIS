@@ -9,6 +9,8 @@ urlpatterns = [
     path('ajouter/', views_avance.creer_avance, name='ajouter_avance'),
     path('liste/', views_avance.liste_avances, name='liste_avances'),
     path('detail/<int:avance_id>/', views_avance.detail_avance, name='detail_avance'),
+    # URL alternative pour les paiements d'avance
+    path('paiement/<int:paiement_id>/', views_avance.detail_avance_paiement, name='detail_avance_paiement'),
     path('paiement/', views_avance.paiement_avance, name='paiement_avance'),
     path('contrat-details-ajax/', views_avance.get_contrat_details_ajax, name='get_contrat_details_ajax'),
     path('calculer-ajax/', views_avance.calculer_avance_ajax, name='calculer_avance_ajax'),
