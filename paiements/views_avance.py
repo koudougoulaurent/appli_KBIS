@@ -255,8 +255,23 @@ def detail_avance(request, avance_id):
     # *** NOUVELLES DONNÉES DÉTAILLÉES ***
     # Les imports sont déjà en haut du fichier
     
-    # Récupérer la liste des mois couverts avec leur statut (dynamique)
-    mois_couverts_liste = avance.get_mois_couverts_liste()
+    # *** SYNCHRONISATION DES AVANCES MULTIPLES ***
+    from .services_synchronisation_avances import ServiceSynchronisationAvances
+    
+    # Synchroniser toutes les avances du contrat
+    sync_result = ServiceSynchronisationAvances.synchroniser_toutes_avances_contrat(avance.contrat)
+    
+    # Récupérer TOUTES les avances du contrat pour la timeline complète
+    avances_contrat = AvanceLoyer.objects.filter(contrat=avance.contrat, statut='active').order_by('date_avance')
+    
+    # Construire la timeline complète de toutes les avances
+    mois_couverts_complets = []
+    for avance_contrat in avances_contrat:
+        mois_avance = avance_contrat.get_mois_couverts_liste()
+        mois_couverts_complets.extend(mois_avance)
+    
+    # Supprimer les doublons et trier
+    mois_couverts_liste = sorted(list(set(mois_couverts_complets)))
     mois_actuel = date.today().replace(day=1)
     
     # Analyser chaque mois couvert avec la progression dynamique
@@ -335,6 +350,26 @@ def detail_avance(request, avance_id):
         'consommations_ajoutees': consommations_ajoutees,
     }
     
+    # *** STATISTIQUES DES AVANCES MULTIPLES ***
+    stats_avances_multiples = {
+        'total_avances': avances_contrat.count(),
+        'total_mois_couverts': sync_result.get('total_mois', 0),
+        'total_montant_avances': sync_result.get('total_montant', 0),
+        'avances_sync': sync_result.get('avances_sync', 0),
+        'est_prolongation': avances_contrat.count() > 1,
+        'avances_liste': [
+            {
+                'id': av.id,
+                'montant': av.montant_avance,
+                'mois_couverts': av.nombre_mois_couverts,
+                'montant_restant': av.montant_restant,
+                'date_avance': av.date_avance,
+                'est_actuelle': av.id == avance.id
+            }
+            for av in avances_contrat
+        ]
+    }
+    
     context = {
         'avance': avance,
         'consommations': consommations,
@@ -342,6 +377,7 @@ def detail_avance(request, avance_id):
         'stats': stats_enrichies,
         'mois_detaille': mois_detaille,
         'mois_actuel': mois_actuel,
+        'avances_multiples': stats_avances_multiples,
     }
     
     return render(request, 'paiements/avances/detail_avance.html', context)
@@ -548,16 +584,43 @@ def creer_avance(request):
                     type_paiement='avance',
                     statut='valide',
                     numero_paiement=numero_paiement,
-                    notes=f"Paiement d'avance automatique - {avance.nombre_mois_couverts} mois couverts",
-                    created_by=request.user
+                    notes=f"Paiement d'avance automatique - {avance.nombre_mois_couverts} mois couverts"
                 )
                 
                 # Lier l'avance au paiement
                 avance.paiement = paiement
                 avance.save()
                 
-                messages.success(request, f"✅ Avance de {avance.montant_avance:,.0f} F CFA créée et intégrée au système de paiement ! "
-                                        f"Elle couvre {avance.nombre_mois_couverts} mois de loyer.")
+                # *** SYNCHRONISATION DES AVANCES MULTIPLES ***
+                from .services_synchronisation_avances import ServiceSynchronisationAvances
+                
+                # Synchroniser toutes les avances du contrat pour calculer les totaux
+                ServiceSynchronisationAvances.synchroniser_toutes_avances_contrat(contrat)
+                
+                # Récupérer les statistiques globales des avances du contrat
+                avances_contrat = AvanceLoyer.objects.filter(contrat=contrat, statut='active')
+                total_mois_couverts = sum(avance.nombre_mois_couverts for avance in avances_contrat)
+                total_montant_restant = sum(avance.montant_restant for avance in avances_contrat)
+                
+                # Message de confirmation détaillé
+                if avances_contrat.count() > 1:
+                    messages.success(request, 
+                        f"✅ AVANCE DE PROLONGATION CRÉÉE AVEC SUCCÈS !\n\n"
+                        f"💰 Montant : {avance.montant_avance:,.0f} F CFA\n"
+                        f"📅 Mois couverts par cette avance : {avance.nombre_mois_couverts}\n"
+                        f"📊 TOTAL CONTRAT : {avances_contrat.count()} avances actives\n"
+                        f"📅 TOTAL MOIS COUVERTS : {total_mois_couverts} mois\n"
+                        f"💰 MONTANT RESTANT TOTAL : {total_montant_restant:,.0f} F CFA\n\n"
+                        f"🔄 Synchronisation automatique effectuée !"
+                    )
+                else:
+                    messages.success(request, 
+                        f"✅ AVANCE CRÉÉE AVEC SUCCÈS !\n\n"
+                        f"💰 Montant : {avance.montant_avance:,.0f} F CFA\n"
+                        f"📅 Mois couverts : {avance.nombre_mois_couverts}\n"
+                        f"🔄 Intégrée au système de paiement !"
+                    )
+                
                 return redirect('paiements:avances:detail_avance', avance_id=avance.id)
             except Exception as e:
                 print(f"Erreur lors de la création de l'avance: {e}")

@@ -81,10 +81,54 @@ class ServiceSynchronisationAvances:
                 paiement.contrat.save()
                 
                 return avance
+    
+    @classmethod
+    def synchroniser_toutes_avances_contrat(cls, contrat):
+        """
+        Synchronise toutes les avances d'un contrat et calcule les totaux corrects.
+        """
+        try:
+            with transaction.atomic():
+                # Récupérer toutes les avances actives du contrat
+                avances = AvanceLoyer.objects.filter(contrat=contrat, statut='active').order_by('date_avance')
+                
+                if not avances.exists():
+                    return {'total_mois': 0, 'total_montant': 0, 'avances_sync': 0}
+                
+                # Synchroniser chaque avance
+                avances_sync = 0
+                for avance in avances:
+                    if avance.paiement:
+                        # Recalculer les mois couverts
+                        loyer_mensuel = float(avance.contrat.loyer_mensuel) if avance.contrat.loyer_mensuel else 0
+                        montant_avance = float(avance.montant_avance)
+                        
+                        if loyer_mensuel > 0:
+                            nombre_mois = cls._calculer_mois_couverts_precis(montant_avance, loyer_mensuel)
+                            montant_reste = montant_avance % loyer_mensuel
+                            
+                            # Mettre à jour l'avance
+                            avance.nombre_mois_couverts = nombre_mois
+                            avance.montant_reste = montant_reste
+                            avance.montant_restant = montant_avance  # Réinitialiser
+                            avance.save()
+                            
+                            avances_sync += 1
+                
+                # Calculer les totaux
+                total_mois = sum(avance.nombre_mois_couverts for avance in avances)
+                total_montant = sum(avance.montant_avance for avance in avances)
+                
+                return {
+                    'total_mois': total_mois,
+                    'total_montant': total_montant,
+                    'avances_sync': avances_sync,
+                    'avances_count': avances.count()
+                }
                 
         except Exception as e:
-            print(f"Erreur synchronisation avance: {str(e)}")
-            return None
+            print(f"Erreur lors de la synchronisation des avances du contrat {contrat.id}: {e}")
+            return {'total_mois': 0, 'total_montant': 0, 'avances_sync': 0, 'error': str(e)}
     
     @classmethod
     def _calculer_mois_couverts_precis(cls, montant_avance, loyer_mensuel):
