@@ -397,11 +397,8 @@ document.addEventListener('DOMContentLoaded', function() {
         detailsDiv.innerHTML = message;
         warningDiv.style.display = 'block';
         
-        // Reconfigurer les boutons après l'affichage de l'avertissement
-        setTimeout(() => {
-            configurerBoutonsAvertissement();
-            console.log('✅ Boutons d\'avertissement reconfigurés après affichage');
-        }, 100);
+        // Les boutons sont déjà configurés, pas besoin de reconfigurer
+        console.log('✅ Avertissement affiché, boutons déjà configurés');
     }
     
     function masquerAvertissementAvanceExistante() {
@@ -450,25 +447,33 @@ document.addEventListener('DOMContentLoaded', function() {
         updateCalculsAutomatiques(); // Déclencher les calculs automatiques
     });
     
+    // Variables pour éviter la reconfiguration en boucle
+    let boutonsConfigures = false;
+    
     // Fonction pour configurer les boutons d'avertissement
     function configurerBoutonsAvertissement() {
+        if (boutonsConfigures) {
+            console.log('🔍 Boutons déjà configurés, évitement de la reconfiguration');
+            return;
+        }
+        
         const btnContinuer = document.getElementById('btn-continuer-avance');
         const btnAnnuler = document.getElementById('btn-annuler-avance');
         
-        if (btnContinuer) {
-            // Supprimer les anciens événements s'ils existent
-            btnContinuer.removeEventListener('click', handleContinuerClick);
-            // Ajouter le nouvel événement
+        if (btnContinuer && !btnContinuer.hasAttribute('data-event-added')) {
             btnContinuer.addEventListener('click', handleContinuerClick);
+            btnContinuer.setAttribute('data-event-added', 'true');
             console.log('✅ Bouton Continuer configuré');
         }
         
-        if (btnAnnuler) {
-            // Supprimer les anciens événements s'ils existent
-            btnAnnuler.removeEventListener('click', handleAnnulerClick);
-            // Ajouter le nouvel événement
+        if (btnAnnuler && !btnAnnuler.hasAttribute('data-event-added')) {
             btnAnnuler.addEventListener('click', handleAnnulerClick);
+            btnAnnuler.setAttribute('data-event-added', 'true');
             console.log('✅ Bouton Annuler configuré');
+        }
+        
+        if (btnContinuer && btnAnnuler) {
+            boutonsConfigures = true;
         }
     }
     
@@ -546,7 +551,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Vérifier les boutons après un délai pour s'assurer qu'ils sont chargés
     setTimeout(() => {
         verifierBoutonsAvertissement();
-        configurerBoutonsAvertissement(); // Reconfigurer au cas où
+        // Ne pas reconfigurer si déjà fait
+        if (!boutonsConfigures) {
+            configurerBoutonsAvertissement();
+        }
     }, 1000);
 });
 </script>
