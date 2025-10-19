@@ -1200,6 +1200,15 @@ class PaiementCautionAvanceViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def valider_caution_avance(self, request, pk=None):
         """Valider un paiement de caution ou avance."""
+        # Vérification des permissions
+        from core.utils import check_group_permissions
+        permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'change')
+        if not permissions['allowed']:
+            return Response(
+                {'error': f'Permissions insuffisantes. {permissions["message"]}'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
         paiement = self.get_object()
         
         if paiement.statut == 'valide':

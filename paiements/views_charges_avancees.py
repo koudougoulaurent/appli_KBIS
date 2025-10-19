@@ -40,7 +40,7 @@ def liste_charges_avancees(request):
     
     # Vérification des permissions avec fallback pour PRIVILEGE
     from core.utils import check_group_permissions_with_fallback
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -123,7 +123,7 @@ def creer_charge_avancee(request, bailleur_id=None):
     
     # Vérification des permissions avec fallback pour PRIVILEGE
     from core.utils import check_group_permissions_with_fallback
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -164,7 +164,7 @@ def modifier_charge_avancee(request, charge_id):
     
     # Vérification des permissions avec fallback pour PRIVILEGE
     from core.utils import check_group_permissions_with_fallback
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -196,7 +196,7 @@ def detail_charge_avancee(request, charge_id):
     
     # Vérification des permissions avec fallback pour PRIVILEGE
     from core.utils import check_group_permissions_with_fallback
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -261,7 +261,7 @@ def dashboard_charges_bailleur(request, bailleur_id):
     
     # Vérification des permissions avec fallback pour PRIVILEGE
     from core.utils import check_group_permissions_with_fallback
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
@@ -319,7 +319,7 @@ def rapport_charges(request):
     
     # Vérification des permissions avec fallback pour PRIVILEGE
     from core.utils import check_group_permissions_with_fallback
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')

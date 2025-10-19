@@ -206,7 +206,7 @@ def generer_pdf_retrait(request, retrait_id):
     """
     Génère un PDF pour un retrait spécifique avec template.
     """
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:retraits_liste')
@@ -230,7 +230,7 @@ def generer_pdf_retraits_multiple(request):
     """
     Génère un PDF consolidé pour plusieurs retraits.
     """
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:retraits_liste')
@@ -264,7 +264,7 @@ def generer_pdf_retraits_mois(request):
     """
     Génère un PDF consolidé pour tous les retraits d'un mois.
     """
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:retraits_liste')

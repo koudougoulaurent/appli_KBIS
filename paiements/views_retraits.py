@@ -212,7 +212,7 @@ def valider_retrait(request, pk):
     """
     Valider un retrait
     """
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES'], 'change')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'change')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:retrait_detail', pk=pk)

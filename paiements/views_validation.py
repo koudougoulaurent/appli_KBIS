@@ -22,7 +22,7 @@ def valider_paiement(request, pk):
     """Valider un paiement en attente"""
     
     # Vérifier les permissions - seuls PRIVILEGE et COMPTABILITE peuvent valider
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'COMPTABILITE'], 'change')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'COMPTABILITE', 'CAISSE'], 'change')
     if not permissions['allowed']:
         messages.error(request, "Vous n'avez pas l'autorisation de valider les paiements.")
         return redirect('paiements:liste')
@@ -59,7 +59,7 @@ def refuser_paiement(request, pk):
     """Refuser un paiement en attente"""
     
     # Vérifier les permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'COMPTABILITE'], 'change')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'COMPTABILITE', 'CAISSE'], 'change')
     if not permissions['allowed']:
         messages.error(request, "Vous n'avez pas l'autorisation de refuser les paiements.")
         return redirect('paiements:liste')
@@ -153,7 +153,7 @@ def paiement_actions_ajax(request, pk):
     
     # Vérifier les permissions selon l'action
     if action in ['valider', 'refuser']:
-        permissions = check_group_permissions(request.user, ['PRIVILEGE', 'COMPTABILITE'], 'change')
+        permissions = check_group_permissions(request.user, ['PRIVILEGE', 'COMPTABILITE', 'CAISSE'], 'change')
     elif action == 'annuler':
         permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'delete')
     else:
