@@ -396,6 +396,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         detailsDiv.innerHTML = message;
         warningDiv.style.display = 'block';
+        
+        // Reconfigurer les boutons après l'affichage de l'avertissement
+        setTimeout(() => {
+            configurerBoutonsAvertissement();
+            console.log('✅ Boutons d\'avertissement reconfigurés après affichage');
+        }, 100);
     }
     
     function masquerAvertissementAvanceExistante() {
@@ -444,57 +450,71 @@ document.addEventListener('DOMContentLoaded', function() {
         updateCalculsAutomatiques(); // Déclencher les calculs automatiques
     });
     
-    // Utiliser la délégation d'événements pour les boutons d'avertissement
-    document.addEventListener('click', function(event) {
-        console.log('🔍 Événement de clic détecté:', event.target);
-        console.log('🔍 ID de l\'élément cliqué:', event.target ? event.target.id : 'Aucun ID');
+    // Fonction pour configurer les boutons d'avertissement
+    function configurerBoutonsAvertissement() {
+        const btnContinuer = document.getElementById('btn-continuer-avance');
+        const btnAnnuler = document.getElementById('btn-annuler-avance');
         
-        // Bouton Continuer (Prolongation)
-        if (event.target && event.target.id === 'btn-continuer-avance') {
-            console.log('✅ Bouton Continuer cliqué - Action en cours...');
-            event.preventDefault();
-            event.stopPropagation();
-            
-            try {
-                // Masquer l'avertissement et permettre la création
-                masquerAvertissementAvanceExistante();
-                console.log('✅ Avertissement masqué');
-                
-                // Ajouter une note dans le formulaire
-                const notesField = document.getElementById('id_notes');
-                if (notesField) {
-                    notesField.value = (notesField.value + '\n\n[PROLONGATION] - Avance supplémentaire ajoutée à une avance existante.').trim();
-                    console.log('✅ Note de prolongation ajoutée');
-                }
-                
-                console.log('✅ Action Continuer terminée avec succès');
-            } catch (error) {
-                console.error('❌ Erreur lors de l\'action Continuer:', error);
-            }
-            return;
+        if (btnContinuer) {
+            // Supprimer les anciens événements s'ils existent
+            btnContinuer.removeEventListener('click', handleContinuerClick);
+            // Ajouter le nouvel événement
+            btnContinuer.addEventListener('click', handleContinuerClick);
+            console.log('✅ Bouton Continuer configuré');
         }
         
-        // Bouton Annuler
-        if (event.target && event.target.id === 'btn-annuler-avance') {
-            console.log('✅ Bouton Annuler cliqué - Action en cours...');
-            event.preventDefault();
-            event.stopPropagation();
-            
-            try {
-                // Réinitialiser le formulaire
-                contratSelect.value = '';
-                masquerAvertissementAvanceExistante();
-                document.getElementById('loyer-mensuel-display').style.display = 'none';
-                document.getElementById('calculs-automatiques').style.display = 'none';
-                montantAvance.value = '';
-                document.getElementById('id_notes').value = '';
-                console.log('✅ Formulaire réinitialisé');
-            } catch (error) {
-                console.error('❌ Erreur lors de l\'action Annuler:', error);
-            }
-            return;
+        if (btnAnnuler) {
+            // Supprimer les anciens événements s'ils existent
+            btnAnnuler.removeEventListener('click', handleAnnulerClick);
+            // Ajouter le nouvel événement
+            btnAnnuler.addEventListener('click', handleAnnulerClick);
+            console.log('✅ Bouton Annuler configuré');
         }
-    });
+    }
+    
+    // Fonction pour gérer le clic sur Continuer
+    function handleContinuerClick(event) {
+        console.log('✅ Bouton Continuer cliqué - Action en cours...');
+        event.preventDefault();
+        event.stopPropagation();
+        
+        try {
+            // Masquer l'avertissement et permettre la création
+            masquerAvertissementAvanceExistante();
+            console.log('✅ Avertissement masqué');
+            
+            // Ajouter une note dans le formulaire
+            const notesField = document.getElementById('id_notes');
+            if (notesField) {
+                notesField.value = (notesField.value + '\n\n[PROLONGATION] - Avance supplémentaire ajoutée à une avance existante.').trim();
+                console.log('✅ Note de prolongation ajoutée');
+            }
+            
+            console.log('✅ Action Continuer terminée avec succès');
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'action Continuer:', error);
+        }
+    }
+    
+    // Fonction pour gérer le clic sur Annuler
+    function handleAnnulerClick(event) {
+        console.log('✅ Bouton Annuler cliqué - Action en cours...');
+        event.preventDefault();
+        event.stopPropagation();
+        
+        try {
+            // Réinitialiser le formulaire
+            contratSelect.value = '';
+            masquerAvertissementAvanceExistante();
+            document.getElementById('loyer-mensuel-display').style.display = 'none';
+            document.getElementById('calculs-automatiques').style.display = 'none';
+            montantAvance.value = '';
+            document.getElementById('id_notes').value = '';
+            console.log('✅ Formulaire réinitialisé');
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'action Annuler:', error);
+        }
+    }
     
     // Vérifier l'existence des boutons d'avertissement
     function verifierBoutonsAvertissement() {
@@ -520,8 +540,14 @@ document.addEventListener('DOMContentLoaded', function() {
     toggleModeSelection();
     updateSelectedMonths();
     
+    // Configurer les boutons d'avertissement au chargement
+    configurerBoutonsAvertissement();
+    
     // Vérifier les boutons après un délai pour s'assurer qu'ils sont chargés
-    setTimeout(verifierBoutonsAvertissement, 1000);
+    setTimeout(() => {
+        verifierBoutonsAvertissement();
+        configurerBoutonsAvertissement(); // Reconfigurer au cas où
+    }, 1000);
 });
 </script>
 {% endblock %}
