@@ -187,13 +187,31 @@ class DocumentUnifieA5Service:
             # Calculer les mois couverts à partir de la date du paiement
             from datetime import datetime, timedelta
             from dateutil.relativedelta import relativedelta
+            import locale
+            
+            # Définir la locale française pour les mois
+            try:
+                locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
+            except:
+                try:
+                    locale.setlocale(locale.LC_TIME, 'French_France.1252')
+                except:
+                    pass  # Utiliser les noms par défaut si la locale française n'est pas disponible
             
             date_paiement = paiement.date_paiement
             mois_couverts = []
             
+            # Dictionnaire de traduction des mois en français
+            mois_francais = {
+                1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+                5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+                9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
+            }
+            
             for i in range(nombre_mois):
                 mois_couvert = date_paiement + relativedelta(months=i)
-                mois_couverts.append(mois_couvert.strftime("%B %Y"))
+                mois_nom = mois_francais.get(mois_couvert.month, mois_couvert.strftime("%B"))
+                mois_couverts.append(f"{mois_nom} {mois_couvert.year}")
             
             return {
                 'nombre': nombre_mois,
