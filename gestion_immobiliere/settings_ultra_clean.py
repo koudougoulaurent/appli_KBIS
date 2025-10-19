@@ -1,12 +1,12 @@
 """
-Settings propre sans dépendances problématiques
+Settings ultra minimal pour identifier le problème
 """
 import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-clean-test-key'
+SECRET_KEY = 'django-insecure-ultra-clean-test-key'
 DEBUG = True
 ALLOWED_HOSTS = ['*']
 
@@ -22,10 +22,6 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'core',
     'utilisateurs',
-    'proprietes',
-    'contrats',
-    'paiements',
-    'notifications',
 ]
 
 MIDDLEWARE = [

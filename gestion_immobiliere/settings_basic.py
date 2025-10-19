@@ -1,12 +1,12 @@
 """
-Settings propre sans dépendances problématiques
+Settings ultra minimal avec seulement les apps Django de base
 """
 import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-clean-test-key'
+SECRET_KEY = 'django-insecure-basic-test-key'
 DEBUG = True
 ALLOWED_HOSTS = ['*']
 
@@ -20,12 +20,6 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'crispy_forms',
     'crispy_bootstrap5',
-    'core',
-    'utilisateurs',
-    'proprietes',
-    'contrats',
-    'paiements',
-    'notifications',
 ]
 
 MIDDLEWARE = [
@@ -38,7 +32,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'gestion_immobiliere.urls'
+ROOT_URLCONF = 'gestion_immobiliere.urls_basic'
 
 TEMPLATES = [
     {
@@ -77,12 +71,6 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-AUTH_USER_MODEL = 'utilisateurs.Utilisateur'
-
-LOGIN_URL = '/utilisateurs/connexion-groupes/'
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/utilisateurs/connexion-groupes/'
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"

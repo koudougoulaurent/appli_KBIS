@@ -437,6 +437,7 @@
                 <!-- Boutons de sélection des groupes -->
                 <div class="groupe-buttons">
                     {% for groupe in groupes %}
+                        {% if groupe.nom in 'PRIVILEGE,CAISSE,ADMINISTRATION,CONTROLES' %}
                         <div class="groupe-btn {{ groupe.nom|lower }}" 
                              onclick="selectGroupe('{{ groupe.nom }}')"
                              data-groupe="{{ groupe.nom }}">
@@ -464,6 +465,7 @@
                                 {% endif %}
                             </div>
                         </div>
+                        {% endif %}
                     {% endfor %}
                 </div>
                 
