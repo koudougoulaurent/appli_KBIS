@@ -85,6 +85,7 @@ class ServiceConsommationDynamique:
     def _calculer_mois_a_consommer(cls, avance, mois_actuel):
         """
         Calcule quels mois devraient être consommés automatiquement.
+        LOGIQUE CORRIGÉE : Ne consommer que les mois réellement écoulés.
         """
         if not avance.mois_debut_couverture:
             return []
@@ -94,19 +95,23 @@ class ServiceConsommationDynamique:
         
         # Parcourir tous les mois couverts par l'avance
         for _ in range(avance.nombre_mois_couverts):
-            # Si le mois est dans le passé et pas encore consommé
+            # CORRECTION : Seuls les mois COMPLÈTEMENT écoulés peuvent être consommés
+            # Un mois est considéré comme écoulé s'il est strictement antérieur au mois actuel
             if mois_courant < mois_actuel and not avance.est_mois_consomme(mois_courant):
                 mois_a_consommer.append(mois_courant)
+                print(f"📅 Mois à consommer: {mois_courant} (mois actuel: {mois_actuel})")
             
             # Passer au mois suivant
             mois_courant = mois_courant + relativedelta(months=1)
         
+        print(f"🔍 Avance {avance.id}: {len(mois_a_consommer)} mois à consommer sur {avance.nombre_mois_couverts} total")
         return mois_a_consommer
     
     @classmethod
     def calculer_progression_avance(cls, avance):
         """
         Calcule la progression réelle d'une avance.
+        LOGIQUE CORRIGÉE : Distinction claire entre mois consommés, en cours, en attente et futurs.
         """
         aujourd_hui = date.today()
         mois_actuel = aujourd_hui.replace(day=1)
@@ -121,23 +126,29 @@ class ServiceConsommationDynamique:
         total_mois = avance.nombre_mois_couverts
         mois_consommes = ConsommationAvance.objects.filter(avance=avance).count()
         
-        # Calculer le pourcentage de progression
+        # NOUVELLE LOGIQUE : Calculer les mois par statut temporel
+        mois_par_statut = cls._calculer_mois_par_statut_temporel(avance, mois_actuel)
+        
+        # Calculer le pourcentage de progression (seulement les mois réellement consommés)
         pourcentage_mois = (mois_consommes / total_mois * 100) if total_mois > 0 else 0
         
         # Calculer la progression monétaire
         montant_consomme = avance.montant_avance - avance.montant_restant
         pourcentage_montant = (montant_consomme / avance.montant_avance * 100) if avance.montant_avance > 0 else 0
         
-        # Déterminer le statut
+        # Déterminer le statut global
         if mois_consommes >= total_mois:
             statut = 'terminee'
             statut_label = 'Terminée'
-        elif mois_actuel >= avance.mois_debut_couverture and mois_actuel <= (avance.mois_fin_couverture or mois_actuel):
+        elif mois_par_statut['en_cours'] > 0:
             statut = 'active'
             statut_label = 'Active'
-        else:
+        elif mois_par_statut['en_attente'] > 0:
             statut = 'en_attente'
             statut_label = 'En attente'
+        else:
+            statut = 'futur'
+            statut_label = 'Futur'
         
         return {
             'total_mois': total_mois,
@@ -150,7 +161,9 @@ class ServiceConsommationDynamique:
             'pourcentage_montant': round(pourcentage_montant, 1),
             'statut': statut,
             'statut_label': statut_label,
-            'prochaine_consommation': cls._calculer_prochaine_consommation(avance, mois_actuel)
+            'prochaine_consommation': cls._calculer_prochaine_consommation(avance, mois_actuel),
+            # NOUVEAU : Statistiques détaillées par statut temporel
+            'mois_par_statut': mois_par_statut
         }
     
     @classmethod
@@ -210,3 +223,50 @@ class ServiceConsommationDynamique:
                     consommations_ajoutees += 1
         
         return consommations_ajoutees
+    
+    @classmethod
+    def _calculer_mois_par_statut_temporel(cls, avance, mois_actuel):
+        """
+        Calcule le nombre de mois par statut temporel (consommés, en cours, en attente, futurs).
+        LOGIQUE CORRIGÉE : Distinction claire entre les différents statuts temporels.
+        """
+        if not avance.mois_debut_couverture:
+            return {
+                'consommes': 0,
+                'en_cours': 0,
+                'en_attente': 0,
+                'futurs': 0
+            }
+        
+        mois_consommes = 0
+        mois_en_cours = 0
+        mois_en_attente = 0
+        mois_futurs = 0
+        
+        mois_courant = avance.mois_debut_couverture
+        
+        # Parcourir tous les mois couverts par l'avance
+        for _ in range(avance.nombre_mois_couverts):
+            est_consomme = avance.est_mois_consomme(mois_courant)
+            
+            if est_consomme:
+                mois_consommes += 1
+            elif mois_courant < mois_actuel:
+                # Mois passé mais pas encore consommé = en attente
+                mois_en_attente += 1
+            elif mois_courant == mois_actuel:
+                # Mois actuel = en cours
+                mois_en_cours += 1
+            else:
+                # Mois futur
+                mois_futurs += 1
+            
+            # Passer au mois suivant
+            mois_courant = mois_courant + relativedelta(months=1)
+        
+        return {
+            'consommes': mois_consommes,
+            'en_cours': mois_en_cours,
+            'en_attente': mois_en_attente,
+            'futurs': mois_futurs
+        }

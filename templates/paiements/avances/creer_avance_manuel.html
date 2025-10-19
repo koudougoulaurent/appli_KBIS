@@ -499,14 +499,48 @@ document.addEventListener('DOMContentLoaded', function() {
             // Ajouter une note dans le formulaire
             const notesField = document.getElementById('id_notes');
             if (notesField) {
-                notesField.value = (notesField.value + '\n\n[PROLONGATION] - Avance supplémentaire ajoutée à une avance existante.').trim();
+                const noteProlongation = '\n\n[PROLONGATION] - Avance supplémentaire ajoutée à une avance existante.';
+                notesField.value = (notesField.value + noteProlongation).trim();
                 console.log('✅ Note de prolongation ajoutée');
             }
+            
+            // Afficher un message de confirmation clair
+            afficherMessageConfirmationProlongation();
             
             console.log('✅ Action Continuer terminée avec succès');
         } catch (error) {
             console.error('❌ Erreur lors de l\'action Continuer:', error);
         }
+    }
+    
+    // Fonction pour afficher un message de confirmation clair
+    function afficherMessageConfirmationProlongation() {
+        // Créer un message de confirmation temporaire
+        const confirmationDiv = document.createElement('div');
+        confirmationDiv.className = 'alert alert-success alert-dismissible fade show position-fixed';
+        confirmationDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        confirmationDiv.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="bi bi-check-circle-fill me-3 fs-4"></i>
+                <div>
+                    <h6 class="alert-heading mb-1">✅ Prolongation activée</h6>
+                    <p class="mb-0">Vous pouvez maintenant créer l'avance de prolongation. La note de prolongation a été ajoutée.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        
+        // Ajouter le message au body
+        document.body.appendChild(confirmationDiv);
+        
+        // Supprimer automatiquement après 5 secondes
+        setTimeout(() => {
+            if (confirmationDiv.parentNode) {
+                confirmationDiv.parentNode.removeChild(confirmationDiv);
+            }
+        }, 5000);
+        
+        console.log('✅ Message de confirmation affiché');
     }
     
     // Fonction pour gérer le clic sur Annuler

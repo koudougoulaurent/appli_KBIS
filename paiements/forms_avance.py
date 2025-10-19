@@ -258,6 +258,54 @@ class PaiementAvanceForm(forms.ModelForm):
                 )
         
         return cleaned_data
+    
+    def calculer_prolongation_avance(self, contrat, montant_avance):
+        """
+        Calcule la prolongation d'une avance existante.
+        LOGIQUE CORRIGÉE : Prend en compte le dernier mois couvert par l'avance existante.
+        """
+        from .models_avance import AvanceLoyer
+        from .services_consommation_dynamique import ServiceConsommationDynamique
+        from decimal import Decimal
+        from datetime import date
+        from dateutil.relativedelta import relativedelta
+        
+        # Récupérer l'avance existante
+        avance_existante = AvanceLoyer.objects.filter(
+            contrat=contrat,
+            statut='active'
+        ).first()
+        
+        if not avance_existante:
+            return None
+        
+        # Calculer la progression actuelle de l'avance existante
+        progression = ServiceConsommationDynamique.calculer_progression_avance(avance_existante)
+        
+        # Déterminer le mois de début de la prolongation
+        if avance_existante.mois_fin_couverture:
+            # Si l'avance a une fin définie, commencer après
+            mois_debut_prolongation = avance_existante.mois_fin_couverture + relativedelta(months=1)
+        else:
+            # Sinon, calculer basé sur les mois couverts
+            mois_debut_prolongation = avance_existante.mois_debut_couverture + relativedelta(months=avance_existante.nombre_mois_couverts)
+        
+        # Calculer le nombre de mois que peut couvrir la nouvelle avance
+        loyer_mensuel = Decimal(str(contrat.loyer_mensuel))
+        nombre_mois_prolongation, montant_reste = self.calculer_mois_et_reste(contrat, montant_avance)
+        
+        # Calculer le mois de fin de la prolongation
+        mois_fin_prolongation = mois_debut_prolongation + relativedelta(months=nombre_mois_prolongation - 1)
+        
+        return {
+            'avance_existante': avance_existante,
+            'progression_existante': progression,
+            'mois_debut_prolongation': mois_debut_prolongation,
+            'mois_fin_prolongation': mois_fin_prolongation,
+            'nombre_mois_prolongation': nombre_mois_prolongation,
+            'montant_reste': montant_reste,
+            'est_prolongation': True
+        }
 
 
 class PaiementAvanceForm(forms.ModelForm):
