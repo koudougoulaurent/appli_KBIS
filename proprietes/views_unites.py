@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 from django.db.models import Q, Count, Sum, Avg
+from django.db import models
 from django.utils import timezone
 from datetime import timedelta
 
