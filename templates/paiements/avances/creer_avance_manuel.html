@@ -446,38 +446,82 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Utiliser la délégation d'événements pour les boutons d'avertissement
     document.addEventListener('click', function(event) {
+        console.log('🔍 Événement de clic détecté:', event.target);
+        console.log('🔍 ID de l\'élément cliqué:', event.target ? event.target.id : 'Aucun ID');
+        
         // Bouton Continuer (Prolongation)
         if (event.target && event.target.id === 'btn-continuer-avance') {
-            console.log('Bouton Continuer cliqué');
+            console.log('✅ Bouton Continuer cliqué - Action en cours...');
             event.preventDefault();
-            // Masquer l'avertissement et permettre la création
-            masquerAvertissementAvanceExistante();
-            // Ajouter une note dans le formulaire
-            const notesField = document.getElementById('id_notes');
-            if (notesField) {
-                notesField.value = (notesField.value + '\n\n[PROLONGATION] - Avance supplémentaire ajoutée à une avance existante.').trim();
+            event.stopPropagation();
+            
+            try {
+                // Masquer l'avertissement et permettre la création
+                masquerAvertissementAvanceExistante();
+                console.log('✅ Avertissement masqué');
+                
+                // Ajouter une note dans le formulaire
+                const notesField = document.getElementById('id_notes');
+                if (notesField) {
+                    notesField.value = (notesField.value + '\n\n[PROLONGATION] - Avance supplémentaire ajoutée à une avance existante.').trim();
+                    console.log('✅ Note de prolongation ajoutée');
+                }
+                
+                console.log('✅ Action Continuer terminée avec succès');
+            } catch (error) {
+                console.error('❌ Erreur lors de l\'action Continuer:', error);
             }
             return;
         }
         
         // Bouton Annuler
         if (event.target && event.target.id === 'btn-annuler-avance') {
-            console.log('Bouton Annuler cliqué');
+            console.log('✅ Bouton Annuler cliqué - Action en cours...');
             event.preventDefault();
-            // Réinitialiser le formulaire
-            contratSelect.value = '';
-            masquerAvertissementAvanceExistante();
-            document.getElementById('loyer-mensuel-display').style.display = 'none';
-            document.getElementById('calculs-automatiques').style.display = 'none';
-            montantAvance.value = '';
-            document.getElementById('id_notes').value = '';
+            event.stopPropagation();
+            
+            try {
+                // Réinitialiser le formulaire
+                contratSelect.value = '';
+                masquerAvertissementAvanceExistante();
+                document.getElementById('loyer-mensuel-display').style.display = 'none';
+                document.getElementById('calculs-automatiques').style.display = 'none';
+                montantAvance.value = '';
+                document.getElementById('id_notes').value = '';
+                console.log('✅ Formulaire réinitialisé');
+            } catch (error) {
+                console.error('❌ Erreur lors de l\'action Annuler:', error);
+            }
             return;
         }
     });
     
+    // Vérifier l'existence des boutons d'avertissement
+    function verifierBoutonsAvertissement() {
+        const btnContinuer = document.getElementById('btn-continuer-avance');
+        const btnAnnuler = document.getElementById('btn-annuler-avance');
+        
+        console.log('🔍 Vérification des boutons d\'avertissement:');
+        console.log('🔍 Bouton Continuer trouvé:', btnContinuer ? 'OUI' : 'NON');
+        console.log('🔍 Bouton Annuler trouvé:', btnAnnuler ? 'OUI' : 'NON');
+        
+        if (btnContinuer) {
+            console.log('🔍 Bouton Continuer - Classes:', btnContinuer.className);
+            console.log('🔍 Bouton Continuer - Texte:', btnContinuer.textContent);
+        }
+        
+        if (btnAnnuler) {
+            console.log('🔍 Bouton Annuler - Classes:', btnAnnuler.className);
+            console.log('🔍 Bouton Annuler - Texte:', btnAnnuler.textContent);
+        }
+    }
+    
     // Initialisation
     toggleModeSelection();
     updateSelectedMonths();
+    
+    // Vérifier les boutons après un délai pour s'assurer qu'ils sont chargés
+    setTimeout(verifierBoutonsAvertissement, 1000);
 });
 </script>
 {% endblock %}
