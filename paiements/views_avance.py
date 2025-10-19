@@ -470,6 +470,15 @@ def creer_avance(request):
                 print(f"Mode sélection: {mode_selection}")
                 print(f"Mois couverts manuels: {mois_couverts_manuels}")
                 
+                # *** VÉRIFICATION DES AVANCES EXISTANTES ***
+                avance_existante = form.verifier_avance_existante(contrat)
+                if avance_existante:
+                    # Ajouter une note de prolongation
+                    if not notes:
+                        notes = f"[PROLONGATION] - Avance supplémentaire ajoutée à l'avance existante #{avance_existante.id}"
+                    else:
+                        notes += f"\n\n[PROLONGATION] - Avance supplémentaire ajoutée à l'avance existante #{avance_existante.id}"
+                
                 # *** CALCULS AUTOMATIQUES ***
                 nombre_mois_couverts, montant_reste = form.calculer_mois_et_reste(contrat, montant_avance)
                 

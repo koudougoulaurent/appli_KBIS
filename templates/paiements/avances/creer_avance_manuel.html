@@ -124,6 +124,27 @@
                                             <strong>Loyer mensuel :</strong> <span id="loyer-mensuel-montant">0</span> F CFA
                                         </div>
                                     </div>
+                                    
+                                    <!-- Avertissement avance existante -->
+                                    <div id="avance-existante-warning" class="mt-2" style="display: none;">
+                                        <div class="alert alert-warning py-3">
+                                            <div class="d-flex align-items-start">
+                                                <i class="bi bi-exclamation-triangle me-3 fs-4"></i>
+                                                <div class="flex-grow-1">
+                                                    <h6 class="alert-heading mb-2">⚠️ Avance(s) existante(s) détectée(s)</h6>
+                                                    <div id="avance-existante-details" class="mb-3"></div>
+                                                    <div class="d-flex gap-2">
+                                                        <button type="button" class="btn btn-warning btn-sm" id="btn-continuer-avance">
+                                                            <i class="bi bi-plus-circle me-1"></i>Continuer (Prolongation)
+                                                        </button>
+                                                        <button type="button" class="btn btn-secondary btn-sm" id="btn-annuler-avance">
+                                                            <i class="bi bi-x-circle me-1"></i>Annuler
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -339,6 +360,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     loyerMontant.textContent = parseFloat(data.loyer_mensuel).toLocaleString('fr-FR');
                     loyerDisplay.style.display = 'block';
                     
+                    // Vérifier les avances existantes
+                    if (data.avances_existantes && data.avances_existantes.has_avances) {
+                        afficherAvertissementAvanceExistante(data.avances_existantes);
+                    } else {
+                        masquerAvertissementAvanceExistante();
+                    }
+                    
                     // Mettre à jour les calculs
                     updateMontantRequis();
                     updateCalculsAutomatiques();
@@ -347,6 +375,32 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => console.error('Erreur:', error));
         
         return 0; // Valeur par défaut
+    }
+    
+    function afficherAvertissementAvanceExistante(avancesInfo) {
+        const warningDiv = document.getElementById('avance-existante-warning');
+        const detailsDiv = document.getElementById('avance-existante-details');
+        
+        // Construire le message détaillé
+        let message = `<p class="mb-2">${avancesInfo.message}</p>`;
+        
+        if (avancesInfo.avances && avancesInfo.avances.length > 0) {
+            message += '<div class="small">';
+            message += '<strong>Détails des avances :</strong><br>';
+            avancesInfo.avances.forEach((avance, index) => {
+                message += `• Avance ${index + 1}: ${parseFloat(avance.montant_avance).toLocaleString('fr-FR')} F CFA `;
+                message += `(${avance.nombre_mois_couverts} mois) - Restant: ${parseFloat(avance.montant_restant).toLocaleString('fr-FR')} F CFA<br>`;
+            });
+            message += '</div>';
+        }
+        
+        detailsDiv.innerHTML = message;
+        warningDiv.style.display = 'block';
+    }
+    
+    function masquerAvertissementAvanceExistante() {
+        const warningDiv = document.getElementById('avance-existante-warning');
+        warningDiv.style.display = 'none';
     }
     
     function updateCalculsAutomatiques() {
@@ -388,6 +442,27 @@ document.addEventListener('DOMContentLoaded', function() {
     montantAvance.addEventListener('input', function() {
         updateMontantRequis();
         updateCalculsAutomatiques(); // Déclencher les calculs automatiques
+    });
+    
+    // Événements pour les boutons d'avertissement
+    document.getElementById('btn-continuer-avance').addEventListener('click', function() {
+        // Masquer l'avertissement et permettre la création
+        masquerAvertissementAvanceExistante();
+        // Optionnel : ajouter une note dans le formulaire
+        const notesField = document.getElementById('id_notes');
+        if (notesField) {
+            notesField.value = (notesField.value + '\n\n[PROLONGATION] - Avance supplémentaire ajoutée à une avance existante.').trim();
+        }
+    });
+    
+    document.getElementById('btn-annuler-avance').addEventListener('click', function() {
+        // Réinitialiser le formulaire
+        contratSelect.value = '';
+        masquerAvertissementAvanceExistante();
+        document.getElementById('loyer-mensuel-display').style.display = 'none';
+        document.getElementById('calculs-automatiques').style.display = 'none';
+        montantAvance.value = '';
+        document.getElementById('id_notes').value = '';
     });
     
     // Initialisation
