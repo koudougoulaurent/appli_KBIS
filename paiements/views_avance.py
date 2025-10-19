@@ -471,16 +471,26 @@ def creer_avance(request):
                 print(f"Mois couverts manuels: {mois_couverts_manuels}")
                 
                 # *** VÉRIFICATION DES AVANCES EXISTANTES ***
-                avance_existante = form.verifier_avance_existante(contrat)
-                if avance_existante:
-                    # Ajouter une note de prolongation
-                    if not notes:
-                        notes = f"[PROLONGATION] - Avance supplémentaire ajoutée à l'avance existante #{avance_existante.id}"
-                    else:
-                        notes += f"\n\n[PROLONGATION] - Avance supplémentaire ajoutée à l'avance existante #{avance_existante.id}"
+                try:
+                    avance_existante = form.verifier_avance_existante(contrat)
+                    if avance_existante:
+                        # Ajouter une note de prolongation
+                        if not notes:
+                            notes = f"[PROLONGATION] - Avance supplémentaire ajoutée à l'avance existante #{avance_existante.id}"
+                        else:
+                            notes += f"\n\n[PROLONGATION] - Avance supplémentaire ajoutée à l'avance existante #{avance_existante.id}"
+                except Exception as e:
+                    print(f"Erreur lors de la vérification des avances existantes: {e}")
+                    # Continuer sans vérification si erreur
                 
                 # *** CALCULS AUTOMATIQUES ***
-                nombre_mois_couverts, montant_reste = form.calculer_mois_et_reste(contrat, montant_avance)
+                try:
+                    nombre_mois_couverts, montant_reste = form.calculer_mois_et_reste(contrat, montant_avance)
+                except Exception as e:
+                    print(f"Erreur lors du calcul des mois et reste: {e}")
+                    # Utiliser des valeurs par défaut
+                    nombre_mois_couverts = 0
+                    montant_reste = montant_avance
                 
                 # *** NOUVELLE LOGIQUE : Gestion des mois sélectionnés manuellement ***
                 mois_effet_personnalise = None
@@ -505,15 +515,23 @@ def creer_avance(request):
                         pass
                 
                 # Créer l'avance via le service avec tous les paramètres
-                avance = ServiceGestionAvance.creer_avance_loyer(
-                    contrat=contrat,
-                    montant_avance=montant_avance,
-                    date_avance=date_avance,
-                    notes=notes,
-                    mois_effet_personnalise=mois_effet_personnalise,
-                    mode_selection_mois=mode_selection,
-                    mois_couverts_manuels=mois_couverts_liste
-                )
+                try:
+                    avance = ServiceGestionAvance.creer_avance_loyer(
+                        contrat=contrat,
+                        montant_avance=montant_avance,
+                        date_avance=date_avance,
+                        notes=notes,
+                        mois_effet_personnalise=mois_effet_personnalise,
+                        mode_selection_mois=mode_selection,
+                        mois_couverts_manuels=mois_couverts_liste
+                    )
+                except Exception as e:
+                    print(f"Erreur lors de la création de l'avance: {e}")
+                    messages.error(request, f"Erreur lors de la création de l'avance: {str(e)}")
+                    return render(request, 'paiements/avances/creer_avance_manuel.html', {
+                        'form': form,
+                        'contrats': Contrat.objects.filter(est_actif=True, est_resilie=False).select_related('locataire', 'propriete'),
+                    })
                 
                 # *** CRITIQUE : Créer automatiquement le paiement correspondant ***
                 from .models import Paiement

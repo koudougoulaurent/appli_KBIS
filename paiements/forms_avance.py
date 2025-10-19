@@ -138,6 +138,29 @@ class AvanceLoyerForm(forms.ModelForm):
         
         return cleaned_data
     
+    def calculer_mois_et_reste(self, contrat, montant_avance):
+        """
+        Calcule automatiquement le nombre de mois couverts et le reste
+        """
+        if not contrat or not montant_avance:
+            return 0, Decimal('0')
+        
+        try:
+            loyer_mensuel = Decimal(str(contrat.loyer_mensuel)) if contrat.loyer_mensuel else Decimal('0')
+        except (ValueError, TypeError, AttributeError):
+            loyer_mensuel = Decimal('0')
+        
+        if loyer_mensuel <= 0:
+            return 0, montant_avance
+        
+        # Calculer le nombre de mois couverts (division entière)
+        nombre_mois = int(montant_avance // loyer_mensuel)
+        
+        # Calculer le reste
+        reste = montant_avance % loyer_mensuel
+        
+        return nombre_mois, reste
+    
     def verifier_avance_existante(self, contrat):
         """
         Vérifie s'il y a déjà une avance active sur ce contrat
@@ -235,29 +258,6 @@ class PaiementAvanceForm(forms.ModelForm):
                 )
         
         return cleaned_data
-    
-    def calculer_mois_et_reste(self, contrat, montant_avance):
-        """
-        Calcule automatiquement le nombre de mois couverts et le reste
-        """
-        if not contrat or not montant_avance:
-            return 0, Decimal('0')
-        
-        try:
-            loyer_mensuel = Decimal(str(contrat.loyer_mensuel)) if contrat.loyer_mensuel else Decimal('0')
-        except (ValueError, TypeError, AttributeError):
-            loyer_mensuel = Decimal('0')
-        
-        if loyer_mensuel <= 0:
-            return 0, montant_avance
-        
-        # Calculer le nombre de mois couverts (division entière)
-        nombre_mois = int(montant_avance // loyer_mensuel)
-        
-        # Calculer le reste
-        reste = montant_avance % loyer_mensuel
-        
-        return nombre_mois, reste
 
 
 class PaiementAvanceForm(forms.ModelForm):
