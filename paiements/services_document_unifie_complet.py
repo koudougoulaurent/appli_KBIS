@@ -126,10 +126,21 @@ class DocumentUnifieA5ServiceComplet:
                     # Utiliser les mois couverts calculés par l'avance
                     mois_liste = avance_loyer.get_mois_couverts_liste()
                     if mois_liste:
+                        # Convertir les dates en noms de mois français
+                        mois_noms = []
+                        mois_francais = {
+                            1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+                            5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+                            9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
+                        }
+                        for mois_date in mois_liste:
+                            mois_nom = mois_francais.get(mois_date.month, mois_date.strftime("%B"))
+                            mois_noms.append(f"{mois_nom} {mois_date.year}")
+                        
                         mois_couverts = {
                             'nombre': avance_loyer.nombre_mois_couverts,
-                            'mois_liste': mois_liste,
-                            'mois_texte': ', '.join(mois_liste)
+                            'mois_liste': mois_noms,
+                            'mois_texte': ', '.join(mois_noms)
                         }
                 else:
                     # Fallback : calculer manuellement

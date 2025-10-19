@@ -134,6 +134,7 @@ def liste_avances(request):
             'updated_at': avance.updated_at,
             'mois_debut_couverture': avance.mois_debut_couverture,
             'mois_fin_couverture': avance.mois_fin_couverture,
+            'loyer_mensuel': float(avance.contrat.loyer_mensuel),  # CORRECTION : Ajouter le loyer mensuel du contrat
             'detail_url': detail_url,
         }
         avances.append(avance_data)
