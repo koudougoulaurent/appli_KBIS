@@ -177,18 +177,11 @@ class Command(BaseCommand):
         
         currencies_data = [
             {
-                'code': 'F CFA',
+                'code': 'XOF',
                 'nom': 'Franc CFA',
                 'symbole': 'F CFA',
                 'taux_change': 1.0,
                 'par_defaut': True
-            },
-            {
-                'code': 'EUR',
-                'nom': 'Euro',
-                'symbole': '€',
-                'taux_change': 0.15,
-                'par_defaut': False
             },
             {
                 'code': 'USD',

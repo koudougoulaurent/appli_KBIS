@@ -445,7 +445,7 @@ class DocumentVerificationService:
             'numero': ['numéro', 'number', 'n°', 'nº'],
             'adresse': ['adresse', 'address', 'résidence', 'domicile'],
             'date': ['date', 'le', 'du'],
-            'montant': ['montant', 'amount', 'euros', '€', 'francs'],
+            'montant': ['montant', 'amount', 'francs', 'F CFA', 'franc cfa'],
             'fournisseur': ['fournisseur', 'provider', 'société', 'company'],
             'iban': ['iban', 'IBAN'],
             'bic': ['bic', 'BIC', 'swift'],

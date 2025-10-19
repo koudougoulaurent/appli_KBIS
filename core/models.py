@@ -432,7 +432,7 @@ class Devise(models.Model):
         max_length=3,
         unique=True,
         verbose_name=_("Code devise"),
-        help_text=_("Code ISO 4217 (ex: EUR, USD, F CFA)")
+        help_text=_("Code ISO 4217 (ex: XOF, USD, F CFA)")
     )
     nom = models.CharField(
         max_length=100,

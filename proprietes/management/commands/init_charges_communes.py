@@ -126,7 +126,7 @@ class Command(BaseCommand):
             if created:
                 charges_creees += 1
                 self.stdout.write(
-                    f'  ✅ Charge créée: {charge.nom} ({charge.montant_mensuel}€, {charge.get_type_repartition_display()})'
+                    f'  ✅ Charge créée: {charge.nom} ({charge.montant_mensuel} F CFA, {charge.get_type_repartition_display()})'
                 )
         
         if charges_creees > 0:
@@ -160,7 +160,7 @@ class Command(BaseCommand):
                     )
                 )
                 self.stdout.write(
-                    f'💰 Total charges: {resultats["total_charges"]:.2f}€'
+                    f'💰 Total charges: {resultats["total_charges"]:.2f} F CFA'
                 )
                 self.stdout.write(
                     f'👥 Nombre de locataires: {resultats["nb_locataires"]}'
@@ -172,7 +172,7 @@ class Command(BaseCommand):
                     self.stdout.write(
                         f'  {statut} {charge_info["charge"]} - '
                         f'{charge_info["locataire"]} ({charge_info["piece"]}) - '
-                        f'{charge_info["montant"]:.2f}€ ({charge_info["base_calcul"]})'
+                        f'{charge_info["montant"]:.2f} F CFA ({charge_info["base_calcul"]})'
                     )
             else:
                 self.stdout.write(
@@ -208,20 +208,20 @@ class Command(BaseCommand):
                     )
                 )
                 self.stdout.write(
-                    f'💰 Total appliqué: {resultats["total_applique"]:.2f}€'
+                    f'💰 Total appliqué: {resultats["total_applique"]:.2f} F CFA'
                 )
                 
                 # Afficher le détail
                 for application in resultats['applications']:
                     self.stdout.write(
                         f'  📋 {application["locataire"]} ({application["piece"]}) - '
-                        f'Charges: {application["charges_avant"]:.2f}€ → {application["charges_apres"]:.2f}€ '
-                        f'(+{application["charges_ajoutees"]:.2f}€)'
+                        f'Charges: {application["charges_avant"]:.2f} F CFA → {application["charges_apres"]:.2f} F CFA '
+                        f'(+{application["charges_ajoutees"]:.2f} F CFA)'
                     )
                     
                     for detail in application['details']:
                         self.stdout.write(
-                            f'    • {detail["charge"]}: +{detail["montant"]:.2f}€'
+                            f'    • {detail["charge"]}: +{detail["montant"]:.2f} F CFA'
                         )
             else:
                 self.stdout.write(
@@ -273,7 +273,7 @@ class Command(BaseCommand):
             
             if created:
                 self.stdout.write(
-                    f'  🏠 Espace partagé créé: {espace.nom} ({espace.cout_acces_mensuel}€/mois)'
+                    f'  🏠 Espace partagé créé: {espace.nom} ({espace.cout_acces_mensuel} F CFA/mois)'
                 )
 
 

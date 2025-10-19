@@ -1150,7 +1150,7 @@ class ChargesBailleur(models.Model):
         ordering = ['-date_charge']
     
     def __str__(self):
-        return f"{self.titre} - {self.montant}€"
+        return f"{self.titre} - {self.montant} F CFA"
     
     def get_absolute_url(self):
         return reverse('proprietes:detail_charge_bailleur', kwargs={'pk': self.pk})

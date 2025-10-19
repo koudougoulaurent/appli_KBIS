@@ -1853,7 +1853,7 @@ class UniteRechercheForm(forms.Form):
     
     loyer_min = forms.DecimalField(
         required=False,
-        label="Loyer minimum (€)",
+        label="Loyer minimum (F CFA)",
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
             'placeholder': '0',
@@ -1863,7 +1863,7 @@ class UniteRechercheForm(forms.Form):
     
     loyer_max = forms.DecimalField(
         required=False,
-        label="Loyer maximum (€)",
+        label="Loyer maximum (F CFA)",
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
             'placeholder': '5000',

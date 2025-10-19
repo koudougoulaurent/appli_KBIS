@@ -353,10 +353,10 @@
 
                 <!-- Filtres de prix et surface -->
                 <div class="filter-section">
-                    <h6><i class="bi bi-currency-euro me-2"></i>Prix et Surface</h6>
+                    <h6><i class="bi bi-currency-exchange me-2"></i>Prix et Surface</h6>
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label text-white">Loyer mensuel (€)</label>
+                            <label class="form-label text-white">Loyer mensuel (F CFA)</label>
                             <div class="price-range">
                                 <div class="row g-2">
                                     <div class="col">{{ form.loyer_min }}</div>
@@ -460,7 +460,7 @@
         </div>
         <div class="col-md-3">
             <div class="stats-card" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
-                <h3>{{ stats.loyer_total|floatformat:0 }}€</h3>
+                <h3>{{ stats.loyer_total|floatformat:0 }} F CFA</h3>
                 <p>Revenus mensuels</p>
             </div>
         </div>
@@ -592,12 +592,12 @@
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
                                     <div class="fw-bold text-success fs-5">
-                                        {{ unite.loyer_mensuel|floatformat:0 }}€
+                                        {{ unite.loyer_mensuel|floatformat:0 }} F CFA
                                         <small class="text-muted">/mois</small>
                                     </div>
                                     {% if unite.charges_mensuelles > 0 %}
                                     <small class="text-muted">
-                                        + {{ unite.charges_mensuelles|floatformat:0 }}€ charges
+                                        + {{ unite.charges_mensuelles|floatformat:0 }} F CFA charges
                                     </small>
                                     {% endif %}
                                 </div>
@@ -752,7 +752,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 <span class="badge bg-${unite.statut_code === 'disponible' ? 'success' : unite.statut_code === 'occupee' ? 'danger' : 'warning'}">
                                                     ${unite.statut}
                                                 </span>
-                                                <div class="text-success fw-bold">${unite.loyer_mensuel}€</div>
+                                                <div class="text-success fw-bold">${unite.loyer_mensuel} F CFA</div>
                                             </div>
                                         </div>
                                     </div>
