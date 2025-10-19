@@ -544,6 +544,26 @@ def recherche_unites(request):
                 Q(bailleur__prenom__icontains=search)
             )
         
+        # Filtre par ville
+        ville = form.cleaned_data.get('ville')
+        if ville:
+            unites = unites.filter(propriete__ville__icontains=ville)
+        
+        # Filtre par code postal
+        code_postal = form.cleaned_data.get('code_postal')
+        if code_postal:
+            unites = unites.filter(propriete__code_postal__icontains=code_postal)
+        
+        # Filtre par bailleur (recherche textuelle)
+        bailleur_search = form.cleaned_data.get('bailleur_search')
+        if bailleur_search:
+            unites = unites.filter(
+                Q(propriete__bailleur__nom__icontains=bailleur_search) |
+                Q(propriete__bailleur__prenom__icontains=bailleur_search) |
+                Q(bailleur__nom__icontains=bailleur_search) |
+                Q(bailleur__prenom__icontains=bailleur_search)
+            )
+        
         propriete = form.cleaned_data.get('propriete')
         if propriete:
             unites = unites.filter(propriete=propriete)

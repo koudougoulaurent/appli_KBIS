@@ -1772,17 +1772,17 @@ class DocumentSearchForm(forms.Form):
 
 
 class UniteRechercheForm(forms.Form):
-    """Formulaire de recherche avancée pour les unités locatives."""
+    """Formulaire de recherche avancée pour les unités locatives avec crispy forms."""
     
     search = forms.CharField(
         required=False,
         label="Recherche générale",
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Numéro d\'unité, nom, propriété...',
+            'placeholder': 'Numéro d\'unité, nom, propriété, ville, bailleur...',
             'id': 'search-input'
         }),
-        help_text="Recherchez par numéro d'unité, nom, propriété ou description"
+        help_text="Recherchez par numéro d'unité, nom, propriété, ville, bailleur ou description"
     )
     
     propriete = forms.ModelChoiceField(
@@ -1964,6 +1964,42 @@ class UniteRechercheForm(forms.Form):
         })
     )
     
+    # Recherche par ville
+    ville = forms.CharField(
+        required=False,
+        label="Ville",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ex: Paris, Lyon, Marseille...',
+            'id': 'ville-input'
+        }),
+        help_text="Filtrer par ville"
+    )
+    
+    # Recherche par code postal
+    code_postal = forms.CharField(
+        required=False,
+        label="Code postal",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ex: 75001, 69000...',
+            'id': 'code-postal-input'
+        }),
+        help_text="Filtrer par code postal"
+    )
+    
+    # Recherche par bailleur (nom ou prénom)
+    bailleur_search = forms.CharField(
+        required=False,
+        label="Recherche bailleur",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Nom ou prénom du bailleur...',
+            'id': 'bailleur-search-input'
+        }),
+        help_text="Rechercher par nom ou prénom du bailleur"
+    )
+    
     # Options d'affichage
     tri = forms.ChoiceField(
         choices=[
@@ -1973,8 +2009,10 @@ class UniteRechercheForm(forms.Form):
             ('surface', 'Surface croissante'),
             ('-surface', 'Surface décroissante'),
             ('propriete__titre', 'Propriété'),
+            ('propriete__ville', 'Ville'),
             ('etage', 'Étage'),
             ('date_creation', 'Date de création'),
+            ('-date_creation', 'Date de création (récent)'),
         ],
         initial='numero_unite',
         label="Trier par",
