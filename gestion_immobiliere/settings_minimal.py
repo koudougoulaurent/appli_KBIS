@@ -54,6 +54,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.entreprise_config',
+                'core.context_processors.dynamic_navigation',
             ],
         },
     },
@@ -101,10 +103,13 @@ STATICFILES_DIRS = [
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Custom user model
+AUTH_USER_MODEL = 'utilisateurs.Utilisateur'
+
 # Login URLs
-LOGIN_URL = '/admin/login/'
+LOGIN_URL = '/utilisateurs/connexion-groupes/'
 LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/utilisateurs/connexion-groupes/'
 
 # Messages
 from django.contrib.messages import constants as messages
