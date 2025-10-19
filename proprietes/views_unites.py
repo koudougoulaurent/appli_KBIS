@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.core.paginator import Paginator
-from django.db.models import Q, Count, Sum, Avg, CharField
+from django.db.models import Q, Count, Sum, Avg, CharField, Value
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
@@ -510,7 +510,7 @@ def recherche_unites(request):
                      then=F('propriete__bailleur__nom') + ' ' + F('propriete__bailleur__prenom')),
                 When(propriete__bailleur__nom__isnull=False,
                      then=F('propriete__bailleur__nom')),
-                default='Bailleur inconnu',
+                default=Value('Bailleur inconnu'),
                 output_field=CharField(max_length=200)
             ),
             # Adresse complète de la propriété
@@ -520,7 +520,7 @@ def recherche_unites(request):
                      then=F('propriete__adresse') + ', ' + F('propriete__ville')),
                 When(propriete__adresse__isnull=False,
                      then=F('propriete__adresse')),
-                default='Adresse non renseignée',
+                default=Value('Adresse non renseignée'),
                 output_field=CharField(max_length=300)
             ),
             # Nombre de pièces
