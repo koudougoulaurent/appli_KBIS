@@ -393,6 +393,15 @@ class CautionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def marquer_caution_payee(self, request, pk=None):
         """Marquer la caution comme payée."""
+        # Vérification des permissions
+        from core.utils import check_group_permissions
+        permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'modify')
+        if not permissions['allowed']:
+            return Response(
+                {'error': f'Permissions insuffisantes. {permissions["message"]}'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
         contrat = self.get_object()
         
         if contrat.caution_payee:
@@ -413,6 +422,15 @@ class CautionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def marquer_avance_payee(self, request, pk=None):
         """Marquer l'avance comme payée."""
+        # Vérification des permissions
+        from core.utils import check_group_permissions
+        permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'modify')
+        if not permissions['allowed']:
+            return Response(
+                {'error': f'Permissions insuffisantes. {permissions["message"]}'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
         contrat = self.get_object()
         
         if contrat.avance_payee:
@@ -433,6 +451,15 @@ class CautionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def recu_caution(self, request, pk=None):
         """Obtenir les informations du reçu de caution."""
+        # Vérification des permissions
+        from core.utils import check_group_permissions
+        permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
+        if not permissions['allowed']:
+            return Response(
+                {'error': f'Permissions insuffisantes. {permissions["message"]}'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
         contrat = self.get_object()
         
         if not contrat.caution_payee:

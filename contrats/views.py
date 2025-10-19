@@ -1508,9 +1508,11 @@ def marquer_avance_payee(request, contrat_id):
 def detail_contrat_caution(request, contrat_id):
     """Détail d'un contrat avec gestion des cautions."""
     
-    # Vérification des permissions simplifiée pour les superutilisateurs
-    if not (request.user.is_superuser or request.user.is_staff):
-        messages.error(request, 'Accès refusé. Permissions insuffisantes.')
+    # Vérification des permissions : PRIVILEGE, ADMINISTRATION, COMPTABILITE, CAISSE peuvent voir les détails
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
         return redirect('contrats:liste_contrats_caution')
     
     try:
@@ -2395,9 +2397,9 @@ def gestion_cautions(request):
     """
     Vue principale pour la gestion des cautions
     """
-    # Vérification des permissions : PRIVILEGE et ADMINISTRATION peuvent gérer les cautions
+    # Vérification des permissions : PRIVILEGE, ADMINISTRATION, COMPTABILITE, CAISSE peuvent gérer les cautions
     from core.utils import check_group_permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('contrats:liste')
