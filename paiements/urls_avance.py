@@ -25,4 +25,8 @@ urlpatterns = [
     path('synchroniser-ajax/', views_monitoring_avance.synchroniser_avances_ajax, name='synchroniser_avances_ajax'),
     path('envoyer-alertes-ajax/', views_monitoring_avance.envoyer_alertes_ajax, name='envoyer_alertes_ajax'),
     path('rapport-progression-ajax/', views_monitoring_avance.rapport_progression_ajax, name='rapport_progression_ajax'),
+    
+    # API pour la progression dynamique
+    path('api/progression/<int:avance_id>/', views_avance.api_progression_avance, name='api_progression_avance'),
+    path('api/consommer-auto/', views_avance.api_consommer_auto, name='api_consommer_auto'),
 ]

@@ -225,32 +225,45 @@ def detail_avance(request, avance_id):
     if not avance:
         raise Http404("Avance non trouvée")
     
-    # Récupérer les consommations
+    # *** CONSOMMATION DYNAMIQUE ET RÉELLE ***
+    from .services_consommation_dynamique import ServiceConsommationDynamique
+    
+    # Synchroniser avec les paiements de loyer
+    consommations_ajoutees = ServiceConsommationDynamique.synchroniser_avec_paiements(avance)
+    
+    # Consommer automatiquement les mois passés
+    ServiceConsommationDynamique.consommer_avances_automatiquement(avance.contrat)
+    
+    # Recalculer la progression dynamique
+    progression = ServiceConsommationDynamique.calculer_progression_avance(avance)
+    
+    # Récupérer les consommations mises à jour
     consommations = ConsommationAvance.objects.filter(avance=avance).order_by('-mois_consomme')
     
     # Récupérer l'historique des paiements du contrat
     historique = ServiceGestionAvance.get_historique_paiements_contrat(avance.contrat)
     
-    # Statistiques de l'avance
+    # Statistiques dynamiques de l'avance
     stats = {
-        'montant_consomme': avance.montant_avance - avance.montant_restant,
-        'pourcentage_consomme': (avance.montant_avance - avance.montant_restant) / avance.montant_avance * 100,
-        'nombre_mois_consommes': consommations.count(),
+        'montant_consomme': progression['montant_consomme'],
+        'pourcentage_consomme': progression['pourcentage_montant'],
+        'nombre_mois_consommes': progression['mois_consommes'],
         'montant_par_mois': avance.loyer_mensuel,
+        'progression': progression,
     }
     
     # *** NOUVELLES DONNÉES DÉTAILLÉES ***
     # Les imports sont déjà en haut du fichier
     
-    # Récupérer la liste des mois couverts avec leur statut
+    # Récupérer la liste des mois couverts avec leur statut (dynamique)
     mois_couverts_liste = avance.get_mois_couverts_liste()
     mois_actuel = date.today().replace(day=1)
     
-    # Analyser chaque mois couvert
+    # Analyser chaque mois couvert avec la progression dynamique
     mois_detaille = []
-    mois_consommes = 0
+    mois_consommes = progression['mois_consommes']
     mois_en_cours = None
-    mois_futurs = 0
+    mois_futurs = progression['mois_restants']
     
     for mois in mois_couverts_liste:
         est_consomme = avance.est_mois_consomme(mois)
@@ -259,24 +272,23 @@ def detail_avance(request, avance_id):
         est_actuel = mois_normalise == mois_actuel
         est_passe = mois_normalise < mois_actuel
         
-        # *** LOGIQUE CORRIGÉE : Un mois n'est consommé que s'il y a un enregistrement ***
+        # *** LOGIQUE DYNAMIQUE : Statut basé sur la progression réelle ***
         if est_consomme:
             # Il y a un enregistrement de consommation pour ce mois
-            mois_consommes += 1
             statut = 'consomme'
             statut_label = 'Consommé'
-            statut_class = 'danger'  # Rouge pour "Consommé"
+            statut_class = 'success'  # Vert pour "Consommé" (positif)
         elif est_actuel:
-            # Mois actuel : toujours "en cours" s'il n'est pas encore consommé
+            # Mois actuel : "en cours" s'il n'est pas encore consommé
             mois_en_cours = mois
             statut = 'en_cours'
             statut_label = 'En cours'
             statut_class = 'warning'  # Jaune pour "En cours"
         elif est_passe:
-            # Mois passé mais pas encore consommé = en attente
-            statut = 'en_attente'
-            statut_label = 'En attente'
-            statut_class = 'secondary'  # Gris pour "En attente"
+            # Mois passé mais pas encore consommé = automatiquement consommé
+            statut = 'auto_consomme'
+            statut_label = 'Auto-consommé'
+            statut_class = 'info'  # Bleu pour "Auto-consommé"
         else:
             # Mois futur
             statut = 'futur'
@@ -305,18 +317,22 @@ def detail_avance(request, avance_id):
     if avance.mois_fin_couverture:
         prochain_mois_paiement = avance.mois_fin_couverture + relativedelta(months=1)
     
-    # Statistiques enrichies
+    # Statistiques enrichies avec progression dynamique
     stats_enrichies = {
         **stats,
-        'mois_consommes': mois_consommes,
+        'mois_consommes': progression['mois_consommes'],
         'mois_en_cours': mois_en_cours,
-        'mois_futurs': mois_futurs,
-        'mois_total': len(mois_couverts_liste),
+        'mois_futurs': progression['mois_restants'],
+        'mois_total': progression['total_mois'],
         'date_debut_couverture': avance.mois_debut_couverture,
         'date_fin_couverture': avance.mois_fin_couverture,
         'date_fin_estimee': date_fin_estimee,
         'prochain_mois_paiement': prochain_mois_paiement,
-        'pourcentage_mois_consommes': (mois_consommes / len(mois_couverts_liste) * 100) if mois_couverts_liste else 0,
+        'pourcentage_mois_consommes': progression['pourcentage_mois'],
+        'statut_avance': progression['statut'],
+        'statut_label': progression['statut_label'],
+        'prochaine_consommation': progression['prochaine_consommation'],
+        'consommations_ajoutees': consommations_ajoutees,
     }
     
     context = {
@@ -329,6 +345,64 @@ def detail_avance(request, avance_id):
     }
     
     return render(request, 'paiements/avances/detail_avance.html', context)
+
+
+@login_required
+def api_progression_avance(request, avance_id):
+    """
+    API pour récupérer la progression dynamique d'une avance
+    """
+    try:
+        avance = AvanceLoyer.objects.get(id=avance_id)
+        from .services_consommation_dynamique import ServiceConsommationDynamique
+        
+        # Consommer automatiquement et calculer la progression
+        ServiceConsommationDynamique.consommer_avances_automatiquement(avance.contrat)
+        progression = ServiceConsommationDynamique.calculer_progression_avance(avance)
+        
+        return JsonResponse({
+            'success': True,
+            'progression': progression,
+            'timestamp': timezone.now().isoformat()
+        })
+        
+    except AvanceLoyer.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Avance non trouvée'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def api_consommer_auto(request):
+    """
+    API pour consommer automatiquement toutes les avances
+    """
+    try:
+        from .services_consommation_dynamique import ServiceConsommationDynamique
+        
+        contrat_id = request.GET.get('contrat_id')
+        if contrat_id:
+            resultat = ServiceConsommationDynamique.consommer_avances_automatiquement(int(contrat_id))
+        else:
+            resultat = ServiceConsommationDynamique.consommer_avances_automatiquement()
+        
+        return JsonResponse({
+            'success': True,
+            'resultat': resultat,
+            'timestamp': timezone.now().isoformat()
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
 
 @login_required
