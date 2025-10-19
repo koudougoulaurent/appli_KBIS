@@ -422,6 +422,83 @@
             transform: translateY(-1px);
         }
         
+        /* Styles pour la barre latérale */
+        .sidebar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: calc(100vh - 76px) !important;
+            position: sticky !important;
+            top: 76px !important;
+            z-index: 1000 !important;
+        }
+        
+        .sidebar-content {
+            padding: 20px 0;
+        }
+        
+        .sidebar-header {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .sidebar-title {
+            color: white;
+            font-weight: 600;
+            margin: 0;
+            font-size: 1.1rem;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .menu-item {
+            margin-bottom: 5px;
+        }
+        
+        .menu-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-radius: 0 25px 25px 0;
+            margin-right: 10px;
+        }
+        
+        .menu-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            transform: translateX(5px);
+        }
+        
+        .menu-link i {
+            margin-right: 12px;
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .menu-link span {
+            font-weight: 500;
+        }
+        
+        /* S'assurer que la sidebar est toujours visible */
+        @media (min-width: 768px) {
+            .sidebar {
+                display: block !important;
+            }
+        }
+        
+        @media (max-width: 767px) {
+            .sidebar {
+                display: none !important;
+            }
+        }
+        
         @media (max-width: 768px) {
             .main-content {
                 padding: 20px;
@@ -486,17 +563,81 @@
         </div>
     </nav>
 
-    <div class="main-content">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-lg-2 col-md-3 sidebar d-lg-block d-md-block" id="sidebar">
+                <div class="sidebar-content">
+                    <div class="sidebar-header">
+                        <h5 class="sidebar-title">Navigation</h5>
+                    </div>
+                    <ul class="sidebar-menu">
+                        <li class="menu-item">
+                            <a href="{% url 'core:dashboard' %}" class="menu-link">
+                                <i class="bi bi-house-door"></i>
+                                <span>Tableau de bord</span>
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="{% url 'proprietes:liste' %}" class="menu-link">
+                                <i class="bi bi-building"></i>
+                                <span>Propriétés</span>
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="{% url 'contrats:liste' %}" class="menu-link">
+                                <i class="bi bi-file-earmark-text"></i>
+                                <span>Contrats</span>
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="{% url 'paiements:liste' %}" class="menu-link">
+                                <i class="bi bi-credit-card"></i>
+                                <span>Paiements</span>
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="{% url 'utilisateurs:liste' %}" class="menu-link">
+                                <i class="bi bi-people"></i>
+                                <span>Utilisateurs</span>
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="{% url 'paiements:avances:liste_avances' %}" class="menu-link">
+                                <i class="bi bi-cash-coin"></i>
+                                <span>Avances</span>
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="{% url 'paiements:retraits:liste_retraits' %}" class="menu-link">
+                                <i class="bi bi-arrow-up-circle"></i>
+                                <span>Retraits</span>
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="{% url 'paiements:recapitulatifs:liste_recapitulatifs' %}" class="menu-link">
+                                <i class="bi bi-graph-up"></i>
+                                <span>Récapitulatifs</span>
+                            </a>
+                        </li>
+                    </ul>
                 </div>
-            {% endfor %}
-        {% endif %}
+            </nav>
 
-        {% block content %}{% endblock %}
+            <!-- Main Content -->
+            <main class="col-lg-10 col-md-9 main-content">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                {% block content %}{% endblock %}
+            </main>
+        </div>
     </div>
 
     <!-- Bootstrap 5 JS -->
