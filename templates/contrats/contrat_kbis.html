@@ -156,15 +156,33 @@
             min-width: 100px;
             display: inline-block;
         }
+        
+        .page-break {
+            page-break-before: always;
+            margin-top: 2cm;
+        }
+        
+        .page-header {
+            margin-bottom: 1cm;
+        }
+        
+        .page-footer {
+            margin-top: 2cm;
+            page-break-after: always;
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="title">CONTRAT DE LOCATION</div>
-        <div>Ouagadougou, {{ contrat_kbis.contrat.date_signature|date:"d/m/Y" }}</div>
-    </div>
+    <!-- PAGE 1: CONTRAT PRINCIPAL -->
+    <div class="page">
+        <div class="page-header">
+            <div class="header">
+                <div class="title">CONTRAT DE LOCATION</div>
+                <div>Ouagadougou, {{ contrat_kbis.contrat.date_signature|date:"d/m/Y" }}</div>
+            </div>
+        </div>
 
-    <div class="contract-content">
+        <div class="contract-content">
         <div class="section">
             <p><strong>Entre d'une part,</strong></p>
             <p>{{ contrat_kbis.agence_nom }} située au {{ contrat_kbis.agence_adresse }} représentée, par {{ contrat_kbis.agence_representant }} Tel…{{ contrat_kbis.agence_telephone }}</p>
@@ -195,29 +213,48 @@
             <p><strong>Résiliation :</strong> Le locataire peut demander la résiliation de ce contrat avec {{ contrat_kbis.preavis_resiliation_locataire }} de préavis. la date de remise des clés est fixe au {{ contrat_kbis.date_remise_cles }} pour permettre à votre remplaçant d'accéder à la maison, faute de quoi le mois entier sera dû. L'agence peut résilier ce contrat avec un préavis de {{ contrat_kbis.preavis_resiliation_agence }}. Le remboursement de la caution sera effectué dans les mêmes conditions.</p>
         </div>
 
-        <div class="footer-note">
-            <p><strong>NB : LES MAISONS SONT A PAYER AVANT DE CONSOMMER</strong></p>
-            <p><strong>LU ET APPROUVÉ BON POUR ACCORD</strong></p>
-        </div>
+            <div class="footer-note">
+                <p><strong>NB : LES MAISONS SONT A PAYER AVANT DE CONSOMMER</strong></p>
+                <p><strong>LU ET APPROUVÉ BON POUR ACCORD</strong></p>
+            </div>
 
-        <div class="signature-section">
-            <div class="signature-box">
-                <p>L'agence</p>
+            <div class="signature-section">
+                <div class="signature-box">
+                    <p>L'agence</p>
+                </div>
+                <div class="signature-box">
+                    <p>le locataire</p>
+                </div>
+                <div class="signature-box">
+                    <p>Personne Garant</p>
+                </div>
             </div>
-            <div class="signature-box">
-                <p>le locataire</p>
+        </div>
+        
+        <div class="page-footer">
+            <div class="header">
+                <div class="title">CONTRAT DE LOCATION</div>
+                <div>Ouagadougou, {{ contrat_kbis.contrat.date_signature|date:"d/m/Y" }}</div>
             </div>
-            <div class="signature-box">
-                <p>Personne Garant</p>
+            <div class="footer-note">
+                <p><strong>LU ET APPROUVÉ BON POUR ACCORD</strong></p>
             </div>
         </div>
     </div>
 
 
-    <!-- ÉTAT DES LIEUX -->
+    <!-- PAGE 2: ÉTAT DES LIEUX -->
     {% if contrat_kbis.etat_lieux %}
-    <div class="etat-lieux">
-        <div class="title">État des lieux</div>
+    <div class="page page-break">
+        <div class="page-header">
+            <div class="header">
+                <div class="title">CONTRAT DE LOCATION</div>
+                <div>Ouagadougou, {{ contrat_kbis.contrat.date_signature|date:"d/m/Y" }}</div>
+            </div>
+        </div>
+        
+        <div class="etat-lieux">
+            <div class="title">État des lieux</div>
         
         <table class="etat-lieux-table">
             <thead>
@@ -442,31 +479,61 @@
             </tbody>
         </table>
 
-        {% if contrat_kbis.etat_lieux.observations %}
-        <div class="observations">
-            <h4>Observations</h4>
-            <p>{{ contrat_kbis.etat_lieux.observations }}</p>
+            {% if contrat_kbis.etat_lieux.observations %}
+            <div class="observations">
+                <h4>Observations</h4>
+                <p>{{ contrat_kbis.etat_lieux.observations }}</p>
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
+        
+        <div class="page-footer">
+            <div class="header">
+                <div class="title">CONTRAT DE LOCATION</div>
+                <div>Ouagadougou, {{ contrat_kbis.contrat.date_signature|date:"d/m/Y" }}</div>
+            </div>
+            <div class="footer-note">
+                <p><strong>LU ET APPROUVÉ BON POUR ACCORD</strong></p>
+            </div>
+        </div>
     </div>
     {% endif %}
 
-    <!-- ENGAGEMENT -->
-    <div class="engagement">
-        <div class="title">Engagement</div>
-        <p>Je soussigné(e) <span class="highlight">{{ contrat_kbis.contrat.locataire.nom|upper }}</span> reconnait avoir loué une maison, avec l'agence {{ contrat_kbis.agence_nom }} le {{ contrat_kbis.contrat.date_signature|date:"d/m/Y" }} Et je m'engage à respecter le délai du payement de mon loyer prévu au plus tard le {{ contrat_kbis.paiement_echeance }}, je reconnais que la réfection des différents points cités ci-dessus sont à ma charge au moment de libérer la maison.</p>
-        
-        <p style="text-align: center;"><strong>Lu et approuvé bon pour accord</strong></p>
-        
-        <div class="signature-section">
-            <div class="signature-box">
-                <p>L'agence</p>
+    <!-- PAGE 3: ENGAGEMENT -->
+    <div class="page page-break">
+        <div class="page-header">
+            <div class="header">
+                <div class="title">CONTRAT DE LOCATION</div>
+                <div>Ouagadougou, {{ contrat_kbis.contrat.date_signature|date:"d/m/Y" }}</div>
             </div>
-            <div class="signature-box">
-                <p>le locataire</p>
+        </div>
+        
+        <div class="engagement">
+            <div class="title">Engagement</div>
+            <p>Je soussigné(e) <span class="highlight">{{ contrat_kbis.contrat.locataire.nom|upper }}</span> reconnait avoir loué une maison, avec l'agence {{ contrat_kbis.agence_nom }} le {{ contrat_kbis.contrat.date_signature|date:"d/m/Y" }} Et je m'engage à respecter le délai du payement de mon loyer prévu au plus tard le {{ contrat_kbis.paiement_echeance }}, je reconnais que la réfection des différents points cités ci-dessus sont à ma charge au moment de libérer la maison.</p>
+            
+            <p style="text-align: center;"><strong>Lu et approuvé bon pour accord</strong></p>
+            
+            <div class="signature-section">
+                <div class="signature-box">
+                    <p>L'agence</p>
+                </div>
+                <div class="signature-box">
+                    <p>le locataire</p>
+                </div>
+                <div class="signature-box">
+                    <p>Personne Garant</p>
+                </div>
             </div>
-            <div class="signature-box">
-                <p>Personne Garant</p>
+        </div>
+        
+        <div class="page-footer">
+            <div class="header">
+                <div class="title">CONTRAT DE LOCATION</div>
+                <div>Ouagadougou, {{ contrat_kbis.contrat.date_signature|date:"d/m/Y" }}</div>
+            </div>
+            <div class="footer-note">
+                <p><strong>LU ET APPROUVÉ BON POUR ACCORD</strong></p>
             </div>
         </div>
     </div>
