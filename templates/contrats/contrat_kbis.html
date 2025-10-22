@@ -178,9 +178,10 @@
             right: 0;
             background-color: #f8f9fa;
             border-top: 1px solid #ddd;
-            padding: 5px 10px;
-            font-size: 8pt;
+            padding: 3px 8px;
+            font-size: 6pt;
             text-align: center;
+            line-height: 1.2;
         }
         
         .mini-header {
@@ -191,12 +192,18 @@
         
         .mini-title {
             font-weight: bold;
-            font-size: 8pt;
+            font-size: 6pt;
         }
         
         .mini-date {
-            font-size: 7pt;
+            font-size: 5pt;
             color: #666;
+        }
+        
+        .mini-info {
+            font-size: 5pt;
+            color: #888;
+            margin-top: 2px;
         }
     </style>
 </head>
@@ -211,7 +218,7 @@
         <div class="contract-content">
         <div class="section">
             <p><strong>Entre d'une part,</strong></p>
-            <p>{{ contrat_kbis.agence_nom }} située au {{ contrat_kbis.agence_adresse }} représentée, par {{ contrat_kbis.agence_representant }} Tel…{{ contrat_kbis.agence_telephone }}</p>
+            <p><strong>{{ contrat_kbis.agence_nom }}</strong> - {{ contrat_kbis.agence_adresse }} - Représenté par {{ contrat_kbis.agence_representant }} - Tel: {{ contrat_kbis.agence_telephone }}</p>
             
             <p><strong>D'autre part</strong> (une copie de votre CNIB doit être jointe à la présente)</p>
             <p>M. Mme, Mlle <span class="highlight">{{ contrat_kbis.contrat.locataire.nom|upper }}</span> N° CNIB <span class="highlight">{{ contrat_kbis.locataire_cnib }}</span> Dénommée(é) le locataire</p>
@@ -520,10 +527,8 @@
         
         <!-- Pied de page en miniature -->
         <div class="mini-footer">
-            <div class="mini-header">
-                <div class="mini-title">CONTRAT DE LOCATION</div>
-                <div class="mini-date">Ouagadougou, {{ contrat_kbis.contrat.date_signature|date:"d/m/Y" }}</div>
-            </div>
+            <div class="mini-title">KBIS IMMOBILIER</div>
+            <div class="mini-info">Pissy 10050 Ouagadougou - Tel: +226 70 20 54 91 - Email: kbissarl2022@gmail.com</div>
         </div>
     </div>
 </body>
