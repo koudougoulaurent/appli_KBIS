@@ -235,7 +235,7 @@
             width: 100%;
             font-weight: bold;
             position: absolute;
-            bottom: 3mm;
+            bottom: 0;
             left: 3mm;
             right: 3mm;
         }
@@ -276,37 +276,14 @@
             text-align: center;
         }
         
-        /* Section signature et cachet */
-        .signature-section {
+        /* Espace pour cachet et signature */
+        .signature-space {
             position: absolute;
-            bottom: 25mm;
+            bottom: 20mm;
             left: 3mm;
             right: 3mm;
-            text-align: center;
-            border-top: 1px solid #000;
-            padding-top: 2mm;
-        }
-        
-        .signature-box {
-            border: 2px dashed #333;
-            padding: 3mm;
-            margin: 0 auto;
-            max-width: 8cm;
-            background-color: #f9f9f9;
-        }
-        
-        .signature-line {
-            border-top: 1px solid #333;
-            margin-top: 5mm;
-            width: 100%;
-            display: block;
-        }
-        
-        .signature-label {
-            font-size: 7px;
-            font-weight: bold;
-            color: #000;
-            margin-top: 2mm;
+            height: 15mm;
+            /* Espace vide pour cachet et signature */
         }
         
         /* Filigrane */
@@ -563,12 +540,9 @@
             </div>
         </div>
         
-        <!-- Section signature et cachet -->
-        <div class="signature-section">
-            <div class="signature-box">
-                <div class="signature-line"></div>
-                <div class="signature-label">Cachet et signature de l'Agence</div>
-            </div>
+        <!-- Espace pour cachet et signature -->
+        <div class="signature-space">
+            <!-- Espace vide pour cachet et signature -->
         </div>
         
         <!-- Pied de page dynamique -->
