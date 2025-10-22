@@ -762,11 +762,7 @@
     
     <!-- Pied de page dynamique -->
     <div class="footer">
-        <p><strong>{{ config.nom_entreprise|default:"KBIS IMMOBILIER" }}</strong></p>
-        <p>{{ config.adresse_complete|default:"pissy 10050 ouagadougou Burkina Faso" }}, {{ config.quartier|default:"Quartier Centre-Ville" }}, {{ config.boite_postale|default:"BP 440 ouagadougou, Burkina Faso" }}</p>
-        <p><strong>Tel:</strong> {{ config.telephone_complet|default:"+226 70 20 54 91" }}</p>
-        <p><strong>Email:</strong> {{ config.email|default:"kbissarl2022@gmail.com" }}</p>
-        <p><strong>RCCM:</strong> {{ config.rccm|default:"CI-ABJ-XXXX-X-XXXXX" }} - <strong>IFU:</strong> {{ config.ifu|default:"XXXXXXXXXX" }}</p>
+        <p><strong>{{ config.nom_entreprise|default:"KBIS IMMOBILIER" }}</strong> - {{ config.adresse_complete|default:"pissy 10050 ouagadougou Burkina Faso" }} - Tel: {{ config.telephone_complet|default:"+226 70 20 54 91" }} - Email: {{ config.email|default:"kbissarl2022@gmail.com" }}</p>
     </div>
 </body>
 </html>
