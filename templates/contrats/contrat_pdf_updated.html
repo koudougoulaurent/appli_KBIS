@@ -271,22 +271,24 @@
         body {
             margin: 0;
             padding: 0;
-            margin-bottom: 100px; /* Espace pour le footer */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .content-wrapper {
+            flex: 1;
         }
         
         .footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
             background: white;
-            padding: 10px;
+            padding: 20px;
             border-top: 2px solid #2c3e50;
-            font-size: 8px;
+            font-size: 9px;
             text-align: center;
-            line-height: 1.2;
-            z-index: 1000;
-            page-break-inside: avoid;
+            line-height: 1.3;
+            margin-top: 50px;
+            margin-bottom: 0;
         }
         
         .page-break {
