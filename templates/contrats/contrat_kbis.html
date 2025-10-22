@@ -118,6 +118,11 @@
         
         .checkbox {
             text-align: center;
+            width: 20px;
+            height: 20px;
+            border: 1px solid #000;
+            display: inline-block;
+            margin: 0 auto;
         }
         
         .observations {
@@ -168,7 +173,9 @@
             <p>M. Mme, Mlle <span class="highlight">{{ contrat_kbis.contrat.locataire.nom|upper }}</span> N° CNIB <span class="highlight">{{ contrat_kbis.locataire_cnib }}</span> Dénommée(é) le locataire</p>
             <p>Profession <span class="highlight">{{ contrat_kbis.locataire_profession }}</span> adresse : <span class="highlight">{{ contrat_kbis.locataire_adresse }}</span> Tel : <span class="highlight">{{ contrat_kbis.locataire_telephone }}</span></p>
             
-            <p>Personne garant M, Mme, <span class="highlight">{{ contrat_kbis.garant_nom|upper }}</span> profession.. <span class="highlight">{{ contrat_kbis.garant_profession }}</span> Adresse..<span class="highlight">{{ contrat_kbis.garant_adresse }}</span> tel : <span class="highlight">{{ contrat_kbis.garant_telephone }}</span> pour la location de la maison n° <span class="highlight">{{ contrat_kbis.propriete_numero }}</span> Située a <span class="highlight">{{ contrat_kbis.propriete_adresse }}</span> Pour un loyer mensuel de : <span class="amount-highlight">{{ contrat_kbis.get_loyer_mensuel_lettres }}</span></p>
+            <p>Personne garant M, Mme, <span class="highlight">{{ contrat_kbis.garant_nom|upper }}</span> profession <span class="highlight">{{ contrat_kbis.garant_profession }}</span> Adresse <span class="highlight">{{ contrat_kbis.garant_adresse }}</span> tel : <span class="highlight">{{ contrat_kbis.garant_telephone }}</span> pour la location de la maison n° <span class="highlight">{{ contrat_kbis.propriete_numero }}</span> Située a <span class="highlight">{{ contrat_kbis.propriete_adresse }}</span> Pour un loyer mensuel de : <span class="amount-highlight">{{ contrat_kbis.get_loyer_mensuel_lettres }}</span></p>
+            
+            <p><strong>Engagement du garant :</strong> Je m'engage à payer à la place du locataire en cas de retard de paiement supérieur à un mois. Ma responsabilité est limitée à <span class="highlight">{{ contrat_kbis.garant_responsabilite_mois }}</span> mois de loyer, soit la somme de <span class="highlight">{{ contrat_kbis.garant_montant_max|floatformat:0 }}</span> francs CFA. Une copie de ma CNIB est jointe à la présente.</p>
         </div>
 
         <div class="financial-info">
@@ -206,42 +213,6 @@
         </div>
     </div>
 
-    <!-- SECTION GARANT -->
-    <div class="etat-lieux">
-        <div class="title">Personne garant du paiement des loyers</div>
-        
-        <div class="section">
-            <p>Je soussigné(e) <span class="highlight">{{ contrat_kbis.garant_nom|upper }}</span> Profession : <span class="highlight">{{ contrat_kbis.garant_profession }}</span> adresse…<span class="highlight">{{ contrat_kbis.garant_adresse }}</span> tel : <span class="highlight">{{ contrat_kbis.garant_telephone }}</span></p>
-            
-            <p>Je me porte garant de la caution solitaire de M. Mme, Mlle <span class="highlight">{{ contrat_kbis.contrat.locataire.nom|upper }}</span> Tel : <span class="highlight">{{ contrat_kbis.locataire_telephone }}</span> locataire de la maison n° <span class="highlight">{{ contrat_kbis.propriete_numero }}</span> Située a <span class="highlight">{{ contrat_kbis.propriete_adresse }}</span> pour</p>
-            
-            <p>Le paiement mensuel du loyer de <span class="amount-highlight">{{ contrat_kbis.get_loyer_mensuel_lettres }}</span> commence à partir de la {{ contrat_kbis.paiement_debut_mois }}</p>
-            
-            <p>En cas de retard de payement du loyer supérieur à un mois. Je m'engage à payer leur correspondant à la place du locataire dans un délai d'une semaine dès que je serai avisé du retard de payement. Ma responsabilité est limitée à six mois (06) mois de loyer, soit la somme de..(…..) franc CFA</p>
-            
-            <p>Le paiement sera effectué auprès de l'agence {{ contrat_kbis.agence_nom }} au {{ contrat_kbis.agence_adresse }}. Situé sur la route du CMA DE PISSY tel : +226 79.18.32.32./70.20.64.91/79.18.39.39/66..66.45.60</p>
-            
-            <p>Si en fin de Contrat, cette garantie a été utilisé, et si toute ou une partie de la caution doit être restitué au locataire après remise en état de la maison, elle sera remboursée à M. Mme, Mlle <span class="highlight">{{ contrat_kbis.garant_nom|upper }}</span> (Personnes garante) du payement des loyers de M. Mme, Mlle <span class="highlight">{{ contrat_kbis.contrat.locataire.nom|upper }}</span> Jusqu'à concurrence des sommes qu'elle aura versées et le reste sera remboursés au locataire.</p>
-            
-            <p>Une copie de la CNIB du garant doit être jointe à la présente</p>
-            
-            <p style="text-align: center;"><strong>Merci pour votre compréhension</strong></p>
-            
-            <p style="text-align: center;">Fait en deux exemplaires à Ouagadougou, le <span class="date-field">{{ contrat_kbis.contrat.date_signature|date:"d/m/Y" }}</span></p>
-        </div>
-
-        <div class="signature-section">
-            <div class="signature-box">
-                <p>L'agence</p>
-            </div>
-            <div class="signature-box">
-                <p>le locataire</p>
-            </div>
-            <div class="signature-box">
-                <p>Personne Garant</p>
-            </div>
-        </div>
-    </div>
 
     <!-- ÉTAT DES LIEUX -->
     {% if contrat_kbis.etat_lieux %}
