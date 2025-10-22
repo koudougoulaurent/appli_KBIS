@@ -7,7 +7,7 @@ from django.views.decorators.http import require_http_methods
 from django.db import transaction
 from django.utils import timezone
 from django.core.files.base import ContentFile
-import weasyprint
+# WeasyPrint sera importé dynamiquement dans les fonctions qui en ont besoin
 import io
 from datetime import datetime, timedelta
 
@@ -149,6 +149,7 @@ def generer_pdf_contrat_kbis(request, contrat_id):
     
     # Générer le PDF
     try:
+        import weasyprint
         pdf_file = weasyprint.HTML(string=html_string).write_pdf()
         
         # Créer la réponse HTTP
@@ -157,6 +158,9 @@ def generer_pdf_contrat_kbis(request, contrat_id):
         
         return response
         
+    except ImportError:
+        messages.error(request, "WeasyPrint n'est pas installé. Impossible de générer le PDF.")
+        return redirect('contrats:detail_contrat_kbis', contrat_id=contrat.id)
     except Exception as e:
         messages.error(request, f"Erreur lors de la génération du PDF : {str(e)}")
         return redirect('contrats:detail_contrat_kbis', contrat_id=contrat.id)
