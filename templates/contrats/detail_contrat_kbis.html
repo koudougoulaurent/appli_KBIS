@@ -1,0 +1,336 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Contrat KBIS - {{ contrat.numero_contrat }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="card-title">
+                            <i class="bi bi-file-earmark-text"></i>
+                            Contrat KBIS - {{ contrat.numero_contrat }}
+                        </h3>
+                        <div class="btn-group">
+                            <a href="{% url 'contrats:generer_pdf_contrat_kbis' contrat.id %}" class="btn btn-success" target="_blank">
+                                <i class="bi bi-file-pdf"></i> Générer PDF
+                            </a>
+                            <a href="{% url 'contrats:modifier_contrat_kbis' contrat.id %}" class="btn btn-warning">
+                                <i class="bi bi-pencil"></i> Modifier
+                            </a>
+                            <a href="{% url 'contrats:liste' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Retour
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Informations générales -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary">
+                                <i class="bi bi-info-circle"></i>
+                                Informations Générales
+                            </h5>
+                            <hr>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <strong>Numéro de Contrat:</strong> {{ contrat.numero_contrat }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Date de Signature:</strong> {{ contrat.date_signature|date:"d/m/Y" }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Date de Début:</strong> {{ contrat.date_debut|date:"d/m/Y" }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Loyer Mensuel:</strong> {{ contrat.loyer_mensuel|floatformat:0 }} F CFA
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <strong>Locataire:</strong> {{ contrat.locataire.nom }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Propriété:</strong> {{ contrat.propriete.nom }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Caution:</strong> {{ contrat_kbis.caution_montant|floatformat:0 }} F CFA
+                            </div>
+                            <div class="info-item">
+                                <strong>Version Template:</strong> {{ contrat_kbis.version_template }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Informations de l'agence -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary">
+                                <i class="bi bi-building"></i>
+                                Informations de l'Agence
+                            </h5>
+                            <hr>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <strong>Nom:</strong> {{ contrat_kbis.agence_nom }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Adresse:</strong> {{ contrat_kbis.agence_adresse }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <strong>Représentant:</strong> {{ contrat_kbis.agence_representant }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Téléphone:</strong> {{ contrat_kbis.agence_telephone }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Informations du locataire -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary">
+                                <i class="bi bi-person"></i>
+                                Informations du Locataire
+                            </h5>
+                            <hr>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <strong>Nom:</strong> {{ contrat.locataire.nom }}
+                            </div>
+                            <div class="info-item">
+                                <strong>N° CNIB:</strong> {{ contrat_kbis.locataire_cnib }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Profession:</strong> {{ contrat_kbis.locataire_profession }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <strong>Adresse:</strong> {{ contrat_kbis.locataire_adresse }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Téléphone:</strong> {{ contrat_kbis.locataire_telephone }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Informations du garant -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary">
+                                <i class="bi bi-shield-check"></i>
+                                Informations du Garant
+                            </h5>
+                            <hr>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <strong>Nom:</strong> {{ contrat_kbis.garant_nom }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Profession:</strong> {{ contrat_kbis.garant_profession }}
+                            </div>
+                            <div class="info-item">
+                                <strong>N° CNIB:</strong> {{ contrat_kbis.garant_cnib|default:"Non renseigné" }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <strong>Adresse:</strong> {{ contrat_kbis.garant_adresse }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Téléphone:</strong> {{ contrat_kbis.garant_telephone }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Informations de la propriété -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary">
+                                <i class="bi bi-house"></i>
+                                Informations de la Propriété
+                            </h5>
+                            <hr>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <strong>Numéro de Maison:</strong> {{ contrat_kbis.propriete_numero }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Adresse:</strong> {{ contrat_kbis.propriete_adresse }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Informations financières -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary">
+                                <i class="bi bi-currency-exchange"></i>
+                                Informations Financières
+                            </h5>
+                            <hr>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <strong>Loyer Mensuel:</strong> {{ contrat.loyer_mensuel|floatformat:0 }} F CFA
+                            </div>
+                            <div class="info-item">
+                                <strong>Caution:</strong> {{ contrat_kbis.caution_montant|floatformat:0 }} F CFA
+                            </div>
+                            <div class="info-item">
+                                <strong>Nombre de Mois de Caution:</strong> {{ contrat_kbis.caution_nombre_mois }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <strong>Début du Paiement:</strong> {{ contrat_kbis.paiement_debut_mois }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Échéance:</strong> {{ contrat_kbis.paiement_echeance }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Délai d'Annulation:</strong> {{ contrat_kbis.delai_annulation }} heures
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Conditions de résiliation -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                Conditions de Résiliation
+                            </h5>
+                            <hr>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <strong>Préavis Locataire:</strong> {{ contrat_kbis.preavis_resiliation_locataire }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Préavis Agence:</strong> {{ contrat_kbis.preavis_resiliation_agence }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <strong>Date de Remise des Clés:</strong> {{ contrat_kbis.date_remise_cles }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- État des lieux -->
+                    {% if etat_lieux %}
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary">
+                                <i class="bi bi-clipboard-check"></i>
+                                État des Lieux
+                            </h5>
+                            <hr>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <strong>Indexé SONABEL:</strong> 
+                                <span class="badge {% if etat_lieux.indexe_sonabel %}bg-success{% else %}bg-danger{% endif %}">
+                                    {% if etat_lieux.indexe_sonabel %}OUI{% else %}NON{% endif %}
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <strong>Indexé ONEA:</strong> 
+                                <span class="badge {% if etat_lieux.indexe_onea %}bg-success{% else %}bg-danger{% endif %}">
+                                    {% if etat_lieux.indexe_onea %}OUI{% else %}NON{% endif %}
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <strong>Peinture Murs:</strong> 
+                                <span class="badge {% if etat_lieux.peinture_murs == 'OK' %}bg-success{% elif etat_lieux.peinture_murs == 'PASSABLE' %}bg-warning{% else %}bg-danger{% endif %}">
+                                    {{ etat_lieux.peinture_murs }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <strong>Clés Grand Portail:</strong> 
+                                <span class="badge {% if etat_lieux.cles_grand_portail %}bg-success{% else %}bg-danger{% endif %}">
+                                    {% if etat_lieux.cles_grand_portail %}OUI{% else %}NON{% endif %}
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <strong>Clés Porte Salon:</strong> 
+                                <span class="badge {% if etat_lieux.cles_porte_salon %}bg-success{% else %}bg-danger{% endif %}">
+                                    {% if etat_lieux.cles_porte_salon %}OUI{% else %}NON{% endif %}
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <strong>WC:</strong> 
+                                <span class="badge {% if etat_lieux.wc == 'OK' %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ etat_lieux.wc }}
+                                </span>
+                            </div>
+                        </div>
+                        {% if etat_lieux.observations %}
+                        <div class="col-12 mt-3">
+                            <div class="alert alert-info">
+                                <strong>Observations:</strong><br>
+                                {{ etat_lieux.observations }}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Informations de génération -->
+                    <div class="row">
+                        <div class="col-12">
+                            <h5 class="text-primary">
+                                <i class="bi bi-gear"></i>
+                                Informations de Génération
+                            </h5>
+                            <hr>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <strong>Date de Génération:</strong> {{ contrat_kbis.date_generation|date:"d/m/Y H:i" }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <strong>Version Template:</strong> {{ contrat_kbis.version_template }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.info-item {
+    margin-bottom: 10px;
+    padding: 5px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+.badge {
+    font-size: 0.8em;
+}
+</style>
+{% endblock %}

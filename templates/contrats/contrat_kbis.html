@@ -1,0 +1,503 @@
+{% load static %}
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contrat de Location KBIS - {{ contrat_kbis.contrat.numero_contrat }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 12pt;
+            line-height: 1.4;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .title {
+            font-size: 16pt;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-decoration: underline;
+        }
+        
+        .contract-content {
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            margin-bottom: 20px;
+        }
+        
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .parties {
+            margin-bottom: 20px;
+        }
+        
+        .party {
+            margin-bottom: 15px;
+        }
+        
+        .party-label {
+            font-weight: bold;
+        }
+        
+        .financial-info {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border: 1px solid #ddd;
+            margin: 20px 0;
+        }
+        
+        .amount-highlight {
+            font-weight: bold;
+            font-size: 14pt;
+            color: #d32f2f;
+        }
+        
+        .conditions {
+            margin: 20px 0;
+        }
+        
+        .condition-item {
+            margin-bottom: 10px;
+            text-align: justify;
+        }
+        
+        .signature-section {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .signature-box {
+            width: 30%;
+            text-align: center;
+            border-top: 1px solid #000;
+            padding-top: 10px;
+        }
+        
+        .etat-lieux {
+            margin-top: 40px;
+            page-break-before: always;
+        }
+        
+        .etat-lieux-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .etat-lieux-table th,
+        .etat-lieux-table td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .etat-lieux-table th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        
+        .checkbox {
+            text-align: center;
+        }
+        
+        .observations {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+        }
+        
+        .engagement {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .footer-note {
+            margin-top: 20px;
+            font-style: italic;
+            text-align: center;
+            font-size: 10pt;
+        }
+        
+        .highlight {
+            background-color: #ffff00;
+            padding: 2px 4px;
+        }
+        
+        .date-field {
+            border-bottom: 1px solid #000;
+            min-width: 100px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">CONTRAT DE LOCATION</div>
+        <div>Ouagadougou, {{ contrat_kbis.contrat.date_signature|date:"d/m/Y" }}</div>
+    </div>
+
+    <div class="contract-content">
+        <div class="section">
+            <p><strong>Entre d'une part,</strong></p>
+            <p>{{ contrat_kbis.agence_nom }} située au {{ contrat_kbis.agence_adresse }} représentée, par {{ contrat_kbis.agence_representant }} Tel…{{ contrat_kbis.agence_telephone }}</p>
+            
+            <p><strong>D'autre part</strong> (une copie de votre CNIB doit être jointe à la présente)</p>
+            <p>M. Mme, Mlle <span class="highlight">{{ contrat_kbis.contrat.locataire.nom|upper }}</span> N° CNIB <span class="highlight">{{ contrat_kbis.locataire_cnib }}</span> Dénommée(é) le locataire</p>
+            <p>Profession <span class="highlight">{{ contrat_kbis.locataire_profession }}</span> adresse : <span class="highlight">{{ contrat_kbis.locataire_adresse }}</span> Tel : <span class="highlight">{{ contrat_kbis.locataire_telephone }}</span></p>
+            
+            <p>Personne garant M, Mme, <span class="highlight">{{ contrat_kbis.garant_nom|upper }}</span> profession.. <span class="highlight">{{ contrat_kbis.garant_profession }}</span> Adresse..<span class="highlight">{{ contrat_kbis.garant_adresse }}</span> tel : <span class="highlight">{{ contrat_kbis.garant_telephone }}</span> pour la location de la maison n° <span class="highlight">{{ contrat_kbis.propriete_numero }}</span> Située a <span class="highlight">{{ contrat_kbis.propriete_adresse }}</span> Pour un loyer mensuel de : <span class="amount-highlight">{{ contrat_kbis.get_loyer_mensuel_lettres }}</span></p>
+        </div>
+
+        <div class="financial-info">
+            <p><strong>{{ contrat_kbis.agence_nom }} reconnait avoir reçu la somme {{ contrat_kbis.get_caution_montant_lettres }}</strong></p>
+            <p>Représentant <span class="highlight">{{ contrat_kbis.caution_nombre_mois }}</span> Mois de caution.</p>
+        </div>
+
+        <div class="section">
+            <p>Le paiement mensuel du loyer commence à partir de la {{ contrat_kbis.paiement_debut_mois }} M. Mme, Mlle {{ contrat_kbis.contrat.locataire.nom|upper }} s'engage à payer au plus tard le {{ contrat_kbis.paiement_echeance }} M. Mme, Mlle {{ contrat_kbis.contrat.locataire.nom|upper }} sachez que votre caution ne vous sera remboursé à la sortie qu'après avoir libéré la maison, l'avoir remis en état (peinture, plomberie etc.,) tel que décrété sur la page état de lieu résilier et payer vos factures de la SONABEL et de l'ONEA. Dans le cas contraire la caution servira à assurer ces frais et quitter les lieux.</p>
+            
+            <p>Il donne par la même occasion pouvoir à l'agence d'introduire une instance aux fins de l'expulsion du locataire sans aucune autre forme de préavis.</p>
+        </div>
+
+        <div class="conditions">
+            <p><strong>Prenez librement vos décisions avant de signer le présent contrat car toute somme versée est remisée sans délai au bailleur. En cas de changement d'avis vous avez {{ contrat_kbis.delai_annulation }} heures pour annuler votre contrat auprès de votre agence. Passé ce délai, un (01) mois de loyer sera déduit de votre caution car les maisons confiées à l'agence sont à titre commerciale et ne doivent pas rester inoccupées.</strong></p>
+            
+            <p><strong>Résiliation :</strong> Le locataire peut demander la résiliation de ce contrat avec {{ contrat_kbis.preavis_resiliation_locataire }} de préavis. la date de remise des clés est fixe au {{ contrat_kbis.date_remise_cles }} pour permettre à votre remplaçant d'accéder à la maison, faute de quoi le mois entier sera dû. L'agence peut résilier ce contrat avec un préavis de {{ contrat_kbis.preavis_resiliation_agence }}. Le remboursement de la caution sera effectué dans les mêmes conditions.</p>
+        </div>
+
+        <div class="footer-note">
+            <p><strong>NB : LES MAISONS SONT A PAYER AVANT DE CONSOMMER</strong></p>
+            <p><strong>LU ET APPROUVÉ BON POUR ACCORD</strong></p>
+        </div>
+
+        <div class="signature-section">
+            <div class="signature-box">
+                <p>L'agence</p>
+            </div>
+            <div class="signature-box">
+                <p>le locataire</p>
+            </div>
+            <div class="signature-box">
+                <p>Personne Garant</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION GARANT -->
+    <div class="etat-lieux">
+        <div class="title">Personne garant du paiement des loyers</div>
+        
+        <div class="section">
+            <p>Je soussigné(e) <span class="highlight">{{ contrat_kbis.garant_nom|upper }}</span> Profession : <span class="highlight">{{ contrat_kbis.garant_profession }}</span> adresse…<span class="highlight">{{ contrat_kbis.garant_adresse }}</span> tel : <span class="highlight">{{ contrat_kbis.garant_telephone }}</span></p>
+            
+            <p>Je me porte garant de la caution solitaire de M. Mme, Mlle <span class="highlight">{{ contrat_kbis.contrat.locataire.nom|upper }}</span> Tel : <span class="highlight">{{ contrat_kbis.locataire_telephone }}</span> locataire de la maison n° <span class="highlight">{{ contrat_kbis.propriete_numero }}</span> Située a <span class="highlight">{{ contrat_kbis.propriete_adresse }}</span> pour</p>
+            
+            <p>Le paiement mensuel du loyer de <span class="amount-highlight">{{ contrat_kbis.get_loyer_mensuel_lettres }}</span> commence à partir de la {{ contrat_kbis.paiement_debut_mois }}</p>
+            
+            <p>En cas de retard de payement du loyer supérieur à un mois. Je m'engage à payer leur correspondant à la place du locataire dans un délai d'une semaine dès que je serai avisé du retard de payement. Ma responsabilité est limitée à six mois (06) mois de loyer, soit la somme de..(…..) franc CFA</p>
+            
+            <p>Le paiement sera effectué auprès de l'agence {{ contrat_kbis.agence_nom }} au {{ contrat_kbis.agence_adresse }}. Situé sur la route du CMA DE PISSY tel : +226 79.18.32.32./70.20.64.91/79.18.39.39/66..66.45.60</p>
+            
+            <p>Si en fin de Contrat, cette garantie a été utilisé, et si toute ou une partie de la caution doit être restitué au locataire après remise en état de la maison, elle sera remboursée à M. Mme, Mlle <span class="highlight">{{ contrat_kbis.garant_nom|upper }}</span> (Personnes garante) du payement des loyers de M. Mme, Mlle <span class="highlight">{{ contrat_kbis.contrat.locataire.nom|upper }}</span> Jusqu'à concurrence des sommes qu'elle aura versées et le reste sera remboursés au locataire.</p>
+            
+            <p>Une copie de la CNIB du garant doit être jointe à la présente</p>
+            
+            <p style="text-align: center;"><strong>Merci pour votre compréhension</strong></p>
+            
+            <p style="text-align: center;">Fait en deux exemplaires à Ouagadougou, le <span class="date-field">{{ contrat_kbis.contrat.date_signature|date:"d/m/Y" }}</span></p>
+        </div>
+
+        <div class="signature-section">
+            <div class="signature-box">
+                <p>L'agence</p>
+            </div>
+            <div class="signature-box">
+                <p>le locataire</p>
+            </div>
+            <div class="signature-box">
+                <p>Personne Garant</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ÉTAT DES LIEUX -->
+    {% if contrat_kbis.etat_lieux %}
+    <div class="etat-lieux">
+        <div class="title">État des lieux</div>
+        
+        <table class="etat-lieux-table">
+            <thead>
+                <tr>
+                    <th>N°</th>
+                    <th>ÉLÉMENT</th>
+                    <th>OUI</th>
+                    <th>NON</th>
+                    <th>OK</th>
+                    <th>PASSABLE</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>INDEXE DU COMPTEUR DE SONABEL</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.indexe_sonabel %}✓{% endif %}</td>
+                    <td class="checkbox">{% if not contrat_kbis.etat_lieux.indexe_sonabel %}✗{% endif %}</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>INDEXE DU COMPTEUR DE L'ONEA</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.indexe_onea %}✓{% endif %}</td>
+                    <td class="checkbox">{% if not contrat_kbis.etat_lieux.indexe_onea %}✗{% endif %}</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>ETAT DE LA PEINTURE</td>
+                    <td></td>
+                    <td></td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.peinture_murs == 'OK' %}✓{% endif %}</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.peinture_murs == 'PASSABLE' %}✓{% endif %}</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>ETAT DE PEINTURE DES COUVERTURES</td>
+                    <td></td>
+                    <td></td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.peinture_couvertures == 'OK' %}✓{% endif %}</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.peinture_couvertures == 'PASSABLE' %}✓{% endif %}</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>PEINTURE DU PLAFOND</td>
+                    <td></td>
+                    <td></td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.peinture_plafond == 'OK' %}✓{% endif %}</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.peinture_plafond == 'PASSABLE' %}✓{% endif %}</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>ETAT DE CREMONE DE VITRE</td>
+                    <td></td>
+                    <td></td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.cremone_vitre == 'OK' %}✓{% endif %}</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.cremone_vitre == 'PASSABLE' %}✓{% endif %}</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>ETAT DE PRISE ELECTRIQUE</td>
+                    <td></td>
+                    <td></td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.prise_electrique == 'OK' %}✓{% endif %}</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.prise_electrique == 'PASSABLE' %}✓{% endif %}</td>
+                </tr>
+                <tr>
+                    <td>8</td>
+                    <td>NOMBRE DES CLES DU GRAND PORTAIL</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.cles_grand_portail %}✓{% endif %}</td>
+                    <td class="checkbox">{% if not contrat_kbis.etat_lieux.cles_grand_portail %}✗{% endif %}</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>9</td>
+                    <td>NOMBRE DES CLES DE LA PORTE DU SALON</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.cles_porte_salon %}✓{% endif %}</td>
+                    <td class="checkbox">{% if not contrat_kbis.etat_lieux.cles_porte_salon %}✗{% endif %}</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>10</td>
+                    <td>NOMBRE DES CLES ISO PLANES</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.cles_iso_planes %}✓{% endif %}</td>
+                    <td class="checkbox">{% if not contrat_kbis.etat_lieux.cles_iso_planes %}✗{% endif %}</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>11</td>
+                    <td>PORTE RIDEAU</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.porte_rideau %}✓{% endif %}</td>
+                    <td class="checkbox">{% if not contrat_kbis.etat_lieux.porte_rideau %}✗{% endif %}</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>12</td>
+                    <td>NOMBRE DES CLES DU PLACARD</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.cles_placard %}✓{% endif %}</td>
+                    <td class="checkbox">{% if not contrat_kbis.etat_lieux.cles_placard %}✗{% endif %}</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>13</td>
+                    <td>NOMBRE DE REGLETTES</td>
+                    <td></td>
+                    <td></td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.reglettes == 'OK' %}✓{% endif %}</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.reglettes == 'NON' %}✓{% endif %}</td>
+                </tr>
+                <tr>
+                    <td>14</td>
+                    <td>NOMBRE DE VEILLEUSE</td>
+                    <td></td>
+                    <td></td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.veilleuses == 'OK' %}✓{% endif %}</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.veilleuses == 'NON' %}✓{% endif %}</td>
+                </tr>
+                <tr>
+                    <td>15</td>
+                    <td>NOMBRE DE VENTILATEURS</td>
+                    <td></td>
+                    <td></td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.ventilateurs == 'OK' %}✓{% endif %}</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.ventilateurs == 'NON' %}✓{% endif %}</td>
+                </tr>
+                <tr>
+                    <td>16</td>
+                    <td>ROBINETS DE LA CUISINE</td>
+                    <td></td>
+                    <td></td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.robinets_cuisine == 'OK' %}✓{% endif %}</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.robinets_cuisine == 'NON' %}✓{% endif %}</td>
+                </tr>
+                <tr>
+                    <td>17</td>
+                    <td>LES DES PLACARDS DE LA CUISINE</td>
+                    <td></td>
+                    <td></td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.placards_cuisine == 'OK' %}✓{% endif %}</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.placards_cuisine == 'NON' %}✓{% endif %}</td>
+                </tr>
+                <tr>
+                    <td>18</td>
+                    <td>ETAT DE LA SONNERIE</td>
+                    <td></td>
+                    <td></td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.sonnerie == 'OK' %}✓{% endif %}</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.sonnerie == 'NON' %}✓{% endif %}</td>
+                </tr>
+                <tr>
+                    <td>19</td>
+                    <td>LES WC</td>
+                    <td></td>
+                    <td></td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.wc == 'OK' %}✓{% endif %}</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.wc == 'NON' %}✓{% endif %}</td>
+                </tr>
+                <tr>
+                    <td>20</td>
+                    <td>LES LAVABOS</td>
+                    <td></td>
+                    <td></td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.lavabos == 'OK' %}✓{% endif %}</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.lavabos == 'NON' %}✓{% endif %}</td>
+                </tr>
+                <tr>
+                    <td>21</td>
+                    <td>LE MIROIR</td>
+                    <td></td>
+                    <td></td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.miroir == 'OK' %}✓{% endif %}</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.miroir == 'NON' %}✓{% endif %}</td>
+                </tr>
+                <tr>
+                    <td>22</td>
+                    <td>FLEXIBLE DE DOUCHE (COLONNE)</td>
+                    <td></td>
+                    <td></td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.flexible_douche == 'OK' %}✓{% endif %}</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.flexible_douche == 'NON' %}✓{% endif %}</td>
+                </tr>
+                <tr>
+                    <td>23</td>
+                    <td>LES ACCESSOIRES (porte savon, porte serviette, porte papier de toilette)</td>
+                    <td></td>
+                    <td></td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.accessoires_sanitaires == 'OK' %}✓{% endif %}</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.accessoires_sanitaires == 'NON' %}✓{% endif %}</td>
+                </tr>
+                <tr>
+                    <td>24</td>
+                    <td>LAMPES SANITAIRE</td>
+                    <td></td>
+                    <td></td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.lampes_sanitaire == 'OK' %}✓{% endif %}</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.lampes_sanitaire == 'NON' %}✓{% endif %}</td>
+                </tr>
+                <tr>
+                    <td>25</td>
+                    <td>CHAUFFE-EAU</td>
+                    <td></td>
+                    <td></td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.chauffe_eau == 'OK' %}✓{% endif %}</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.chauffe_eau == 'NON' %}✓{% endif %}</td>
+                </tr>
+                <tr>
+                    <td>26</td>
+                    <td>CLIMATISEUR (entretien)</td>
+                    <td></td>
+                    <td></td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.climatiseur == 'OK' %}✓{% endif %}</td>
+                    <td class="checkbox">{% if contrat_kbis.etat_lieux.climatiseur == 'NON' %}✓{% endif %}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        {% if contrat_kbis.etat_lieux.observations %}
+        <div class="observations">
+            <h4>Observations</h4>
+            <p>{{ contrat_kbis.etat_lieux.observations }}</p>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ENGAGEMENT -->
+    <div class="engagement">
+        <div class="title">Engagement</div>
+        <p>Je soussigné(e) <span class="highlight">{{ contrat_kbis.contrat.locataire.nom|upper }}</span> reconnait avoir loué une maison, avec l'agence {{ contrat_kbis.agence_nom }} le {{ contrat_kbis.contrat.date_signature|date:"d/m/Y" }} Et je m'engage à respecter le délai du payement de mon loyer prévu au plus tard le {{ contrat_kbis.paiement_echeance }}, je reconnais que la réfection des différents points cités ci-dessus sont à ma charge au moment de libérer la maison.</p>
+        
+        <p style="text-align: center;"><strong>Lu et approuvé bon pour accord</strong></p>
+        
+        <div class="signature-section">
+            <div class="signature-box">
+                <p>L'agence</p>
+            </div>
+            <div class="signature-box">
+                <p>le locataire</p>
+            </div>
+            <div class="signature-box">
+                <p>Personne Garant</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

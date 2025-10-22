@@ -1,69 +1,179 @@
 """
-Utilitaires simples pour la gestion des contrats - Version sans erreurs
+Utilitaires pour les contrats KBIS
 """
-from proprietes.models import Propriete, UniteLocative
-from contrats.models import Contrat
-from django.utils import timezone
 
-
-def get_proprietes_disponibles():
+def nombre_en_lettres(nombre):
     """
-    Retourne les propriétés disponibles pour un nouveau contrat.
-    Utilise la fonction globale pour assurer la cohérence.
+    Convertit un nombre en lettres (français).
     """
-    from core.property_utils import get_proprietes_disponibles_global
-    return get_proprietes_disponibles_global()
-
-
-def get_proprietes_disponibles_optimise():
-    """
-    Version optimisée qui utilise la méthode du modèle Propriete.
-    Plus lente mais plus fiable pour les cas complexes.
-    """
-    proprietes = Propriete.objects.filter(is_deleted=False)
-    return [p for p in proprietes if p.est_disponible_pour_location()]
-
-
-def get_unites_locatives_disponibles(propriete=None):
-    """
-    Retourne les unités locatives vraiment disponibles pour un nouveau contrat.
-    Exclut celles qui sont déjà louées par des contrats actifs.
-    """
-    from core.property_utils import get_unites_locatives_disponibles_global
-    return get_unites_locatives_disponibles_global(propriete)
-
-
-def get_pieces_disponibles(propriete=None):
-    """
-    Retourne les pièces vraiment disponibles pour un nouveau contrat.
-    Exclut celles qui sont déjà louées par des contrats actifs.
-    """
-    from core.property_utils import get_pieces_disponibles_global
-    return get_pieces_disponibles_global(propriete)
-
-
-def verifier_disponibilite_propriete(propriete):
-    """
-    Vérifie si une propriété est disponible.
-    """
-    # Vérifier s'il y a des contrats actifs pour cette propriété
-    contrats_actifs = Contrat.objects.filter(
-        propriete=propriete,
-        est_actif=True,
-        est_resilie=False,
-        date_debut__lte=timezone.now().date(),
-        date_fin__gte=timezone.now().date(),
-        is_deleted=False
-    ).exists()
+    if nombre == 0:
+        return "zéro"
     
-    if contrats_actifs:
-        return False
+    # Dictionnaires pour la conversion
+    unites = {
+        0: "", 1: "un", 2: "deux", 3: "trois", 4: "quatre", 5: "cinq",
+        6: "six", 7: "sept", 8: "huit", 9: "neuf", 10: "dix",
+        11: "onze", 12: "douze", 13: "treize", 14: "quatorze", 15: "quinze",
+        16: "seize", 17: "dix-sept", 18: "dix-huit", 19: "dix-neuf"
+    }
     
-    # Vérifier s'il y a des unités locatives disponibles
-    unites_disponibles = UniteLocative.objects.filter(
-        propriete=propriete,
-        statut='disponible',
-        is_deleted=False
-    ).exists()
+    dizaines = {
+        2: "vingt", 3: "trente", 4: "quarante", 5: "cinquante",
+        6: "soixante", 7: "soixante-dix", 8: "quatre-vingt", 9: "quatre-vingt-dix"
+    }
     
-    return unites_disponibles
+    centaines = {
+        1: "cent", 2: "deux cents", 3: "trois cents", 4: "quatre cents",
+        5: "cinq cents", 6: "six cents", 7: "sept cents", 8: "huit cents", 9: "neuf cents"
+    }
+    
+    milliers = {
+        1: "mille", 2: "deux mille", 3: "trois mille", 4: "quatre mille",
+        5: "cinq mille", 6: "six mille", 7: "sept mille", 8: "huit mille", 9: "neuf mille"
+    }
+    
+    def convertir_centaines(n):
+        """Convertit les centaines."""
+        if n < 100:
+            return convertir_dizaines(n)
+        
+        centaine = n // 100
+        reste = n % 100
+        
+        if centaine == 1:
+            if reste == 0:
+                return "cent"
+            else:
+                return f"cent {convertir_dizaines(reste)}"
+        else:
+            if reste == 0:
+                return centaines[centaine]
+            else:
+                return f"{centaines[centaine]} {convertir_dizaines(reste)}"
+    
+    def convertir_dizaines(n):
+        """Convertit les dizaines."""
+        if n < 20:
+            return unites[n]
+        
+        dizaine = n // 10
+        unite = n % 10
+        
+        if dizaine == 7:  # 70-79
+            if unite == 1:
+                return "soixante et onze"
+            elif unite == 0:
+                return "soixante-dix"
+            else:
+                return f"soixante-{unites[unite + 10]}"
+        elif dizaine == 9:  # 90-99
+            if unite == 1:
+                return "quatre-vingt-onze"
+            elif unite == 0:
+                return "quatre-vingt-dix"
+            else:
+                return f"quatre-vingt-{unites[unite + 10]}"
+        elif dizaine == 8:  # 80-89
+            if unite == 0:
+                return "quatre-vingts"
+            else:
+                return f"quatre-vingt-{unites[unite]}"
+        else:
+            if unite == 0:
+                return dizaines[dizaine]
+            elif unite == 1 and dizaine != 8:
+                return f"{dizaines[dizaine]} et un"
+            else:
+                return f"{dizaines[dizaine]}-{unites[unite]}"
+    
+    def convertir_milliers(n):
+        """Convertit les milliers."""
+        if n < 1000:
+            return convertir_centaines(n)
+        
+        millier = n // 1000
+        reste = n % 1000
+        
+        if millier == 1:
+            if reste == 0:
+                return "mille"
+            else:
+                return f"mille {convertir_centaines(reste)}"
+        else:
+            if reste == 0:
+                return milliers[millier]
+            else:
+                return f"{milliers[millier]} {convertir_centaines(reste)}"
+    
+    # Conversion principale
+    if nombre < 1000:
+        return convertir_centaines(nombre)
+    elif nombre < 1000000:
+        return convertir_milliers(nombre)
+    else:
+        # Pour les nombres plus grands, on peut étendre si nécessaire
+        return str(nombre)
+
+
+def formater_montant_lettres(montant):
+    """
+    Formate un montant en lettres avec "Francs CFA".
+    """
+    montant_entier = int(montant)
+    montant_lettres = nombre_en_lettres(montant_entier)
+    
+    if montant_entier == 1:
+        return f"{montant_lettres.upper()} Franc CFA"
+    else:
+        return f"{montant_lettres.upper()} Francs CFA"
+
+
+def formater_mois_lettres(mois):
+    """
+    Convertit un numéro de mois en lettres.
+    """
+    mois_lettres = {
+        1: "JANVIER", 2: "FÉVRIER", 3: "MARS", 4: "AVRIL",
+        5: "MAI", 6: "JUIN", 7: "JUILLET", 8: "AOÛT",
+        9: "SEPTEMBRE", 10: "OCTOBRE", 11: "NOVEMBRE", 12: "DÉCEMBRE"
+    }
+    return mois_lettres.get(mois, str(mois))
+
+
+def formater_date_lettres(date):
+    """
+    Formate une date en lettres.
+    """
+    from datetime import datetime
+    
+    if isinstance(date, str):
+        date = datetime.strptime(date, '%Y-%m-%d').date()
+    
+    jour = date.day
+    mois = formater_mois_lettres(date.month)
+    annee = date.year
+    
+    return f"{jour} {mois} {annee}"
+
+
+def generer_numero_contrat_kbis():
+    """
+    Génère un numéro de contrat KBIS unique.
+    """
+    from datetime import datetime
+    import random
+    
+    # Format: KBIS-YYYY-MM-NNNN
+    now = datetime.now()
+    annee = now.year
+    mois = now.month
+    numero = random.randint(1000, 9999)
+    
+    return f"KBIS-{annee}-{mois:02d}-{numero}"
+
+
+def calculer_caution_automatique(loyer_mensuel, nombre_mois=3):
+    """
+    Calcule automatiquement le montant de la caution.
+    """
+    return loyer_mensuel * nombre_mois

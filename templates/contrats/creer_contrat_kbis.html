@@ -1,0 +1,386 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Créer Contrat KBIS{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="bi bi-file-earmark-text"></i>
+                        Créer Contrat KBIS - {{ contrat.numero_contrat }}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="contrat-kbis-form">
+                        {% csrf_token %}
+                        
+                        <!-- Informations du contrat de base -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary">
+                                    <i class="bi bi-info-circle"></i>
+                                    Informations du Contrat
+                                </h5>
+                                <hr>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Locataire</label>
+                                    <input type="text" class="form-control" value="{{ contrat.locataire.nom }}" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Propriété</label>
+                                    <input type="text" class="form-control" value="{{ contrat.propriete.nom }}" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Loyer Mensuel</label>
+                                    <input type="text" class="form-control" value="{{ loyer_mensuel|floatformat:0 }} F CFA" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Caution Automatique (3 mois)</label>
+                                    <input type="text" class="form-control" value="{{ caution_automatique|floatformat:0 }} F CFA" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Informations du locataire -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary">
+                                    <i class="bi bi-person"></i>
+                                    Informations du Locataire
+                                </h5>
+                                <hr>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="locataire_cnib">N° CNIB *</label>
+                                    <input type="text" class="form-control" id="locataire_cnib" name="locataire_cnib" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="locataire_profession">Profession *</label>
+                                    <input type="text" class="form-control" id="locataire_profession" name="locataire_profession" required>
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="locataire_adresse">Adresse *</label>
+                                    <textarea class="form-control" id="locataire_adresse" name="locataire_adresse" rows="2" required></textarea>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="locataire_telephone">Téléphone *</label>
+                                    <input type="text" class="form-control" id="locataire_telephone" name="locataire_telephone" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Informations du garant -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary">
+                                    <i class="bi bi-shield-check"></i>
+                                    Informations du Garant
+                                </h5>
+                                <hr>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="garant_nom">Nom du Garant *</label>
+                                    <input type="text" class="form-control" id="garant_nom" name="garant_nom" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="garant_profession">Profession *</label>
+                                    <input type="text" class="form-control" id="garant_profession" name="garant_profession" required>
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="garant_adresse">Adresse *</label>
+                                    <textarea class="form-control" id="garant_adresse" name="garant_adresse" rows="2" required></textarea>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="garant_telephone">Téléphone *</label>
+                                    <input type="text" class="form-control" id="garant_telephone" name="garant_telephone" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="garant_cnib">N° CNIB du Garant</label>
+                                    <input type="text" class="form-control" id="garant_cnib" name="garant_cnib">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Informations de la propriété -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary">
+                                    <i class="bi bi-house"></i>
+                                    Informations de la Propriété
+                                </h5>
+                                <hr>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="propriete_numero">Numéro de la Maison *</label>
+                                    <input type="text" class="form-control" id="propriete_numero" name="propriete_numero" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="propriete_adresse">Adresse *</label>
+                                    <input type="text" class="form-control" id="propriete_adresse" name="propriete_adresse" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Informations financières -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary">
+                                    <i class="bi bi-currency-exchange"></i>
+                                    Informations Financières
+                                </h5>
+                                <hr>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="caution_montant">Montant de la Caution (F CFA) *</label>
+                                    <input type="number" class="form-control" id="caution_montant" name="caution_montant" 
+                                           value="{{ caution_automatique }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="paiement_debut_mois">Début du Paiement *</label>
+                                    <input type="text" class="form-control" id="paiement_debut_mois" name="paiement_debut_mois" 
+                                           value="fin du mois de SEPTEMBRE 2025" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="paiement_echeance">Échéance de Paiement *</label>
+                                    <input type="text" class="form-control" id="paiement_echeance" name="paiement_echeance" 
+                                           value="03 du mois suivant" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="delai_annulation">Délai d'Annulation (heures) *</label>
+                                    <input type="number" class="form-control" id="delai_annulation" name="delai_annulation" 
+                                           value="48" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Conditions de résiliation -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    Conditions de Résiliation
+                                </h5>
+                                <hr>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="preavis_resiliation_locataire">Préavis Locataire *</label>
+                                    <input type="text" class="form-control" id="preavis_resiliation_locataire" name="preavis_resiliation_locataire" 
+                                           value="un mois" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="preavis_resiliation_agence">Préavis Agence *</label>
+                                    <input type="text" class="form-control" id="preavis_resiliation_agence" name="preavis_resiliation_agence" 
+                                           value="trois mois" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="date_remise_cles">Date de Remise des Clés *</label>
+                                    <input type="text" class="form-control" id="date_remise_cles" name="date_remise_cles" 
+                                           value="01er du mois suivant" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- État des lieux -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary">
+                                    <i class="bi bi-clipboard-check"></i>
+                                    État des Lieux
+                                </h5>
+                                <hr>
+                            </div>
+                            
+                            <!-- Indexes des compteurs -->
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="indexe_sonabel" name="indexe_sonabel" checked>
+                                    <label class="form-check-label" for="indexe_sonabel">
+                                        Indexé du compteur SONABEL
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="indexe_onea" name="indexe_onea" checked>
+                                    <label class="form-check-label" for="indexe_onea">
+                                        Indexé du compteur ONEA
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- État de la peinture -->
+                            <div class="col-12 mt-3">
+                                <h6>État de la Peinture</h6>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="peinture_murs">Murs</label>
+                                    <select class="form-control" id="peinture_murs" name="peinture_murs">
+                                        <option value="OK">OK</option>
+                                        <option value="PASSABLE">PASSABLE</option>
+                                        <option value="MAUVAIS">MAUVAIS</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="peinture_couvertures">Couvertures</label>
+                                    <select class="form-control" id="peinture_couvertures" name="peinture_couvertures">
+                                        <option value="OK">OK</option>
+                                        <option value="PASSABLE">PASSABLE</option>
+                                        <option value="MAUVAIS">MAUVAIS</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="peinture_plafond">Plafond</label>
+                                    <select class="form-control" id="peinture_plafond" name="peinture_plafond">
+                                        <option value="OK">OK</option>
+                                        <option value="PASSABLE">PASSABLE</option>
+                                        <option value="MAUVAIS">MAUVAIS</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Clés -->
+                            <div class="col-12 mt-3">
+                                <h6>Clés</h6>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="cles_grand_portail" name="cles_grand_portail" checked>
+                                    <label class="form-check-label" for="cles_grand_portail">
+                                        Grand portail
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="cles_porte_salon" name="cles_porte_salon" checked>
+                                    <label class="form-check-label" for="cles_porte_salon">
+                                        Porte salon
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="cles_iso_planes" name="cles_iso_planes" checked>
+                                    <label class="form-check-label" for="cles_iso_planes">
+                                        Iso planes
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="cles_placard" name="cles_placard" checked>
+                                    <label class="form-check-label" for="cles_placard">
+                                        Placard
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Observations -->
+                            <div class="col-12 mt-3">
+                                <div class="form-group">
+                                    <label for="observations">Observations</label>
+                                    <textarea class="form-control" id="observations" name="observations" rows="3"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Boutons d'action -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'contrats:detail' contrat.id %}" class="btn btn-secondary">
+                                        <i class="bi bi-arrow-left"></i> Retour
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-save"></i> Créer Contrat KBIS
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-remplir les informations du locataire
+    const locataireNom = '{{ contrat.locataire.nom }}';
+    const locataireTelephone = '{{ contrat.locataire.telephone|default:"" }}';
+    
+    if (locataireTelephone) {
+        document.getElementById('locataire_telephone').value = locataireTelephone;
+    }
+    
+    // Auto-remplir les informations de la propriété
+    const proprieteNom = '{{ contrat.propriete.nom }}';
+    const proprieteAdresse = '{{ contrat.propriete.adresse|default:"" }}';
+    
+    if (proprieteAdresse) {
+        document.getElementById('propriete_adresse').value = proprieteAdresse;
+    }
+    
+    // Calculer automatiquement la caution
+    const loyerMensuel = {{ loyer_mensuel }};
+    const cautionMontant = document.getElementById('caution_montant');
+    cautionMontant.addEventListener('input', function() {
+        const montant = parseFloat(this.value);
+        if (montant > 0) {
+            const nombreMois = Math.round(montant / loyerMensuel);
+            console.log(`Caution de ${montant} F CFA = ${nombreMois} mois de loyer`);
+        }
+    });
+});
+</script>
+{% endblock %}

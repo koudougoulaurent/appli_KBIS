@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views, views_contrat_pdf_updated
+from . import views, api_views, views_contrat_pdf_updated, views_kbis
 from .views import contrat_list, quittance_list, etat_lieux_list
 
 app_name = 'contrats'
@@ -78,4 +78,11 @@ urlpatterns = [
     path('generer-garantie-pdf/<int:pk>/', views_contrat_pdf_updated.generer_garantie_pdf, name='generer_garantie_pdf'),
     path('generer-documents-complets/<int:pk>/', views_contrat_pdf_updated.generer_documents_complets, name='generer_documents_complets'),
     path('auto-remplir/<int:pk>/', views_contrat_pdf_updated.auto_remplir_contrat, name='auto_remplir_contrat'),
+    
+    # === CONTRATS KBIS ===
+    path('kbis/creer/<int:contrat_id>/', views_kbis.creer_contrat_kbis, name='creer_contrat_kbis'),
+    path('kbis/<int:contrat_id>/', views_kbis.detail_contrat_kbis, name='detail_contrat_kbis'),
+    path('kbis/<int:contrat_id>/modifier/', views_kbis.modifier_contrat_kbis, name='modifier_contrat_kbis'),
+    path('kbis/<int:contrat_id>/pdf/', views_kbis.generer_pdf_contrat_kbis, name='generer_pdf_contrat_kbis'),
+    path('kbis/', views_kbis.liste_contrats_kbis, name='liste_contrats_kbis'),
 ] 
