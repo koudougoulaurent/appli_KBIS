@@ -964,6 +964,9 @@ class RecuCautionPDFService:
         
         elements.append(Paragraph("DETAILS FINANCIERS", self.styles['CustomHeading']))
         
+        # Calculer les mois couverts par l'avance
+        mois_couverts_info = self._calculer_mois_couverts_avance()
+        
         # Tableau des détails financiers
         data = [
             ['Description', 'Montant'],
@@ -973,6 +976,11 @@ class RecuCautionPDFService:
             ['Avance de loyer:', self.contrat.get_avance_loyer_formatted()],
             ['TOTAL:', self.contrat.get_total_caution_avance_formatted()],
         ]
+        
+        # Ajouter les informations sur les mois couverts si l'avance existe
+        if mois_couverts_info and self.contrat.avance_loyer and self.contrat.avance_loyer > 0:
+            data.append(['Mois couverts par l\'avance:', mois_couverts_info['mois_texte']])
+            data.append(['Période de couverture:', f"{mois_couverts_info['date_debut'].strftime('%B %Y')} à {mois_couverts_info['date_fin'].strftime('%B %Y')}"])
         
         table = Table(data, colWidths=[8*cm, 4*cm])
         table.setStyle(TableStyle([
@@ -993,6 +1001,35 @@ class RecuCautionPDFService:
         elements.append(table)
         return elements
 
+    def _calculer_mois_couverts_avance(self):
+        """Calcule les mois couverts par l'avance de loyer"""
+        if not self.contrat.avance_loyer or self.contrat.avance_loyer <= 0:
+            return None
+            
+        if not self.contrat.loyer_mensuel or self.contrat.loyer_mensuel <= 0:
+            return None
+        
+        try:
+            # Utiliser le service corrigé pour calculer les mois couverts
+            from paiements.services_avance_corrige import ServiceAvanceCorrige
+            
+            mois_couverts_data = ServiceAvanceCorrige.calculer_mois_couverts_correct(
+                self.contrat, self.contrat.avance_loyer, None
+            )
+            
+            if mois_couverts_data:
+                return {
+                    'nombre': mois_couverts_data['nombre'],
+                    'mois_texte': mois_couverts_data['mois_texte'],
+                    'date_debut': mois_couverts_data['date_debut'],
+                    'date_fin': mois_couverts_data['date_fin']
+                }
+        except Exception as e:
+            print(f"[DEBUG] Erreur lors du calcul des mois couverts: {e}")
+            pass
+        
+        return None
+
     def _create_payment_status(self):
         """Crée la section du statut des paiements"""
         elements = []
@@ -1007,11 +1044,19 @@ class RecuCautionPDFService:
         caution_statut = '✓ Payée' if caution_ok else ('Non requise' if caution_ok is None else '✗ En attente')
         avance_statut = '✓ Payée' if avance_ok else ('Non requise' if avance_ok is None else '✗ En attente')
         
+        # Calculer les mois couverts par l'avance
+        mois_couverts_info = self._calculer_mois_couverts_avance()
+        
         data = [
             ['Type de paiement', 'Statut'],
             ['Caution:', caution_statut],
             ['Avance:', avance_statut],
         ]
+        
+        # Ajouter les informations sur les mois couverts si l'avance existe
+        if mois_couverts_info and self.contrat.avance_loyer and self.contrat.avance_loyer > 0:
+            data.append(['Mois couverts par l\'avance:', f"{mois_couverts_info['nombre']} mois ({mois_couverts_info['mois_texte']})"])
+            data.append(['Période de couverture:', f"{mois_couverts_info['date_debut'].strftime('%B %Y')} à {mois_couverts_info['date_fin'].strftime('%B %Y')}"])
         
         table = Table(data, colWidths=[6*cm, 6*cm])
         table.setStyle(TableStyle([
