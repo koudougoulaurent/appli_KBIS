@@ -177,3 +177,58 @@ def calculer_caution_automatique(loyer_mensuel, nombre_mois=3):
     Calcule automatiquement le montant de la caution.
     """
     return loyer_mensuel * nombre_mois
+
+
+def get_proprietes_disponibles():
+    """
+    Retourne les propriétés disponibles pour la création de contrats.
+    Une propriété est disponible si :
+    1. Elle n'a pas de contrat actif qui couvre la propriété entière, ET
+    2. Elle a au moins une unité locative disponible OU elle est marquée comme disponible
+    """
+    from proprietes.models import Propriete
+    from proprietes.models import UniteLocative
+    from .models import Contrat
+    from django.db.models import Q
+    from django.utils import timezone
+    
+    # Propriétés qui ont au moins une unité locative disponible
+    proprietes_avec_unites_disponibles = Propriete.objects.filter(
+        unites_locatives__statut='disponible'
+    ).distinct()
+    
+    # Propriétés marquées comme disponibles (sans unités locatives)
+    proprietes_marquees_disponibles = Propriete.objects.filter(
+        disponible=True,
+        unites_locatives__isnull=True
+    )
+    
+    # Propriétés avec unités locatives mais aucune disponible
+    proprietes_avec_unites_non_disponibles = Propriete.objects.filter(
+        unites_locatives__isnull=False
+    ).exclude(
+        unites_locatives__statut='disponible'
+    ).distinct()
+    
+    # Combiner toutes les propriétés disponibles
+    proprietes_disponibles = (
+        proprietes_avec_unites_disponibles | 
+        proprietes_marquees_disponibles
+    ).distinct()
+    
+    # Exclure les propriétés qui ont des contrats actifs
+    # (contrats qui ne sont pas terminés et qui couvrent la propriété entière)
+    contrats_actifs = Contrat.objects.filter(
+        date_fin__gte=timezone.now().date(),
+        propriete__in=proprietes_disponibles
+    )
+    
+    # Propriétés avec contrats actifs
+    proprietes_avec_contrats_actifs = contrats_actifs.values_list('propriete_id', flat=True)
+    
+    # Filtrer les propriétés disponibles en excluant celles avec contrats actifs
+    proprietes_finales = proprietes_disponibles.exclude(
+        id__in=proprietes_avec_contrats_actifs
+    )
+    
+    return proprietes_finales.order_by('titre')
