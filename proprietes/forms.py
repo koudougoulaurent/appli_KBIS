@@ -206,6 +206,7 @@ class ProprieteForm(forms.ModelForm):
             'adresse': _('Adresse'),
             'code_postal': _('Code postal'),
             'ville': _('Ville'),
+            'quartier': _('Quartier'),
             'pays': _('Pays'),
             'type_bien': _('Type de bien'),
             'type_gestion': _('Type de gestion'),
