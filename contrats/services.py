@@ -1038,10 +1038,15 @@ class RecuCautionPDFService:
             ('FONTNAME', (1, 1), (1, -2), 'Helvetica'),
             ('FONTNAME', (0, -1), (1, -1), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
             ('GRID', (0, 0), (-1, -1), 1, colors.grey),
             ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
             ('BACKGROUND', (0, -1), (-1, -1), colors.lightblue),
+            # Mettre en évidence les informations sur l'avance si elles existent
+            ('BACKGROUND', (0, -3), (-1, -2), colors.lightgreen),
+            ('FONTNAME', (0, -3), (1, -2), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, -3), (1, -2), 9),
         ]))
         
         elements.append(table)
@@ -1099,16 +1104,8 @@ class RecuCautionPDFService:
             ['Avance:', avance_statut],
         ]
         
-        # Ajouter les informations sur les mois couverts si l'avance existe
-        if mois_couverts_info and self.contrat.avance_loyer and self.contrat.avance_loyer > 0:
-            # Afficher tous les noms de mois couverts
-            mois_liste = mois_couverts_info.get('mois_liste', [])
-            if mois_liste:
-                mois_texte_complet = ', '.join(mois_liste)
-                data.append(['Mois couverts par l\'avance:', f"{mois_couverts_info['nombre']} mois ({mois_texte_complet})"])
-            else:
-                data.append(['Mois couverts par l\'avance:', f"{mois_couverts_info['nombre']} mois ({mois_couverts_info['mois_texte']})"])
-            data.append(['Période de couverture:', f"{mois_couverts_info['date_debut'].strftime('%B %Y')} à {mois_couverts_info['date_fin'].strftime('%B %Y')}"])
+        # Ne pas répéter les informations sur les mois couverts dans le statut des paiements
+        # (elles sont déjà affichées dans les détails financiers)
         
         table = Table(data, colWidths=[6*cm, 6*cm])
         table.setStyle(TableStyle([
@@ -1130,15 +1127,13 @@ class RecuCautionPDFService:
         elements = []
         
         elements.append(Paragraph("SIGNATURES", self.styles['CustomHeading']))
+        elements.append(Spacer(1, 20))
         
-        # Ligne de séparation
-        elements.append(Paragraph("<hr/>", self.styles['CustomBody']))
-        elements.append(Spacer(1, 30))
-        
-        # Tableau des signatures pour éviter le chevauchement
+        # Tableau des signatures amélioré
         signature_data = [
             ['Signature du locataire', 'Signature de l\'agent immobilier'],
-            ['', ''],
+            ['', ''],  # Lignes de signature
+            ['', ''],  # Lignes de signature supplémentaires
             [f"{self.contrat.locataire.nom} {self.contrat.locataire.prenom}", 
              f"{self.config_entreprise.nom_entreprise if self.config_entreprise else 'KBIS IMMOBILIER'}"],
             ['Date : _________________', 'Date : _________________']
@@ -1148,13 +1143,16 @@ class RecuCautionPDFService:
         signature_table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTNAME', (0, 1), (0, 2), 'Helvetica'),  # Lignes de signature
+            ('FONTNAME', (0, 3), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-            ('TOPPADDING', (0, 0), (-1, -1), 12),
-            ('LINEBELOW', (0, 1), (0, 1), 1, colors.black),
-            ('LINEBELOW', (1, 1), (1, 1), 1, colors.black),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
+            ('TOPPADDING', (0, 0), (-1, -1), 15),
+            ('LINEBELOW', (0, 1), (0, 2), 2, colors.black),  # Ligne de signature plus épaisse
+            ('LINEBELOW', (1, 1), (1, 2), 2, colors.black),  # Ligne de signature plus épaisse
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.lightgrey),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
         ]))
         
         elements.append(signature_table)
