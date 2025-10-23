@@ -84,15 +84,16 @@ class ProprieteForm(forms.ModelForm):
         })
     )
     
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Rendre le champ quartier optionnel temporairement pour éviter les erreurs en production
-        self.fields['quartier'].required = False
+    # Méthode __init__ temporairement supprimée pour éviter les erreurs en production
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     # Rendre le champ quartier optionnel temporairement pour éviter les erreurs en production
+    #     self.fields['quartier'].required = False
     
     class Meta:
         model = Propriete
         fields = [
-            'numero_propriete', 'titre', 'adresse', 'code_postal', 'ville', 'quartier', 'pays',
+            'numero_propriete', 'titre', 'adresse', 'code_postal', 'ville', 'pays',
             'type_bien', 'type_gestion', 'bailleur', 'surface', 'nombre_pieces', 'nombre_chambres', 'nombre_salles_bain',
             'ascenseur', 'parking', 'balcon', 'jardin', 'cuisine',
             'prix_achat', 'loyer_actuel', 'charges_locataire',
