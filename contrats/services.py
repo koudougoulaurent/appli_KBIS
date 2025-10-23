@@ -1074,7 +1074,12 @@ class RecuCautionPDFService:
             # Convertir les mois en français
             mois_debut_fr = self._convertir_mois_francais(mois_couverts_info['date_debut'])
             mois_fin_fr = self._convertir_mois_francais(mois_couverts_info['date_fin'])
-            periode_info = f"{mois_debut_fr} {mois_couverts_info['date_debut'].year} à {mois_fin_fr} {mois_couverts_info['date_fin'].year}"
+            
+            # Si c'est un seul mois, afficher seulement ce mois
+            if mois_couverts_info['date_debut'] == mois_couverts_info['date_fin']:
+                periode_info = f"{mois_debut_fr} {mois_couverts_info['date_debut'].year}"
+            else:
+                periode_info = f"{mois_debut_fr} {mois_couverts_info['date_debut'].year} à {mois_fin_fr} {mois_couverts_info['date_fin'].year}"
             
             # Créer un tableau avec cellules fusionnées pour les informations sur l'avance
             avance_data = [
