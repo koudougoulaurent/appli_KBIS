@@ -415,7 +415,8 @@ class Propriete(models.Model):
         blank=True, 
         null=True, 
         verbose_name=_("Quartier"),
-        help_text=_("Quartier ou secteur où se trouve la propriété (très important pour la localisation)")
+        help_text=_("Quartier ou secteur où se trouve la propriété (très important pour la localisation)"),
+        default=""  # Valeur par défaut pour éviter les erreurs
     )
     pays = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Pays"))
     

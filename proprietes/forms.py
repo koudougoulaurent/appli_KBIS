@@ -84,6 +84,11 @@ class ProprieteForm(forms.ModelForm):
         })
     )
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Rendre le champ quartier optionnel temporairement pour éviter les erreurs en production
+        self.fields['quartier'].required = False
+    
     class Meta:
         model = Propriete
         fields = [
