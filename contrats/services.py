@@ -773,8 +773,8 @@ class RecuCautionPDFService:
         # Signatures
         story.extend(self._create_signatures())
         
-        # Génération du PDF avec en-tête et pied de page personnalisés
-        doc.build(story, onFirstPage=self._add_header_footer, onLaterPages=self._add_header_footer)
+        # Génération du PDF avec en-tête uniquement sur la première page
+        doc.build(story, onFirstPage=self._add_header_footer, onLaterPages=self._add_footer_only)
         buffer.seek(0)
         
         # Mettre en cache le PDF généré
@@ -784,6 +784,45 @@ class RecuCautionPDFService:
             buffer.seek(0)  # Remettre le pointeur au début
         
         return buffer
+
+    def _add_footer_only(self, canvas_obj, doc):
+        """Ajoute uniquement le pied de page (sans en-tête) sur les pages suivantes"""
+        import os
+        
+        # Dimensions de la page
+        page_width, page_height = A4
+        
+        # === PIED DE PAGE SIMPLIFIÉ ===
+        # Fond du pied de page réduit
+        canvas_obj.setFillColor(colors.lightgrey)
+        canvas_obj.rect(0, 0, page_width, 1.5*cm, fill=1, stroke=0)
+        
+        # Informations de l'entreprise dans le pied de page
+        if self.config_entreprise:
+            canvas_obj.setFillColor(colors.black)
+            canvas_obj.setFont("Helvetica", 8)
+            
+            # Nom de l'entreprise
+            canvas_obj.drawString(1*cm, 0.8*cm, self.config_entreprise.nom_entreprise)
+            
+            # Adresse
+            if self.config_entreprise.adresse:
+                canvas_obj.drawString(1*cm, 0.5*cm, self.config_entreprise.adresse)
+            
+            # Téléphone et email
+            contact_info = []
+            if self.config_entreprise.telephone:
+                contact_info.append(f"Tel: {self.config_entreprise.telephone}")
+            if self.config_entreprise.email:
+                contact_info.append(f"Email: {self.config_entreprise.email}")
+            
+            if contact_info:
+                canvas_obj.drawString(1*cm, 0.2*cm, " | ".join(contact_info))
+        
+        # Numéro de page
+        canvas_obj.setFillColor(colors.black)
+        canvas_obj.setFont("Helvetica", 8)
+        canvas_obj.drawRightString(page_width - 1*cm, 0.5*cm, f"Page {doc.page}")
 
     def _add_header_footer(self, canvas_obj, doc):
         """Ajoute l'en-tête et le pied de page fixes sur chaque page"""
@@ -979,7 +1018,13 @@ class RecuCautionPDFService:
         
         # Ajouter les informations sur les mois couverts si l'avance existe
         if mois_couverts_info and self.contrat.avance_loyer and self.contrat.avance_loyer > 0:
-            data.append(['Mois couverts par l\'avance:', mois_couverts_info['mois_texte']])
+            # Afficher tous les noms de mois couverts
+            mois_liste = mois_couverts_info.get('mois_liste', [])
+            if mois_liste:
+                mois_texte_complet = ', '.join(mois_liste)
+                data.append(['Mois couverts par l\'avance:', f"{mois_couverts_info['nombre']} mois ({mois_texte_complet})"])
+            else:
+                data.append(['Mois couverts par l\'avance:', f"{mois_couverts_info['nombre']} mois ({mois_couverts_info['mois_texte']})"])
             data.append(['Période de couverture:', f"{mois_couverts_info['date_debut'].strftime('%B %Y')} à {mois_couverts_info['date_fin'].strftime('%B %Y')}"])
         
         table = Table(data, colWidths=[8*cm, 4*cm])
@@ -1055,7 +1100,13 @@ class RecuCautionPDFService:
         
         # Ajouter les informations sur les mois couverts si l'avance existe
         if mois_couverts_info and self.contrat.avance_loyer and self.contrat.avance_loyer > 0:
-            data.append(['Mois couverts par l\'avance:', f"{mois_couverts_info['nombre']} mois ({mois_couverts_info['mois_texte']})"])
+            # Afficher tous les noms de mois couverts
+            mois_liste = mois_couverts_info.get('mois_liste', [])
+            if mois_liste:
+                mois_texte_complet = ', '.join(mois_liste)
+                data.append(['Mois couverts par l\'avance:', f"{mois_couverts_info['nombre']} mois ({mois_texte_complet})"])
+            else:
+                data.append(['Mois couverts par l\'avance:', f"{mois_couverts_info['nombre']} mois ({mois_couverts_info['mois_texte']})"])
             data.append(['Période de couverture:', f"{mois_couverts_info['date_debut'].strftime('%B %Y')} à {mois_couverts_info['date_fin'].strftime('%B %Y')}"])
         
         table = Table(data, colWidths=[6*cm, 6*cm])
