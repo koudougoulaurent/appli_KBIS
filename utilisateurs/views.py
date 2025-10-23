@@ -283,9 +283,7 @@ def dashboard_groupe(request, groupe_nom):
         'titre_page': f'Dashboard - {groupe_nom}',
         'version_app': 'GESTIMMOB version 6.0'
     }
-    
 
-    
     return render(request, template_name, context)
 
 def logout_groupe(request):
@@ -604,7 +602,6 @@ def privilege_required(view_func):
         return view_func(request, *args, **kwargs)
     return wrapper
 
-
 class PrivilegeRequiredMixin(UserPassesTestMixin):
     """Mixin pour vérifier que l'utilisateur appartient au groupe PRIVILEGE"""
     
@@ -614,7 +611,6 @@ class PrivilegeRequiredMixin(UserPassesTestMixin):
     def handle_no_permission(self):
         messages.error(self.request, "Accès refusé. Seuls les utilisateurs du groupe PRIVILEGE peuvent accéder à cette fonctionnalité.")
         return redirect('utilisateurs:dashboard_groupe', groupe_nom=self.request.user.get_groupe_display())
-
 
 @privilege_required
 def privilege_dashboard_advanced(request):
@@ -668,7 +664,6 @@ def privilege_dashboard_advanced(request):
     
     return render(request, 'utilisateurs/dashboard_privilege_advanced.html', context)
 
-
 @privilege_required
 def privilege_element_management(request):
     """Interface de gestion des éléments pour le groupe PRIVILEGE"""
@@ -710,7 +705,6 @@ def privilege_element_management(request):
     }
     
     return render(request, 'utilisateurs/privilege_element_management.html', context)
-
 
 @privilege_required
 def privilege_element_list(request, model_name):
@@ -756,150 +750,6 @@ def privilege_element_list(request, model_name):
     }
     
     return render(request, 'utilisateurs/privilege_element_list.html', context)
-
-
-@require_POST
-@privilege_required
-def privilege_delete_element(request, model_name, element_id):
-    """Supprime ou désactive un élément selon les permissions PRIVILEGE"""
-    
-    # Mapper les noms de modèles
-    model_map = {
-        'bailleur': Bailleur,
-        'locataire': Locataire,
-        'propriete': Propriete,
-        'typebien': TypeBien,
-        'templaterecu': TemplateRecu,
-        'devise': Devise,
-        'chargesbailleur': ChargesBailleur,
-    }
-    
-    model_class = model_map.get(model_name.lower())
-    if not model_class:
-        return JsonResponse({'success': False, 'message': "Type d'élément non reconnu."})
-    
-    try:
-        element = model_class.objects.get(id=element_id)
-    except model_class.DoesNotExist:
-        return JsonResponse({'success': False, 'message': "Élément non trouvé."})
-    
-    # Utiliser la méthode de suppression sécurisée
-    success, message, action, détails_références = request.user.safe_delete_element(element, request)
-    
-    if success:
-        messages.success(request, message)
-    else:
-        messages.error(request, message)
-    
-    return JsonResponse({
-        'success': success,
-        'message': message,
-        'action': action,
-        'détails_références': détails_références,
-    })
-
-
-@login_required
-@require_POST
-def privilege_force_delete_element(request, model_name, element_id):
-    """Suppression forcée/urgente d'un élément - uniquement pour PRIVILEGE"""
-    
-    # Vérifier les permissions PRIVILEGE
-    from core.utils import check_group_permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'delete')
-    if not permissions['allowed']:
-        return JsonResponse({
-            'success': False, 
-            'message': permissions['message']
-        })
-    
-    # Mapper les noms de modèles
-    model_map = {
-        'bailleur': Bailleur,
-        'locataire': Locataire,
-        'propriete': Propriete,
-        'typebien': TypeBien,
-        'templaterecu': TemplateRecu,
-        'devise': Devise,
-        'chargesbailleur': ChargesBailleur,
-        'utilisateur': Utilisateur,
-        'contrat': 'contrats.models.Contrat',
-        'paiement': 'paiements.models.Paiement',
-        'recu': 'paiements.models.Recu',
-        'quittance': 'contrats.models.Quittance',
-        'chargedeductible': 'paiements.models.ChargeDeductible',
-        # Ajoutez ici tout autre modèle à supprimer physiquement
-    }
-    
-    model_class = model_map.get(model_name.lower())
-    if not model_class:
-        return JsonResponse({'success': False, 'message': "Type d'élément non reconnu."})
-    
-    # Importer le modèle si c'est une chaîne
-    if isinstance(model_class, str):
-        from django.apps import apps
-        app_name, model_name_import = model_class.split('.')
-        model_class = apps.get_model(app_name, model_name_import)
-    
-    try:
-        element = model_class.objects.get(id=element_id)
-    except model_class.DoesNotExist:
-        return JsonResponse({'success': False, 'message': "Élément non trouvé."})
-    
-    # Vérifier les contrats actifs avant suppression forcée
-    from core.utils import check_active_contracts_before_force_delete
-    contract_check = check_active_contracts_before_force_delete(element)
-    
-    if not contract_check['can_force_delete']:
-        return JsonResponse({
-            'success': False,
-            'message': contract_check['message'],
-            'contracts_count': contract_check['contracts_count']
-        })
-    
-    try:
-        # Suppression forcée - suppression PHYSIQUE de la base de données
-        old_data = {f.name: getattr(element, f.name) for f in element._meta.fields}
-        object_repr = str(element)
-        model_name = element._meta.model_name
-        
-        # SUPPRESSION PHYSIQUE RÉELLE de la base de données
-        element.delete()
-        
-        # Log d'audit spécial pour suppression forcée
-        AuditLog.objects.create(
-            content_type=ContentType.objects.get_for_model(element.__class__),
-            object_id=element_id,
-            action='force_delete',
-            details={
-                'old_data': old_data,
-                'force_delete': True,
-                'contracts_checked': True,
-                'contracts_count': 0,
-                'deleted_at': str(timezone.now()),
-                'deletion_type': 'PHYSICAL_DELETE',
-                'model_name': model_name
-            },
-            object_repr=object_repr,
-            user=request.user,
-            ip_address=request.META.get('REMOTE_ADDR'),
-            user_agent=request.META.get('HTTP_USER_AGENT', '')
-        )
-        
-        return JsonResponse({
-            'success': True,
-            'message': f"✅ SUPPRESSION FORCÉE RÉUSSIE ✅\n\nL'élément '{object_repr}' a été supprimé DÉFINITIVEMENT de la base de données.\n\n📋 Détails :\n• Type : Suppression physique\n• Modèle : {model_name}\n• Utilisateur : {request.user.username}\n• Heure : {timezone.now().strftime('%d/%m/%Y à %H:%M:%S')}\n• Audit : Action tracée dans les logs",
-            'action': 'force_delete',
-            'deletion_type': 'PHYSICAL',
-            'user': request.user.username
-        })
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'message': f"❌ ERREUR LORS DE LA SUPPRESSION FORCÉE ❌\n\nImpossible de supprimer l'élément de la base de données.\n\n📋 Détails de l'erreur :\n{str(e)}\n\n💡 Solutions possibles :\n• Vérifiez les permissions\n• Contactez l'administrateur système"
-        })
-
 
 @privilege_required
 def privilege_profile_management(request):
@@ -1010,64 +860,6 @@ def privilege_profile_management(request):
         context['action'] = 'update'
         return context
 
-
-@require_POST
-@privilege_required
-def privilege_delete_utilisateur(request, user_id):
-    """Supprime un utilisateur (suppression logique)"""
-    
-    try:
-        utilisateur = Utilisateur.objects.get(id=user_id)
-    except Utilisateur.DoesNotExist:
-        return JsonResponse({'success': False, 'message': "Utilisateur non trouvé."})
-    
-    # Vérifier qu'on ne supprime pas soi-même
-    if utilisateur == request.user:
-        return JsonResponse({'success': False, 'message': "Vous ne pouvez pas supprimer votre propre compte."})
-    
-    # Utiliser la méthode de suppression sécurisée
-    success, message, action = request.user.safe_delete_element(utilisateur, request)
-    
-    if success:
-        messages.success(request, message)
-    else:
-        messages.error(request, message)
-    
-    return JsonResponse({
-        'success': success,
-        'message': message,
-        'action': action,
-    })
-
-
-@require_POST
-@privilege_required
-def privilege_disable_utilisateur(request, element_id):
-    """Désactive un utilisateur"""
-    
-    try:
-        utilisateur = Utilisateur.objects.get(id=element_id)
-    except Utilisateur.DoesNotExist:
-        return JsonResponse({'success': False, 'message': "Utilisateur non trouvé."})
-    
-    # Vérifier qu'on ne désactive pas soi-même
-    if utilisateur == request.user:
-        return JsonResponse({'success': False, 'message': "Vous ne pouvez pas désactiver votre propre compte."})
-    
-    success, message, action = request.user.safe_delete_element(utilisateur, request)
-    
-    if success:
-        messages.success(request, message)
-    else:
-        messages.error(request, message)
-    
-    return JsonResponse({
-        'success': success,
-        'message': message,
-        'action': action,
-    })
-
-
 @privilege_required
 def privilege_audit_log(request):
     """Journal d'audit pour le groupe PRIVILEGE"""
@@ -1109,287 +901,6 @@ def privilege_audit_log(request):
     }
     
     return render(request, 'utilisateurs/privilege_audit_log.html', context)
-
-@require_POST
-@privilege_required
-def privilege_disable_element(request, model_name, element_id):
-    """Désactive un élément (désactivation logique)"""
-    
-    try:
-        # Obtenir la classe du modèle
-        model_class = get_model_class(model_name)
-        if not model_class:
-            return JsonResponse({'success': False, 'message': f"Modèle {model_name} non supporté."})
-        
-        # Récupérer l'élément
-        element = model_class.objects.get(id=element_id)
-    except model_class.DoesNotExist:
-        return JsonResponse({'success': False, 'message': f"Élément non trouvé."})
-    
-    # Utiliser la méthode de désactivation sécurisée
-    success, message, action = request.user.safe_delete_element(element, request)
-    
-    if success:
-        messages.success(request, message)
-    else:
-        messages.error(request, message)
-    
-    return JsonResponse({
-        'success': success,
-        'message': message,
-        'action': action,
-    })
-
-
-@require_POST
-@privilege_required
-def privilege_delete_bailleur(request, element_id):
-    """Supprime un bailleur (suppression logique)"""
-    from proprietes.models import Bailleur
-    
-    try:
-        bailleur = Bailleur.objects.get(id=element_id)
-    except Bailleur.DoesNotExist:
-        return JsonResponse({'success': False, 'message': "Bailleur non trouvé."})
-    
-    success, message, action = request.user.safe_delete_element(bailleur, request)
-    
-    if success:
-        messages.success(request, message)
-    else:
-        messages.error(request, message)
-    
-    return JsonResponse({
-        'success': success,
-        'message': message,
-        'action': action,
-    })
-
-
-@require_POST
-@privilege_required
-def privilege_delete_locataire(request, element_id):
-    """Supprime un locataire (suppression logique)"""
-    from proprietes.models import Locataire
-    
-    try:
-        locataire = Locataire.objects.get(id=element_id)
-    except Locataire.DoesNotExist:
-        return JsonResponse({'success': False, 'message': "Locataire non trouvé."})
-    
-    success, message, action = request.user.safe_delete_element(locataire, request)
-    
-    if success:
-        messages.success(request, message)
-    else:
-        messages.error(request, message)
-    
-    return JsonResponse({
-        'success': success,
-        'message': message,
-        'action': action,
-    })
-
-
-@require_POST
-@privilege_required
-def privilege_delete_propriete(request, element_id):
-    """Supprime une propriété (suppression logique)"""
-    from proprietes.models import Propriete
-    
-    try:
-        propriete = Propriete.objects.get(id=element_id)
-    except Propriete.DoesNotExist:
-        return JsonResponse({'success': False, 'message': "Propriété non trouvée."})
-    
-    success, message, action = request.user.safe_delete_element(propriete, request)
-    
-    if success:
-        messages.success(request, message)
-    else:
-        messages.error(request, message)
-    
-    return JsonResponse({
-        'success': success,
-        'message': message,
-        'action': action,
-    })
-
-
-@require_POST
-@privilege_required
-def privilege_delete_type_bien(request, element_id):
-    """Supprime un type de bien (suppression logique)"""
-    from proprietes.models import TypeBien
-    
-    try:
-        type_bien = TypeBien.objects.get(id=element_id)
-    except TypeBien.DoesNotExist:
-        return JsonResponse({'success': False, 'message': "Type de bien non trouvé."})
-    
-    success, message, action = request.user.safe_delete_element(type_bien, request)
-    
-    if success:
-        messages.success(request, message)
-    else:
-        messages.error(request, message)
-    
-    return JsonResponse({
-        'success': success,
-        'message': message,
-        'action': action,
-    })
-
-
-@require_POST
-@privilege_required
-def privilege_delete_charges_bailleur(request, element_id):
-    """Supprime des charges bailleur (suppression logique)"""
-    from proprietes.models import ChargesBailleur
-    
-    try:
-        charges = ChargesBailleur.objects.get(id=element_id)
-    except ChargesBailleur.DoesNotExist:
-        return JsonResponse({'success': False, 'message': "Charges bailleur non trouvées."})
-    
-    success, message, action = request.user.safe_delete_element(charges, request)
-    
-    if success:
-        messages.success(request, message)
-    else:
-        messages.error(request, message)
-    
-    return JsonResponse({
-        'success': success,
-        'message': message,
-        'action': action,
-    })
-
-
-@require_POST
-@privilege_required
-def privilege_disable_bailleur(request, element_id):
-    """Désactive un bailleur"""
-    from proprietes.models import Bailleur
-    
-    try:
-        bailleur = Bailleur.objects.get(id=element_id)
-    except Bailleur.DoesNotExist:
-        return JsonResponse({'success': False, 'message': "Bailleur non trouvé."})
-    
-    success, message, action = request.user.safe_delete_element(bailleur, request)
-    
-    if success:
-        messages.success(request, message)
-    else:
-        messages.error(request, message)
-    
-    return JsonResponse({
-        'success': success,
-        'message': message,
-        'action': action,
-    })
-
-
-@require_POST
-@privilege_required
-def privilege_disable_locataire(request, element_id):
-    """Désactive un locataire"""
-    from proprietes.models import Locataire
-    
-    try:
-        locataire = Locataire.objects.get(id=element_id)
-    except Locataire.DoesNotExist:
-        return JsonResponse({'success': False, 'message': "Locataire non trouvé."})
-    
-    success, message, action = request.user.safe_delete_element(locataire, request)
-    
-    if success:
-        messages.success(request, message)
-    else:
-        messages.error(request, message)
-    
-    return JsonResponse({
-        'success': success,
-        'message': message,
-        'action': action,
-    })
-
-
-@require_POST
-@privilege_required
-def privilege_disable_propriete(request, element_id):
-    """Désactive une propriété"""
-    from proprietes.models import Propriete
-    
-    try:
-        propriete = Propriete.objects.get(id=element_id)
-    except Propriete.DoesNotExist:
-        return JsonResponse({'success': False, 'message': "Propriété non trouvée."})
-    
-    success, message, action = request.user.safe_delete_element(propriete, request)
-    
-    if success:
-        messages.success(request, message)
-    else:
-        messages.error(request, message)
-    
-    return JsonResponse({
-        'success': success,
-        'message': message,
-        'action': action,
-    })
-
-
-@require_POST
-@privilege_required
-def privilege_disable_type_bien(request, element_id):
-    """Désactive un type de bien"""
-    from proprietes.models import TypeBien
-    
-    try:
-        type_bien = TypeBien.objects.get(id=element_id)
-    except TypeBien.DoesNotExist:
-        return JsonResponse({'success': False, 'message': "Type de bien non trouvé."})
-    
-    success, message, action = request.user.safe_delete_element(type_bien, request)
-    
-    if success:
-        messages.success(request, message)
-    else:
-        messages.error(request, message)
-    
-    return JsonResponse({
-        'success': success,
-        'message': message,
-        'action': action,
-    })
-
-
-@require_POST
-@privilege_required
-def privilege_disable_charges_bailleur(request, element_id):
-    """Désactive des charges bailleur"""
-    from proprietes.models import ChargesBailleur
-    
-    try:
-        charges = ChargesBailleur.objects.get(id=element_id)
-    except ChargesBailleur.DoesNotExist:
-        return JsonResponse({'success': False, 'message': "Charges bailleur non trouvées."})
-    
-    success, message, action = request.user.safe_delete_element(charges, request)
-    
-    if success:
-        messages.success(request, message)
-    else:
-        messages.error(request, message)
-    
-    return JsonResponse({
-        'success': success,
-        'message': message,
-        'action': action,
-    })
-
 
 @require_POST
 @privilege_required
@@ -1443,7 +954,6 @@ def privilege_bulk_actions(request):
         'details': messages_list
     })
 
-
 def get_model_class(model_name):
     """Retourne la classe du modèle correspondant au nom"""
     model_mapping = {
@@ -1473,7 +983,6 @@ def get_model_class(model_name):
         return apps.get_model(app_label, model_class_name)
     except (ValueError, LookupError):
         return None
-
 
 @login_required
 def utilisateurs_dashboard(request):

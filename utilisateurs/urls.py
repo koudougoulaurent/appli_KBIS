@@ -41,32 +41,12 @@ urlpatterns = [
     path('privilege/elements/<str:model_name>/', views.privilege_element_list, name='privilege_element_list'),
     path('privilege/elements/<str:model_name>/<int:element_id>/delete/', views.privilege_delete_element, name='privilege_delete_element'),
     
-    # Actions de privilège sur les éléments (suppression et désactivation)
-    path('privilege/delete/<str:model_name>/<int:element_id>/', views.privilege_delete_element, name='privilege_delete_element_generic'),
-    path('privilege/disable/<str:model_name>/<int:element_id>/', views.privilege_disable_element, name='privilege_disable_element_generic'),
-    path('privilege/force_delete/<str:model_name>/<int:element_id>/', views.privilege_force_delete_element, name='privilege_force_delete_element'),
-    
-    # Actions de privilège spécialisées par modèle
-    path('privilege/delete/bailleur/<int:element_id>/', views.privilege_delete_bailleur, name='privilege_delete_bailleur'),
-    path('privilege/delete/locataire/<int:element_id>/', views.privilege_delete_locataire, name='privilege_delete_locataire'),
-    path('privilege/delete/propriete/<int:element_id>/', views.privilege_delete_propriete, name='privilege_delete_propriete'),
-    path('privilege/delete/typebien/<int:element_id>/', views.privilege_delete_type_bien, name='privilege_delete_type_bien'),
-    path('privilege/delete/chargesbailleur/<int:element_id>/', views.privilege_delete_charges_bailleur, name='privilege_delete_charges_bailleur'),
-    path('privilege/delete/utilisateur/<int:element_id>/', views.privilege_delete_utilisateur, name='privilege_delete_utilisateur'),
-    
-    path('privilege/disable/bailleur/<int:element_id>/', views.privilege_disable_bailleur, name='privilege_disable_bailleur'),
-    path('privilege/disable/locataire/<int:element_id>/', views.privilege_disable_locataire, name='privilege_disable_locataire'),
-    path('privilege/disable/propriete/<int:element_id>/', views.privilege_disable_propriete, name='privilege_disable_propriete'),
-    path('privilege/disable/typebien/<int:element_id>/', views.privilege_disable_type_bien, name='privilege_disable_type_bien'),
-    path('privilege/disable/chargesbailleur/<int:element_id>/', views.privilege_disable_charges_bailleur, name='privilege_disable_charges_bailleur'),
-    path('privilege/disable/utilisateur/<int:element_id>/', views.privilege_disable_utilisateur, name='privilege_disable_utilisateur'),
     
     # Actions en lot
     path('privilege/bulk-actions/', views.privilege_bulk_actions, name='privilege_bulk_actions'),
     
     # Gestion des profils
     path('privilege/profiles/', views.privilege_profile_management, name='privilege_profile_management'),
-    path('privilege/profiles/<int:user_id>/delete/', views.privilege_delete_utilisateur, name='privilege_delete_utilisateur'),
     
     # Journal d'audit
     path('privilege/audit/', views.privilege_dashboard_advanced, name='privilege_audit_log'),

@@ -128,20 +128,6 @@
                 </td>
                 
                 <!-- Actions de privilège -->
-                {% if is_privilege_user %}
-                <td class="privilege-actions-column">
-                    {% if privilege_actions and privilege_actions|get_item:object.id %}
-                        {% include 'includes/privilege_buttons.html' with object=object %}
-                    {% else %}
-                        <div class="text-muted">
-                            <small>
-                                <i class="bi bi-dash-circle"></i>
-                                Aucune action
-                            </small>
-                        </div>
-                    {% endif %}
-                </td>
-                {% endif %}
             </tr>
             {% endfor %}
         </tbody>

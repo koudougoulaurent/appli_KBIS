@@ -473,11 +473,6 @@
                                 {% endfor %}
                             </div>
                         </td>
-                        {% if is_privilege_user %}
-                        <td class="privilege-actions-cell">
-                            {% include 'includes/privilege_buttons.html' with object=object %}
-                        </td>
-                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -742,13 +737,6 @@ function initializePrivilegeFeatures() {
         }
     });
     
-    // Ajouter des écouteurs d'événements pour les actions de privilège
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.privilege-actions-container')) {
-            // Les actions sont gérées par le template privilege_buttons.html
-            console.log('Action de privilège détectée');
-        }
-    });
     
     // Mettre à jour l'interface après les actions de privilège
     window.addEventListener('privilegeActionCompleted', function(e) {
