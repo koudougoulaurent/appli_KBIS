@@ -719,6 +719,14 @@ class Paiement(models.Model):
         related_name='paiements_crees',
         verbose_name=_("Créé par")
     )
+    
+    # Données extra pour les notifications
+    data_extra = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name=_("Données supplémentaires"),
+        help_text=_("Données JSON pour les notifications et métadonnées")
+    )
     is_deleted = models.BooleanField(default=False)
     deleted_at = models.DateTimeField(null=True, blank=True)
     deleted_by = models.ForeignKey(

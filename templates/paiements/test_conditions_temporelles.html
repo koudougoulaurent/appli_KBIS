@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Test des Conditions Temporelles - Retraits{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-clock"></i>
+                        Test des Conditions Temporelles - Retraits
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Statut des conditions -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="alert {% if conditions_ok %}alert-success{% else %}alert-danger{% endif %}">
+                                <h5>
+                                    <i class="fas {% if conditions_ok %}fa-check-circle{% else %}fa-times-circle{% endif %}"></i>
+                                    Statut des Conditions
+                                </h5>
+                                <p class="mb-0">{{ message }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6><i class="fas fa-calendar"></i> Informations Temporelles</h6>
+                                    <p class="mb-1"><strong>Date actuelle :</strong> {{ aujourd_hui|date:"d/m/Y" }}</p>
+                                    <p class="mb-1"><strong>Jour du mois :</strong> {{ jour_actuel }}</p>
+                                    <p class="mb-0"><strong>Période autorisée :</strong> {{ periode_autorisee }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="row">
+                        <div class="col-md-4">
+                            <a href="{% url 'paiements:generer_retraits_automatiques' %}" 
+                               class="btn btn-primary btn-lg {% if not conditions_ok %}disabled{% endif %}">
+                                <i class="fas fa-magic"></i>
+                                Générer Retraits Automatiques
+                            </a>
+                            {% if not conditions_ok %}
+                                <small class="text-muted d-block mt-2">
+                                    Génération non autorisée en dehors de la période du 25 au 5
+                                </small>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <a href="{% url 'paiements:creer_retrait_manuel' %}" class="btn btn-success btn-lg">
+                                <i class="fas fa-hand-paper"></i>
+                                Créer Retrait Manuel
+                            </a>
+                            <small class="text-muted d-block mt-2">
+                                Aucune restriction temporelle
+                            </small>
+                        </div>
+                        <div class="col-md-4">
+                            <button id="refresh-conditions" class="btn btn-outline-secondary">
+                                <i class="fas fa-sync-alt"></i>
+                                Actualiser les Conditions
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Information importante -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="alert alert-warning">
+                                <h6><i class="fas fa-exclamation-triangle"></i> Information Importante</h6>
+                                <p class="mb-0">
+                                    <strong>Les conditions temporelles s'appliquent UNIQUEMENT aux retraits automatiques.</strong><br>
+                                    Les retraits manuels peuvent être créés à tout moment sans restriction temporelle.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Explication des règles -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6><i class="fas fa-info-circle"></i> Règles des Conditions Temporelles</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6>✅ Période Autorisée</h6>
+                                            <ul>
+                                                <li>Du <strong>25 du mois courant</strong> au <strong>5 du mois suivant</strong></li>
+                                                <li>Exemple : Du 25 octobre au 5 novembre</li>
+                                                <li>Exemple : Du 25 décembre au 5 janvier</li>
+                                            </ul>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6>❌ Période Interdite</h6>
+                                            <ul>
+                                                <li>Du <strong>6 au 24</strong> de chaque mois</li>
+                                                <li>Exemple : Du 6 octobre au 24 octobre</li>
+                                                <li>Exemple : Du 6 janvier au 24 janvier</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Actualiser les conditions via AJAX
+    document.getElementById('refresh-conditions').addEventListener('click', function() {
+        fetch('{% url "paiements:api_conditions_temporelles" %}')
+            .then(response => response.json())
+            .then(data => {
+                // Mettre à jour l'interface
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors de l\'actualisation des conditions');
+            });
+    });
+});
+</script>
+{% endblock %}

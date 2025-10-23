@@ -1,0 +1,201 @@
+<!-- Notification Bell Ultra-Moderne -->
+<li class="nav-item dropdown notification-bell">
+    <a class="nav-link dropdown-toggle position-relative" href="#" role="button" 
+       data-bs-toggle="dropdown" aria-expanded="false" id="notification-bell-trigger">
+        <i class="bi bi-bell"></i>
+        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
+              id="notification-badge" style="display: none;">
+            0
+        </span>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-end notification-dropdown" id="notification-dropdown">
+        <li class="dropdown-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <span>
+                    <i class="bi bi-bell me-2"></i>
+                    Notifications
+                </span>
+                <div class="notification-actions">
+                    <button class="btn btn-sm btn-outline-light" onclick="notificationManager.refresh()" 
+                            title="Actualiser">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-light" onclick="markAllAsRead()" 
+                            title="Tout marquer comme lu">
+                        <i class="bi bi-check-all"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-light" onclick="toggleNotificationSound()" 
+                            title="Activer/Désactiver le son">
+                        <i class="bi bi-volume-up" id="sound-icon"></i>
+                    </button>
+                </div>
+            </div>
+        </li>
+        <li><hr class="dropdown-divider"></li>
+        <div id="notifications-list">
+            <!-- Notifications chargées dynamiquement -->
+            <li class="dropdown-item text-center text-muted py-4">
+                <div class="spinner-border spinner-border-sm me-2" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                </div>
+                Chargement des notifications...
+            </li>
+        </div>
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-item text-center">
+            <a href="{% url 'notifications:notification_list' %}" class="btn btn-outline-primary btn-sm w-100">
+                <i class="bi bi-list-ul me-2"></i>
+                Voir toutes les notifications
+            </a>
+        </li>
+        <li class="dropdown-item text-center">
+            <a href="{% url 'notifications:preferences' %}" class="btn btn-outline-secondary btn-sm w-100">
+                <i class="bi bi-gear me-2"></i>
+                Préférences
+            </a>
+        </li>
+    </ul>
+</li>
+
+<!-- Styles inline pour l'initialisation -->
+<style>
+.notification-dropdown {
+    width: 400px;
+    max-height: 500px;
+    overflow-y: auto;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    padding: 0;
+    margin-top: 8px;
+}
+
+.notification-dropdown .dropdown-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 12px 12px 0 0;
+    margin: 0;
+    font-weight: 600;
+}
+
+.notification-dropdown .dropdown-divider {
+    margin: 0;
+    border-color: #e9ecef;
+}
+
+.notification-item {
+    padding: 15px 20px;
+    border-bottom: 1px solid #f8f9fa;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.notification-item:last-child {
+    border-bottom: none;
+}
+
+.notification-item:hover {
+    background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%);
+    transform: translateX(5px);
+}
+
+.notification-item.unread {
+    background: linear-gradient(90deg, #e3f2fd 0%, #f3e5f5 100%);
+    border-left: 4px solid #2196f3;
+}
+
+.notification-item.read {
+    opacity: 0.7;
+}
+
+.notification-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: white;
+    box-shadow: 0 4px 12px rgba(240, 147, 251, 0.3);
+    flex-shrink: 0;
+}
+
+.notification-title {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+.notification-message {
+    color: #6c757d;
+    font-size: 13px;
+    line-height: 1.4;
+    margin-bottom: 8px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.notification-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+}
+
+.notification-actions {
+    display: flex;
+    gap: 5px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.notification-item:hover .notification-actions {
+    opacity: 1;
+}
+
+.notification-actions .btn {
+    padding: 4px 8px;
+    font-size: 11px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.notification-actions .btn:hover {
+    transform: scale(1.1);
+}
+
+#notification-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(255, 107, 107, 0.4);
+    border: 2px solid white;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+</style>
+
+

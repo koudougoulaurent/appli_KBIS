@@ -1,0 +1,445 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}Préférences de Notifications - Burkina Faso{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'notifications/css/notifications_dynamiques.css' %}">
+<style>
+.phone-format-example {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+    font-family: 'Courier New', monospace;
+}
+
+.phone-format-example strong {
+    color: #28a745;
+}
+
+.burkina-flag {
+    width: 20px;
+    height: 15px;
+    background: linear-gradient(to right, #ff0000 33%, #00ff00 33%, #00ff00 66%, #ff0000 66%);
+    display: inline-block;
+    margin-right: 5px;
+    border-radius: 2px;
+}
+
+.form-section {
+    background: white;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.section-title {
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.phone-help {
+    background: #e3f2fd;
+    border-left: 4px solid #2196f3;
+    padding: 1rem;
+    margin-top: 1rem;
+    border-radius: 0.25rem;
+}
+
+.phone-help h6 {
+    color: #1976d2;
+    margin-bottom: 0.5rem;
+}
+
+.phone-help ul {
+    margin-bottom: 0;
+    padding-left: 1.5rem;
+}
+
+.phone-help li {
+    margin-bottom: 0.25rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="bi bi-gear me-2"></i>
+                    Préférences de Notifications
+                    <span class="burkina-flag"></span>
+                    <small class="text-muted">Burkina Faso</small>
+                </h2>
+                <a href="{% url 'notifications:notification_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Retour
+                </a>
+            </div>
+
+            <form method="post" id="preferences-form">
+                {% csrf_token %}
+                
+                <!-- Section Générale -->
+                <div class="form-section">
+                    <h4 class="section-title">
+                        <i class="bi bi-sliders"></i> Configuration Générale
+                    </h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mb-3">
+                                {{ form.email_notifications }}
+                                <label class="form-check-label" for="{{ form.email_notifications.id_for_label }}">
+                                    <i class="bi bi-envelope me-2"></i>
+                                    Notifications par Email
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-3">
+                                {{ form.browser_notifications }}
+                                <label class="form-check-label" for="{{ form.browser_notifications.id_for_label }}">
+                                    <i class="bi bi-bell me-2"></i>
+                                    Notifications Navigateur
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-3">
+                                {{ form.sms_notifications }}
+                                <label class="form-check-label" for="{{ form.sms_notifications.id_for_label }}">
+                                    <i class="bi bi-phone me-2"></i>
+                                    Notifications SMS
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.phone_number.id_for_label }}" class="form-label">
+                                    <i class="bi bi-telephone me-2"></i>
+                                    Numéro de Téléphone
+                                    <span class="burkina-flag"></span>
+                                </label>
+                                {{ form.phone_number }}
+                                <div class="phone-format-example">
+                                    <strong>Format accepté:</strong> +226 XX XX XX XX<br>
+                                    <strong>Exemple:</strong> +226 70 12 34 56
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.sms_provider.id_for_label }}" class="form-label">
+                                    <i class="bi bi-cloud me-2"></i>
+                                    Fournisseur SMS
+                                </label>
+                                {{ form.sms_provider }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Aide pour le format du numéro -->
+                    <div class="phone-help">
+                        <h6><i class="bi bi-info-circle me-2"></i>Format du Numéro Burkina Faso</h6>
+                        <ul>
+                            <li><strong>Format international:</strong> +226 XX XX XX XX</li>
+                            <li><strong>Format local:</strong> 0X XX XX XX (sera automatiquement converti)</li>
+                            <li><strong>Format compact:</strong> +226XXXXXXXX (sera automatiquement formaté)</li>
+                            <li>Le système valide automatiquement le format pendant la saisie</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Section Digest -->
+                <div class="form-section">
+                    <h4 class="section-title">
+                        <i class="bi bi-calendar-week"></i> Résumés Périodiques
+                    </h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mb-3">
+                                {{ form.daily_digest }}
+                                <label class="form-check-label" for="{{ form.daily_digest.id_for_label }}">
+                                    <i class="bi bi-calendar-day me-2"></i>
+                                    Résumé Quotidien
+                                </label>
+                                <small class="form-text text-muted d-block">
+                                    Recevoir un résumé quotidien des activités
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mb-3">
+                                {{ form.weekly_digest }}
+                                <label class="form-check-label" for="{{ form.weekly_digest.id_for_label }}">
+                                    <i class="bi bi-calendar-week me-2"></i>
+                                    Résumé Hebdomadaire
+                                </label>
+                                <small class="form-text text-muted d-block">
+                                    Recevoir un résumé hebdomadaire des activités
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Paiements -->
+                <div class="form-section">
+                    <h4 class="section-title">
+                        <i class="bi bi-cash-stack"></i> Notifications de Paiement
+                    </h4>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6>Échéances de Paiement</h6>
+                            <div class="form-check form-switch mb-2">
+                                {{ form.payment_due_email }}
+                                <label class="form-check-label" for="{{ form.payment_due_email.id_for_label }}">
+                                    Email
+                                </label>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                {{ form.payment_due_sms }}
+                                <label class="form-check-label" for="{{ form.payment_due_sms.id_for_label }}">
+                                    SMS
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <h6>Paiements Reçus</h6>
+                            <div class="form-check form-switch mb-2">
+                                {{ form.payment_received_email }}
+                                <label class="form-check-label" for="{{ form.payment_received_email.id_for_label }}">
+                                    Email
+                                </label>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                {{ form.payment_received_sms }}
+                                <label class="form-check-label" for="{{ form.payment_received_sms.id_for_label }}">
+                                    SMS
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <h6>Paiements en Retard</h6>
+                            <div class="form-check form-switch mb-2">
+                                {{ form.payment_overdue_email }}
+                                <label class="form-check-label" for="{{ form.payment_overdue_email.id_for_label }}">
+                                    Email
+                                </label>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                {{ form.payment_overdue_sms }}
+                                <label class="form-check-label" for="{{ form.payment_overdue_sms.id_for_label }}">
+                                    SMS
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Contrats -->
+                <div class="form-section">
+                    <h4 class="section-title">
+                        <i class="bi bi-file-text"></i> Notifications de Contrat
+                    </h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Contrats Expirants</h6>
+                            <div class="form-check form-switch mb-2">
+                                {{ form.contract_expiring_email }}
+                                <label class="form-check-label" for="{{ form.contract_expiring_email.id_for_label }}">
+                                    Email
+                                </label>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                {{ form.contract_expiring_sms }}
+                                <label class="form-check-label" for="{{ form.contract_expiring_sms.id_for_label }}">
+                                    SMS
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6>Maintenance</h6>
+                            <div class="form-check form-switch mb-2">
+                                {{ form.maintenance_email }}
+                                <label class="form-check-label" for="{{ form.maintenance_email.id_for_label }}">
+                                    Email
+                                </label>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                {{ form.maintenance_sms }}
+                                <label class="form-check-label" for="{{ form.maintenance_sms.id_for_label }}">
+                                    SMS
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Système -->
+                <div class="form-section">
+                    <h4 class="section-title">
+                        <i class="bi bi-gear"></i> Notifications Système
+                    </h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Alertes Système</h6>
+                            <div class="form-check form-switch mb-2">
+                                {{ form.system_alerts_email }}
+                                <label class="form-check-label" for="{{ form.system_alerts_email.id_for_label }}">
+                                    Email
+                                </label>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                {{ form.system_alerts_sms }}
+                                <label class="form-check-label" for="{{ form.system_alerts_sms.id_for_label }}">
+                                    SMS
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6>Informations Générales</h6>
+                            <div class="form-check form-switch mb-2">
+                                {{ form.email_notifications }}
+                                <label class="form-check-label" for="{{ form.email_notifications.id_for_label }}">
+                                    Email Général
+                                </label>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                {{ form.sms_notifications }}
+                                <label class="form-check-label" for="{{ form.sms_notifications.id_for_label }}">
+                                    SMS Général
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Boutons d'action -->
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'notifications:notification_list' %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Annuler
+                    </a>
+                    
+                    <div>
+                        <button type="button" class="btn btn-outline-primary me-2" onclick="testSMS()">
+                            <i class="bi bi-phone"></i> Tester SMS
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check"></i> Sauvegarder
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de test SMS -->
+<div class="modal fade" id="testSMSModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-phone me-2"></i>
+                    Test SMS - Burkina Faso
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="test-sms-form">
+                    <div class="mb-3">
+                        <label class="form-label">Numéro de téléphone</label>
+                        <input type="text" class="form-control burkina-phone-input" 
+                               placeholder="+226 XX XX XX XX" maxlength="17">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Message de test</label>
+                        <textarea class="form-control" rows="3" maxlength="160" 
+                                  placeholder="Votre message de test..."></textarea>
+                        <div class="form-text">Maximum 160 caractères</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="sendTestSMS()">
+                    <i class="bi bi-send"></i> Envoyer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function testSMS() {
+    const modal = new bootstrap.Modal(document.getElementById('testSMSModal'));
+    modal.show();
+}
+
+function sendTestSMS() {
+    const phoneInput = document.querySelector('#testSMSModal .burkina-phone-input');
+    const messageInput = document.querySelector('#testSMSModal textarea');
+    
+    if (!phoneInput.value || !messageInput.value) {
+        alert('Veuillez remplir tous les champs');
+        return;
+    }
+    
+    // Ici vous pouvez ajouter la logique d'envoi du SMS de test
+    alert('SMS de test envoyé à ' + phoneInput.value);
+    
+    const modal = bootstrap.Modal.getInstance(document.getElementById('testSMSModal'));
+    modal.hide();
+}
+
+// Formatage automatique du numéro de téléphone
+document.addEventListener('DOMContentLoaded', function() {
+    const phoneInputs = document.querySelectorAll('.burkina-phone-input');
+    
+    phoneInputs.forEach(function(input) {
+        input.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            
+            if (value.startsWith('226') && !value.startsWith('+226')) {
+                value = '+' + value;
+            }
+            
+            if (value.length === 8 && !value.startsWith('+226')) {
+                value = '+226' + value;
+            }
+            
+            if (value.startsWith('+226') && value.length > 4) {
+                const number = value.substring(4);
+                if (number.length <= 8) {
+                    const formatted = '+226 ' + 
+                        (number.substring(0, 2) + ' ' + 
+                         number.substring(2, 4) + ' ' + 
+                         number.substring(4, 6) + ' ' + 
+                         number.substring(6, 8)).trim();
+                    e.target.value = formatted;
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

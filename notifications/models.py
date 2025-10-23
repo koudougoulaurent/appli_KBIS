@@ -3,6 +3,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from .validators import validate_burkina_faso_phone
 
 
 class Notification(models.Model):
@@ -139,7 +140,13 @@ class NotificationPreference(models.Model):
     weekly_digest = models.BooleanField(default=False)
     
     # Configuration SMS
-    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    phone_number = models.CharField(
+        max_length=20, 
+        blank=True, 
+        null=True,
+        validators=[validate_burkina_faso_phone],
+        help_text="Format: +226 XX XX XX XX"
+    )
     sms_provider = models.CharField(max_length=50, default='twilio', choices=[
         ('twilio', 'Twilio'),
         ('nexmo', 'Nexmo/Vonage'),

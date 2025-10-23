@@ -234,8 +234,8 @@ def ajouter_contrat(request):
             if telecharger_pdf:
                 try:
                     # Générer le PDF du contrat avec le nouveau service
-                    from .services_contrat_pdf_updated import ContratPDFServiceUpdated
-                    pdf_service = ContratPDFServiceUpdated(contrat)
+                    from .services import ContratPDFService
+                    pdf_service = ContratPDFService(contrat)
                     # Remplir automatiquement les champs manquants
                     contrat = pdf_service.auto_remplir_champs_contrat()
                     pdf_buffer = pdf_service.generate_contrat_pdf()
@@ -363,8 +363,8 @@ def modifier_contrat(request, pk):
             if telecharger_pdf:
                 try:
                     # Régénérer le PDF du contrat avec le nouveau service
-                    from .services_contrat_pdf_updated import ContratPDFServiceUpdated
-                    pdf_service = ContratPDFServiceUpdated(contrat)
+                    from .services import ContratPDFService
+                    pdf_service = ContratPDFService(contrat)
                     # Remplir automatiquement les champs manquants
                     contrat = pdf_service.auto_remplir_champs_contrat()
                     pdf_buffer = pdf_service.generate_contrat_pdf()
@@ -1599,14 +1599,11 @@ def imprimer_document_contrat(request, contrat_id):
     
     try:
         # Utiliser le nouveau service avec le contenu unifié
-        from .services_contrat_pdf_updated import ContratPDFServiceUpdated
-        service = ContratPDFServiceUpdated(contrat)
-        
-        # Remplir automatiquement les champs manquants
-        contrat = service.auto_remplir_champs_contrat()
+        from .services import ContratPDFService
+        service = ContratPDFService(contrat)
         
         # Générer le PDF du contrat avec le nouveau contenu
-        pdf_buffer = service.generate_contrat_pdf()
+        pdf_buffer = service.generate_contrat_pdf(use_cache=False)
         
         # Créer la réponse HTTP avec le PDF
         response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
@@ -2123,12 +2120,10 @@ def generer_contrat_pdf(request, pk):
     contrat = get_object_or_404(Contrat, pk=pk)
     
     try:
-        # Générer le PDF du contrat avec le nouveau service
-        from .services_contrat_pdf_updated import ContratPDFServiceUpdated
-        pdf_service = ContratPDFServiceUpdated(contrat)
-        # Remplir automatiquement les champs manquants
-        contrat = pdf_service.auto_remplir_champs_contrat()
-        pdf_buffer = pdf_service.generate_contrat_pdf()
+        # Générer le PDF du contrat avec le service mis à jour
+        from .services import ContratPDFService
+        pdf_service = ContratPDFService(contrat)
+        pdf_buffer = pdf_service.generate_contrat_pdf(use_cache=False)
         
         # Créer la réponse HTTP avec le PDF
         from django.http import HttpResponse

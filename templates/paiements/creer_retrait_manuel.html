@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Créer un Retrait Manuel{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-hand-paper"></i>
+                        Créer un Retrait Manuel
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="bailleur_id">Bailleur :</label>
+                                    <select name="bailleur_id" id="bailleur_id" class="form-control" required>
+                                        <option value="">-- Sélectionner un bailleur --</option>
+                                        {% for bailleur in bailleurs %}
+                                            <option value="{{ bailleur.id }}">{{ bailleur.nom }} {{ bailleur.prenom }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="mois">Mois :</label>
+                                    <select name="mois" id="mois" class="form-control" required>
+                                        <option value="1" {% if mois_actuel == 1 %}selected{% endif %}>Janvier</option>
+                                        <option value="2" {% if mois_actuel == 2 %}selected{% endif %}>Février</option>
+                                        <option value="3" {% if mois_actuel == 3 %}selected{% endif %}>Mars</option>
+                                        <option value="4" {% if mois_actuel == 4 %}selected{% endif %}>Avril</option>
+                                        <option value="5" {% if mois_actuel == 5 %}selected{% endif %}>Mai</option>
+                                        <option value="6" {% if mois_actuel == 6 %}selected{% endif %}>Juin</option>
+                                        <option value="7" {% if mois_actuel == 7 %}selected{% endif %}>Juillet</option>
+                                        <option value="8" {% if mois_actuel == 8 %}selected{% endif %}>Août</option>
+                                        <option value="9" {% if mois_actuel == 9 %}selected{% endif %}>Septembre</option>
+                                        <option value="10" {% if mois_actuel == 10 %}selected{% endif %}>Octobre</option>
+                                        <option value="11" {% if mois_actuel == 11 %}selected{% endif %}>Novembre</option>
+                                        <option value="12" {% if mois_actuel == 12 %}selected{% endif %}>Décembre</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="annee">Année :</label>
+                                    <input type="number" name="annee" id="annee" class="form-control" 
+                                           value="{{ annee_actuelle }}" min="2020" max="2030" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-success">
+                            <h6><i class="fas fa-check-circle"></i> Retrait Manuel - Aucune Restriction Temporelle</h6>
+                            <ul class="mb-0">
+                                <li><strong>✅ Avantage :</strong> Peut être créé à tout moment, même en dehors de la période du 25 au 5</li>
+                                <li><strong>Conditions logiques :</strong> Toutes les cautions payées OU tous les loyers du mois payés</li>
+                                <li><strong>Utilisation :</strong> Idéal pour les retraits urgents ou exceptionnels</li>
+                            </ul>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-hand-paper"></i>
+                                Créer le Retrait Manuel
+                            </button>
+                            <a href="{% url 'paiements:test_conditions_temporelles' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i>
+                                Retour au Test des Conditions
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+

@@ -22,7 +22,7 @@ def liste_retraits(request):
     """
     Liste des retraits aux bailleurs
     """
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE', 'CONTROLES', 'GESTIONNAIRE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('core:dashboard')
@@ -87,7 +87,7 @@ def detail_retrait(request, pk):
     """
     Détail d'un retrait
     """
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE', 'CONTROLES', 'GESTIONNAIRE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste_retraits')
@@ -126,7 +126,7 @@ def creer_retrait_automatique(request):
     """
     Création automatique des retraits
     """
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'add')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE', 'CONTROLES', 'GESTIONNAIRE'], 'add')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste_retraits')
@@ -212,7 +212,7 @@ def valider_retrait(request, pk):
     """
     Valider un retrait
     """
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'change')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE', 'CONTROLES', 'GESTIONNAIRE'], 'change')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:retrait_detail', pk=pk)
@@ -234,7 +234,7 @@ def marquer_paye(request, pk):
     """
     Effectue le retrait (marque comme payé) - Action définitive
     """
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CAISSE'], 'change')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE', 'CONTROLES', 'GESTIONNAIRE'], 'change')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:retrait_detail', pk=pk)
@@ -257,7 +257,7 @@ def generer_quittance(request, pk):
     """
     Générer une quittance de retrait (redirige vers la version KBIS dynamique)
     """
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE', 'CONTROLES', 'GESTIONNAIRE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:retrait_detail', pk=pk)
@@ -284,7 +284,7 @@ def telecharger_quittance(request, pk):
     """
     Télécharger une quittance de retrait (redirige vers la version KBIS dynamique)
     """
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE', 'CONTROLES', 'GESTIONNAIRE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:retrait_detail', pk=pk)
@@ -300,7 +300,7 @@ def supprimer_retrait(request, pk):
     """
     Supprimer un retrait (suppression logique)
     """
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION'], 'delete')
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE', 'CONTROLES', 'GESTIONNAIRE'], 'delete')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:retrait_detail', pk=pk)

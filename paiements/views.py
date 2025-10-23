@@ -1040,18 +1040,14 @@ def liste_retraits(request):
 @login_required
 def ajouter_retrait(request):
     """Ajouter un retrait bailleur avec déduction automatique des charges."""
-    # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
+    # Vérification des permissions - Tous les groupes peuvent créer des retraits
+    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE', 'CONTROLES', 'GESTIONNAIRE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste')
     
-    # Vérifier la période autorisée pour les retraits (du 25 au 5 du mois suivant)
-    from .services_retrait import ServiceGestionRetrait
-    periode_ok, message_periode = ServiceGestionRetrait.verifier_periode_retrait()
-    if not periode_ok:
-        messages.error(request, message_periode)
-        return redirect('paiements:liste')
+    # Note: Cette vue permet la création de retraits manuels sans conditions temporelles
+    # Les conditions temporelles ne s'appliquent qu'aux retraits automatiques
     
     if request.method == 'POST':
         form = RetraitBailleurForm(request.POST)

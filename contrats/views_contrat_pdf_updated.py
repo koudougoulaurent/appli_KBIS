@@ -10,7 +10,7 @@ from django.http import HttpResponse
 from django.utils import timezone
 from core.utils import check_group_permissions
 from .models import Contrat
-from .services_contrat_pdf_updated import ContratPDFServiceUpdated
+from .services import ContratPDFService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ def generer_contrat_pdf_updated(request, pk):
     
     try:
         # Remplir automatiquement les champs manquants
-        service = ContratPDFServiceUpdated(contrat)
+        service = ContratPDFService(contrat)
         contrat = service.auto_remplir_champs_contrat()
         
         # Générer le PDF du contrat
@@ -63,7 +63,7 @@ def generer_etat_lieux_pdf(request, pk):
     
     try:
         # Générer le PDF de l'état des lieux
-        service = ContratPDFServiceUpdated(contrat)
+        service = ContratPDFService(contrat)
         pdf_buffer = service.generate_etat_lieux_pdf()
         
         # Créer la réponse HTTP avec le PDF
@@ -93,7 +93,7 @@ def generer_garantie_pdf(request, pk):
     
     try:
         # Remplir automatiquement les champs manquants
-        service = ContratPDFServiceUpdated(contrat)
+        service = ContratPDFService(contrat)
         contrat = service.auto_remplir_champs_contrat()
         
         # Générer le PDF de la garantie
@@ -126,7 +126,7 @@ def generer_documents_complets(request, pk):
     
     try:
         # Remplir automatiquement les champs manquants
-        service = ContratPDFServiceUpdated(contrat)
+        service = ContratPDFService(contrat)
         contrat = service.auto_remplir_champs_contrat()
         
         # Générer tous les PDF
@@ -162,7 +162,7 @@ def auto_remplir_contrat(request, pk):
     
     try:
         # Remplir automatiquement les champs
-        service = ContratPDFServiceUpdated(contrat)
+        service = ContratPDFService(contrat)
         contrat = service.auto_remplir_champs_contrat()
         
         messages.success(request, f'Champs du contrat {contrat.numero_contrat} remplis automatiquement!')

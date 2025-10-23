@@ -1,0 +1,87 @@
+<!-- Widget pour numéro de téléphone du Burkina Faso -->
+<input type="text" 
+       name="{{ widget.name }}" 
+       value="{{ widget.value|default:'' }}"
+       {% for name, value in widget.attrs.items %}{{ name }}="{{ value }}"{% endfor %}
+       data-phone-format="burkina-faso"
+       data-country-code="+226"
+       autocomplete="tel">
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const phoneInputs = document.querySelectorAll('[data-phone-format="burkina-faso"]');
+    
+    phoneInputs.forEach(function(input) {
+        // Formatage automatique pendant la saisie
+        input.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, ''); // Garder seulement les chiffres
+            
+            // Si l'utilisateur tape 226, ajouter automatiquement le +
+            if (value.startsWith('226') && !value.startsWith('+226')) {
+                value = '+' + value;
+            }
+            
+            // Si l'utilisateur tape juste les 8 chiffres, ajouter +226
+            if (value.length === 8 && !value.startsWith('+226')) {
+                value = '+226' + value;
+            }
+            
+            // Formater avec des espaces
+            if (value.startsWith('+226') && value.length > 4) {
+                const number = value.substring(4);
+                if (number.length <= 8) {
+                    const formatted = '+226 ' + 
+                        (number.substring(0, 2) + ' ' + 
+                         number.substring(2, 4) + ' ' + 
+                         number.substring(4, 6) + ' ' + 
+                         number.substring(6, 8)).trim();
+                    e.target.value = formatted;
+                }
+            }
+        });
+        
+        // Validation en temps réel
+        input.addEventListener('blur', function(e) {
+            const value = e.target.value.replace(/\s/g, '');
+            const pattern = /^\+226\d{8}$/;
+            
+            if (value && !pattern.test(value)) {
+                e.target.setCustomValidity('Format invalide. Utilisez: +226 XX XX XX XX');
+                e.target.reportValidity();
+            } else {
+                e.target.setCustomValidity('');
+            }
+        });
+        
+        // Empêcher la saisie de caractères non autorisés
+        input.addEventListener('keypress', function(e) {
+            const char = String.fromCharCode(e.which);
+            if (!/[0-9+\s]/.test(char) && e.which !== 8 && e.which !== 9) {
+                e.preventDefault();
+            }
+        });
+    });
+});
+</script>
+
+<style>
+.burkina-phone-input {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.5px;
+}
+
+.burkina-phone-input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.burkina-phone-input:invalid {
+    border-color: #dc3545;
+}
+
+.burkina-phone-input:valid {
+    border-color: #28a745;
+}
+</style>
+
+

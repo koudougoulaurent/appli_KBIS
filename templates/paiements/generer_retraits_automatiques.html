@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Génération Automatique des Retraits{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-magic"></i>
+                        Génération Automatique des Retraits
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="mois">Mois :</label>
+                                    <select name="mois" id="mois" class="form-control" required>
+                                        <option value="1" {% if mois_actuel == 1 %}selected{% endif %}>Janvier</option>
+                                        <option value="2" {% if mois_actuel == 2 %}selected{% endif %}>Février</option>
+                                        <option value="3" {% if mois_actuel == 3 %}selected{% endif %}>Mars</option>
+                                        <option value="4" {% if mois_actuel == 4 %}selected{% endif %}>Avril</option>
+                                        <option value="5" {% if mois_actuel == 5 %}selected{% endif %}>Mai</option>
+                                        <option value="6" {% if mois_actuel == 6 %}selected{% endif %}>Juin</option>
+                                        <option value="7" {% if mois_actuel == 7 %}selected{% endif %}>Juillet</option>
+                                        <option value="8" {% if mois_actuel == 8 %}selected{% endif %}>Août</option>
+                                        <option value="9" {% if mois_actuel == 9 %}selected{% endif %}>Septembre</option>
+                                        <option value="10" {% if mois_actuel == 10 %}selected{% endif %}>Octobre</option>
+                                        <option value="11" {% if mois_actuel == 11 %}selected{% endif %}>Novembre</option>
+                                        <option value="12" {% if mois_actuel == 12 %}selected{% endif %}>Décembre</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="annee">Année :</label>
+                                    <input type="number" name="annee" id="annee" class="form-control" 
+                                           value="{{ annee_actuelle }}" min="2020" max="2030" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle"></i> Conditions de Génération Automatique</h6>
+                            <ul class="mb-0">
+                                <li><strong>⚠️ IMPORTANT :</strong> Cette génération crée des RETRAITS AUTOMATIQUES</li>
+                                <li><strong>Conditions temporelles :</strong> Génération possible uniquement du 25 du mois courant au 5 du mois suivant</li>
+                                <li><strong>Conditions logiques :</strong> Toutes les cautions payées OU tous les loyers du mois payés</li>
+                                <li><strong>Résultat :</strong> Création automatique des retraits pour tous les bailleurs éligibles</li>
+                                <li><strong>Retraits manuels :</strong> Peuvent être créés à tout moment via le menu "Créer un Retrait"</li>
+                            </ul>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-magic"></i>
+                                Générer les Retraits Automatiques
+                            </button>
+                            <a href="{% url 'paiements:test_conditions_temporelles' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i>
+                                Retour au Test des Conditions
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

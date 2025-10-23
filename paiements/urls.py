@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges, views_retrait_ameliore, views_avance, views_document_unifie, views_document_unifie_complet, views_avance_corrige
+from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges, views_retrait_ameliore, views_avance, views_document_unifie, views_document_unifie_complet, views_avance_corrige, views_retraits_temporels
 # from . import views_locataire_paiements
 
 app_name = 'paiements'
@@ -150,6 +150,13 @@ urlpatterns = [
     path('retraits-bailleurs/<int:pk>/', views_retraits.detail_retrait, name='retrait_detail'),
     path('retraits-bailleurs/<int:pk>/valider/', views_retraits.valider_retrait, name='valider_retrait'),
     path('retraits-bailleurs/<int:pk>/marquer-paye/', views_retraits.marquer_paye, name='marquer_retrait_paye'),
+    
+    # URLs pour les conditions temporelles des retraits
+    path('retraits/conditions-temporelles/', views_retraits_temporels.test_conditions_temporelles, name='test_conditions_temporelles'),
+    path('retraits/generer-automatiques/', views_retraits_temporels.generer_retraits_automatiques, name='generer_retraits_automatiques'),
+    path('retraits/creer-manuel/', views_retraits_temporels.creer_retrait_manuel, name='creer_retrait_manuel'),
+    path('retraits/api/conditions-temporelles/', views_retraits_temporels.api_conditions_temporelles, name='api_conditions_temporelles'),
+    
     path('retraits-bailleurs/<int:pk>/generer-quittance/', views_retraits.generer_quittance, name='generer_quittance_retrait'),
     path('retraits-bailleurs/<int:pk>/telecharger-quittance/', views_retraits.telecharger_quittance, name='telecharger_quittance_retrait'),
     path('retraits-bailleurs/<int:pk>/supprimer/', views_retraits.supprimer_retrait, name='supprimer_retrait'),

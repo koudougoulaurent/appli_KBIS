@@ -503,6 +503,9 @@
                                 <li><a class="dropdown-item" href="{% url 'paiements:retrait_auto_create' %}">
                                     <i class="bi bi-magic"></i> Création Automatique
                                 </a></li>
+                                <li><a class="dropdown-item" href="{% url 'paiements:test_conditions_temporelles' %}">
+                                    <i class="bi bi-clock"></i> Conditions Temporelles
+                                </a></li>
                                 <li><a class="dropdown-item" href="{% url 'paiements:recherche_intelligente' %}">
                                     <i class="bi bi-search"></i> Recherche Intelligente
                                 </a></li>
@@ -530,20 +533,7 @@
                             </a>
                         </li>
 
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-bell"></i> 
-                                <span class="d-none d-lg-inline">Notifications</span>
-                                <span class="d-inline d-lg-none">Notifs</span>
-                            </a>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{% url 'notifications:notification_list' %}">
-                                    <i class="bi bi-bell"></i> Toutes les notifications
-                                </a></li>
-                                <li><a class="dropdown-item" href="{% url 'notifications:preferences' %}">
-                                    <i class="bi bi-gear"></i> Préférences
-                                </a></li>
-                                <li><hr class="dropdown-divider"></li>
+                        {% include 'includes/notification_bell_simple.html' %}
                                 <li><a class="dropdown-item" href="{% url 'notifications:sms_configuration' %}">
                                     <i class="bi bi-sms"></i> Configuration SMS
                                 </a></li>

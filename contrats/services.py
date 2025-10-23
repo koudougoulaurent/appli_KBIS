@@ -206,7 +206,7 @@ class ContratPDFService:
             alignment=TA_CENTER
         ))
 
-    def generate_contrat_pdf(self, use_cache=True):
+    def generate_contrat_pdf(self, use_cache=False):
         """Génère le PDF du contrat de bail avec en-tête et pied de page fixes"""
         from core.pdf_cache import PDFCacheManager
         
@@ -226,43 +226,46 @@ class ContratPDFService:
         from core.models import ConfigurationEntreprise
         self.config_entreprise = ConfigurationEntreprise.get_configuration_active()
         
-        # Créer le document avec des marges ajustées pour éviter le chevauchement
+        # Créer le document avec des marges optimisées pour éviter le chevauchement
         doc = SimpleDocTemplate(
             buffer,
             pagesize=A4,
-            rightMargin=2*cm,
-            leftMargin=2*cm,
-            topMargin=4*cm,  # Plus d'espace pour l'en-tête
-            bottomMargin=2*cm  # Moins d'espace pour le pied de page simplifié
+            rightMargin=1.5*cm,
+            leftMargin=1.5*cm,
+            topMargin=4*cm,  # Marge supérieure augmentée pour éviter le chevauchement
+            bottomMargin=1*cm  # Marge inférieure pour le pied de page
         )
         
         # Construction du contenu du PDF
         story = []
         
-        # Titre principal du contrat
+        # Titre principal du contrat avec espacement pour éviter le chevauchement
         story.append(Paragraph(
             "CONTRAT DE LOCATION",
             self.styles['CustomTitle']
         ))
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 15))  # Espacement réduit pour éviter la page vide
         
         # Informations de base du contrat
         story.extend(self._create_basic_info())
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 15))
         
         # Conditions de location
         story.extend(self._create_rental_conditions())
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 15))
         
         # Obligations et conditions
         story.extend(self._create_obligations())
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 15))
         
-        # Signatures
+        # État des lieux
+        story.extend(self._create_etat_des_lieux())
+        
+        # Signatures (engagement à la fin)
         story.extend(self._create_signatures())
         
-        # Génération du PDF avec en-tête et pied de page personnalisés
-        doc.build(story, onFirstPage=self._add_header_footer, onLaterPages=self._add_header_footer)
+        # Génération du PDF avec en-tête première page seulement et pied de page dernière page seulement
+        doc.build(story, onFirstPage=self._add_header_only, onLaterPages=self._add_footer_last_page_only)
         buffer.seek(0)
         
         # Mettre en cache le PDF généré
@@ -272,6 +275,18 @@ class ContratPDFService:
             buffer.seek(0)  # Remettre le pointeur au début
         
         return buffer
+
+    @classmethod
+    def clear_contrat_cache(cls, contrat_id=None):
+        """Vide le cache des contrats"""
+        from core.pdf_cache import PDFCacheManager
+        
+        if contrat_id:
+            # Vider le cache d'un contrat spécifique
+            PDFCacheManager.invalidate_cache('contrat', contrat_id)
+        else:
+            # Vider tout le cache des contrats
+            PDFCacheManager.invalidate_all_pdf_cache()
 
     def _create_header(self):
         """Crée l'en-tête du document avec les informations de l'entreprise"""
@@ -423,165 +438,170 @@ class ContratPDFService:
             canvas_obj.drawRightString(page_width - 2*cm, 0.6*cm, f"Page {doc.page}")
 
     def _create_basic_info(self):
-        """Crée la section des informations de base du contrat"""
+        """Crée la section des informations de base du contrat selon le nouveau format"""
         elements = []
         
-        elements.append(Paragraph("INFORMATIONS DU CONTRAT", self.styles['CustomHeading']))
+        # Date et lieu
+        date_contrat = self.contrat.date_signature.strftime('%d/%m/%Y')
+        elements.append(Paragraph(f"Ouagadougou, {date_contrat}", self.styles['CustomBody']))
+        elements.append(Spacer(1, 10))
         
-        # Tableau des informations
-        data = [
-            ['Numéro de contrat:', self.contrat.numero_contrat],
-            ['Date de signature:', self.contrat.date_signature.strftime('%d/%m/%Y')],
-            ['Date de début:', self.contrat.date_debut.strftime('%d/%m/%Y')],
-            ['Date de fin:', self.contrat.date_fin.strftime('%d/%m/%Y') if self.contrat.date_fin else 'Indéterminée'],
-        ]
+        # Titre principal
+        elements.append(Paragraph("● CONTRAT DE LOCATION", self.styles['CustomHeading']))
+        elements.append(Spacer(1, 10))
         
-        table = Table(data, colWidths=[4*cm, 8*cm])
-        table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-        ]))
+        # Entre les parties
+        elements.append(Paragraph("Entre d'une part,", self.styles['CustomBody']))
+        elements.append(Spacer(1, 5))
         
-        elements.append(table)
-        elements.append(Spacer(1, 15))
+        # Informations de l'agence
+        agence_info = f"""L'Agence KBIS IMMOBILIER située au secteur 26 Pissy représentée, par M. NIKIEMA PA MAMDOU Tel…70-20-64-91"""
+        elements.append(Paragraph(agence_info, self.styles['CustomBody']))
+        elements.append(Spacer(1, 10))
         
-        # Informations de la propriété
-        elements.append(Paragraph("INFORMATIONS DE LA PROPRIÉTÉ", self.styles['CustomHeading']))
+        # D'autre part
+        elements.append(Paragraph("D'autre part (une copie de votre CNIB doit être jointe à la présente)", self.styles['CustomBody']))
+        elements.append(Spacer(1, 5))
         
-        data_propriete = [
-            ['Titre:', self.contrat.propriete.titre],
-            ['Adresse:', self.contrat.propriete.adresse],
-            ['Code postal:', self.contrat.propriete.code_postal],
-            ['Ville:', self.contrat.propriete.ville],
-            ['Type:', str(self.contrat.propriete.type_bien)],
-            ['Surface:', f"{self.contrat.propriete.surface} m²"],
-        ]
+        # Informations du locataire (avec pointillés pour champs vides)
+        locataire_nom = self.contrat.locataire.nom.upper() if self.contrat.locataire.nom else '....................'
+        locataire_prenom = self.contrat.locataire.prenom.upper() if self.contrat.locataire.prenom else '....................'
+        locataire_cnib = getattr(self.contrat.locataire, 'numero_cnib', 'N/A')
+        locataire_profession = getattr(self.contrat.locataire, 'profession', 'N/A')
+        locataire_adresse = self.contrat.locataire.adresse if self.contrat.locataire.adresse else '....................'
+        locataire_tel = self.contrat.locataire.telephone if self.contrat.locataire.telephone else '....................'
         
-        table_propriete = Table(data_propriete, colWidths=[4*cm, 8*cm])
-        table_propriete.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-        ]))
+        # Remplacer les valeurs par défaut par des pointillés
+        if locataire_cnib == 'N/A':
+            locataire_cnib = '....................'
+        if locataire_profession == 'N/A':
+            locataire_profession = '....................'
+            
+        locataire_info = f"""M. Mme, Mlle {locataire_nom} {locataire_prenom} N° CNIB {locataire_cnib} Dénommée(é) le locataire<br/>
+Profession {locataire_profession} adresse : {locataire_adresse} Tel : {locataire_tel}"""
+        elements.append(Paragraph(locataire_info, self.styles['CustomBody']))
+        elements.append(Spacer(1, 10))
         
-        elements.append(table_propriete)
-        elements.append(Spacer(1, 15))
+        # Personne garant (avec pointillés pour champs vides)
+        garant_nom = getattr(self.contrat, 'garant_nom', 'NOM DU GARANT')
+        garant_profession = getattr(self.contrat, 'garant_profession', 'PROFESSION')
+        garant_adresse = getattr(self.contrat, 'garant_adresse', 'ADRESSE')
+        garant_tel = getattr(self.contrat, 'garant_telephone', 'TEL')
         
-        # Informations du locataire
-        elements.append(Paragraph("INFORMATIONS DU LOCATAIRE", self.styles['CustomHeading']))
+        # Remplacer les valeurs par défaut par des pointillés bien espacés
+        if garant_nom == 'NOM DU GARANT':
+            garant_nom = '....................'
+        if garant_profession == 'PROFESSION':
+            garant_profession = '....................'
+        if garant_adresse == 'ADRESSE':
+            garant_adresse = '....................'
+        if garant_tel == 'TEL':
+            garant_tel = '....................'
+            
+        garant_info = f"""Personne garant M, Mme, {garant_nom} profession {garant_profession} Adresse {garant_adresse} tel : {garant_tel}"""
+        elements.append(Paragraph(garant_info, self.styles['CustomBody']))
+        elements.append(Spacer(1, 10))
         
-        data_locataire = [
-            ['Nom:', f"{self.contrat.locataire.nom} {self.contrat.locataire.prenom}"],
-            ['Adresse:', self.contrat.locataire.adresse],
-            ['Code postal:', self.contrat.locataire.code_postal],
-            ['Ville:', self.contrat.locataire.ville],
-            ['Téléphone:', self.contrat.locataire.telephone],
-            ['Email:', self.contrat.locataire.email],
-        ]
+        # Informations de la propriété (avec pointillés pour champs vides)
+        propriete_numero = getattr(self.contrat.propriete, 'numero_maison', 'N/A')
+        propriete_ville = self.contrat.propriete.ville if self.contrat.propriete.ville else '....................'
         
-        table_locataire = Table(data_locataire, colWidths=[4*cm, 8*cm])
-        table_locataire.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-        ]))
+        # Remplacer les valeurs par défaut par des pointillés
+        if propriete_numero == 'N/A':
+            propriete_numero = '....................'
+            
+        propriete_info = f"""pour la location de la maison n° {propriete_numero} Située a {propriete_ville} Pour un loyer mensuel de : {self.contrat.get_loyer_mensuel_formatted()}"""
+        elements.append(Paragraph(propriete_info, self.styles['CustomBody']))
+        elements.append(Spacer(1, 10))
         
-        elements.append(table_locataire)
+        # Reçu de la caution
+        caution_montant = self.contrat.get_depot_garantie_formatted()
+        elements.append(Paragraph(f"KBIS IMMOBILIER reconnait avoir reçu la somme {caution_montant}", self.styles['CustomBody']))
+        elements.append(Paragraph("Représentant Trois (03) Mois de caution.", self.styles['CustomBody']))
+        elements.append(Spacer(1, 10))
+        
+        # Conditions de paiement
+        mois_debut = self.contrat.date_debut.strftime('%B %Y')
+        elements.append(Paragraph(f"Le paiement mensuel du loyer commence à partir de la fin du mois de {mois_debut.upper()}", self.styles['CustomBody']))
+        elements.append(Paragraph(f"M. Mme, Mlle {self.contrat.locataire.nom.upper()} {self.contrat.locataire.prenom.upper()} s'engage à payer au plus tard le 03 du mois suivant", self.styles['CustomBody']))
+        elements.append(Spacer(1, 10))
         
         return elements
 
     def _create_rental_conditions(self):
-        """Crée la section des conditions de location"""
+        """Crée la section des conditions de location selon le nouveau format"""
         elements = []
         
-        elements.append(Paragraph("CONDITIONS DE LOCATION", self.styles['CustomHeading']))
+        # Conditions de caution
+        elements.append(Paragraph(f"M. Mme, Mlle {self.contrat.locataire.nom.upper()} {self.contrat.locataire.prenom.upper()} sachez que votre caution ne vous sera remboursé à la sortie qu'après avoir libéré la maison, l'avoir remis en état (peinture, plomberie etc.,) tel que décrété sur la page état de lieu résilier et payer vos factures de la SONABEL et de l'ONEA. Dans le cas contraire la caution servira à assurer ces frais et quitter les lieux.", self.styles['CustomBody']))
+        elements.append(Spacer(1, 10))
         
-        # Tableau des conditions financières
-        data_conditions = [
-            ['Loyer mensuel:', self.contrat.get_loyer_mensuel_formatted()],
-            ['Charges mensuelles:', self.contrat.get_charges_mensuelles_formatted()],
-            ['Dépôt de garantie:', self.contrat.get_depot_garantie_formatted()],
-            ['Avance de loyer:', self.contrat.get_avance_loyer_formatted()],
-            ['Jour de paiement:', f"Le {self.contrat.jour_paiement} de chaque mois"],
-            ['Mode de paiement:', self.contrat.get_mode_paiement_display()],
-        ]
+        # Pouvoir d'expulsion
+        elements.append(Paragraph("Il donne par la même occasion pouvoir à l'agence d'introduire une instance aux fins de l'expulsion du locataire sans aucune autre forme de préavis.", self.styles['CustomBody']))
+        elements.append(Spacer(1, 10))
         
-        table_conditions = Table(data_conditions, colWidths=[5*cm, 7*cm])
-        table_conditions.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
-        ]))
+        # Décision et remise
+        elements.append(Paragraph("Prenez librement vos décisions avant de signer le présent contrat car toute somme versée est remisée sans délai au bailleur. Encas de changement d'avis vous avez 48 heures pour annuler votre contrat auprès de votre agence. Passé ce délai, un (01) mois de loyer sera déduit de votre caution car les maisons confiées à l'agence sont à titre commerciale et ne doivent pas rester inoccupées.", self.styles['CustomBody']))
+        elements.append(Spacer(1, 10))
         
-        elements.append(table_conditions)
+        # Résiliation
+        elements.append(Paragraph("Résiliation : Le locataire peut demander la résiliation de ce contrat avec un mois de preavis.la date de remise des clés est fixe au 01er du mois suivant pour permettre à votre remplaçant d'accéder à la maison, faute de quoi le mois entier sera dû.L'agence peut résilier ce contrat avec un préavis de trois mois. Le remboursement de la caution sera effectué dans les mêmes conditions.", self.styles['CustomBody']))
+        elements.append(Spacer(1, 10))
+        
+        # Notes importantes
+        elements.append(Paragraph("● NB : LES MAISONS SONT A PAYER AVANT DE CONSOMMER", self.styles['CustomBody']))
+        elements.append(Paragraph("● LU ET APPROUVE BON POUR ACCORD", self.styles['CustomBody']))
+        elements.append(Spacer(1, 15))
         
         return elements
 
     def _create_obligations(self):
-        """Crée la section des obligations et conditions"""
+        """Crée la section des obligations et conditions selon le nouveau format"""
         elements = []
         
-        elements.append(Paragraph("OBLIGATIONS ET CONDITIONS", self.styles['CustomHeading']))
+        # Section Personne garant du paiement des loyers
+        elements.append(Paragraph("● Personne garant du paiement des loyers", self.styles['CustomHeading']))
+        elements.append(Spacer(1, 10))
         
-        # Texte des obligations (personnalisable via la configuration)
-        if self.config_entreprise and hasattr(self.config_entreprise, 'texte_contrat') and self.config_entreprise.texte_contrat:
-            obligations_text = self.config_entreprise.texte_contrat
-        else:
-            # Texte par défaut si pas de configuration personnalisée
-            obligations_text = """
-            <b>Obligations du locataire :</b><br/>
-            • Payer le loyer et les charges dans les délais convenus<br/>
-            • Entretenir les lieux loués<br/>
-            • Respecter le règlement intérieur<br/>
-            • Ne pas effectuer de travaux sans autorisation<br/>
-            • Assurer le logement contre les risques locatifs<br/>
-            • Respecter la destination des lieux<br/><br/>
-            
-            <b>Obligations du bailleur :</b><br/>
-            • Livrer le logement en bon état d'usage<br/>
-            • Effectuer les réparations locatives<br/>
-            • Respecter les obligations de sécurité<br/>
-            • Garantir la jouissance paisible des lieux
-            """
+        # Engagement du garant
+        garant_engagement = f"""Jesoussigné(e)M. Mme, Mlle {getattr(self.contrat, 'garant_nom', 'N/A')} Profession : ……adresse…tel : {getattr(self.contrat, 'garant_telephone', 'N/A')}
+
+Je me porte garant de la caution solitaire de M. Mme, Mlle {self.contrat.locataire.nom.upper()} {self.contrat.locataire.prenom.upper()} Tel : {self.contrat.locataire.telephone} locataire de la maison n° {getattr(self.contrat.propriete, 'numero_maison', 'N/A')} Située a {self.contrat.propriete.ville} pour
+
+Le paiement mensuel du loyer de {self.contrat.get_loyer_mensuel_formatted()} commence à partir de la fin du mois de {self.contrat.date_debut.strftime('%B %Y').lower()}
+
+En cas de retard de payement du loyer supérieur à un mois. Je m'engage à payer leur correspondant à la place du locataire dans un délai d'une semaine dès que je serai avise du retard de payement. Ma responsabilité est limitée à six mois (06) mois de loyer, soit la somme de..(….…) franc CFA
+
+Le paiement sera effectué auprès de l'agence KBIS IMMOBILIER au secteur 26 PISSY. Situé sur la route du CMA DE PISSY tel : +226 79.18.32.32./70.20.64.91/79.18.39.39/66..66.45.60
+
+Si en fin de Contrat, cette garantie a été utilisé, et si toute ou une partie de la caution doit être restitué au locataire après remise en état de la maison, elle sera remboursée à M. Mme, Mlle {getattr(self.contrat, 'garant_nom', 'N/A')} (Personnes garante) du payement des loyers de M. Mme, Mlle {self.contrat.locataire.nom.upper()} {self.contrat.locataire.prenom.upper()} Jusqu'à concurrence des sommes qu'elle aura versées et le reste sera remboursés au locataire.
+
+Une copie de la CNIB du garant doit être jointe à la présente
+
+Merci pour votre compréhension"""
         
-        elements.append(Paragraph(obligations_text, self.styles['CustomBody']))
+        elements.append(Paragraph(garant_engagement, self.styles['CustomBody']))
+        elements.append(Spacer(1, 15))
+        
+        # Date et lieu
+        date_contrat = self.contrat.date_signature.strftime('%d-%m-%Y')
+        elements.append(Paragraph(f"Fait en deux exemplaires à Ouagadougou, le {date_contrat}", self.styles['CustomBody']))
+        elements.append(Spacer(1, 15))
         
         return elements
 
     def _create_signatures(self):
-        """Crée la section des signatures"""
+        """Crée la section des signatures selon le nouveau format"""
         elements = []
         
-        elements.append(Paragraph("SIGNATURES", self.styles['CustomHeading']))
-        
-        # Ligne de séparation
-        elements.append(Paragraph("<hr/>", self.styles['CustomBody']))
-        elements.append(Spacer(1, 30))
-        
-        # Tableau des signatures pour éviter le chevauchement
+        # Tableau des signatures
         signature_data = [
-            ['Signature du locataire', 'Signature de l\'agent immobilier'],
-            ['', ''],
-            [f"{self.contrat.locataire.nom} {self.contrat.locataire.prenom}", 
-             f"{self.config_entreprise.nom_entreprise if self.config_entreprise else 'KBIS IMMOBILIER'}"],
-            ['Date : _________________', 'Date : _________________']
+            ['L\'agence', 'le locataire', 'Personne Garant'],
+            ['', '', ''],
+            ['', '', ''],
         ]
         
-        signature_table = Table(signature_data, colWidths=[8*cm, 8*cm])
+        signature_table = Table(signature_data, colWidths=[5*cm, 5*cm, 5*cm])
         signature_table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
@@ -589,18 +609,334 @@ class ContratPDFService:
             ('FONTSIZE', (0, 0), (-1, -1), 10),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
             ('TOPPADDING', (0, 0), (-1, -1), 12),
-            ('LINEBELOW', (0, 1), (0, 1), 1, colors.black),
-            ('LINEBELOW', (1, 1), (1, 1), 1, colors.black),
+            # Suppression des traits (LINEBELOW) - remplacés par le pied de page dynamique
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ]))
         
         elements.append(signature_table)
-        elements.append(Spacer(1, 30))
+        elements.append(Spacer(1, 15))
         
-        # Ajouter les informations des documents joints (au lieu d'embarquer les images)
-        elements.extend(self._create_documents_summary())
+        # Section Engagement
+        elements.append(Paragraph("Engagement", self.styles['CustomHeading']))
+        elements.append(Spacer(1, 5))
+        
+        # Texte d'engagement
+        engagement_text = f"""Je soussigné(e) {self.contrat.locataire.nom.upper()} {self.contrat.locataire.prenom.upper()} reconnait avoir loué une maison, avec l'agence KBIS IMMOBILIER le {self.contrat.date_signature.strftime('%d/%m/%Y')} Et je m'engage à respecter le délai du payement de mon loyer prévu au plus tard le 03 du mois, je reconnais que la réfection des différents points cites ci-dessus sont à ma charge au moment de libérer la maison.
+
+Lu et approuvé bon pour accord"""
+        
+        elements.append(Paragraph(engagement_text, self.styles['CustomBody']))
+        elements.append(Spacer(1, 10))
+        
+        # Tableau des signatures final
+        signature_final_data = [
+            ['L\'agence', 'le locataire', 'Personne Garant'],
+            ['', '', ''],
+            ['', '', ''],
+        ]
+        
+        signature_final_table = Table(signature_final_data, colWidths=[5*cm, 5*cm, 5*cm])
+        signature_final_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+            ('TOPPADDING', (0, 0), (-1, -1), 12),
+            # Suppression des traits (LINEBELOW) - remplacés par le pied de page dynamique
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        
+        elements.append(signature_final_table)
+        
+        # Le pied de page sera géré par _add_footer_only (vrai pied de page)
         
         return elements
+    
+    def _create_etat_des_lieux(self):
+        """Crée la section état des lieux avec le tableau fourni"""
+        elements = []
+        
+        # Titre de la section
+        elements.append(Paragraph("Etat des lieux", self.styles['CustomHeading']))
+        elements.append(Spacer(1, 15))
+        
+        # Données du tableau état des lieux exactement comme dans les images (6 colonnes)
+        etat_lieux_data = [
+            ['N°', 'Description', 'OK', '', 'NON', ''],
+            ['1', 'INDEXE DU COMPTEUR DE SONABEL', 'OUI', '', '', ''],
+            ['2', 'INDEXE DU COMPTEUR DE L\'ONEA', 'OUI', '', '', ''],
+            ['3', 'ETAT DE LA PEINTURE', 'OK', '', 'PASSABLE', ''],
+            ['4', 'ETAT DE PEINTURE DES COUVERTURES', 'OK', '', 'PASSABLE', ''],
+            ['5', 'PEINTURE DU PLAFOND', 'OK', '', 'PASSABLE', ''],
+            ['6', 'ETAT DE CREMONE DE VITRE', 'OK', '', 'PASSABLE', ''],
+            ['7', 'ETAT DE PRISE ELECTRIQUE', 'OK', '', 'PASSABLE', ''],
+            ['8', 'NOMBRE DES CLES DU GRAND PORTAIL', 'OUI', '', 'NON', ''],
+            ['9', 'NOMBRE DES CLES DE LA PORTE DU SALON', 'OUI', '', 'NON', ''],
+            ['10', 'NOMBRE DES CLES ISO PLANES', 'OUI', '', 'NON', ''],
+            ['11', 'PORTE RIDEAU', 'OUI', '', 'NON', ''],
+            ['12', 'NOMBRE DES CLES DU PLACARD', 'OUI', '', 'NON', ''],
+            ['13', 'NOMBRE DE REGLETTES', 'OK', '', 'NON', ''],
+            ['14', 'NOMBRE DE VEILLEUSE', 'OK', '', 'NON', ''],
+            ['15', 'NOMBRE DE VENTILATEURS', 'OK', '', 'NON', ''],
+            ['16', 'ROBINETS DE LA CUISINE', 'OK', '', 'NON', ''],
+            ['17', 'LES DES PLACARDS DE LA CUISINE', 'OK', '', 'NON', ''],
+            ['18', 'ETAT DE LA SONNERIE', 'OK', '', 'NON', ''],
+            ['19', 'LES WC', 'OK', '', 'NON', ''],
+            ['20', 'LES LAVABOS', 'OK', '', 'NON', ''],
+            ['21', 'LE MIROIR', 'OK', '', 'NON', ''],
+            ['22', 'FLEXIBLE DE DOUCHE\n(COLONNE)', 'OK', '', 'NON', ''],
+            ['23', 'LES ACCESSOIRES\n(porte savon, porte serviette,\nporte papier de toilette)', 'OK', '', 'NON', ''],
+            ['24', 'LAMPES SANITAIRE', 'OK', '', 'NON', ''],
+            ['25', 'CHAUFFE-EAU', 'OK', '', 'NON', ''],
+            ['26', 'CLIMATISEUR\n(entretien)', 'OK', '', 'NON', ''],
+        ]
+        
+        # Créer le tableau exactement comme dans les images (6 colonnes)
+        etat_table = Table(etat_lieux_data, colWidths=[1*cm, 8*cm, 1.5*cm, 1*cm, 1.5*cm, 1*cm])
+        etat_table.setStyle(TableStyle([
+            # Style général
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            
+            # En-tête
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            
+            # Bordures
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('LINEBELOW', (0, 0), (-1, 0), 2, colors.black),
+            
+            # Padding réduit pour optimiser l'affichage
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('LEFTPADDING', (0, 0), (-1, -1), 3),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 3),
+            
+            # Alignement des colonnes exactement comme dans les images
+            ('ALIGN', (0, 1), (0, -1), 'CENTER'),  # N°
+            ('ALIGN', (2, 1), (2, -1), 'CENTER'),  # OK
+            ('ALIGN', (4, 1), (4, -1), 'CENTER'),  # NON
+            
+            # Retour à la ligne automatique pour éviter le débordement
+            ('WORDWRAP', (0, 0), (-1, -1), 'CJK'),  # Active le retour à la ligne automatique
+        ]))
+        
+        elements.append(etat_table)
+        elements.append(Spacer(1, 10))
+        
+        # Section Observation (rectangle simple - une seule colonne)
+        elements.append(Paragraph("Observation", self.styles['CustomHeading']))
+        elements.append(Spacer(1, 10))
+        
+        # Zone d'observation (rectangle simple - une seule ligne)
+        observation_data = [
+            [''],
+        ]
+        
+        observation_table = Table(observation_data, colWidths=[16*cm])
+        observation_table.setStyle(TableStyle([
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 20),
+            ('TOPPADDING', (0, 0), (-1, -1), 20),
+            ('LEFTPADDING', (0, 0), (-1, -1), 10),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ]))
+        
+        elements.append(observation_table)
+        
+        return elements
+
+    def _add_footer_only(self, canvas_obj, doc):
+        """Ajoute uniquement le pied de page (sans en-tête) sur les pages suivantes"""
+        import os
+        
+        # Dimensions de la page
+        page_width, page_height = A4
+        
+        # === PIED DE PAGE DYNAMIQUE COLLÉ EN BAS ===
+        # Récupérer le pied de page personnalisé depuis la configuration
+        if self.config_entreprise:
+            pied_page_text = getattr(self.config_entreprise, 'pied_page_personnalise', '')
+            if pied_page_text:
+                # Utiliser le pied de page personnalisé
+                canvas_obj.setFillColor(colors.black)
+                canvas_obj.setFont("Helvetica", 8)
+                
+                # Centrer le texte en bas de page
+                text_width = canvas_obj.stringWidth(pied_page_text, "Helvetica", 8)
+                text_x = (page_width - text_width) / 2
+                text_y = 0.3*cm  # Collé en bas
+                
+                canvas_obj.drawString(text_x, text_y, pied_page_text)
+            else:
+                # Pied de page par défaut
+                canvas_obj.setFillColor(colors.black)
+                canvas_obj.setFont("Helvetica", 8)
+                
+                # Nom de l'entreprise
+                canvas_obj.drawString(1*cm, 0.8*cm, self.config_entreprise.nom_entreprise)
+                
+                # Adresse
+                adresse_complete = self.config_entreprise.get_adresse_complete()
+                if adresse_complete and adresse_complete != "Adresse non configurée":
+                    canvas_obj.drawString(1*cm, 0.5*cm, adresse_complete)
+                
+                # Téléphone et email
+                contact_info = []
+                if self.config_entreprise.telephone:
+                    contact_info.append(f"Tel: {self.config_entreprise.telephone}")
+                if self.config_entreprise.email:
+                    contact_info.append(f"Email: {self.config_entreprise.email}")
+                
+                if contact_info:
+                    canvas_obj.drawString(1*cm, 0.2*cm, " | ".join(contact_info))
+        
+        # Numéro de page
+        canvas_obj.setFillColor(colors.black)
+        canvas_obj.setFont("Helvetica", 8)
+        canvas_obj.drawRightString(page_width - 1*cm, 0.5*cm, f"Page {doc.page}")
+
+    def _add_header_only(self, canvas_obj, doc):
+        """Ajoute uniquement l'en-tête sur la première page (sans pied de page)"""
+        import os
+        
+        # Dimensions de la page
+        page_width, page_height = A4
+        
+        # === EN-TÊTE ===
+        if self.config_entreprise:
+            # Utiliser l'image d'en-tête personnalisée KBIS
+            try:
+                entete_path = self.config_entreprise.get_entete_prioritaire()
+                if entete_path and os.path.exists(entete_path):
+                    # Utiliser l'image d'en-tête personnalisée
+                    from reportlab.lib.utils import ImageReader
+                    img = ImageReader(entete_path)
+                    img_width, img_height = img.getSize()
+                    
+                    # Calculer les dimensions optimales pour l'en-tête
+                    max_width = page_width - 2*cm  # Largeur maximale de la page
+                    max_height = 4*cm  # Hauteur maximale pour l'en-tête
+                    
+                    # Redimensionner proportionnellement
+                    aspect_ratio = img_width / img_height
+                    if aspect_ratio > (max_width / max_height):
+                        entete_width = max_width
+                        entete_height = max_width / aspect_ratio
+                    else:
+                        entete_height = max_height
+                        entete_width = max_height * aspect_ratio
+                    
+                    # Centrer l'en-tête
+                    entete_x = (page_width - entete_width) / 2
+                    entete_y = page_height - entete_height - 0.5*cm
+                    
+                    canvas_obj.drawImage(entete_path, entete_x, entete_y, entete_width, entete_height)
+                    
+                else:
+                    # Fallback vers l'ancien système si l'image n'existe pas
+                    # En-tête avec couleur de fond
+                    canvas_obj.setFillColor(colors.lightblue)
+                    canvas_obj.rect(0, page_height - 3*cm, page_width, 3*cm, fill=1, stroke=0)
+                    
+                    # Bordure en bas de l'en-tête
+                    canvas_obj.setStrokeColor(colors.darkblue)
+                    canvas_obj.setLineWidth(2)
+                    canvas_obj.line(0, page_height - 3*cm, page_width, page_height - 3*cm)
+                    
+                    # Logo de l'entreprise (si disponible)
+                    try:
+                        logo_path = self.config_entreprise.get_logo_prioritaire()
+                        if logo_path and os.path.exists(logo_path):
+                            # Redimensionner le logo pour l'en-tête
+                            logo_width = 2*cm
+                            logo_height = 1.5*cm
+                            
+                            # Positionner le logo à gauche
+                            logo_x = 1*cm
+                            logo_y = page_height - 2.5*cm
+                            
+                            canvas_obj.drawImage(logo_path, logo_x, logo_y, logo_width, logo_height)
+                            
+                            # Texte de l'entreprise à droite du logo
+                            text_x = logo_x + logo_width + 0.5*cm
+                            text_y = page_height - 2.2*cm
+                        else:
+                            # Pas de logo - centrer le texte
+                            text_x = 2*cm
+                            text_y = page_height - 2.2*cm
+                            
+                    except (OSError, IOError, ValueError):
+                        # En cas d'erreur avec le logo
+                        text_x = 2*cm
+                        text_y = page_height - 2.2*cm
+                    
+                    # Nom de l'entreprise
+                    canvas_obj.setFillColor(colors.darkblue)
+                    canvas_obj.setFont("Helvetica-Bold", 16)
+                    canvas_obj.drawString(text_x, text_y, self.config_entreprise.nom_entreprise)
+                    
+                    # Adresse complète
+                    canvas_obj.setFont("Helvetica", 10)
+                    canvas_obj.drawString(text_x, text_y - 0.4*cm, self.config_entreprise.get_adresse_complete())
+                    
+                    # Informations de contact complètes
+                    canvas_obj.setFont("Helvetica", 9)
+                    canvas_obj.drawString(text_x, text_y - 0.8*cm, self.config_entreprise.get_contact_complet())
+                    
+            except (OSError, IOError, ValueError, AttributeError) as e:
+                print(f"Erreur lors de l'ajout de l'en-tête personnalisé: {e}")
+                # Fallback vers l'ancien système en cas d'erreur
+                canvas_obj.setFillColor(colors.lightblue)
+                canvas_obj.rect(0, page_height - 3*cm, page_width, 3*cm, fill=1, stroke=0)
+                canvas_obj.setFillColor(colors.darkblue)
+                canvas_obj.setFont("Helvetica-Bold", 16)
+                canvas_obj.drawString(2*cm, page_height - 2.2*cm, self.config_entreprise.nom_entreprise)
+
+    def _add_no_footer(self, canvas_obj, doc):
+        """N'ajoute rien sur les pages intermédiaires (pas de pied de page)"""
+        # Ne rien ajouter - pages intermédiaires sans pied de page
+        pass
+
+    def _add_no_header_footer(self, canvas_obj, doc):
+        """N'ajoute rien sur la première page (pas d'en-tête ni de pied de page)"""
+        # Ne rien ajouter - première page sans en-tête ni pied de page
+        pass
+
+    def _add_footer_last_page_only(self, canvas_obj, doc):
+        """Ajoute uniquement le pied de page sur la dernière page, rien sur les pages intermédiaires"""
+        import os
+        
+        # Dimensions de la page
+        page_width, page_height = A4
+        
+        # Vérifier si c'est la dernière page
+        if hasattr(doc, 'page') and hasattr(doc, 'pages'):
+            if doc.page == doc.pages:  # Dernière page seulement
+                # === PIED DE PAGE DYNAMIQUE ===
+                if self.config_entreprise:
+                    pied_page_text = getattr(self.config_entreprise, 'pied_page_personnalise', '')
+                    if not pied_page_text:
+                        # Pied de page par défaut centré
+                        pied_page_text = f"{self.config_entreprise.nom_entreprise} | {self.config_entreprise.get_adresse_complete()} | Tel: {self.config_entreprise.telephone} | Email: {self.config_entreprise.email}"
+                    
+                    # Utiliser le pied de page
+                    canvas_obj.setFillColor(colors.black)
+                    canvas_obj.setFont("Helvetica", 8)
+                    
+                    # Centrer le texte en bas de page (remplace les traits)
+                    text_width = canvas_obj.stringWidth(pied_page_text, "Helvetica", 8)
+                    text_x = (page_width - text_width) / 2
+                    text_y = 0.3*cm  # Position très bas pour remplacer les traits
+                    
+                    canvas_obj.drawString(text_x, text_y, pied_page_text)
+            # Si ce n'est pas la dernière page, ne rien ajouter (pages intermédiaires vides)
     
     def _create_documents_summary(self):
         """Crée un résumé des documents joints au lieu d'embarquer les images."""
@@ -734,14 +1070,14 @@ class RecuCautionPDFService:
         # Générer le PDF
         buffer = BytesIO()
         
-        # Créer le document avec des marges ajustées pour éviter le chevauchement
+        # Créer le document avec des marges optimisées pour éviter le chevauchement
         doc = SimpleDocTemplate(
             buffer,
             pagesize=A4,
-            rightMargin=2*cm,
-            leftMargin=2*cm,
-            topMargin=4*cm,  # Plus d'espace pour l'en-tête
-            bottomMargin=2*cm  # Moins d'espace pour le pied de page simplifié
+            rightMargin=1.5*cm,
+            leftMargin=1.5*cm,
+            topMargin=4*cm,  # Marge supérieure augmentée pour éviter le chevauchement
+            bottomMargin=1*cm  # Marge inférieure pour le pied de page
         )
         
         # Construction du contenu du PDF
@@ -792,33 +1128,43 @@ class RecuCautionPDFService:
         # Dimensions de la page
         page_width, page_height = A4
         
-        # === PIED DE PAGE SIMPLIFIÉ ===
-        # Fond du pied de page réduit
-        canvas_obj.setFillColor(colors.lightgrey)
-        canvas_obj.rect(0, 0, page_width, 1.5*cm, fill=1, stroke=0)
-        
-        # Informations de l'entreprise dans le pied de page
+        # === PIED DE PAGE DYNAMIQUE COLLÉ EN BAS ===
+        # Récupérer le pied de page personnalisé depuis la configuration
         if self.config_entreprise:
-            canvas_obj.setFillColor(colors.black)
-            canvas_obj.setFont("Helvetica", 8)
-            
-            # Nom de l'entreprise
-            canvas_obj.drawString(1*cm, 0.8*cm, self.config_entreprise.nom_entreprise)
-            
-            # Adresse
-            adresse_complete = self.config_entreprise.get_adresse_complete()
-            if adresse_complete and adresse_complete != "Adresse non configurée":
-                canvas_obj.drawString(1*cm, 0.5*cm, adresse_complete)
-            
-            # Téléphone et email
-            contact_info = []
-            if self.config_entreprise.telephone:
-                contact_info.append(f"Tel: {self.config_entreprise.telephone}")
-            if self.config_entreprise.email:
-                contact_info.append(f"Email: {self.config_entreprise.email}")
-            
-            if contact_info:
-                canvas_obj.drawString(1*cm, 0.2*cm, " | ".join(contact_info))
+            pied_page_text = getattr(self.config_entreprise, 'pied_page_personnalise', '')
+            if pied_page_text:
+                # Utiliser le pied de page personnalisé
+                canvas_obj.setFillColor(colors.black)
+                canvas_obj.setFont("Helvetica", 8)
+                
+                # Centrer le texte en bas de page
+                text_width = canvas_obj.stringWidth(pied_page_text, "Helvetica", 8)
+                text_x = (page_width - text_width) / 2
+                text_y = 0.3*cm  # Collé en bas
+                
+                canvas_obj.drawString(text_x, text_y, pied_page_text)
+            else:
+                # Pied de page par défaut
+                canvas_obj.setFillColor(colors.black)
+                canvas_obj.setFont("Helvetica", 8)
+                
+                # Nom de l'entreprise
+                canvas_obj.drawString(1*cm, 0.8*cm, self.config_entreprise.nom_entreprise)
+                
+                # Adresse
+                adresse_complete = self.config_entreprise.get_adresse_complete()
+                if adresse_complete and adresse_complete != "Adresse non configurée":
+                    canvas_obj.drawString(1*cm, 0.5*cm, adresse_complete)
+                
+                # Téléphone et email
+                contact_info = []
+                if self.config_entreprise.telephone:
+                    contact_info.append(f"Tel: {self.config_entreprise.telephone}")
+                if self.config_entreprise.email:
+                    contact_info.append(f"Email: {self.config_entreprise.email}")
+                
+                if contact_info:
+                    canvas_obj.drawString(1*cm, 0.2*cm, " | ".join(contact_info))
         
         # Numéro de page
         canvas_obj.setFillColor(colors.black)
@@ -1297,14 +1643,14 @@ class ResiliationPDFService:
         from core.models import ConfigurationEntreprise
         self.config_entreprise = ConfigurationEntreprise.get_configuration_active()
         
-        # Créer le document avec des marges ajustées pour éviter le chevauchement
+        # Créer le document avec des marges optimisées pour éviter le chevauchement
         doc = SimpleDocTemplate(
             buffer,
             pagesize=A4,
-            rightMargin=2*cm,
-            leftMargin=2*cm,
-            topMargin=4*cm,  # Plus d'espace pour l'en-tête
-            bottomMargin=2*cm  # Moins d'espace pour le pied de page simplifié
+            rightMargin=1.5*cm,
+            leftMargin=1.5*cm,
+            topMargin=4*cm,  # Marge supérieure augmentée pour éviter le chevauchement
+            bottomMargin=1*cm  # Marge inférieure pour le pied de page
         )
         
         # Construction du contenu du PDF

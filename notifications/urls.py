@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views
+from . import views, api_views, views_burkina
 from .views import notification_list
 
 # Router pour l'API
@@ -30,4 +30,18 @@ urlpatterns = [
     path('sms/historique/', views.sms_history, name='sms_history'),
     path('sms/test/', views.send_test_sms, name='send_test_sms'),
     path('sms/envoyer-retards/', views.send_overdue_notifications, name='send_overdue_notifications'),
+    
+    # URLs API pour les notifications dynamiques
+    path('api/', include('notifications.urls_dynamiques')),
+    
+    # URLs pour les notifications simples
+    path('', include('notifications.urls_simples')),
+    
+    # URLs pour le support Burkina Faso
+    path('preferences-burkina/', views_burkina.preferences_burkina, name='preferences_burkina'),
+    path('test-sms-burkina/', views_burkina.test_sms_burkina, name='test_sms_burkina'),
+    path('validate-phone-burkina/', views_burkina.validate_phone_burkina, name='validate_phone_burkina'),
+    path('format-phone-burkina/', views_burkina.format_phone_burkina, name='format_phone_burkina'),
+    path('bulk-notification-burkina/', views_burkina.bulk_notification_burkina, name='bulk_notification_burkina'),
+    path('phone-format-help/', views_burkina.phone_format_help, name='phone_format_help'),
 ] 

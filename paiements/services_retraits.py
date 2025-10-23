@@ -183,13 +183,38 @@ class ServiceCalculRetraits:
         return True, "Tous les loyers du mois sont payés"
     
     @staticmethod
+    def verifier_conditions_temporelles():
+        """
+        Vérifie si la génération automatique des retraits est autorisée selon les conditions temporelles.
+        
+        RÈGLE : Génération possible uniquement du 25 du mois courant au 5 du mois suivant
+        """
+        from datetime import date as dt_date
+        
+        aujourd_hui = dt_date.today()
+        jour_actuel = aujourd_hui.day
+        
+        # Condition : entre le 25 du mois courant et le 5 du mois suivant
+        if jour_actuel >= 25 or jour_actuel <= 5:
+            return True, f"Génération autorisée (jour {jour_actuel} - période du 25 au 5)"
+        else:
+            return False, f"Génération non autorisée (jour {jour_actuel} - période autorisée : du 25 au 5)"
+    
+    @staticmethod
     def creer_retrait_automatique(bailleur, mois, annee, user=None):
         """
         Crée automatiquement un retrait pour un bailleur
-        Applique la logique des deux conditions alternatives :
-        1. Si toutes les cautions sont payées → retrait possible même sans loyers du mois
-        2. Sinon → tous les loyers du mois doivent être payés
+        Applique la logique des conditions temporelles et des deux conditions alternatives :
+        1. Vérification des conditions temporelles (25 du mois au 5 du mois suivant) - UNIQUEMENT pour les retraits automatiques
+        2. Si toutes les cautions sont payées → retrait possible même sans loyers du mois
+        3. Sinon → tous les loyers du mois doivent être payés
         """
+        # Vérification des conditions temporelles (UNIQUEMENT pour les retraits automatiques)
+        conditions_temporelles_ok, message_temporel = ServiceCalculRetraits.verifier_conditions_temporelles()
+        
+        if not conditions_temporelles_ok:
+            print(f"RETRAIT AUTOMATIQUE NON CRÉÉ pour {bailleur.nom} {bailleur.prenom}: {message_temporel}")
+            return None
         # Condition 1 : Vérifier si toutes les cautions sont payées
         cautions_ok, message_cautions = ServiceCalculRetraits.verifier_cautions_payees(bailleur)
         
@@ -234,9 +259,125 @@ class ServiceCalculRetraits:
         return retrait
     
     @staticmethod
+    def creer_retrait_manuel(bailleur, mois, annee, user=None):
+        """
+        Crée un retrait manuel pour un bailleur
+        N'APPLIQUE PAS les conditions temporelles - permet la création à tout moment
+        Applique uniquement les conditions logiques :
+        1. Si toutes les cautions sont payées → retrait possible même sans loyers du mois
+        2. Sinon → tous les loyers du mois doivent être payés
+        """
+        print(f"CRÉATION RETRAIT MANUEL pour {bailleur.nom} {bailleur.prenom} - Aucune restriction temporelle")
+        
+        # Condition 1 : Vérifier si toutes les cautions sont payées
+        cautions_ok, message_cautions = ServiceCalculRetraits.verifier_cautions_payees(bailleur)
+        
+        if cautions_ok:
+            # Toutes les cautions sont payées → on peut créer le retrait même sans loyers du mois
+            print(f"Toutes les cautions payées pour {bailleur.nom} {bailleur.prenom} - Retrait possible")
+        else:
+            # Condition 2 : Vérifier que tous les loyers du mois sont payés
+            loyers_ok, message_loyers = ServiceCalculRetraits.verifier_loyers_mois_courant(bailleur, mois, annee)
+            
+            if not loyers_ok:
+                print(f"Retrait manuel non créé pour {bailleur.nom} {bailleur.prenom}: {message_loyers}")
+                return None
+        
+        # Calculer les montants
+        calcul = ServiceCalculRetraits.calculer_retrait_mensuel_bailleur(
+            bailleur, mois, annee
+        )
+        
+        # Vérifier s'il y a des loyers à payer
+        if calcul['total_loyers'] <= 0:
+            print(f"Retrait manuel non créé pour {bailleur.nom} {bailleur.prenom}: Aucun loyer perçu")
+            return None
+        
+        # Date du mois de retrait
+        mois_retrait = date(annee, mois, 1)
+        
+        # Créer le retrait
+        retrait = RetraitBailleur.objects.create(
+            bailleur=bailleur,
+            mois_retrait=mois_retrait,
+            montant_loyers_bruts=calcul['total_loyers'],
+            montant_charges_deductibles=calcul['total_charges_deductibles'],
+            montant_charges_bailleur=calcul['total_charges_bailleur'],
+            montant_net_a_payer=calcul['montant_net'],
+            statut='en_attente',
+            type_retrait='mensuel',
+            mode_retrait='virement',
+            cree_par=user
+        )
+        
+        print(f"RETRAIT MANUEL CRÉÉ pour {bailleur.nom} {bailleur.prenom} - Montant: {retrait.montant_net_a_payer} F CFA")
+        return retrait
+    
+    @staticmethod
     def creer_retraits_automatiques_mensuels(mois, annee, user=None):
         """
-        Crée automatiquement tous les retraits mensuels
+        Crée automatiquement des retraits pour tous les bailleurs éligibles du mois donné.
+        Applique toutes les conditions : temporelles, cautions et loyers.
+        """
+        from proprietes.models import Bailleur as BailleurModel
+        
+        # Vérification des conditions temporelles
+        conditions_temporelles_ok, message_temporel = ServiceCalculRetraits.verifier_conditions_temporelles()
+        
+        if not conditions_temporelles_ok:
+            print(f"CRÉATION AUTOMATIQUE ANNULÉE: {message_temporel}")
+            return {
+                'success': False,
+                'message': message_temporel,
+                'retraits_crees': 0,
+                'retraits_ignores': 0,
+                'retraits_existants': 0,
+                'cautions_manquantes': 0,
+                'loyers_manquants': 0,
+                'aucun_loyer': 0,
+                'details': []
+            }
+        
+        print(f"CRÉATION AUTOMATIQUE AUTORISÉE: {message_temporel}")
+        
+        # Récupérer tous les bailleurs actifs
+        bailleurs = BailleurModel.objects.filter(is_deleted=False)
+        
+        retraits_crees = 0
+        retraits_ignores = 0
+        details = []
+        
+        for bailleur in bailleurs:
+            try:
+                retrait = ServiceCalculRetraits.creer_retrait_automatique(bailleur, mois, annee, user)
+                
+                if retrait:
+                    retraits_crees += 1
+                    details.append(f"✅ Retrait créé pour {bailleur.nom} {bailleur.prenom} - Montant: {retrait.montant_net_a_payer} F CFA")
+                else:
+                    retraits_ignores += 1
+                    details.append(f"❌ Retrait ignoré pour {bailleur.nom} {bailleur.prenom}")
+                    
+            except Exception as e:
+                retraits_ignores += 1
+                details.append(f"❌ Erreur pour {bailleur.nom} {bailleur.prenom}: {str(e)}")
+        
+        return {
+            'success': True,
+            'message': f"Génération terminée: {retraits_crees} retraits créés, {retraits_ignores} ignorés",
+            'retraits_crees': retraits_crees,
+            'retraits_ignores': retraits_ignores,
+            'retraits_existants': 0,  # Pas de retraits existants dans cette méthode
+            'cautions_manquantes': 0,  # Pas de décompte séparé dans cette méthode
+            'loyers_manquants': 0,  # Pas de décompte séparé dans cette méthode
+            'aucun_loyer': 0,  # Pas de décompte séparé dans cette méthode
+            'details': details
+        }
+    
+    @staticmethod
+    def creer_retraits_automatiques_mensuels_legacy(mois, annee, user=None):
+        """
+        Ancienne méthode de création automatique des retraits (pour compatibilité)
         """
         # Vérifier la période autorisée pour les retraits
         from .services_retrait import ServiceGestionRetrait
