@@ -512,6 +512,14 @@
                 <span class="detail-label">Mois couverts:</span>
                 <span class="detail-value">{{ mois_couverts.nombre }} mois ({{ mois_couverts.mois_texte }})</span>
             </div>
+            <div class="detail-row">
+                <span class="detail-label">Période de couverture:</span>
+                <span class="detail-value">{{ mois_couverts.date_debut|date:"F Y" }} à {{ mois_couverts.date_fin|date:"F Y" }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Loyer mensuel:</span>
+                <span class="detail-value">{{ montant_loyer|floatformat:0 }} F CFA</span>
+            </div>
             {% endif %}
             <div class="detail-row">
                 <span class="detail-label">Note:</span>
@@ -519,7 +527,7 @@
                     {% if document_type == 'paiement_caution' %}
                         Caution - Garantie remboursable en fin de contrat
                     {% elif document_type == 'paiement_avance' %}
-                        Avance de loyer - Couvre {% if mois_couverts %}{{ mois_couverts.nombre }} mois de loyer ({{ mois_couverts.mois_texte }}){% else %}plusieurs mois de loyer{% endif %}
+                        Avance de loyer - Couvre {% if mois_couverts %}{{ mois_couverts.nombre }} mois de loyer ({{ mois_couverts.mois_texte }}) - Période: {{ mois_couverts.date_debut|date:"F Y" }} à {{ mois_couverts.date_fin|date:"F Y" }}{% else %}plusieurs mois de loyer{% endif %}
                     {% elif document_type == 'paiement_quittance' %}
                         Paiement de loyer - Période {{ paiement.mois_paye|date:"F Y"|default:"courante" }}
                     {% elif document_type == 'retrait_quittance' or document_type == 'retrait_recu' %}
@@ -528,7 +536,7 @@
                         Quittance de récapitulatif - Montant versé au bailleur
                     {% elif document_type == 'paiement_recu' and 'avance' in type_paiement|lower %}
                         {% if mois_couverts %}
-                            Avance de loyer - Couvre {{ mois_couverts.nombre }} mois de loyer ({{ mois_couverts.mois_texte }}) - Loyer mensuel: {{ montant_loyer|floatformat:0 }} F CFA - Période: {{ mois_couverts.date_debut|date:"M Y" }} à {{ mois_couverts.date_fin|date:"M Y" }}
+                            Avance de loyer - Couvre {{ mois_couverts.nombre }} mois de loyer ({{ mois_couverts.mois_texte }}) - Loyer mensuel: {{ montant_loyer|floatformat:0 }} F CFA - Période: {{ mois_couverts.date_debut|date:"F Y" }} à {{ mois_couverts.date_fin|date:"F Y" }}
                         {% else %}
                             Avance de loyer - Montant: {{ montant_total|floatformat:0 }} F CFA - Loyer mensuel: {{ montant_loyer|floatformat:0 }} F CFA
                         {% endif %}
@@ -542,6 +550,37 @@
                 </span>
             </div>
         </div>
+        
+        <!-- Section spéciale pour les avances -->
+        {% if document_type == 'paiement_avance' and mois_couverts %}
+        <div class="details-section">
+            <h3>DETAILS DE L'AVANCE</h3>
+            <div class="detail-row">
+                <span class="detail-label">Montant de l'avance:</span>
+                <span class="detail-value">{{ montant_total|floatformat:0 }} F CFA</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Loyer mensuel:</span>
+                <span class="detail-value">{{ montant_loyer|floatformat:0 }} F CFA</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Nombre de mois couverts:</span>
+                <span class="detail-value">{{ mois_couverts.nombre }} mois</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Mois couverts:</span>
+                <span class="detail-value">{{ mois_couverts.mois_texte }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Période de couverture:</span>
+                <span class="detail-value">{{ mois_couverts.date_debut|date:"F Y" }} à {{ mois_couverts.date_fin|date:"F Y" }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Date de début du contrat:</span>
+                <span class="detail-value">{{ contrat.date_debut|date:"d/m/Y"|default:"Non définie" }}</span>
+            </div>
+        </div>
+        {% endif %}
         
         <!-- Espace pour cachet et signature -->
         <div class="signature-space">
