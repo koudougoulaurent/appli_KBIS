@@ -806,8 +806,9 @@ class RecuCautionPDFService:
             canvas_obj.drawString(1*cm, 0.8*cm, self.config_entreprise.nom_entreprise)
             
             # Adresse
-            if self.config_entreprise.adresse:
-                canvas_obj.drawString(1*cm, 0.5*cm, self.config_entreprise.adresse)
+            adresse_complete = self.config_entreprise.get_adresse_complete()
+            if adresse_complete and adresse_complete != "Adresse non configurée":
+                canvas_obj.drawString(1*cm, 0.5*cm, adresse_complete)
             
             # Téléphone et email
             contact_info = []
