@@ -410,15 +410,14 @@ class Propriete(models.Model):
     adresse = models.TextField(blank=True, null=True, verbose_name=_("Adresse"))
     code_postal = models.CharField(max_length=10, blank=True, null=True, verbose_name=_("Code postal"))
     ville = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Ville"))
-    # Champ quartier temporairement commenté pour éviter les erreurs en production
-    # quartier = models.CharField(
-    #     max_length=100, 
-    #     blank=True, 
-    #     null=True, 
-    #     verbose_name=_("Quartier"),
-    #     help_text=_("Quartier ou secteur où se trouve la propriété (très important pour la localisation)"),
-    #     default=""  # Valeur par défaut pour éviter les erreurs
-    # )
+    quartier = models.CharField(
+        max_length=100, 
+        blank=True, 
+        null=True, 
+        verbose_name=_("Quartier"),
+        help_text=_("Quartier ou secteur où se trouve la propriété (très important pour la localisation)"),
+        default=""  # Valeur par défaut pour éviter les erreurs
+    )
     pays = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Pays"))
     
     # Caractéristiques
