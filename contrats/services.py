@@ -1017,17 +1017,7 @@ class RecuCautionPDFService:
             ['TOTAL:', self.contrat.get_total_caution_avance_formatted()],
         ]
         
-        # Ajouter les informations sur les mois couverts si l'avance existe
-        if mois_couverts_info and self.contrat.avance_loyer and self.contrat.avance_loyer > 0:
-            # Afficher tous les noms de mois couverts
-            mois_liste = mois_couverts_info.get('mois_liste', [])
-            if mois_liste:
-                mois_texte_complet = ', '.join(mois_liste)
-                data.append(['Mois couverts par l\'avance:', f"{mois_couverts_info['nombre']} mois ({mois_texte_complet})"])
-            else:
-                data.append(['Mois couverts par l\'avance:', f"{mois_couverts_info['nombre']} mois ({mois_couverts_info['mois_texte']})"])
-            data.append(['Période de couverture:', f"{mois_couverts_info['date_debut'].strftime('%B %Y')} à {mois_couverts_info['date_fin'].strftime('%B %Y')}"])
-        
+        # Créer le tableau principal des détails financiers
         table = Table(data, colWidths=[8*cm, 4*cm])
         table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
@@ -1043,13 +1033,50 @@ class RecuCautionPDFService:
             ('GRID', (0, 0), (-1, -1), 1, colors.grey),
             ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
             ('BACKGROUND', (0, -1), (-1, -1), colors.lightblue),
-            # Mettre en évidence les informations sur l'avance si elles existent
-            ('BACKGROUND', (0, -3), (-1, -2), colors.lightgreen),
-            ('FONTNAME', (0, -3), (1, -2), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, -3), (1, -2), 9),
         ]))
         
         elements.append(table)
+        
+        # Ajouter un tableau séparé pour les informations sur l'avance avec cellules fusionnées
+        if mois_couverts_info and self.contrat.avance_loyer and self.contrat.avance_loyer > 0:
+            elements.append(Spacer(1, 10))
+            
+            # Préparer les informations sur les mois couverts
+            mois_liste = mois_couverts_info.get('mois_liste', [])
+            if mois_liste:
+                mois_texte_complet = ', '.join(mois_liste)
+                mois_info = f"{mois_couverts_info['nombre']} mois ({mois_texte_complet})"
+            else:
+                mois_info = f"{mois_couverts_info['nombre']} mois ({mois_couverts_info['mois_texte']})"
+            
+            periode_info = f"{mois_couverts_info['date_debut'].strftime('%B %Y')} à {mois_couverts_info['date_fin'].strftime('%B %Y')}"
+            
+            # Créer un tableau avec cellules fusionnées pour les informations sur l'avance
+            avance_data = [
+                ['INFORMATIONS SUR L\'AVANCE DE LOYER'],
+                ['Mois couverts:', mois_info],
+                ['Période de couverture:', periode_info]
+            ]
+            
+            avance_table = Table(avance_data, colWidths=[4*cm, 8*cm])
+            avance_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 8),
+                ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.lightgreen),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.lightgreen),
+                ('SPAN', (0, 0), (1, 0)),  # Fusionner la première ligne
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ]))
+            
+            elements.append(avance_table)
+        
         return elements
 
     def _calculer_mois_couverts_avance(self):
