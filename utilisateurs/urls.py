@@ -39,7 +39,6 @@ urlpatterns = [
     # Gestion des éléments
     path('privilege/elements/', views.privilege_element_management, name='privilege_element_management'),
     path('privilege/elements/<str:model_name>/', views.privilege_element_list, name='privilege_element_list'),
-    path('privilege/elements/<str:model_name>/<int:element_id>/delete/', views.privilege_delete_element, name='privilege_delete_element'),
     
     
     # Actions en lot
