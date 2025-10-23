@@ -379,7 +379,17 @@
         <div class="detail-content">
             <p><strong>loyer mensuel de: {{ contrat.loyer_mensuel_texte|default:"QUARANTE MILLE" }} ({{ contrat.loyer_mensuel_numerique|default:"40000" }}) Francs CFA</strong></p>
             <p><strong>{{ config.nom_entreprise|default:"KBIS INTERNATIONAL" }}</strong> reconnaît d'avoir reçu la somme <strong>{{ contrat.depot_garantie_texte|default:"CENT VINGT MILLE" }} ({{ contrat.depot_garantie_numerique|default:"120000" }}) Francs CFA</strong> Représentant {{ contrat.nombre_mois_caution|default:"Trois (03)" }} Mois de caution</p>
-            <p><strong>Le paiement mensuel du loyer commence à partir de la fin du mois de: {{ contrat.mois_debut_paiement|default:"AOUT 2025" }}</strong> <strong>M. Mme, Mlle {{ contrat.locataire.nom }} {{ contrat.locataire.prenom }}</strong> s'engage à payer au plus tard le {{ contrat.jour_paiement|default:"03" }} du mois suivant</p>
+            <p><strong>Le paiement mensuel du loyer commence à partir de la fin du mois de: 
+                {% if contrat.mois_debut_paiement %}
+                    {% if "2025" in contrat.mois_debut_paiement or "2026" in contrat.mois_debut_paiement or "2027" in contrat.mois_debut_paiement %}
+                        {{ contrat.mois_debut_paiement }}
+                    {% else %}
+                        {{ contrat.mois_debut_paiement }} 2025
+                    {% endif %}
+                {% else %}
+                    OCTOBRE 2025
+                {% endif %}
+            </strong> <strong>M. Mme, Mlle {{ contrat.locataire.nom }} {{ contrat.locataire.prenom }}</strong> s'engage à payer au plus tard le {{ contrat.jour_paiement|default:"03" }} du mois suivant</p>
         </div>
     </div>
     

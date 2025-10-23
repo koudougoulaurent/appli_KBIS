@@ -235,7 +235,13 @@
         </div>
 
         <div class="section">
-            <p>Le paiement mensuel du loyer commence à partir de la {{ contrat_kbis.paiement_debut_mois }} M. Mme, Mlle {{ contrat_kbis.contrat.locataire.nom|upper }} s'engage à payer au plus tard le {{ contrat_kbis.paiement_echeance }} M. Mme, Mlle {{ contrat_kbis.contrat.locataire.nom|upper }} sachez que votre caution ne vous sera remboursé à la sortie qu'après avoir libéré la maison, l'avoir remis en état (peinture, plomberie etc.,) tel que décrété sur la page état de lieu résilier et payer vos factures de la SONABEL et de l'ONEA. Dans le cas contraire la caution servira à assurer ces frais et quitter les lieux.</p>
+            <p>Le paiement mensuel du loyer commence à partir de la 
+                {% if "2025" in contrat_kbis.paiement_debut_mois or "2026" in contrat_kbis.paiement_debut_mois or "2027" in contrat_kbis.paiement_debut_mois %}
+                    {{ contrat_kbis.paiement_debut_mois }}
+                {% else %}
+                    {{ contrat_kbis.paiement_debut_mois }} 2025
+                {% endif %}
+                M. Mme, Mlle {{ contrat_kbis.contrat.locataire.nom|upper }} s'engage à payer au plus tard le {{ contrat_kbis.paiement_echeance }} M. Mme, Mlle {{ contrat_kbis.contrat.locataire.nom|upper }} sachez que votre caution ne vous sera remboursé à la sortie qu'après avoir libéré la maison, l'avoir remis en état (peinture, plomberie etc.,) tel que décrété sur la page état de lieu résilier et payer vos factures de la SONABEL et de l'ONEA. Dans le cas contraire la caution servira à assurer ces frais et quitter les lieux.</p>
             
             <p>Il donne par la même occasion pouvoir à l'agence d'introduire une instance aux fins de l'expulsion du locataire sans aucune autre forme de préavis.</p>
         </div>
