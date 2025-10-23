@@ -1041,15 +1041,40 @@ class RecuCautionPDFService:
         if mois_couverts_info and self.contrat.avance_loyer and self.contrat.avance_loyer > 0:
             elements.append(Spacer(1, 10))
             
-            # Préparer les informations sur les mois couverts
+            # Préparer les informations sur les mois couverts avec gestion des retours à la ligne
             mois_liste = mois_couverts_info.get('mois_liste', [])
             if mois_liste:
+                # Gérer les retours à la ligne pour éviter le débordement
                 mois_texte_complet = ', '.join(mois_liste)
-                mois_info = f"{mois_couverts_info['nombre']} mois ({mois_texte_complet})"
+                # Diviser le texte en lignes de 50 caractères maximum
+                if len(mois_texte_complet) > 50:
+                    mots = mois_texte_complet.split(', ')
+                    lignes = []
+                    ligne_actuelle = []
+                    longueur_actuelle = 0
+                    
+                    for mot in mots:
+                        if longueur_actuelle + len(mot) + 2 > 50 and ligne_actuelle:  # +2 pour ", "
+                            lignes.append(', '.join(ligne_actuelle))
+                            ligne_actuelle = [mot]
+                            longueur_actuelle = len(mot)
+                        else:
+                            ligne_actuelle.append(mot)
+                            longueur_actuelle += len(mot) + 2 if ligne_actuelle else 0
+                    
+                    if ligne_actuelle:
+                        lignes.append(', '.join(ligne_actuelle))
+                    
+                    mois_info = f"{mois_couverts_info['nombre']} mois ({'<br/>'.join(lignes)})"
+                else:
+                    mois_info = f"{mois_couverts_info['nombre']} mois ({mois_texte_complet})"
             else:
                 mois_info = f"{mois_couverts_info['nombre']} mois ({mois_couverts_info['mois_texte']})"
             
-            periode_info = f"{mois_couverts_info['date_debut'].strftime('%B %Y')} à {mois_couverts_info['date_fin'].strftime('%B %Y')}"
+            # Convertir les mois en français
+            mois_debut_fr = self._convertir_mois_francais(mois_couverts_info['date_debut'])
+            mois_fin_fr = self._convertir_mois_francais(mois_couverts_info['date_fin'])
+            periode_info = f"{mois_debut_fr} {mois_couverts_info['date_debut'].year} à {mois_fin_fr} {mois_couverts_info['date_fin'].year}"
             
             # Créer un tableau avec cellules fusionnées pour les informations sur l'avance
             avance_data = [
@@ -1066,13 +1091,14 @@ class RecuCautionPDFService:
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
                 ('FONTSIZE', (0, 0), (-1, 0), 11),
                 ('FONTSIZE', (0, 1), (-1, -1), 9),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-                ('TOPPADDING', (0, 0), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+                ('TOPPADDING', (0, 0), (-1, -1), 10),
                 ('GRID', (0, 0), (-1, -1), 1, colors.grey),
                 ('BACKGROUND', (0, 0), (-1, 0), colors.lightgreen),
                 ('BACKGROUND', (0, 1), (-1, -1), colors.lightgreen),
                 ('SPAN', (0, 0), (1, 0)),  # Fusionner la première ligne
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Alignement en haut pour gérer les retours à la ligne
+                ('WORDWRAP', (1, 1), (1, -1)),  # Permettre le retour à la ligne dans la colonne de droite
             ]))
             
             elements.append(avance_table)
@@ -1107,6 +1133,15 @@ class RecuCautionPDFService:
             pass
         
         return None
+
+    def _convertir_mois_francais(self, date_obj):
+        """Convertit un mois en français"""
+        mois_francais = {
+            1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+            5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+            9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
+        }
+        return mois_francais.get(date_obj.month, date_obj.strftime('%B'))
 
     def _create_payment_status(self):
         """Crée la section du statut des paiements"""
