@@ -913,7 +913,7 @@ def supprimer_bailleur(request, pk):
         try:
             # Suppression logique
             old_data = {f.name: getattr(bailleur, f.name) for f in bailleur._meta.fields}
-            bailleur.est_supprime = True
+            bailleur.is_deleted = True
             bailleur.date_suppression = timezone.now()
             bailleur.save()
             
@@ -924,7 +924,7 @@ def supprimer_bailleur(request, pk):
                 action='delete',
                 details={
                     'old_data': old_data,
-                    'new_data': {'est_supprime': True, 'date_suppression': str(timezone.now())}
+                    'new_data': {'is_deleted': True, 'date_suppression': str(timezone.now())}
                 },
                 object_repr=str(bailleur),
                 user=request.user,
@@ -1062,7 +1062,7 @@ class SupprimerLocataireView(SuppressionGeneriqueView):
             # Autres locataires pour le transfert
             autres_locataires = Locataire.objects.filter(
                 statut='actif',
-                est_supprime=False
+                is_deleted=False
             ).exclude(pk=obj.pk)
             context['autres_locataires'] = autres_locataires
         
@@ -1125,7 +1125,7 @@ class SupprimerLocataireView(SuppressionGeneriqueView):
                     old_data[f.name] = str(value)
             except Exception:
                 old_data[f.name] = str(getattr(obj, f.name, None))
-        obj.est_supprime = True
+        obj.is_deleted = True
         obj.date_suppression = timezone.now()
         obj.save()
         
@@ -1136,7 +1136,7 @@ class SupprimerLocataireView(SuppressionGeneriqueView):
             action='delete',
             details={
                 'old_data': old_data,
-                'new_data': {'est_supprime': True, 'date_suppression': str(timezone.now())},
+                'new_data': {'is_deleted': True, 'date_suppression': str(timezone.now())},
                 'action_type': 'LOGICAL_DELETE'
             },
             object_repr=str(obj),
@@ -1569,7 +1569,7 @@ def supprimer_locataire(request, pk):
         if action == 'logical_delete':
             # Suppression logique
             old_data = {f.name: getattr(locataire, f.name) for f in locataire._meta.fields}
-            locataire.est_supprime = True
+            locataire.is_deleted = True
             locataire.date_suppression = timezone.now()
             locataire.save()
             
@@ -1580,7 +1580,7 @@ def supprimer_locataire(request, pk):
                 action='delete',
                 details={
                     'old_data': old_data,
-                    'new_data': {'est_supprime': True, 'date_suppression': str(timezone.now())}
+                    'new_data': {'is_deleted': True, 'date_suppression': str(timezone.now())}
                 },
                 object_repr=str(locataire),
                 user=request.user,
@@ -1675,7 +1675,7 @@ def corbeille_locataires(request):
         return redirect('proprietes:locataires_liste')
     
     # Récupérer les locataires supprimés logiquement
-    locataires_supprimes = Locataire.objects.filter(est_supprime=True).order_by('-date_suppression')
+    locataires_supprimes = Locataire.objects.filter(is_deleted=True).order_by('-date_suppression')
     
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -1683,9 +1683,9 @@ def corbeille_locataires(request):
         
         if action == 'restaurer' and locataires_ids:
             # Restaurer les locataires sélectionnés
-            locataires_a_restaurer = Locataire.objects.filter(id__in=locataires_ids, est_supprime=True)
+            locataires_a_restaurer = Locataire.objects.filter(id__in=locataires_ids, is_deleted=True)
             for locataire in locataires_a_restaurer:
-                locataire.est_supprime = False
+                locataire.is_deleted = False
                 locataire.date_suppression = None
                 locataire.save()
                 
@@ -1695,8 +1695,8 @@ def corbeille_locataires(request):
                     object_id=locataire.pk,
                     action='update',
                     details={
-                        'old_data': {'est_supprime': True},
-                        'new_data': {'est_supprime': False}
+                        'old_data': {'is_deleted': True},
+                        'new_data': {'is_deleted': False}
                     },
                     object_repr=str(locataire),
                     user=request.user,
@@ -1709,7 +1709,7 @@ def corbeille_locataires(request):
             
         elif action == 'supprimer_definitivement' and locataires_ids:
             # Suppression définitive avec vérifications de sécurité
-            locataires_a_supprimer = Locataire.objects.filter(id__in=locataires_ids, est_supprime=True)
+            locataires_a_supprimer = Locataire.objects.filter(id__in=locataires_ids, is_deleted=True)
             locataires_supprimes_avec_succes = []
             locataires_avec_contrats_actifs = []
             
@@ -1879,7 +1879,7 @@ def supprimer_propriete(request, pk):
         try:
             # Suppression logique
             old_data = {f.name: getattr(propriete, f.name) for f in propriete._meta.fields}
-            propriete.est_supprime = True
+            propriete.is_deleted = True
             propriete.date_suppression = timezone.now()
             propriete.save()
             
@@ -1889,7 +1889,7 @@ def supprimer_propriete(request, pk):
                 object_id=propriete.pk,
                 action='DELETE',
                 old_data=old_data,
-                new_data={'est_supprime': True, 'date_suppression': str(timezone.now())},
+                new_data={'is_deleted': True, 'date_suppression': str(timezone.now())},
                 user=request.user,
                 ip_address=request.META.get('REMOTE_ADDR'),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')
@@ -1923,7 +1923,7 @@ def supprimer_type_bien(request, pk):
         try:
             # Suppression logique
             old_data = {f.name: getattr(type_bien, f.name) for f in type_bien._meta.fields}
-            type_bien.est_supprime = True
+            type_bien.is_deleted = True
             type_bien.date_suppression = timezone.now()
             type_bien.save()
             
@@ -1933,7 +1933,7 @@ def supprimer_type_bien(request, pk):
                 object_id=type_bien.pk,
                 action='DELETE',
                 old_data=old_data,
-                new_data={'est_supprime': True, 'date_suppression': str(timezone.now())},
+                new_data={'is_deleted': True, 'date_suppression': str(timezone.now())},
                 user=request.user,
                 ip_address=request.META.get('REMOTE_ADDR'),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')
@@ -1967,7 +1967,7 @@ def supprimer_charge_bailleur(request, pk):
         try:
             # Suppression logique
             old_data = {f.name: getattr(charge, f.name) for f in charge._meta.fields}
-            charge.est_supprime = True
+            charge.is_deleted = True
             charge.date_suppression = timezone.now()
             charge.save()
             
@@ -1977,7 +1977,7 @@ def supprimer_charge_bailleur(request, pk):
                 object_id=charge.pk,
                 action='DELETE',
                 old_data=old_data,
-                new_data={'est_supprime': True, 'date_suppression': str(timezone.now())},
+                new_data={'is_deleted': True, 'date_suppression': str(timezone.now())},
                 user=request.user,
                 ip_address=request.META.get('REMOTE_ADDR'),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')
