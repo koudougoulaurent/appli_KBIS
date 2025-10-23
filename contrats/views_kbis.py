@@ -11,6 +11,18 @@ from django.core.files.base import ContentFile
 import io
 from datetime import datetime, timedelta
 
+def get_paiement_debut_mois_actuel():
+    """Génère le mois de début de paiement avec l'année actuelle"""
+    mois_francais = {
+        1: 'JANVIER', 2: 'FÉVRIER', 3: 'MARS', 4: 'AVRIL',
+        5: 'MAI', 6: 'JUIN', 7: 'JUILLET', 8: 'AOÛT',
+        9: 'SEPTEMBRE', 10: 'OCTOBRE', 11: 'NOVEMBRE', 12: 'DÉCEMBRE'
+    }
+    maintenant = datetime.now()
+    mois_actuel = mois_francais.get(maintenant.month, 'NOVEMBRE')
+    annee_actuelle = maintenant.year
+    return f"fin du mois de {mois_actuel} {annee_actuelle}"
+
 from .models import Contrat
 from .models_kbis import ContratKbis, EtatLieuxKbis
 from .utils import generer_numero_contrat_kbis, calculer_caution_automatique
@@ -47,7 +59,7 @@ def creer_contrat_kbis(request, contrat_id):
                     propriete_numero=request.POST.get('propriete_numero', ''),
                     propriete_adresse=request.POST.get('propriete_adresse', ''),
                     caution_montant=calculer_caution_automatique(contrat.loyer_mensuel),
-                    paiement_debut_mois=request.POST.get('paiement_debut_mois', 'fin du mois de SEPTEMBRE 2025'),
+                    paiement_debut_mois=request.POST.get('paiement_debut_mois', get_paiement_debut_mois_actuel()),
                     paiement_echeance=request.POST.get('paiement_echeance', '03 du mois suivant'),
                     delai_annulation=int(request.POST.get('delai_annulation', 48)),
                     preavis_resiliation_locataire=request.POST.get('preavis_resiliation_locataire', 'un mois'),

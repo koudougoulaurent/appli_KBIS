@@ -173,7 +173,7 @@
                                 <div class="form-group">
                                     <label for="paiement_debut_mois">Début du Paiement *</label>
                                     <input type="text" class="form-control" id="paiement_debut_mois" name="paiement_debut_mois" 
-                                           value="fin du mois de SEPTEMBRE 2025" required>
+                                           value="fin du mois de {{ "now"|date:"F"|upper }} {{ "now"|date:"Y" }}" required>
                                 </div>
                             </div>
                             <div class="col-md-6">

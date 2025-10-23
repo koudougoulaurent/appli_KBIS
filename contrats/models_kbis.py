@@ -100,7 +100,7 @@ class ContratKbis(models.Model):
     )
     paiement_debut_mois = models.CharField(
         max_length=50,
-        default="fin du mois de SEPTEMBRE 2025",
+        default="fin du mois de NOVEMBRE 2025",
         verbose_name=_("Début du paiement")
     )
     paiement_echeance = models.CharField(
