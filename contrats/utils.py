@@ -192,43 +192,30 @@ def get_proprietes_disponibles():
     from django.db.models import Q
     from django.utils import timezone
     
-    # Propriétés qui ont au moins une unité locative disponible
-    proprietes_avec_unites_disponibles = Propriete.objects.filter(
-        unites_locatives__statut='disponible'
-    ).distinct()
+    # Utiliser une approche plus simple avec Q objects
+    # Propriétés disponibles = (avec unités disponibles OU marquées disponibles) ET pas de contrat actif
+    
+    # Construire la requête avec Q objects pour éviter les problèmes de combinaison
+    query = Q()
+    
+    # Propriétés avec unités locatives disponibles
+    query |= Q(unites_locatives__statut='disponible')
     
     # Propriétés marquées comme disponibles (sans unités locatives)
-    proprietes_marquees_disponibles = Propriete.objects.filter(
-        disponible=True,
-        unites_locatives__isnull=True
-    )
+    query |= Q(disponible=True, unites_locatives__isnull=True)
     
-    # Propriétés avec unités locatives mais aucune disponible
-    proprietes_avec_unites_non_disponibles = Propriete.objects.filter(
-        unites_locatives__isnull=False
-    ).exclude(
-        unites_locatives__statut='disponible'
-    ).distinct()
+    # Appliquer le filtre principal
+    proprietes_candidates = Propriete.objects.filter(query).distinct()
     
-    # Combiner toutes les propriétés disponibles
-    proprietes_disponibles = (
-        proprietes_avec_unites_disponibles | 
-        proprietes_marquees_disponibles
-    ).distinct()
-    
-    # Exclure les propriétés qui ont des contrats actifs
-    # (contrats qui ne sont pas terminés et qui couvrent la propriété entière)
+    # Exclure les propriétés avec contrats actifs
+    # (contrats qui ne sont pas terminés)
     contrats_actifs = Contrat.objects.filter(
-        date_fin__gte=timezone.now().date(),
-        propriete__in=proprietes_disponibles
-    )
-    
-    # Propriétés avec contrats actifs
-    proprietes_avec_contrats_actifs = contrats_actifs.values_list('propriete_id', flat=True)
+        date_fin__gte=timezone.now().date()
+    ).values_list('propriete_id', flat=True)
     
     # Filtrer les propriétés disponibles en excluant celles avec contrats actifs
-    proprietes_finales = proprietes_disponibles.exclude(
-        id__in=proprietes_avec_contrats_actifs
+    proprietes_finales = proprietes_candidates.exclude(
+        id__in=contrats_actifs
     )
     
     return proprietes_finales.order_by('titre')
