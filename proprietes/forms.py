@@ -87,7 +87,7 @@ class ProprieteForm(forms.ModelForm):
     class Meta:
         model = Propriete
         fields = [
-            'numero_propriete', 'titre', 'adresse', 'code_postal', 'ville', 'pays',
+            'numero_propriete', 'titre', 'adresse', 'code_postal', 'ville', 'quartier', 'pays',
             'type_bien', 'type_gestion', 'bailleur', 'surface', 'nombre_pieces', 'nombre_chambres', 'nombre_salles_bain',
             'ascenseur', 'parking', 'balcon', 'jardin', 'cuisine',
             'prix_achat', 'loyer_actuel', 'charges_locataire',
@@ -119,6 +119,10 @@ class ProprieteForm(forms.ModelForm):
             'ville': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Paris'
+            }),
+            'quartier': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ex: Quartier des Halles, Centre-ville, Secteur 15'
             }),
             'pays': forms.TextInput(attrs={
                 'class': 'form-control',
