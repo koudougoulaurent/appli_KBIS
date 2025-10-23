@@ -1392,15 +1392,15 @@ class RecuCautionPDFService:
             if mois_liste:
                 # Gérer les retours à la ligne pour éviter le débordement
                 mois_texte_complet = ', '.join(mois_liste)
-                # Diviser le texte en lignes de 50 caractères maximum
-                if len(mois_texte_complet) > 50:
+                # Diviser le texte en lignes de 40 caractères maximum pour éviter le débordement
+                if len(mois_texte_complet) > 40:
                     mots = mois_texte_complet.split(', ')
                     lignes = []
                     ligne_actuelle = []
                     longueur_actuelle = 0
                     
                     for mot in mots:
-                        if longueur_actuelle + len(mot) + 2 > 50 and ligne_actuelle:  # +2 pour ", "
+                        if longueur_actuelle + len(mot) + 2 > 40 and ligne_actuelle:  # +2 pour ", "
                             lignes.append(', '.join(ligne_actuelle))
                             ligne_actuelle = [mot]
                             longueur_actuelle = len(mot)
@@ -1411,6 +1411,7 @@ class RecuCautionPDFService:
                     if ligne_actuelle:
                         lignes.append(', '.join(ligne_actuelle))
                     
+                    # Utiliser des retours à la ligne pour le PDF
                     mois_info = f"{mois_couverts_info['nombre']} mois ({'<br/>'.join(lignes)})"
                 else:
                     mois_info = f"{mois_couverts_info['nombre']} mois ({mois_texte_complet})"
@@ -1428,10 +1429,11 @@ class RecuCautionPDFService:
                 periode_info = f"{mois_debut_fr} {mois_couverts_info['date_debut'].year} à {mois_fin_fr} {mois_couverts_info['date_fin'].year}"
             
             # Créer un tableau avec cellules fusionnées pour les informations sur l'avance
+            # Utiliser Paragraph pour gérer les retours à la ligne
             avance_data = [
                 ['INFORMATIONS SUR L\'AVANCE DE LOYER'],
-                ['Mois couverts:', mois_info],
-                ['Période de couverture:', periode_info]
+                ['Mois couverts:', Paragraph(mois_info, self.styles['CustomBody'])],
+                ['Période de couverture:', Paragraph(periode_info, self.styles['CustomBody'])]
             ]
             
             avance_table = Table(avance_data, colWidths=[4*cm, 8*cm])
