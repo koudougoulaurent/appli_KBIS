@@ -653,6 +653,7 @@ def check_group_permissions(user, allowed_groups, operation_type='modify'):
     
     NOUVELLE LOGIQUE :
     - Tous les groupes peuvent : view, add (créer/ajouter)
+    - ADMINISTRATION peut : view, add, validate, resilier (toutes sauf modify/delete)
     - Seul PRIVILEGE peut : modify, delete (modifier/supprimer)
     
     Args:
@@ -675,23 +676,33 @@ def check_group_permissions(user, allowed_groups, operation_type='modify'):
     # Actions que tous les groupes peuvent faire
     actions_tous_groupes = ['view', 'add']
     
+    # Actions que ADMINISTRATION et PRIVILEGE peuvent faire
+    actions_administration = ['view', 'add', 'validate', 'resilier']
+    
     # Actions que seul PRIVILEGE peut faire
     actions_privilege_only = ['modify', 'delete']
     
-    if operation_type in actions_tous_groupes:
+    if operation_type in actions_privilege_only:
+        # Seul PRIVILEGE peut modifier et supprimer
+        if groupe_nom == 'PRIVILEGE':
+            return {'allowed': True, 'message': f'Accès autorisé pour {operation_type} (groupe PRIVILEGE).'}
+        else:
+            return {'allowed': False, 'message': f'Accès refusé. Seul le groupe PRIVILEGE peut {operation_type}.'}
+    
+    elif operation_type in actions_administration:
+        # ADMINISTRATION et PRIVILEGE peuvent faire ces actions
+        if groupe_nom in ['PRIVILEGE', 'ADMINISTRATION']:
+            return {'allowed': True, 'message': f'Accès autorisé pour {operation_type} (groupe {groupe_nom}).'}
+        else:
+            return {'allowed': False, 'message': f'Accès refusé. Seuls PRIVILEGE et ADMINISTRATION peuvent {operation_type}.'}
+    
+    elif operation_type in actions_tous_groupes:
         # Tous les groupes peuvent voir et ajouter
         groupes_autorises = ['PRIVILEGE', 'ADMINISTRATION', 'CAISSE', 'CONTROLES', 'COMPTABILITE', 'GESTIONNAIRE']
         if groupe_nom in groupes_autorises:
             return {'allowed': True, 'message': f'Accès autorisé pour {operation_type} (groupe {groupe_nom}).'}
         else:
             return {'allowed': False, 'message': f'Accès refusé. Groupe non autorisé: {groupe_nom}.'}
-    
-    elif operation_type in actions_privilege_only:
-        # Seul PRIVILEGE peut modifier et supprimer
-        if groupe_nom == 'PRIVILEGE':
-            return {'allowed': True, 'message': f'Accès autorisé pour {operation_type} (groupe PRIVILEGE).'}
-        else:
-            return {'allowed': False, 'message': f'Accès refusé. Seul le groupe PRIVILEGE peut {operation_type}.'}
     
     else:
         # Pour les autres opérations, utiliser la logique originale
