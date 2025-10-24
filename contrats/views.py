@@ -1575,9 +1575,11 @@ def imprimer_recu_caution(request, contrat_id):
 def imprimer_document_contrat(request, contrat_id):
     """Imprimer le document de contrat avec le nouveau contenu unifié."""
     
-    # Vérification des permissions simplifiée pour les superutilisateurs
-    if not (request.user.is_superuser or request.user.is_staff):
-        messages.error(request, 'Accès refusé. Permissions insuffisantes.')
+    # Vérification des permissions avec la nouvelle logique
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, [], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
         return redirect('contrats:detail_contrat_caution', contrat_id=contrat_id)
     
     try:

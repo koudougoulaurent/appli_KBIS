@@ -21,9 +21,11 @@ def generer_contrat_pdf_updated(request, pk):
     """
     Vue pour générer le PDF d'un contrat avec le template mis à jour
     """
-    # Vérification des permissions simplifiée pour les superutilisateurs
-    if not (request.user.is_superuser or request.user.is_staff):
-        messages.error(request, 'Accès refusé. Permissions insuffisantes.')
+    # Vérification des permissions avec la nouvelle logique
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, [], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
         return redirect('contrats:liste')
     
     contrat = get_object_or_404(Contrat, pk=pk)
@@ -54,9 +56,11 @@ def generer_etat_lieux_pdf(request, pk):
     """
     Vue pour générer le PDF d'un état des lieux
     """
-    # Vérification des permissions simplifiée pour les superutilisateurs
-    if not (request.user.is_superuser or request.user.is_staff):
-        messages.error(request, 'Accès refusé. Permissions insuffisantes.')
+    # Vérification des permissions avec la nouvelle logique
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, [], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
         return redirect('contrats:liste')
     
     contrat = get_object_or_404(Contrat, pk=pk)
@@ -84,9 +88,11 @@ def generer_garantie_pdf(request, pk):
     """
     Vue pour générer le PDF d'une garantie
     """
-    # Vérification des permissions simplifiée pour les superutilisateurs
-    if not (request.user.is_superuser or request.user.is_staff):
-        messages.error(request, 'Accès refusé. Permissions insuffisantes.')
+    # Vérification des permissions avec la nouvelle logique
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, [], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
         return redirect('contrats:liste')
     
     contrat = get_object_or_404(Contrat, pk=pk)
@@ -117,9 +123,11 @@ def generer_documents_complets(request, pk):
     """
     Vue pour générer tous les documents d'un contrat (contrat + état des lieux + garantie)
     """
-    # Vérification des permissions simplifiée pour les superutilisateurs
-    if not (request.user.is_superuser or request.user.is_staff):
-        messages.error(request, 'Accès refusé. Permissions insuffisantes.')
+    # Vérification des permissions avec la nouvelle logique
+    from core.utils import check_group_permissions
+    permissions = check_group_permissions(request.user, [], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
         return redirect('contrats:liste')
     
     contrat = get_object_or_404(Contrat, pk=pk)
