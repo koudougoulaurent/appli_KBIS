@@ -87,6 +87,7 @@ class DocumentUnifieA5Service:
                 'propriete': paiement.contrat.propriete,
                 'bailleur': paiement.contrat.propriete.bailleur,
                 'contrat': paiement.contrat,
+                'paiement': paiement,  # IMPORTANT: Passer le paiement pour accéder à mois_paye
                 
                 # Charges déductibles (si applicable)
                 'charges_deduites': getattr(paiement, 'charges_deduites', []),
