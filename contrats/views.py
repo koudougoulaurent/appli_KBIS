@@ -1194,7 +1194,7 @@ def liste_contrats_caution(request):
                 
                 paiements_avance = Paiement.objects.filter(
                     contrat=contrat,
-                    type_paiement__in=['avance_loyer', 'avance'],
+                    type_paiement='avance',
                     statut='valide'
                 )
                 
@@ -1257,7 +1257,7 @@ def liste_contrats_caution(request):
         ),
         montant_avance_paye=Sum(
             'paiements__montant',
-            filter=Q(paiements__type_paiement__in=['avance_loyer', 'avance'], paiements__statut='valide'),
+            filter=Q(paiements__type_paiement='avance', paiements__statut='valide'),
             default=0
         )
     ).order_by('-date_creation')
@@ -1275,7 +1275,7 @@ def liste_contrats_caution(request):
         
         paiements_avance = Paiement.objects.filter(
             contrat=contrat,
-            type_paiement__in=['avance_loyer', 'avance'],
+            type_paiement='avance',
             statut='valide'
         )
         montant_avance_paye = sum(p.montant for p in paiements_avance)
@@ -2506,7 +2506,7 @@ def forcer_correction_statuts(request):
                     
                     paiements_avance = Paiement.objects.filter(
                         contrat=contrat,
-                        type_paiement__in=['avance_loyer', 'avance'],
+                        type_paiement='avance',
                         statut='valide'
                     )
                     
