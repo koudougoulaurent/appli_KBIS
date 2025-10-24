@@ -1202,4 +1202,4 @@ def check_action_permissions(user, action_type='view'):
             return {'allowed': False, 'message': f'Accès refusé. Seul le groupe PRIVILEGE peut {action_type}.'}
     
     else:
-        return {'allowed': False, 'message': f'Type d'action non reconnu: {action_type}.'}
+        return {'allowed': False, 'message': f'Type d\'action non reconnu: {action_type}.'}
