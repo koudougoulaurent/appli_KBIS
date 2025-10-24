@@ -1379,8 +1379,9 @@ class RecuCautionPDFService:
         
         elements.append(table)
         
-        # Ajouter un tableau séparé pour les informations sur l'avance avec cellules fusionnées
-        if mois_couverts_info and self.contrat.avance_loyer and self.contrat.avance_loyer > 0:
+        # Ajouter un tableau séparé pour les informations sur les mois réglés
+        # Afficher les mois réglés pour les avances ET pour les paiements de loyer normaux
+        if mois_couverts_info:
             elements.append(Spacer(1, 10))
             
             # Préparer les informations sur les mois couverts avec gestion des retours à la ligne
@@ -1455,10 +1456,8 @@ class RecuCautionPDFService:
         return elements
 
     def _calculer_mois_couverts_avance(self):
-        """Calcule les mois couverts par l'avance de loyer"""
-        if not self.contrat.avance_loyer or self.contrat.avance_loyer <= 0:
-            return None
-            
+        """Calcule les mois couverts par l'avance de loyer ou les mois réglés"""
+        # Calculer les mois même pour les paiements de loyer normaux
         if not self.contrat.loyer_mensuel or self.contrat.loyer_mensuel <= 0:
             return None
         
@@ -1466,8 +1465,11 @@ class RecuCautionPDFService:
             # Utiliser le service corrigé pour calculer les mois couverts
             from paiements.services_avance_corrige import ServiceAvanceCorrige
             
+            # Calculer les mois même si pas d'avance (pour les paiements de loyer normaux)
+            montant_a_calculer = self.contrat.avance_loyer if self.contrat.avance_loyer else self.contrat.loyer_mensuel
+            
             mois_couverts_data = ServiceAvanceCorrige.calculer_mois_couverts_correct(
-                self.contrat, self.contrat.avance_loyer, None
+                self.contrat, montant_a_calculer, None
             )
             
             if mois_couverts_data:
