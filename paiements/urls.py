@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges, views_retrait_ameliore, views_avance, views_document_unifie, views_document_unifie_complet, views_avance_corrige, views_retraits_temporels
+from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges, views_retrait_ameliore, views_avance, views_document_unifie, views_document_unifie_complet, views_avance_corrige, views_retraits_temporels, views_validation_paiements
 # from . import views_locataire_paiements
 
 app_name = 'paiements'
@@ -284,4 +284,7 @@ urlpatterns = [
     path('avances/recu-corrige/<int:paiement_id>/', views_avance_corrige.generer_recu_avance_corrige, name='generer_recu_avance_corrige'),
     path('avances/corriger-ajax/<int:avance_id>/', views_avance_corrige.corriger_avance_ajax, name='corriger_avance_ajax'),
     path('avances/comparer/', views_avance_corrige.comparer_avances, name='comparer_avances'),
+    
+    # 🔍 VALIDATION INTELLIGENTE DES PAIEMENTS
+    path('validation/', include('paiements.urls_validation')),
 ]

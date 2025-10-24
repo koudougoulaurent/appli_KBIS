@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        Historique des Validations - {{ contrat }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if paiements_analyse %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Montant</th>
+                                        <th>Type</th>
+                                        <th>Statut</th>
+                                        <th>Validation</th>
+                                        <th>Avertissements</th>
+                                        <th>Suggestions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in paiements_analyse %}
+                                    <tr>
+                                        <td>{{ item.paiement.date_paiement|date:"d/m/Y" }}</td>
+                                        <td>{{ item.paiement.montant }} F CFA</td>
+                                        <td>
+                                            <span class="badge bg-secondary">
+                                                {{ item.paiement.type_paiement|title }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{% if item.paiement.statut == 'valide' %}success{% else %}warning{% endif %}">
+                                                {{ item.paiement.statut|title }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if item.validation.valide %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check"></i> Valide
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-danger">
+                                                    <i class="fas fa-times"></i> Invalide
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if item.validation.avertissements %}
+                                                <div class="alert alert-warning alert-sm mb-0">
+                                                    {% for avertissement in item.validation.avertissements %}
+                                                        <small>{{ avertissement }}</small><br>
+                                                    {% endfor %}
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted">Aucun</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if item.validation.suggestions %}
+                                                <div class="alert alert-info alert-sm mb-0">
+                                                    {% for suggestion in item.validation.suggestions %}
+                                                        <small>{{ suggestion }}</small><br>
+                                                    {% endfor %}
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted">Aucune</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Aucun paiement trouvé</h5>
+                            <p class="text-muted">Ce contrat n'a pas encore de paiements enregistrés.</p>
+                        </div>
+                    {% endif %}
+
+                    <!-- Actions -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'paiements:validation:statut_paiements_contrat' contrat.id %}" class="btn btn-outline-primary">
+                                    <i class="fas fa-chart-line me-1"></i>
+                                    Statut des Paiements
+                                </a>
+                                <a href="{% url 'paiements:ajouter' %}" class="btn btn-primary">
+                                    <i class="fas fa-plus me-1"></i>
+                                    Nouveau Paiement
+                                </a>
+                                <a href="{% url 'contrats:detail' contrat.id %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-arrow-left me-1"></i>
+                                    Retour au Contrat
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
