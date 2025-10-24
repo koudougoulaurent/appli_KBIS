@@ -446,12 +446,8 @@ class ContratPDFService:
         elements.append(Paragraph(f"Ouagadougou, {date_contrat}", self.styles['CustomBody']))
         elements.append(Spacer(1, 10))
         
-        # Titre principal
-        elements.append(Paragraph("● CONTRAT DE LOCATION", self.styles['CustomHeading']))
-        elements.append(Spacer(1, 10))
-        
-        # Entre les parties
-        elements.append(Paragraph("Entre d'une part,", self.styles['CustomBody']))
+        # Entre les parties (en bleu à la place du titre redondant)
+        elements.append(Paragraph("Entre d'une part,", self.styles['CustomHeading']))
         elements.append(Spacer(1, 5))
         
         # Informations de l'agence
