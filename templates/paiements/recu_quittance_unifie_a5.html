@@ -380,7 +380,7 @@
                 {% if paiement.mois_paye %}
                 <div class="info-item">
                     <span class="info-label">Mois réglé:</span>
-                    <span class="info-value">{{ paiement.mois_paye|date:"F Y" }}</span>
+                    <span class="info-value">{{ paiement.mois_paye }}</span>
                 </div>
                 {% endif %}
                 {% if document_type == 'avance' %}
@@ -437,7 +437,7 @@
                     {% elif document_type == 'avance' %}
                         Avance de loyer - Couvre {% if mois_couverts %}{{ mois_couverts.nombre }} mois de loyer ({{ mois_couverts.mois_texte }}){% else %}plusieurs mois de loyer{% endif %}
                     {% elif document_type == 'quittance' %}
-                        Paiement de loyer - Période {{ paiement.mois_paye|date:"F Y"|default:"courante" }}
+                        Paiement de loyer - Période {{ paiement.mois_paye|default:"courante" }}
                     {% else %}
                         Paiement reçu en bonne et due forme
                     {% endif %}
