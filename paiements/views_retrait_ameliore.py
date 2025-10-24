@@ -17,7 +17,7 @@ def creer_retrait_automatique_ameliore(request):
     """
     Création automatique des retraits avec sélection de contrat spécifique
     """
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE', 'CONTROLES', 'GESTIONNAIRE'], 'add')
+    permissions = check_group_permissions(request.user, [], 'add')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:retraits_liste')

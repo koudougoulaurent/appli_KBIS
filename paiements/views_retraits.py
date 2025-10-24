@@ -126,7 +126,7 @@ def creer_retrait_automatique(request):
     """
     Création automatique des retraits
     """
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE', 'CONTROLES', 'GESTIONNAIRE'], 'add')
+    permissions = check_group_permissions(request.user, [], 'add')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste_retraits')

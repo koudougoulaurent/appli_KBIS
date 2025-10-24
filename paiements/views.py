@@ -354,7 +354,7 @@ def ajouter_paiement(request):
     """Ajouter un nouveau paiement avec contexte intelligent."""
     # Vérification des permissions
     from core.utils import check_group_permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'add')
+    permissions = check_group_permissions(request.user, [], 'add')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste')
@@ -906,7 +906,7 @@ charge_deductible_list = ChargeDeductibleListView.as_view()
 @login_required
 def ajouter_charge_deductible(request):
     """Ajouter une nouvelle charge déductible."""
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION'], 'add')
+    permissions = check_group_permissions(request.user, [], 'add')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:charge_deductible_list')
@@ -1559,7 +1559,7 @@ def liste_recaps_mensuels(request):
 def creer_recap_mensuel(request):
     """Créer un nouveau récapitulatif mensuel."""
     # Vérification des permissions avec fallback pour PRIVILEGE
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'add')
+    permissions = check_group_permissions(request.user, [], 'add')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:liste_recaps_mensuels_auto')
@@ -2386,7 +2386,7 @@ def marquer_quittance_archivee(request, pk):
 def generer_quittance_manuelle(request, paiement_pk):
     """Générer manuellement une quittance pour un paiement existant avec le système A5 unifié."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'add')
+    permissions = check_group_permissions(request.user, [], 'add')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:detail', pk=paiement_pk)
@@ -2446,7 +2446,7 @@ def tableau_bord_detail(request, pk):
 def tableau_bord_create(request):
     """Créer un nouveau tableau de bord financier."""
     # Vérification des permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE'], 'add')
+    permissions = check_group_permissions(request.user, [], 'add')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('paiements:tableau_bord_list')

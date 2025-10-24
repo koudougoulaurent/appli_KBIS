@@ -45,7 +45,7 @@ def generer_retraits_automatiques(request):
     Génère automatiquement les retraits pour tous les bailleurs éligibles
     avec vérification des conditions temporelles
     """
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE', 'CONTROLES', 'GESTIONNAIRE'], 'add')
+    permissions = check_group_permissions(request.user, [], 'add')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('core:dashboard')
@@ -89,7 +89,7 @@ def creer_retrait_manuel(request):
     Crée un retrait manuel pour un bailleur spécifique
     N'APPLIQUE PAS les conditions temporelles - permet la création à tout moment
     """
-    permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE', 'CONTROLES', 'GESTIONNAIRE'], 'add')
+    permissions = check_group_permissions(request.user, [], 'add')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('core:dashboard')
