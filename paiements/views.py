@@ -379,6 +379,22 @@ def ajouter_paiement(request):
                     from datetime import datetime
                     annee_actuelle = datetime.now().year
                     paiement.mois_paye = f"{mois_paye_nom} {annee_actuelle}"
+                else:
+                    # Si aucun mois n'est spécifié, utiliser le mois de la date de paiement
+                    from datetime import datetime
+                    import locale
+                    try:
+                        # Essayer de définir la locale française
+                        locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
+                    except:
+                        try:
+                            locale.setlocale(locale.LC_TIME, 'French_France.1252')
+                        except:
+                            pass  # Utiliser la locale par défaut
+                    
+                    mois_nom = paiement.date_paiement.strftime('%B').capitalize()
+                    annee = paiement.date_paiement.year
+                    paiement.mois_paye = f"{mois_nom} {annee}"
                 
                 paiement.save()
                 
