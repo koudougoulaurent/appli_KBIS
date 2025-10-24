@@ -834,12 +834,11 @@ def ajouter_etat_lieux(request):
     """
     Vue pour ajouter un état des lieux
     """
-    # Vérification des permissions : PRIVILEGE et ADMINISTRATION peuvent ajouter
-    from core.utils import check_group_permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
-        return redirect('contrats:etats_lieux_liste')
+    # Tous les groupes peuvent ajouter des états des lieux
+    # permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
+    # if not permissions['allowed']:
+    #     messages.error(request, permissions['message'])
+    #     return redirect('contrats:etats_lieux_liste')
     
     if request.method == 'POST':
         try:
@@ -1666,12 +1665,11 @@ def liste_resiliations(request):
 def creer_resiliation(request, contrat_id):
     """Créer une résiliation pour un contrat."""
     
-    # Vérification des permissions : Seul PRIVILEGE peut créer des résiliations
-    from core.utils import check_group_permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
-        return redirect('contrats:liste_resiliations')
+    # Tous les groupes peuvent créer des résiliations
+    # permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
+    # if not permissions['allowed']:
+    #     messages.error(request, permissions['message'])
+    #     return redirect('contrats:liste_resiliations')
     
     try:
         contrat = Contrat.objects.get(id=contrat_id)
@@ -1786,12 +1784,11 @@ def supprimer_resiliation(request, resiliation_id):
 def selectionner_contrat_resiliation(request):
     """Vue pour sélectionner un contrat à résilier."""
     
-    # Vérification des permissions : Seul PRIVILEGE peut créer des résiliations
-    from core.utils import check_group_permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
-        return redirect('contrats:liste_resiliations')
+    # Tous les groupes peuvent créer des résiliations
+    # permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
+    # if not permissions['allowed']:
+    #     messages.error(request, permissions['message'])
+    #     return redirect('contrats:liste_resiliations')
     
     # Récupérer les contrats actifs non résiliés
     contrats = Contrat.objects.filter(
@@ -1839,12 +1836,11 @@ def selectionner_contrat_resiliation(request):
 def resiliation_professionnelle(request, pk):
     """Vue pour afficher le formulaire de résiliation professionnel."""
     
-    # Vérification des permissions : Seul PRIVILEGE peut créer des résiliations
-    from core.utils import check_group_permissions
-    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
-        return redirect('contrats:liste_resiliations')
+    # Tous les groupes peuvent créer des résiliations
+    # permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'add')
+    # if not permissions['allowed']:
+    #     messages.error(request, permissions['message'])
+    #     return redirect('contrats:liste_resiliations')
     
     contrat = get_object_or_404(Contrat, pk=pk)
     

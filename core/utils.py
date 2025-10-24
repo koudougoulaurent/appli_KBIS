@@ -651,6 +651,10 @@ def check_group_permissions(user, allowed_groups, operation_type='modify'):
     """
     Vérifie les permissions d'un utilisateur selon son groupe et le type d'opération
     
+    NOUVELLE LOGIQUE :
+    - Tous les groupes peuvent : view, add (créer/ajouter)
+    - Seul PRIVILEGE peut : modify, delete (modifier/supprimer)
+    
     Args:
         user: L'utilisateur connecté
         allowed_groups: Liste des groupes autorisés (ex: ['PRIVILEGE', 'ADMINISTRATION'])
@@ -668,20 +672,36 @@ def check_group_permissions(user, allowed_groups, operation_type='modify'):
     
     groupe_nom = groupe.nom.upper()
     
-    # PRIVILEGE a TOUS les droits sur TOUTES les fonctionnalités sensibles
-    if groupe_nom == 'PRIVILEGE':
-        return {'allowed': True, 'message': 'Accès autorisé (groupe PRIVILEGE).'}
+    # Actions que tous les groupes peuvent faire
+    actions_tous_groupes = ['view', 'add']
     
-    # Vérification alternative avec la méthode is_privilege_user pour plus de robustesse
-    if hasattr(user, 'is_privilege_user') and user.is_privilege_user():
-        return {'allowed': True, 'message': 'Accès autorisé (groupe PRIVILEGE via is_privilege_user).'}
+    # Actions que seul PRIVILEGE peut faire
+    actions_privilege_only = ['modify', 'delete']
     
-    # Vérifier si le groupe de l'utilisateur est dans la liste des groupes autorisés
-    if groupe_nom in [g.upper() for g in allowed_groups]:
-        return {'allowed': True, 'message': f'Accès autorisé (groupe {groupe_nom}).'}
+    if operation_type in actions_tous_groupes:
+        # Tous les groupes peuvent voir et ajouter
+        groupes_autorises = ['PRIVILEGE', 'ADMINISTRATION', 'CAISSE', 'CONTROLES', 'COMPTABILITE', 'GESTIONNAIRE']
+        if groupe_nom in groupes_autorises:
+            return {'allowed': True, 'message': f'Accès autorisé pour {operation_type} (groupe {groupe_nom}).'}
+        else:
+            return {'allowed': False, 'message': f'Accès refusé. Groupe non autorisé: {groupe_nom}.'}
     
-    # Si aucun groupe n'est autorisé, refuser l'accès
-    return {'allowed': False, 'message': f'Accès refusé. Groupes autorisés: {", ".join(allowed_groups)}. Votre groupe: {groupe_nom}.'}
+    elif operation_type in actions_privilege_only:
+        # Seul PRIVILEGE peut modifier et supprimer
+        if groupe_nom == 'PRIVILEGE':
+            return {'allowed': True, 'message': f'Accès autorisé pour {operation_type} (groupe PRIVILEGE).'}
+        else:
+            return {'allowed': False, 'message': f'Accès refusé. Seul le groupe PRIVILEGE peut {operation_type}.'}
+    
+    else:
+        # Pour les autres opérations, utiliser la logique originale
+        if groupe_nom == 'PRIVILEGE':
+            return {'allowed': True, 'message': 'Accès autorisé (groupe PRIVILEGE).'}
+        
+        if groupe_nom in [g.upper() for g in allowed_groups]:
+            return {'allowed': True, 'message': f'Accès autorisé (groupe {groupe_nom}).'}
+        
+        return {'allowed': False, 'message': f'Accès refusé. Groupes autorisés: {", ".join(allowed_groups)}. Votre groupe: {groupe_nom}.'}
 
 
 def check_group_permissions_with_fallback(user, allowed_groups, operation_type='modify'):
@@ -1144,3 +1164,42 @@ class KBISDocumentTemplate:
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
         th { background-color: #f8f9fa; font-weight: bold; color: #2c5aa0; }
         """
+def check_action_permissions(user, action_type='view'):
+    """
+    Vérifie si l'utilisateur peut effectuer une action selon son type.
+    
+    Args:
+        user: L'utilisateur connecté
+        action_type: Type d'action ('view', 'add', 'modify', 'delete')
+    
+    Returns:
+        dict: {'allowed': bool, 'message': str}
+    """
+    if not user.is_authenticated:
+        return {'allowed': False, 'message': 'Utilisateur non authentifié.'}
+    
+    groupe_nom = getattr(user.groupe_travail, 'nom', '').upper() if hasattr(user, 'groupe_travail') and user.groupe_travail else ''
+    
+    # Actions que tous les groupes peuvent faire
+    actions_tous_groupes = ['view', 'add']
+    
+    # Actions que seul PRIVILEGE peut faire
+    actions_privilege_only = ['modify', 'delete']
+    
+    if action_type in actions_tous_groupes:
+        # Tous les groupes peuvent voir et ajouter
+        groupes_autorises = ['PRIVILEGE', 'ADMINISTRATION', 'CAISSE', 'CONTROLES', 'COMPTABILITE', 'GESTIONNAIRE']
+        if groupe_nom in groupes_autorises:
+            return {'allowed': True, 'message': f'Accès autorisé pour {action_type} (groupe {groupe_nom}).'}
+        else:
+            return {'allowed': False, 'message': f'Accès refusé. Groupe non autorisé: {groupe_nom}.'}
+    
+    elif action_type in actions_privilege_only:
+        # Seul PRIVILEGE peut modifier et supprimer
+        if groupe_nom == 'PRIVILEGE':
+            return {'allowed': True, 'message': f'Accès autorisé pour {action_type} (groupe PRIVILEGE).'}
+        else:
+            return {'allowed': False, 'message': f'Accès refusé. Seul le groupe PRIVILEGE peut {action_type}.'}
+    
+    else:
+        return {'allowed': False, 'message': f'Type d'action non reconnu: {action_type}.'}
