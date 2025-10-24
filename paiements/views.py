@@ -379,8 +379,9 @@ def ajouter_paiement(request):
                     from datetime import datetime
                     annee_actuelle = datetime.now().year
                     paiement.mois_paye = f"{mois_paye_nom} {annee_actuelle}"
-                else:
-                    # Si aucun mois n'est spécifié, utiliser le mois de la date de paiement
+                elif paiement.type_paiement == 'loyer':
+                    # IMPORTANT: Remplir automatiquement le mois payé UNIQUEMENT pour les paiements de LOYER
+                    # Les avances et cautions ont leur propre logique d'affichage
                     from datetime import datetime
                     import locale
                     try:

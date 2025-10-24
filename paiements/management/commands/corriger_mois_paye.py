@@ -5,6 +5,7 @@ Remplit automatiquement le champ mois_paye pour les paiements existants
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.db.models import Q
 from paiements.models import Paiement
 import locale
 from datetime import datetime
@@ -27,11 +28,13 @@ class Command(BaseCommand):
             self.style.SUCCESS('Correction des mois payés manquants...')
         )
         
-        # Trouver tous les paiements sans mois_paye
+        # Trouver tous les paiements de LOYER sans mois_paye
+        # IMPORTANT: Ne corriger que les paiements de loyer
+        # Les avances et cautions ont leur propre logique d'affichage
         paiements_sans_mois = Paiement.objects.filter(
-            mois_paye__isnull=True
-        ) | Paiement.objects.filter(
-            mois_paye=''
+            type_paiement='loyer'
+        ).filter(
+            Q(mois_paye__isnull=True) | Q(mois_paye='')
         )
         
         total_a_corriger = paiements_sans_mois.count()
@@ -89,22 +92,22 @@ class Command(BaseCommand):
                 self.style.SUCCESS(f'{corrections_appliquees} paiements corrigés')
             )
         
-        # Vérifier les statistiques
-        self.stdout.write('\nStatistiques des mois payés :')
-        paiements_avec_mois = Paiement.objects.exclude(
-            mois_paye__isnull=True
+        # Vérifier les statistiques pour les paiements de loyer uniquement
+        self.stdout.write('\nStatistiques des mois payés (LOYERS uniquement) :')
+        paiements_loyer_avec_mois = Paiement.objects.filter(
+            type_paiement='loyer'
         ).exclude(
-            mois_paye=''
+            Q(mois_paye__isnull=True) | Q(mois_paye='')
         ).count()
         
-        paiements_sans_mois_restants = Paiement.objects.filter(
-            mois_paye__isnull=True
-        ) | Paiement.objects.filter(
-            mois_paye=''
+        paiements_loyer_sans_mois_restants = Paiement.objects.filter(
+            type_paiement='loyer'
+        ).filter(
+            Q(mois_paye__isnull=True) | Q(mois_paye='')
         )
         
-        self.stdout.write(f'  - Paiements avec mois payé : {paiements_avec_mois}')
-        self.stdout.write(f'  - Paiements sans mois payé : {paiements_sans_mois_restants.count()}')
+        self.stdout.write(f'  - Paiements LOYER avec mois payé : {paiements_loyer_avec_mois}')
+        self.stdout.write(f'  - Paiements LOYER sans mois payé : {paiements_loyer_sans_mois_restants.count()}')
         
         self.stdout.write(
             self.style.SUCCESS('\nCorrection terminée !')
