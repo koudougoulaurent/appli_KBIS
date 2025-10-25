@@ -1754,6 +1754,7 @@ class ChargeBailleur(models.Model):
     
     class Meta:
         app_label = 'paiements'
+        db_table = 'paiements_chargebailleur'
         verbose_name = _("Charge Bailleur")
         verbose_name_plural = _("Charges Bailleur")
         ordering = ['-date_charge', '-created_at']
