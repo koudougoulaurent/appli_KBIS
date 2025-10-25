@@ -1608,8 +1608,8 @@ class RetraitBailleur(models.Model):
         total_charges = Decimal('0')
         
         # Récupérer les charges de bailleur pour ce mois
-        charges = ChargesBailleur.objects.filter(
-            propriete__bailleur=self.bailleur,
+        charges = ChargeBailleur.objects.filter(
+            bailleur=self.bailleur,
             date_charge__year=mois_retrait.year,
             date_charge__month=mois_retrait.month,
             statut='en_attente'
