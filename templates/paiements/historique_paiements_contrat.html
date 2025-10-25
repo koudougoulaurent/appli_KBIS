@@ -1,0 +1,513 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .historique-container {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .stats-card {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 15px;
+    }
+    
+    .stats-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    
+    .stats-label {
+        color: #7f8c8d;
+        font-size: 0.9rem;
+    }
+    
+    .paiement-item {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-left: 4px solid #3498db;
+    }
+    
+    .paiement-item.loyer {
+        border-left-color: #27ae60;
+    }
+    
+    .paiement-item.avance {
+        border-left-color: #f39c12;
+    }
+    
+    .paiement-item.caution {
+        border-left-color: #e74c3c;
+    }
+    
+    .paiement-item.charges {
+        border-left-color: #9b59b6;
+    }
+    
+    .paiement-montant {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #27ae60;
+    }
+    
+    .paiement-date {
+        color: #7f8c8d;
+        font-size: 0.9rem;
+    }
+    
+    .paiement-statut {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    
+    .statut-valide {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .statut-en-attente {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .statut-refuse {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .filters-section {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .print-button {
+        background: #3498db;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .print-button:hover {
+        background: #2980b9;
+        color: white;
+        text-decoration: none;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Section Debug (à supprimer en production) -->
+    <div class="alert alert-warning mb-4">
+        <h6><i class="fas fa-bug me-2"></i>DEBUG - Informations de Debug</h6>
+        <div class="row">
+            <div class="col-md-6">
+                <strong>Contrat:</strong> {{ contrat.numero_contrat }}<br>
+                <strong>Locataire:</strong> {{ contrat.locataire.get_nom_complet }}<br>
+                <strong>Propriété:</strong> {{ contrat.propriete.titre }}<br>
+                <strong>Loyer:</strong> {{ contrat.loyer_mensuel|floatformat:0 }} F CFA<br>
+                <strong>Date début:</strong> {{ contrat.date_debut|date:"d/m/Y" }}
+            </div>
+            <div class="col-md-6">
+                <strong>Nombre de paiements:</strong> {{ paiements.count }}<br>
+                <strong>Stats total:</strong> {{ stats.total_paiements }}<br>
+                <strong>Stats montant:</strong> {{ stats.total_montant }}<br>
+                <strong>Paiements trouvés:</strong>
+                <ul class="mb-0">
+                    {% for paiement in paiements %}
+                    <li>{{ paiement.type_paiement }}: {{ paiement.montant|floatformat:0 }} F CFA ({{ paiement.date_paiement|date:"d/m/Y" }}) - {{ paiement.statut }}</li>
+                    {% empty %}
+                    <li>AUCUN PAIEMENT TROUVÉ</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <!-- En-tête -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        Historique des Paiements
+                    </h2>
+                    <p class="text-muted mb-0">{{ contrat.numero_contrat }} - {{ locataire.get_nom_complet }}</p>
+                </div>
+                <div>
+                    <a href="{% url 'paiements:historique:historique_contrat_imprimer' contrat.id %}" 
+                       class="print-button" target="_blank">
+                        <i class="fas fa-print me-1"></i>
+                        Imprimer
+                    </a>
+                    <a href="{% url 'contrats:detail' contrat.id %}" class="btn btn-outline-secondary ms-2">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        Retour au Contrat
+                    </a>
+                </div>
+            </div>
+
+            <!-- Statistiques principales -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="stats-card text-center">
+                        <div class="stats-number">{{ stats.total_paiements }}</div>
+                        <div class="stats-label">Total Paiements</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card text-center">
+                        <div class="stats-number">{{ stats.total_montant|floatformat:0 }} F</div>
+                        <div class="stats-label">Montant Total</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card text-center">
+                        <div class="stats-number">{{ stats.paiements_valides }}</div>
+                        <div class="stats-label">Paiements Validés</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card text-center">
+                        <div class="stats-number">{{ stats.paiements_en_attente }}</div>
+                        <div class="stats-label">En Attente</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistiques par type -->
+            {% if stats_par_type %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="chart-container">
+                        <h5 class="mb-3">
+                            <i class="fas fa-chart-pie me-2"></i>
+                            Répartition par Type de Paiement
+                        </h5>
+                        <div class="row">
+                            {% for type_paiement, data in stats_par_type.items %}
+                            <div class="col-md-3 mb-3">
+                                <div class="stats-card">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="fw-bold">{{ data.display }}</div>
+                                            <div class="text-muted">{{ data.count }} paiement{{ data.count|pluralize }}</div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="paiement-montant">{{ data.montant_total|floatformat:0 }} F</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Filtres -->
+            <div class="filters-section">
+                <h5 class="mb-3">
+                    <i class="fas fa-filter me-2"></i>
+                    Filtres
+                </h5>
+                <div class="row">
+                    <div class="col-md-3">
+                        <label for="filter_type" class="form-label">Type de Paiement</label>
+                        <select id="filter_type" class="form-select">
+                            <option value="">Tous</option>
+                            {% for type_paiement, display in paiements.first.TYPE_PAIEMENT_CHOICES %}
+                            <option value="{{ type_paiement }}">{{ display }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="filter_statut" class="form-label">Statut</label>
+                        <select id="filter_statut" class="form-select">
+                            <option value="">Tous</option>
+                            <option value="valide">Validé</option>
+                            <option value="en_attente">En Attente</option>
+                            <option value="refuse">Refusé</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="filter_date_debut" class="form-label">Date Début</label>
+                        <input type="date" id="filter_date_debut" class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="filter_date_fin" class="form-label">Date Fin</label>
+                        <input type="date" id="filter_date_fin" class="form-control">
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button id="apply_filters" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i>
+                            Appliquer les Filtres
+                        </button>
+                        <button id="clear_filters" class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-times me-1"></i>
+                            Effacer
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+                <!-- Liste des paiements -->
+                <div class="historique-container">
+                    <h5 class="mb-3">
+                        <i class="fas fa-list me-2"></i>
+                        Liste des Paiements
+                        <span id="paiements_count" class="badge bg-primary ms-2">{{ paiements.count }}</span>
+                    </h5>
+                    
+                    <!-- Debug Section -->
+                    <div class="alert alert-info mb-3">
+                        <h6>Debug - Informations sur les paiements</h6>
+                        <p><strong>Nombre de paiements:</strong> {{ paiements.count }}</p>
+                        <p><strong>Paiements est vide:</strong> {{ paiements|length_is:0|yesno:"Oui,Non" }}</p>
+                        <p><strong>Premier paiement:</strong> 
+                            {% if paiements.first %}
+                                {{ paiements.first.type_paiement }} - {{ paiements.first.montant }} F CFA
+                            {% else %}
+                                Aucun
+                            {% endif %}
+                        </p>
+                    </div>
+                    
+                    <div id="paiements_list">
+                        <!-- Debug: Vérifier si la boucle fonctionne -->
+                        <div class="alert alert-success mb-3">
+                            <h6>Debug - Boucle des paiements</h6>
+                            <p><strong>Paiements.count:</strong> {{ paiements.count }}</p>
+                            <p><strong>Paiements.first:</strong> {% if paiements.first %}{{ paiements.first.type_paiement }}{% else %}Aucun{% endif %}</p>
+                            <p><strong>Boucle va commencer...</strong></p>
+                        </div>
+                        
+                        <!-- Utiliser la liste simple pour forcer l'affichage -->
+                        {% for paiement in paiements_list %}
+                    <div class="paiement-item {{ paiement.type_paiement }}">
+                        <div class="row align-items-center">
+                            <div class="col-md-2">
+                                <div class="paiement-date">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    {{ paiement.date_paiement|date:"d/m/Y" }}
+                                </div>
+                                <div class="text-muted small">
+                                    <strong>Réf:</strong> {{ paiement.reference_paiement }}
+                                </div>
+                                <div class="text-muted small">
+                                    <strong>ID:</strong> {{ paiement.id }}
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="fw-bold text-uppercase">{{ paiement.get_type_paiement_display }}</div>
+                                {% if paiement.mois_paye %}
+                                <div class="text-muted small">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    <strong>Mois:</strong> {{ paiement.mois_paye }}
+                                </div>
+                                {% endif %}
+                                <div class="text-muted small">
+                                    <strong>Type:</strong> {{ paiement.type_paiement }}
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="paiement-montant">{{ paiement.montant|floatformat:0 }} F CFA</div>
+                                <div class="text-muted small">
+                                    <strong>Mode:</strong> {{ paiement.get_mode_paiement_display }}
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <span class="paiement-statut statut-{{ paiement.statut }}">
+                                    {{ paiement.get_statut_display }}
+                                </span>
+                                <div class="text-muted small mt-1">
+                                    <strong>Statut:</strong> {{ paiement.statut }}
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="text-muted small">
+                                    <i class="fas fa-clock me-1"></i>
+                                    <strong>Créé:</strong> {{ paiement.date_creation|date:"d/m/Y H:i" }}
+                                </div>
+                                {% if paiement.notes %}
+                                <div class="text-muted small">
+                                    <i class="fas fa-sticky-note me-1"></i>
+                                    <strong>Notes:</strong> {{ paiement.notes|truncatechars:20 }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <div class="btn-group-vertical btn-group-sm">
+                                    <a href="{% url 'paiements:detail' paiement.id %}" class="btn btn-outline-primary btn-sm mb-1">
+                                        <i class="fas fa-eye me-1"></i>Détails
+                                    </a>
+                                    {% if paiement.statut == 'valide' %}
+                                    <a href="{% url 'paiements:generer_recu_unifie_a5' paiement.id %}" 
+                                       class="btn btn-outline-success btn-sm" target="_blank">
+                                        <i class="fas fa-file-pdf me-1"></i>PDF
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <!-- Debug: Vérifier pourquoi la boucle est vide -->
+                    <div class="alert alert-danger mb-3">
+                        <h6>Debug - Boucle vide détectée</h6>
+                        <p><strong>Paiements.count:</strong> {{ paiements.count }}</p>
+                        <p><strong>Paiements.first:</strong> {% if paiements.first %}{{ paiements.first.type_paiement }}{% else %}Aucun{% endif %}</p>
+                        <p><strong>Contrat:</strong> {{ contrat.numero_contrat }}</p>
+                        <p><strong>Stats total:</strong> {{ stats.total_paiements }}</p>
+                        <p><strong>Stats montant:</strong> {{ stats.total_montant }}</p>
+                    </div>
+                    
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Aucun paiement trouvé</h5>
+                        <p class="text-muted">Ce contrat n'a pas encore de paiements enregistrés.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filtres AJAX
+    const applyFiltersBtn = document.getElementById('apply_filters');
+    const clearFiltersBtn = document.getElementById('clear_filters');
+    
+    applyFiltersBtn.addEventListener('click', function() {
+        const filters = {
+            type_paiement: document.getElementById('filter_type').value,
+            statut: document.getElementById('filter_statut').value,
+            date_debut: document.getElementById('filter_date_debut').value,
+            date_fin: document.getElementById('filter_date_fin').value
+        };
+        
+        // Appel AJAX pour filtrer les paiements
+        fetch(`{% url 'paiements:historique:historique_contrat_ajax' contrat.id %}?` + new URLSearchParams(filters))
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updatePaiementsList(data.paiements);
+                    document.getElementById('paiements_count').textContent = data.total;
+                } else {
+                    console.error('Erreur:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur AJAX:', error);
+            });
+    });
+    
+    clearFiltersBtn.addEventListener('click', function() {
+        document.getElementById('filter_type').value = '';
+        document.getElementById('filter_statut').value = '';
+        document.getElementById('filter_date_debut').value = '';
+        document.getElementById('filter_date_fin').value = '';
+        
+        // Recharger la page pour afficher tous les paiements
+        location.reload();
+    });
+    
+    function updatePaiementsList(paiements) {
+        const container = document.getElementById('paiements_list');
+        
+        if (paiements.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Aucun paiement trouvé</h5>
+                    <p class="text-muted">Aucun paiement ne correspond aux filtres sélectionnés.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        paiements.forEach(paiement => {
+            html += `
+                <div class="paiement-item ${paiement.type_paiement}">
+                    <div class="row align-items-center">
+                        <div class="col-md-2">
+                            <div class="paiement-date">
+                                <i class="fas fa-calendar me-1"></i>
+                                ${paiement.date_paiement}
+                            </div>
+                            <div class="text-muted small">
+                                ${paiement.reference}
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="fw-bold">${paiement.type_paiement}</div>
+                            ${paiement.mois_paye ? `<div class="text-muted small"><i class="fas fa-calendar-alt me-1"></i>${paiement.mois_paye}</div>` : ''}
+                        </div>
+                        <div class="col-md-2">
+                            <div class="paiement-montant">${paiement.montant} F CFA</div>
+                        </div>
+                        <div class="col-md-2">
+                            <span class="paiement-statut statut-${paiement.statut}">
+                                ${paiement.statut}
+                            </span>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="text-muted small">
+                                <i class="fas fa-credit-card me-1"></i>
+                                ${paiement.mode_paiement}
+                            </div>
+                        </div>
+                        <div class="col-md-2 text-end">
+                            <a href="/paiements/detail/${paiement.id}/" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+});
+</script>
+{% endblock %}
+

@@ -1,9 +1,9 @@
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_RIGHT
 # from reportlab.pdfgen import canvas  # Non utilisé directement
 from io import BytesIO
 
@@ -248,18 +248,19 @@ class ContratPDFService:
         
         # Informations de base du contrat
         story.extend(self._create_basic_info())
-        story.append(Spacer(1, 15))
+        story.append(PageBreak())  # Saut de page pour le module suivant
         
         # Conditions de location
         story.extend(self._create_rental_conditions())
-        story.append(Spacer(1, 15))
+        story.append(PageBreak())  # Saut de page pour le module suivant
         
         # Obligations et conditions
         story.extend(self._create_obligations())
-        story.append(Spacer(1, 15))
+        story.append(PageBreak())  # Saut de page pour le module suivant
         
         # État des lieux
         story.extend(self._create_etat_des_lieux())
+        story.append(PageBreak())  # Saut de page pour le module suivant
         
         # Signatures (engagement à la fin)
         story.extend(self._create_signatures())
@@ -441,17 +442,31 @@ class ContratPDFService:
         """Crée la section des informations de base du contrat selon le nouveau format"""
         elements = []
         
-        # Date et lieu
+        # Date et lieu - alignée à droite
         date_contrat = self.contrat.date_signature.strftime('%d/%m/%Y')
-        elements.append(Paragraph(f"Ouagadougou, {date_contrat}", self.styles['CustomBody']))
+        date_style = ParagraphStyle(
+            'DateRight',
+            parent=self.styles['CustomBody'],
+            alignment=TA_RIGHT,
+            fontSize=10
+        )
+        elements.append(Paragraph(f"Ouagadougou, {date_contrat}", date_style))
         elements.append(Spacer(1, 10))
         
-        # Entre les parties (en bleu à la place du titre redondant)
-        elements.append(Paragraph("Entre d'une part,", self.styles['CustomHeading']))
+        # Entre les parties (en bleu à la place du titre redondant) - titre en gras centré
+        entre_style = ParagraphStyle(
+            'EntreHeading',
+            parent=self.styles['CustomHeading'],
+            alignment=TA_CENTER,
+            fontSize=14,
+            textColor=colors.darkblue,
+            spaceAfter=10
+        )
+        elements.append(Paragraph("Entre d'une part,", entre_style))
         elements.append(Spacer(1, 5))
         
-        # Informations de l'agence
-        agence_info = f"""L'Agence KBIS IMMOBILIER située au secteur 26 Pissy représentée, par M. NIKIEMA PA MAMDOU Tel…70-20-64-91"""
+        # Informations de l'agence - INFORMATIONS DYNAMIQUES EN GRAS
+        agence_info = f"""L'Agence <b>KBIS IMMOBILIER</b> située au <b>secteur 26 Pissy</b> représentée, par <b>M. NIKIEMA PA MAMDOU</b> Tel <b>70-20-64-91</b>"""
         elements.append(Paragraph(agence_info, self.styles['CustomBody']))
         elements.append(Spacer(1, 10))
         
@@ -459,22 +474,22 @@ class ContratPDFService:
         elements.append(Paragraph("D'autre part (une copie de votre CNIB doit être jointe à la présente)", self.styles['CustomBody']))
         elements.append(Spacer(1, 5))
         
-        # Informations du locataire (avec pointillés pour champs vides)
-        locataire_nom = self.contrat.locataire.nom.upper() if self.contrat.locataire.nom else '....................'
-        locataire_prenom = self.contrat.locataire.prenom.upper() if self.contrat.locataire.prenom else '....................'
-        locataire_cnib = getattr(self.contrat.locataire, 'numero_cnib', 'N/A')
-        locataire_profession = getattr(self.contrat.locataire, 'profession', 'N/A')
-        locataire_adresse = self.contrat.locataire.adresse if self.contrat.locataire.adresse else '....................'
-        locataire_tel = self.contrat.locataire.telephone if self.contrat.locataire.telephone else '....................'
+        # Informations du locataire - récupération des vraies données
+        locataire = self.contrat.locataire
         
-        # Remplacer les valeurs par défaut par des pointillés
-        if locataire_cnib == 'N/A':
-            locataire_cnib = '....................'
-        if locataire_profession == 'N/A':
-            locataire_profession = '....................'
-            
-        locataire_info = f"""M. Mme, Mlle {locataire_nom} {locataire_prenom} N° CNIB {locataire_cnib} Dénommée(é) le locataire<br/>
-Profession {locataire_profession} adresse : {locataire_adresse} Tel : {locataire_tel}"""
+        # Récupérer les vraies données de la base
+        locataire_nom = locataire.nom.upper() if locataire.nom else '....................'
+        locataire_prenom = locataire.prenom.upper() if locataire.prenom else '....................'
+        locataire_cnib = getattr(locataire, 'numero_cnib', None) or '....................'
+        locataire_profession = getattr(locataire, 'profession', None) or '....................'
+        locataire_adresse = locataire.adresse if locataire.adresse else '....................'
+        locataire_tel = locataire.telephone if locataire.telephone else '....................'
+        
+        # Logique des civilités selon les données de la base
+        civilité = self._determiner_civilite_locataire(locataire)
+        
+        locataire_info = f"""{civilité} <b>{locataire_nom} {locataire_prenom}</b> N° CNIB <b>{locataire_cnib}</b> Dénommée(é) le locataire<br/>
+Profession <b>{locataire_profession}</b> adresse : <b>{locataire_adresse}</b> Tel : <b>{locataire_tel}</b>"""
         elements.append(Paragraph(locataire_info, self.styles['CustomBody']))
         elements.append(Spacer(1, 10))
         
@@ -498,28 +513,37 @@ Profession {locataire_profession} adresse : {locataire_adresse} Tel : {locataire
         elements.append(Paragraph(garant_info, self.styles['CustomBody']))
         elements.append(Spacer(1, 10))
         
-        # Informations de la propriété (avec pointillés pour champs vides)
-        propriete_numero = getattr(self.contrat.propriete, 'numero_maison', 'N/A')
-        propriete_ville = self.contrat.propriete.ville if self.contrat.propriete.ville else '....................'
+        # Informations de la propriété - récupération des vraies données
+        propriete = self.contrat.propriete
         
-        # Remplacer les valeurs par défaut par des pointillés
-        if propriete_numero == 'N/A':
-            propriete_numero = '....................'
+        # Utiliser le numéro de l'unité locative si disponible, sinon le numéro de propriété
+        propriete_numero = '....................'
+        if hasattr(self.contrat, 'unite_locative') and self.contrat.unite_locative:
+            # Pour les unités locatives, afficher le numéro de l'unité avec des détails
+            propriete_numero = f"{self.contrat.unite_locative.numero_unite}"
+            if hasattr(propriete, 'numero_propriete') and propriete.numero_propriete:
+                propriete_numero = f"{propriete.numero_propriete} - {propriete_numero}"
+        elif hasattr(propriete, 'numero_propriete') and propriete.numero_propriete:
+            propriete_numero = propriete.numero_propriete
             
-        propriete_info = f"""pour la location de la maison n° {propriete_numero} Située a {propriete_ville} Pour un loyer mensuel de : {self.contrat.get_loyer_mensuel_formatted()}"""
+        propriete_ville = propriete.ville if propriete.ville else '....................'
+        propriete_quartier = getattr(propriete, 'quartier', None) or '....................'
+        
+        # Informations complètes de la propriété avec ville et quartier - EN GRAS
+        propriete_info = f"""pour la location de la maison n° <b>{propriete_numero}</b> Située à <b>{propriete_ville}</b>, quartier <b>{propriete_quartier}</b> Pour un loyer mensuel de : <b>{self.contrat.get_loyer_mensuel_formatted()}</b>"""
         elements.append(Paragraph(propriete_info, self.styles['CustomBody']))
         elements.append(Spacer(1, 10))
         
-        # Reçu de la caution
+        # Reçu de la caution - EN GRAS
         caution_montant = self.contrat.get_depot_garantie_formatted()
-        elements.append(Paragraph(f"KBIS IMMOBILIER reconnait avoir reçu la somme {caution_montant}", self.styles['CustomBody']))
-        elements.append(Paragraph("Représentant Trois (03) Mois de caution.", self.styles['CustomBody']))
+        elements.append(Paragraph(f"<b>KBIS IMMOBILIER</b> reconnait avoir reçu la somme <b>{caution_montant}</b>", self.styles['CustomBody']))
+        elements.append(Paragraph("Représentant <b>Trois (03) Mois de caution</b>.", self.styles['CustomBody']))
         elements.append(Spacer(1, 10))
         
-        # Conditions de paiement
+        # Conditions de paiement - EN GRAS
         mois_debut = self.contrat.date_debut.strftime('%B %Y')
-        elements.append(Paragraph(f"Le paiement mensuel du loyer commence à partir de la fin du mois de {mois_debut.upper()}", self.styles['CustomBody']))
-        elements.append(Paragraph(f"M. Mme, Mlle {self.contrat.locataire.nom.upper()} {self.contrat.locataire.prenom.upper()} s'engage à payer au plus tard le 03 du mois suivant", self.styles['CustomBody']))
+        elements.append(Paragraph(f"Le paiement mensuel du loyer commence à partir de la fin du mois de <b>{mois_debut.upper()}</b>", self.styles['CustomBody']))
+        elements.append(Paragraph(f"<b>{civilité} {locataire_nom} {locataire_prenom}</b> s'engage à payer au plus tard le <b>03 du mois suivant</b>", self.styles['CustomBody']))
         elements.append(Spacer(1, 10))
         
         return elements
@@ -528,8 +552,9 @@ Profession {locataire_profession} adresse : {locataire_adresse} Tel : {locataire
         """Crée la section des conditions de location selon le nouveau format"""
         elements = []
         
-        # Conditions de caution
-        elements.append(Paragraph(f"M. Mme, Mlle {self.contrat.locataire.nom.upper()} {self.contrat.locataire.prenom.upper()} sachez que votre caution ne vous sera remboursé à la sortie qu'après avoir libéré la maison, l'avoir remis en état (peinture, plomberie etc.,) tel que décrété sur la page état de lieu résilier et payer vos factures de la SONABEL et de l'ONEA. Dans le cas contraire la caution servira à assurer ces frais et quitter les lieux.", self.styles['CustomBody']))
+        # Conditions de caution - CIVILITÉ CORRECTE
+        civilite_locataire = self._determiner_civilite_locataire(self.contrat.locataire)
+        elements.append(Paragraph(f"{civilite_locataire} {self.contrat.locataire.nom.upper()} {self.contrat.locataire.prenom.upper()} sachez que votre caution ne vous sera remboursé à la sortie qu'après avoir libéré la maison, l'avoir remis en état (peinture, plomberie etc.,) tel que décrété sur la page état de lieu résilier et payer vos factures de la SONABEL et de l'ONEA. Dans le cas contraire la caution servira à assurer ces frais et quitter les lieux.", self.styles['CustomBody']))
         elements.append(Spacer(1, 10))
         
         # Pouvoir d'expulsion
@@ -555,33 +580,26 @@ Profession {locataire_profession} adresse : {locataire_adresse} Tel : {locataire
         """Crée la section des obligations et conditions selon le nouveau format"""
         elements = []
         
-        # Section Personne garant du paiement des loyers
-        elements.append(Paragraph("● Personne garant du paiement des loyers", self.styles['CustomHeading']))
+        # Section des obligations générales (sans la personne garant) - TITRE EN BLEU CENTRÉ
+        obligations_style = ParagraphStyle(
+            'ObligationsHeading',
+            parent=self.styles['CustomHeading'],
+            alignment=TA_CENTER,
+            fontSize=14,
+            textColor=colors.darkblue,
+            spaceAfter=10
+        )
+        elements.append(Paragraph("OBLIGATIONS ET CONDITIONS", obligations_style))
         elements.append(Spacer(1, 10))
         
-        # Engagement du garant
-        garant_engagement = f"""Jesoussigné(e)M. Mme, Mlle {getattr(self.contrat, 'garant_nom', 'N/A')} Profession : ……adresse…tel : {getattr(self.contrat, 'garant_telephone', 'N/A')}
-
-Je me porte garant de la caution solitaire de M. Mme, Mlle {self.contrat.locataire.nom.upper()} {self.contrat.locataire.prenom.upper()} Tel : {self.contrat.locataire.telephone} locataire de la maison n° {getattr(self.contrat.propriete, 'numero_maison', 'N/A')} Située a {self.contrat.propriete.ville} pour
-
-Le paiement mensuel du loyer de {self.contrat.get_loyer_mensuel_formatted()} commence à partir de la fin du mois de {self.contrat.date_debut.strftime('%B %Y').lower()}
-
-En cas de retard de payement du loyer supérieur à un mois. Je m'engage à payer leur correspondant à la place du locataire dans un délai d'une semaine dès que je serai avise du retard de payement. Ma responsabilité est limitée à six mois (06) mois de loyer, soit la somme de..(….…) franc CFA
-
-Le paiement sera effectué auprès de l'agence KBIS IMMOBILIER au secteur 26 PISSY. Situé sur la route du CMA DE PISSY tel : +226 79.18.32.32./70.20.64.91/79.18.39.39/66..66.45.60
-
-Si en fin de Contrat, cette garantie a été utilisé, et si toute ou une partie de la caution doit être restitué au locataire après remise en état de la maison, elle sera remboursée à M. Mme, Mlle {getattr(self.contrat, 'garant_nom', 'N/A')} (Personnes garante) du payement des loyers de M. Mme, Mlle {self.contrat.locataire.nom.upper()} {self.contrat.locataire.prenom.upper()} Jusqu'à concurrence des sommes qu'elle aura versées et le reste sera remboursés au locataire.
-
-Une copie de la CNIB du garant doit être jointe à la présente
-
-Merci pour votre compréhension"""
+        # Obligations générales
+        obligations_text = """Le locataire s'engage à :
+• Respecter les conditions de paiement convenues
+• Maintenir la propriété en bon état
+• Informer l'agence de tout problème
+• Respecter les règles de vie en communauté"""
         
-        elements.append(Paragraph(garant_engagement, self.styles['CustomBody']))
-        elements.append(Spacer(1, 15))
-        
-        # Date et lieu
-        date_contrat = self.contrat.date_signature.strftime('%d-%m-%Y')
-        elements.append(Paragraph(f"Fait en deux exemplaires à Ouagadougou, le {date_contrat}", self.styles['CustomBody']))
+        elements.append(Paragraph(obligations_text, self.styles['CustomBody']))
         elements.append(Spacer(1, 15))
         
         return elements
@@ -590,39 +608,93 @@ Merci pour votre compréhension"""
         """Crée la section des signatures selon le nouveau format"""
         elements = []
         
-        # Tableau des signatures
-        signature_data = [
-            ['L\'agence', 'le locataire', 'Personne Garant'],
-            ['', '', ''],
-            ['', '', ''],
-        ]
+        # Section Personne garant du paiement des loyers - MAINTENANT À LA FIN - EN BLEU CENTRÉ
+        garant_style = ParagraphStyle(
+            'GarantHeading',
+            parent=self.styles['CustomHeading'],
+            alignment=TA_CENTER,
+            fontSize=14,
+            textColor=colors.darkblue,
+            spaceAfter=10
+        )
+        elements.append(Paragraph("● Personne garant du paiement des loyers", garant_style))
+        elements.append(Spacer(1, 10))
         
-        signature_table = Table(signature_data, colWidths=[5*cm, 5*cm, 5*cm])
-        signature_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-            ('TOPPADDING', (0, 0), (-1, -1), 12),
-            # Suppression des traits (LINEBELOW) - remplacés par le pied de page dynamique
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ]))
+        # Engagement du garant - INFORMATIONS DYNAMIQUES EN GRAS
+        garant_nom = getattr(self.contrat, 'garant_nom', 'N/A')
+        garant_profession = getattr(self.contrat, 'garant_profession', 'N/A')
+        garant_adresse = getattr(self.contrat, 'garant_adresse', 'N/A')
+        garant_telephone = getattr(self.contrat, 'garant_telephone', 'N/A')
         
-        elements.append(signature_table)
-        elements.append(Spacer(1, 15))
+        # Remplacer les valeurs par défaut par des pointillés
+        if garant_nom == 'N/A':
+            garant_nom = '....................'
+        if garant_profession == 'N/A':
+            garant_profession = '....................'
+        if garant_adresse == 'N/A':
+            garant_adresse = '....................'
+        if garant_telephone == 'N/A':
+            garant_telephone = '....................'
         
-        # Section Engagement
-        elements.append(Paragraph("Engagement", self.styles['CustomHeading']))
+        # Calculer le montant de la responsabilité (6 mois de loyer)
+        from decimal import Decimal
+        try:
+            loyer_decimal = Decimal(str(self.contrat.loyer_mensuel)) if self.contrat.loyer_mensuel else Decimal('0')
+            responsabilite_montant = loyer_decimal * 6
+            responsabilite_formatted = f"{responsabilite_montant:,.0f} F CFA"
+        except:
+            responsabilite_formatted = "...................."
+        
+        # Redéfinir le numéro de propriété pour cette section
+        propriete = self.contrat.propriete
+        propriete_numero = '....................'
+        if hasattr(self.contrat, 'unite_locative') and self.contrat.unite_locative:
+            propriete_numero = self.contrat.unite_locative.numero_unite
+        elif hasattr(propriete, 'numero_propriete') and propriete.numero_propriete:
+            propriete_numero = propriete.numero_propriete
+
+        # Déterminer la civilité du garant et du locataire
+        civilite_garant = self._determiner_civilite_garant(garant_nom)
+        civilite_locataire = self._determiner_civilite_locataire(self.contrat.locataire)
+        
+        garant_engagement = f"""Je soussigné(e) <b>{civilite_garant} {garant_nom}</b> <b>Profession : {garant_profession}</b> <b>adresse : {garant_adresse}</b> <b>tel : {garant_telephone}</b>
+
+Je me porte garant de la caution solitaire de <b>{civilite_locataire} {self.contrat.locataire.nom.upper()} {self.contrat.locataire.prenom.upper()}</b> <b>Tel : {self.contrat.locataire.telephone}</b> locataire de la maison n° <b>{propriete_numero}</b> Située à <b>{self.contrat.propriete.ville}</b> pour
+
+Le paiement mensuel du loyer de <b>{self.contrat.get_loyer_mensuel_formatted()}</b> commence à partir de la fin du mois de <b>{self.contrat.date_debut.strftime('%B %Y').lower()}</b>
+
+En cas de retard de payement du loyer supérieur à un mois. Je m'engage à payer leur correspondant à la place du locataire dans un délai d'une semaine dès que je serai avise du retard de payement. Ma responsabilité est limitée à six mois (06) mois de loyer, soit la somme de <b>{responsabilite_formatted}</b>
+
+Le paiement sera effectué auprès de l'agence <b>KBIS IMMOBILIER</b> au secteur 26 PISSY. Situé sur la route du CMA DE PISSY tel : <b>+226 79.18.32.32./70.20.64.91/79.18.39.39/66..66.45.60</b>
+
+Si en fin de Contrat, cette garantie a été utilisé, et si toute ou une partie de la caution doit être restitué au locataire après remise en état de la maison, elle sera remboursée à <b>{civilite_garant} {garant_nom}</b> (Personnes garante) du payement des loyers de <b>{civilite_locataire} {self.contrat.locataire.nom.upper()} {self.contrat.locataire.prenom.upper()}</b> Jusqu'à concurrence des sommes qu'elle aura versées et le reste sera remboursés au locataire.
+
+Une copie de la CNIB du garant doit être jointe à la présente
+
+Merci pour votre compréhension"""
+        
+        elements.append(Paragraph(garant_engagement, self.styles['CustomBody']))
+        elements.append(Spacer(1, 10))
+        
+        # Section Engagement - EN BLEU CENTRÉ
+        engagement_style = ParagraphStyle(
+            'EngagementHeading',
+            parent=self.styles['CustomHeading'],
+            alignment=TA_CENTER,
+            fontSize=14,
+            textColor=colors.darkblue,
+            spaceAfter=5
+        )
+        elements.append(Paragraph("Engagement", engagement_style))
         elements.append(Spacer(1, 5))
         
-        # Texte d'engagement
-        engagement_text = f"""Je soussigné(e) {self.contrat.locataire.nom.upper()} {self.contrat.locataire.prenom.upper()} reconnait avoir loué une maison, avec l'agence KBIS IMMOBILIER le {self.contrat.date_signature.strftime('%d/%m/%Y')} Et je m'engage à respecter le délai du payement de mon loyer prévu au plus tard le 03 du mois, je reconnais que la réfection des différents points cites ci-dessus sont à ma charge au moment de libérer la maison.
+        # Texte d'engagement - INFORMATIONS DYNAMIQUES EN GRAS
+        engagement_text = f"""Je soussigné(e) <b>{self.contrat.locataire.nom.upper()} {self.contrat.locataire.prenom.upper()}</b> reconnait avoir loué une maison, avec l'agence <b>KBIS IMMOBILIER</b> le <b>{self.contrat.date_signature.strftime('%d/%m/%Y')}</b> Et je m'engage à respecter le délai du payement de mon loyer prévu au plus tard le <b>03 du mois</b>, je reconnais que la réfection des différents points cites ci-dessus sont à ma charge au moment de libérer la maison.
 
-Lu et approuvé bon pour accord"""
+<b>Lu et approuvé bon pour accord</b>"""
         
         elements.append(Paragraph(engagement_text, self.styles['CustomBody']))
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 5))
         
         # Tableau des signatures final
         signature_final_data = [
@@ -644,6 +716,12 @@ Lu et approuvé bon pour accord"""
         ]))
         
         elements.append(signature_final_table)
+        elements.append(Spacer(1, 10))
+        
+        # Date et lieu final
+        date_contrat = self.contrat.date_signature.strftime('%d-%m-%Y')
+        elements.append(Paragraph(f"Fait en deux exemplaires à Ouagadougou, le {date_contrat}", self.styles['CustomBody']))
+        elements.append(Spacer(1, 10))
         
         # Le pied de page sera géré par _add_footer_only (vrai pied de page)
         
@@ -653,8 +731,16 @@ Lu et approuvé bon pour accord"""
         """Crée la section état des lieux avec le tableau fourni"""
         elements = []
         
-        # Titre de la section
-        elements.append(Paragraph("Etat des lieux", self.styles['CustomHeading']))
+        # Titre de la section - EN BLEU CENTRÉ
+        etat_style = ParagraphStyle(
+            'EtatHeading',
+            parent=self.styles['CustomHeading'],
+            alignment=TA_CENTER,
+            fontSize=14,
+            textColor=colors.darkblue,
+            spaceAfter=15
+        )
+        elements.append(Paragraph("Etat des lieux", etat_style))
         elements.append(Spacer(1, 15))
         
         # Données du tableau état des lieux exactement comme dans les images (6 colonnes)
@@ -998,6 +1084,53 @@ Lu et approuvé bon pour accord"""
             ))
         
         return elements
+
+    def _determiner_civilite_locataire(self, locataire):
+        """Détermine la civilité appropriée selon les données de la base"""
+        # Vérifier si c'est une société/personne morale
+        if hasattr(locataire, 'type_personne') and locataire.type_personne == 'societe':
+            return locataire.nom.upper() if locataire.nom else 'SOCIÉTÉ'
+        
+        # Vérifier si c'est une personne physique
+        if hasattr(locataire, 'civilite'):
+            civilité = locataire.civilite
+            if civilité == 'M':
+                return 'M.'
+            elif civilité == 'Mme':
+                return 'Mme'
+            elif civilité == 'Mlle':
+                return 'Mlle'
+            elif civilité == 'Mademoiselle':
+                return 'Mlle'
+        
+        # Vérifier le genre si disponible
+        if hasattr(locataire, 'genre'):
+            if locataire.genre == 'M':
+                return 'M.'
+            elif locataire.genre == 'F':
+                # Par défaut, utiliser Mme pour les femmes
+                return 'Mme'
+        
+        # Vérifier le prénom pour deviner le genre (approximation)
+        if locataire.prenom:
+            prenom_lower = locataire.prenom.lower()
+            # Noms typiquement féminins
+            noms_feminins = ['marie', 'marie-claire', 'fatou', 'aminata', 'aicha', 'kadiatou', 'mariama']
+            if any(nom in prenom_lower for nom in noms_feminins):
+                return 'Mme'
+        
+        # Par défaut, utiliser M.
+        return 'M.'
+    
+    def _determiner_civilite_garant(self, garant_nom):
+        """Détermine la civilité appropriée pour le garant"""
+        # Pour le garant, on utilise une logique simple basée sur le nom
+        # Si le nom contient des mots-clés de société, on l'affiche tel quel
+        if garant_nom and any(mot in garant_nom.upper() for mot in ['SARL', 'SA', 'SOCIÉTÉ', 'SOCIETE', 'ENTREPRISE', 'COMPANY', 'LTD']):
+            return garant_nom.upper()
+        
+        # Sinon, on utilise M. par défaut (le garant est généralement un homme dans ce contexte)
+        return 'M.'
 
 
 class RecuCautionPDFService:

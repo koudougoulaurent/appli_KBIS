@@ -24,6 +24,10 @@
            class="btn btn-outline-primary" target="_blank">
             <i class="bi bi-files"></i> Tous les Documents
         </a>
+        <a href="{% url 'paiements:historique:historique_contrat' contrat.id %}" 
+           class="btn btn-outline-info">
+            <i class="bi bi-history"></i> Historique Paiements
+        </a>
         <a href="{% url 'contrats:liste_contrats_caution' %}" class="btn btn-outline-primary">
             <i class="bi bi-arrow-left"></i> Retour à la liste
         </a>

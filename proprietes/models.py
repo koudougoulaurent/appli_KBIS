@@ -181,6 +181,8 @@ class Locataire(DuplicatePreventionMixin, models.Model):
         ('M', 'Monsieur'),
         ('Mme', 'Madame'),
         ('Mlle', 'Mademoiselle'),
+        ('Mademoiselle', 'Mademoiselle'),
+        ('Societe', 'Société'),
     ]
     
     STATUT_CHOICES = [
@@ -197,14 +199,24 @@ class Locataire(DuplicatePreventionMixin, models.Model):
         verbose_name=_("Numéro locataire"),
         help_text=_("Identifiant unique du locataire")
     )
+    type_personne = models.CharField(
+        max_length=20,
+        choices=[
+            ('physique', 'Personne physique'),
+            ('societe', 'Société/Personne morale'),
+        ],
+        default='physique',
+        verbose_name=_("Type de personne")
+    )
     civilite = models.CharField(
         max_length=50,
+        choices=CIVILITE_CHOICES,
         blank=True,
         null=True,
         verbose_name=_("Civilité")
     )
     nom = models.CharField(max_length=100, verbose_name=_("Nom"))
-    prenom = models.CharField(max_length=100, verbose_name=_("Prénom"))
+    prenom = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Prénom"))
     date_naissance = models.DateField(blank=True, null=True, verbose_name=_("Date de naissance"))
     
     # Contact
@@ -219,6 +231,7 @@ class Locataire(DuplicatePreventionMixin, models.Model):
     pays = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Pays"))
     
     # Informations professionnelles
+    numero_cnib = models.CharField(max_length=50, blank=True, null=True, verbose_name=_("Numéro CNIB/CNI"))
     profession = models.CharField(max_length=100, blank=True, verbose_name=_("Profession"))
     employeur = models.CharField(max_length=100, blank=True, verbose_name=_("Employeur"))
     revenus_mensuels = models.DecimalField(
@@ -287,7 +300,12 @@ class Locataire(DuplicatePreventionMixin, models.Model):
         return f"{self.get_nom_complet()} ({self.numero_locataire})"
     
     def get_nom_complet(self):
-        return f"{self.civilite} {self.prenom} {self.nom}"
+        """Retourne le nom complet en gérant les cas où le prénom est vide (personnes morales)"""
+        if self.prenom:
+            return f"{self.civilite} {self.prenom} {self.nom}"
+        else:
+            # Pour les personnes morales ou sans prénom
+            return f"{self.civilite} {self.nom}"
     
     def get_absolute_url(self):
         return reverse('proprietes:detail_locataire', kwargs={'pk': self.pk})

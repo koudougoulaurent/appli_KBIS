@@ -471,7 +471,7 @@ class Contrat(models.Model):
         self._creer_avance_loyer_automatique()
     
     def _gestion_disponibilite_propriete(self):
-        """Gère automatiquement la disponibilité de la propriété associée."""
+        """Gère automatiquement la disponibilité de la propriété et des unités locatives associées."""
         if self.pk:  # Si c'est une modification
             old_instance = Contrat.objects.get(pk=self.pk)
             old_actif = old_instance.est_actif
@@ -480,11 +480,15 @@ class Contrat(models.Model):
             # Si le statut a changé, mettre à jour la disponibilité
             if (old_actif != self.est_actif) or (old_resilie != self.est_resilie):
                 self._update_disponibilite_propriete()
+                self._update_disponibilite_unite_locative()
         else:  # Si c'est une création
             if self.est_actif and not self.est_resilie:
                 # Nouveau contrat actif = propriété non disponible
                 self.propriete.disponible = False
                 self.propriete.save(update_fields=['disponible'])
+                
+                # Marquer l'unité locative comme occupée si elle existe
+                self._update_disponibilite_unite_locative()
     
     def _update_disponibilite_propriete(self):
         """Met à jour la disponibilité de la propriété en fonction des contrats actifs."""
@@ -506,8 +510,30 @@ class Contrat(models.Model):
                 self.propriete.disponible = True
                 self.propriete.save(update_fields=['disponible'])
     
+    def _update_disponibilite_unite_locative(self):
+        """Met à jour la disponibilité de l'unité locative en fonction du statut du contrat."""
+        if not self.unite_locative:
+            return  # Pas d'unité locative associée
+        
+        if self.est_actif and not self.est_resilie:
+            # Contrat actif = unité locative occupée
+            self.unite_locative.statut = 'occupee'
+            self.unite_locative.save(update_fields=['statut'])
+        else:
+            # Contrat inactif ou résilié = unité locative disponible
+            # Vérifier s'il y a d'autres contrats actifs pour cette unité
+            contrats_actifs_unite = Contrat.objects.filter(
+                unite_locative=self.unite_locative,
+                est_actif=True,
+                est_resilie=False
+            ).exclude(pk=self.pk)
+            
+            if not contrats_actifs_unite.exists():
+                self.unite_locative.statut = 'disponible'
+                self.unite_locative.save(update_fields=['statut'])
+    
     def delete(self, *args, **kwargs):
-        """Override delete pour gérer la disponibilité de la propriété."""
+        """Override delete pour gérer la disponibilité de la propriété et de l'unité locative."""
         # Marquer la propriété comme disponible si c'était le seul contrat actif
         if self.est_actif and not self.est_resilie:
             contrats_actifs = Contrat.objects.filter(
@@ -519,6 +545,18 @@ class Contrat(models.Model):
             if not contrats_actifs.exists():
                 self.propriete.disponible = True
                 self.propriete.save(update_fields=['disponible'])
+            
+            # Marquer l'unité locative comme disponible si c'était le seul contrat actif
+            if self.unite_locative:
+                contrats_actifs_unite = Contrat.objects.filter(
+                    unite_locative=self.unite_locative,
+                    est_actif=True,
+                    est_resilie=False
+                ).exclude(pk=self.pk)
+                
+                if not contrats_actifs_unite.exists():
+                    self.unite_locative.statut = 'disponible'
+                    self.unite_locative.save(update_fields=['statut'])
         
         super().delete(*args, **kwargs)
     

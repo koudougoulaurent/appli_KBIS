@@ -209,7 +209,7 @@ class ContractNavigationHelper(NavigationHelper):
                 'cash-coin',
                 [
                     ('Nouveau Paiement', reverse('paiements:ajouter'), 'btn-outline-success', 'plus-circle', 'Créer un nouveau paiement'),
-                    ('Historique Paiements', reverse('paiements:liste'), 'btn-outline-secondary', 'clock-history', 'Voir l\'historique des paiements'),
+                    ('Historique Paiements', reverse('paiements:historique:historique_contrat', args=[contrat.pk]), 'btn-outline-secondary', 'clock-history', 'Voir l\'historique des paiements de ce contrat'),
                     ('Gérer Cautions', reverse('contrats:liste_contrats_caution'), 'btn-outline-warning', 'shield-check', 'Gérer toutes les cautions'),
                 ]
             ),

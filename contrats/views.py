@@ -236,9 +236,7 @@ def ajouter_contrat(request):
                     # Générer le PDF du contrat avec le nouveau service
                     from .services import ContratPDFService
                     pdf_service = ContratPDFService(contrat)
-                    # Remplir automatiquement les champs manquants
-                    contrat = pdf_service.auto_remplir_champs_contrat()
-                    pdf_buffer = pdf_service.generate_contrat_pdf()
+                    pdf_buffer = pdf_service.generate_contrat_pdf(use_cache=False)
                     
                     # Créer la réponse HTTP avec le PDF
                     from django.http import HttpResponse
@@ -365,9 +363,7 @@ def modifier_contrat(request, pk):
                     # Régénérer le PDF du contrat avec le nouveau service
                     from .services import ContratPDFService
                     pdf_service = ContratPDFService(contrat)
-                    # Remplir automatiquement les champs manquants
-                    contrat = pdf_service.auto_remplir_champs_contrat()
-                    pdf_buffer = pdf_service.generate_contrat_pdf()
+                    pdf_buffer = pdf_service.generate_contrat_pdf(use_cache=False)
                     
                     # Créer la réponse HTTP avec le PDF
                     from django.http import HttpResponse

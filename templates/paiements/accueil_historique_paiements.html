@@ -1,0 +1,1169 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Styles pour les boutons de navigation dynamiques */
+.btn-vue-dynamique {
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    border: 2px solid;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-vue-dynamique.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #667eea;
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transform: translateY(-2px);
+}
+
+.btn-vue-dynamique.inactive {
+    background: white;
+    border-color: #e9ecef;
+    color: #6c757d;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-vue-dynamique.inactive:hover {
+    background: #f8f9fa;
+    border-color: #667eea;
+    color: #667eea;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Animation de transition pour le contenu */
+.contenu-transition {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.4s ease;
+}
+
+.contenu-transition.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Spinner de chargement */
+.loading-spinner {
+    display: none;
+    text-align: center;
+    padding: 40px;
+}
+
+.loading-spinner .spinner-border {
+    width: 3rem;
+    height: 3rem;
+    border-width: 0.3em;
+}
+
+/* Styles pour les cartes de contenu */
+.card-dynamique {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.card-dynamique:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.card-dynamique .card-header {
+    border-bottom: none;
+    padding: 20px;
+    font-weight: 600;
+}
+
+.card-dynamique .card-body {
+    padding: 25px;
+}
+
+/* Styles pour les tableaux */
+.table-dynamique {
+    margin-bottom: 0;
+}
+
+.table-dynamique th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+    background-color: #f8f9fa;
+    padding: 15px 12px;
+}
+
+.table-dynamique td {
+    padding: 15px 12px;
+    vertical-align: middle;
+    border-top: 1px solid #e9ecef;
+}
+
+.table-dynamique tbody tr:hover {
+    background-color: #f8f9fa;
+    transform: scale(1.01);
+    transition: all 0.2s ease;
+}
+
+/* Badges personnalisés */
+.badge-dynamique {
+    font-size: 0.85em;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+.badge-primary-dynamique {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.badge-success-dynamique {
+    background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+    color: white;
+}
+
+.badge-info-dynamique {
+    background: linear-gradient(135deg, #3498db 0%, #85c1e9 100%);
+    color: white;
+}
+
+.badge-warning-dynamique {
+    background: linear-gradient(135deg, #f39c12 0%, #f7dc6f 100%);
+    color: #2c3e50;
+}
+
+/* Statistiques */
+.stat-card {
+    text-align: center;
+    padding: 20px;
+    border-radius: 10px;
+    background: white;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card h3 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.stat-card p {
+    color: #6c757d;
+    font-weight: 500;
+    margin-bottom: 0;
+}
+
+/* Animations d'entrée */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .btn-vue-dynamique {
+        padding: 10px 16px;
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+    
+    .stat-card h3 {
+        font-size: 2rem;
+    }
+    
+    .table-dynamique th,
+    .table-dynamique td {
+        padding: 10px 8px;
+        font-size: 14px;
+    }
+}
+
+/* Effet de pulsation pour les éléments actifs */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(102, 126, 234, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
+    }
+}
+
+.btn-vue-dynamique.active {
+    animation: pulse 2s infinite;
+}
+
+/* Styles pour les boutons d'action dans les tableaux */
+.btn-action {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+    margin: 2px;
+    transition: all 0.2s ease;
+}
+
+.btn-action:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+</style>
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 60px 0;
+        margin-bottom: 40px;
+    }
+    
+    .hero-title {
+        font-size: 3rem;
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.2rem;
+        opacity: 0.9;
+        margin-bottom: 30px;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 40px;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        transition: transform 0.3s ease;
+        border-left: 5px solid #3498db;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .stat-card.success {
+        border-left-color: #27ae60;
+    }
+    
+    .stat-card.warning {
+        border-left-color: #f39c12;
+    }
+    
+    .stat-card.danger {
+        border-left-color: #e74c3c;
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 10px;
+    }
+    
+    .stat-label {
+        color: #7f8c8d;
+        font-size: 1rem;
+        font-weight: 500;
+    }
+    
+    .section-card {
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .section-title i {
+        margin-right: 10px;
+        color: #3498db;
+    }
+    
+    .quick-access-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .quick-access-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 25px;
+        text-align: center;
+        transition: transform 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .quick-access-card:hover {
+        transform: translateY(-5px);
+        text-decoration: none;
+        color: white;
+    }
+    
+    .quick-access-card h4 {
+        margin-bottom: 15px;
+        font-weight: bold;
+    }
+    
+    .quick-access-card p {
+        opacity: 0.9;
+        margin-bottom: 20px;
+    }
+    
+    .btn-quick-access {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 2px solid white;
+        padding: 10px 20px;
+        border-radius: 25px;
+        font-weight: bold;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-quick-access:hover {
+        background: white;
+        color: #667eea;
+        transform: scale(1.05);
+    }
+    
+    .paiement-item {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-left: 4px solid #3498db;
+    }
+    
+    .paiement-item.loyer {
+        border-left-color: #27ae60;
+    }
+    
+    .paiement-item.avance {
+        border-left-color: #f39c12;
+    }
+    
+    .paiement-item.caution {
+        border-left-color: #e74c3c;
+    }
+    
+    .paiement-montant {
+        font-size: 1.1rem;
+        font-weight: bold;
+        color: #27ae60;
+    }
+    
+    .paiement-date {
+        color: #7f8c8d;
+        font-size: 0.9rem;
+    }
+    
+    .chart-container {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .chart-bar {
+        background: #3498db;
+        height: 20px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .chart-bar::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        animation: shimmer 2s infinite;
+    }
+    
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+    
+    .chart-label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 5px;
+    }
+    
+    .chart-value {
+        font-weight: bold;
+        color: #2c3e50;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Section Hero -->
+    <div class="hero-section">
+        <div class="container text-center">
+            <h1 class="hero-title">
+                <i class="fas fa-history me-3"></i>
+                Historique des Paiements
+            </h1>
+            <p class="hero-subtitle">
+                Consultez et analysez l'historique complet des paiements de votre gestion immobilière
+            </p>
+            <div class="d-flex justify-content-center gap-3">
+                <button id="btn-par-contrat" class="btn btn-light btn-lg btn-vue-dynamique active">
+                    <i class="fas fa-file-contract me-2"></i>
+                    Par Contrat
+                </button>
+                <button id="btn-par-locataire" class="btn btn-outline-light btn-lg btn-vue-dynamique inactive">
+                    <i class="fas fa-user me-2"></i>
+                    Par Locataire
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spinner de chargement -->
+    <div id="loading-spinner" class="loading-spinner" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Chargement...</span>
+        </div>
+        <p class="mt-3 text-muted">Chargement du contenu...</p>
+    </div>
+
+    <!-- Contenu dynamique -->
+    <div id="contenu-dynamique" class="contenu-transition show">
+        <!-- Le contenu sera chargé dynamiquement ici -->
+    </div>
+
+    <!-- Statistiques globales -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ stats_globales.total_paiements }}</div>
+            <div class="stat-label">Total Paiements</div>
+        </div>
+        <div class="stat-card success">
+            <div class="stat-number">{{ stats_globales.total_montant|floatformat:0 }} F</div>
+            <div class="stat-label">Montant Total</div>
+        </div>
+        <div class="stat-card success">
+            <div class="stat-number">{{ stats_globales.paiements_valides }}</div>
+            <div class="stat-label">Paiements Validés</div>
+        </div>
+        <div class="stat-card warning">
+            <div class="stat-number">{{ stats_globales.paiements_en_attente }}</div>
+            <div class="stat-label">En Attente</div>
+        </div>
+        <div class="stat-card danger">
+            <div class="stat-number">{{ stats_globales.paiements_refuses }}</div>
+            <div class="stat-label">Refusés</div>
+        </div>
+    </div>
+
+    <!-- Accès rapide -->
+    <div class="quick-access-grid">
+        <a href="{% url 'contrats:liste' %}" class="quick-access-card">
+            <h4>
+                <i class="fas fa-file-contract me-2"></i>
+                Historique par Contrat
+            </h4>
+            <p>Consultez l'historique des paiements pour chaque contrat individuellement</p>
+            <button class="btn-quick-access">
+                <i class="fas fa-arrow-right me-1"></i>
+                Accéder
+            </button>
+        </a>
+        
+        <a href="{% url 'proprietes:locataires_liste' %}" class="quick-access-card">
+            <h4>
+                <i class="fas fa-user me-2"></i>
+                Historique par Locataire
+            </h4>
+            <p>Vue globale des paiements pour tous les contrats d'un locataire</p>
+            <button class="btn-quick-access">
+                <i class="fas fa-arrow-right me-1"></i>
+                Accéder
+            </button>
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Paiements récents -->
+        <div class="col-lg-6">
+            <div class="section-card">
+                <h3 class="section-title">
+                    <i class="fas fa-clock"></i>
+                    Paiements Récents (7 derniers jours)
+                </h3>
+                
+                {% if paiements_recents %}
+                    {% for paiement in paiements_recents %}
+                    <div class="paiement-item {{ paiement.type_paiement }}">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <div class="fw-bold">{{ paiement.get_type_paiement_display }}</div>
+                                <div class="paiement-date">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    {{ paiement.date_paiement|date:"d/m/Y" }}
+                                </div>
+                                {% if paiement.mois_paye %}
+                                <div class="text-muted small">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    {{ paiement.mois_paye }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                <div class="paiement-montant">{{ paiement.montant|floatformat:0 }} F</div>
+                            </div>
+                            <div class="col-md-3 text-end">
+                                <span class="badge bg-{% if paiement.statut == 'valide' %}success{% elif paiement.statut == 'en_attente' %}warning{% else %}danger{% endif %}">
+                                    {{ paiement.get_statut_display }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Aucun paiement récent</h5>
+                        <p class="text-muted">Aucun paiement n'a été enregistré ces 7 derniers jours.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Statistiques par type -->
+        <div class="col-lg-6">
+            <div class="section-card">
+                <h3 class="section-title">
+                    <i class="fas fa-chart-pie"></i>
+                    Répartition par Type
+                </h3>
+                
+                {% if stats_par_type %}
+                    {% for type_paiement, data in stats_par_type.items %}
+                    <div class="chart-container">
+                        <div class="chart-label">
+                            <span class="fw-bold">{{ data.display }}</span>
+                            <span class="chart-value">{{ data.count }} paiement{{ data.count|pluralize }} - {{ data.montant_total|floatformat:0 }} F</span>
+                        </div>
+                        <div class="chart-bar" style="width: {% widthratio data.count stats_globales.total_paiements 100 %}%"></div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Aucune donnée</h5>
+                        <p class="text-muted">Aucun paiement enregistré pour le moment.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Contrats les plus actifs -->
+        <div class="col-lg-6">
+            <div class="section-card">
+                <h3 class="section-title">
+                    <i class="fas fa-file-contract"></i>
+                    Contrats les Plus Actifs
+                </h3>
+                
+                {% if contrats_actifs %}
+                    {% for contrat in contrats_actifs %}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <div class="fw-bold">{{ contrat.numero_contrat }}</div>
+                            <div class="text-muted small">{{ contrat.locataire.get_nom_complet }}</div>
+                        </div>
+                        <div class="text-end">
+                            <div class="h5 text-primary mb-0">{{ contrat.nb_paiements }}</div>
+                            <div class="text-muted small">paiement{{ contrat.nb_paiements|pluralize }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-file-contract fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Aucun contrat actif</h5>
+                        <p class="text-muted">Aucun contrat avec des paiements trouvé.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Locataires les plus actifs -->
+        <div class="col-lg-6">
+            <div class="section-card">
+                <h3 class="section-title">
+                    <i class="fas fa-user"></i>
+                    Locataires les Plus Actifs
+                </h3>
+                
+                {% if locataires_actifs %}
+                    {% for locataire in locataires_actifs %}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <div class="fw-bold">{{ locataire.get_nom_complet }}</div>
+                            <div class="text-muted small">{{ locataire.telephone }}</div>
+                        </div>
+                        <div class="text-end">
+                            <div class="h5 text-success mb-0">{{ locataire.nb_paiements }}</div>
+                            <div class="text-muted small">paiement{{ locataire.nb_paiements|pluralize }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-user fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Aucun locataire actif</h5>
+                        <p class="text-muted">Aucun locataire avec des paiements trouvé.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Évolution par mois -->
+    {% if paiements_par_mois %}
+    <div class="section-card">
+        <h3 class="section-title">
+            <i class="fas fa-chart-line"></i>
+            Évolution des Paiements (6 derniers mois)
+        </h3>
+        
+        <div class="row">
+            {% for mois_data in paiements_par_mois %}
+            <div class="col-md-2 mb-3">
+                <div class="chart-container text-center">
+                    <div class="h4 text-primary mb-2">{{ mois_data.count }}</div>
+                    <div class="text-muted small">{{ mois_data.mois|date:"M Y" }}</div>
+                    <div class="text-success small">{{ mois_data.montant|floatformat:0 }} F</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/**
+ * JavaScript pour l'affichage dynamique de l'historique des paiements
+ * Gère les boutons "Par Contrat" et "Par Locataire"
+ */
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Script historique dynamique chargé');
+    
+    /**
+     * Formate un montant en devise locale
+     * @param {number} montant - Le montant à formater
+     * @returns {string} - Le montant formaté
+     */
+    function formatCurrency(montant) {
+        if (typeof montant !== 'number') {
+            montant = parseFloat(montant) || 0;
+        }
+        return new Intl.NumberFormat('fr-FR', {
+            style: 'currency',
+            currency: 'XOF',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(montant).replace('XOF', 'F');
+    }
+    
+    // Éléments du DOM
+    const btnParContrat = document.getElementById('btn-par-contrat');
+    const btnParLocataire = document.getElementById('btn-par-locataire');
+    const contenuDynamique = document.getElementById('contenu-dynamique');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    
+    console.log('Éléments trouvés:', {
+        btnParContrat: !!btnParContrat,
+        btnParLocataire: !!btnParLocataire,
+        contenuDynamique: !!contenuDynamique,
+        loadingSpinner: !!loadingSpinner
+    });
+    
+    // État actuel
+    let vueActuelle = 'contrats'; // 'contrats' ou 'locataires'
+    
+    // Initialisation
+    if (btnParContrat && btnParLocataire && contenuDynamique) {
+        // Charger le contenu initial (contrats)
+        chargerContenu('contrats');
+        
+        // Événements des boutons
+        btnParContrat.addEventListener('click', function() {
+            console.log('Clic sur Par Contrat');
+            if (vueActuelle !== 'contrats') {
+                chargerContenu('contrats');
+            }
+        });
+        
+        btnParLocataire.addEventListener('click', function() {
+            console.log('Clic sur Par Locataire');
+            if (vueActuelle !== 'locataires') {
+                chargerContenu('locataires');
+            }
+        });
+    } else {
+        console.error('Éléments DOM non trouvés');
+    }
+    
+    /**
+     * Charge le contenu dynamiquement
+     * @param {string} type - 'contrats' ou 'locataires'
+     */
+    function chargerContenu(type) {
+        console.log('Chargement du contenu:', type);
+        
+        // Afficher le spinner
+        if (loadingSpinner) {
+            loadingSpinner.style.display = 'block';
+        }
+        
+        // Mettre à jour l'état
+        vueActuelle = type;
+        
+        // Mettre à jour les styles des boutons
+        mettreAJourBoutons(type);
+        
+        // Simuler un délai pour l'effet de chargement
+        setTimeout(() => {
+            genererContenu(type);
+            if (loadingSpinner) {
+                loadingSpinner.style.display = 'none';
+            }
+        }, 300);
+    }
+    
+    /**
+     * Met à jour les styles des boutons
+     * @param {string} type - Type de vue active
+     */
+    function mettreAJourBoutons(type) {
+        if (type === 'contrats') {
+            btnParContrat.classList.add('active');
+            btnParContrat.classList.remove('inactive');
+            btnParLocataire.classList.add('inactive');
+            btnParLocataire.classList.remove('active');
+        } else {
+            btnParLocataire.classList.add('active');
+            btnParLocataire.classList.remove('inactive');
+            btnParContrat.classList.add('inactive');
+            btnParContrat.classList.remove('active');
+        }
+    }
+    
+    /**
+     * Génère le contenu selon le type
+     * @param {string} type - 'contrats' ou 'locataires'
+     */
+    function genererContenu(type) {
+        if (type === 'contrats') {
+            genererContenuContrats();
+        } else {
+            genererContenuLocataires();
+        }
+    }
+    
+    /**
+     * Génère le contenu pour les contrats
+     */
+    function genererContenuContrats() {
+        console.log('Génération du contenu contrats');
+        
+        // Utiliser les données directement depuis le contexte Django
+        const contratsData = {{ contrats_data|safe }};
+        const statsData = {{ stats_contrats|safe }};
+        
+        if (contratsData && contratsData.length > 0) {
+            genererContenuContratsAvecDonnees({
+                contrats: contratsData,
+                statistiques: statsData
+            });
+        } else {
+            console.log('Aucune donnée de contrats disponible');
+            genererContenuContratsErreur();
+        }
+    }
+    
+    /**
+     * Génère le contenu des contrats avec les vraies données
+     */
+    function genererContenuContratsAvecDonnees(data) {
+        const contrats = data.contrats;
+        const stats = data.statistiques;
+        
+        let tableRows = '';
+        contrats.forEach((contrat, index) => {
+            tableRows += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td><strong>${contrat.numero}</strong></td>
+                    <td>${contrat.locataire}</td>
+                    <td>${contrat.propriete}</td>
+                    <td><span class="badge bg-primary">${contrat.paiements} paiements</span></td>
+                    <td>
+                        <a href="${contrat.url_detail}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i> Voir
+                        </a>
+                        <a href="${contrat.url_historique}" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-history"></i> Historique
+                        </a>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        const contenu = `
+            <div class="row">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-file-contract me-2"></i>
+                                Top ${contrats.length} Contrats les Plus Actifs
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Contrat</th>
+                                            <th>Locataire</th>
+                                            <th>Propriété</th>
+                                            <th>Paiements</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-contrats">
+                                        ${tableRows}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-chart-line me-2"></i>
+                                Statistiques des Contrats
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h3 class="text-primary">${stats.total_contrats}</h3>
+                                        <p class="text-muted">Total Contrats</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h3 class="text-success">${stats.contrats_actifs}</h3>
+                                        <p class="text-muted">Contrats Actifs</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h3 class="text-warning">${stats.contrats_resilies}</h3>
+                                        <p class="text-muted">Contrats Résiliés</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h3 class="text-info">${formatCurrency(stats.revenus_totaux)}</h3>
+                                        <p class="text-muted">Revenus Totaux</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        contenuDynamique.innerHTML = contenu;
+    }
+    
+    /**
+     * Génère le contenu d'erreur pour les contrats
+     */
+    function genererContenuContratsErreur() {
+        const contenu = `
+            <div class="row">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Erreur de Chargement
+                            </h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <p class="text-muted">Impossible de charger les données des contrats.</p>
+                            <p class="text-muted small">Vérifiez votre connexion et réessayez.</p>
+                            <button class="btn btn-primary" onclick="genererContenuContrats()">
+                                <i class="fas fa-refresh"></i> Réessayer
+                            </button>
+                            <button class="btn btn-outline-secondary ms-2" onclick="location.reload()">
+                                <i class="fas fa-home"></i> Recharger la page
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        contenuDynamique.innerHTML = contenu;
+    }
+    
+    /**
+     * Génère le contenu pour les locataires
+     */
+    function genererContenuLocataires() {
+        console.log('Génération du contenu locataires');
+        
+        // Utiliser les données directement depuis le contexte Django
+        const locatairesData = {{ locataires_data|safe }};
+        const statsData = {{ stats_locataires|safe }};
+        
+        if (locatairesData && locatairesData.length > 0) {
+            genererContenuLocatairesAvecDonnees({
+                locataires: locatairesData,
+                statistiques: statsData
+            });
+        } else {
+            console.log('Aucune donnée de locataires disponible');
+            genererContenuLocatairesErreur();
+        }
+    }
+    
+    /**
+     * Génère le contenu des locataires avec les vraies données
+     */
+    function genererContenuLocatairesAvecDonnees(data) {
+        const locataires = data.locataires;
+        const stats = data.statistiques;
+        
+        let tableRows = '';
+        locataires.forEach((locataire, index) => {
+            tableRows += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td><strong>${locataire.nom}</strong></td>
+                    <td><span class="badge bg-info">${locataire.contrats} contrats</span></td>
+                    <td><span class="badge bg-success">${locataire.paiements} paiements</span></td>
+                    <td>${locataire.dernier_paiement}</td>
+                    <td>
+                        <a href="${locataire.url_profil}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-user"></i> Profil
+                        </a>
+                        <a href="${locataire.url_historique}" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-history"></i> Historique
+                        </a>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        const contenu = `
+            <div class="row">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-users me-2"></i>
+                                Top ${locataires.length} Locataires les Plus Actifs
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Locataire</th>
+                                            <th>Contrats</th>
+                                            <th>Paiements</th>
+                                            <th>Dernier Paiement</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-locataires">
+                                        ${tableRows}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0">
+                                <i class="fas fa-chart-pie me-2"></i>
+                                Statistiques des Locataires
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h3 class="text-success">${stats.total_locataires}</h3>
+                                        <p class="text-muted">Total Locataires</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h3 class="text-primary">${stats.locataires_actifs}</h3>
+                                        <p class="text-muted">Locataires Actifs</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h3 class="text-info">${stats.moyenne_contrats}</h3>
+                                        <p class="text-muted">Moy. Contrats/Locataire</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h3 class="text-warning">${stats.moyenne_paiements}</h3>
+                                        <p class="text-muted">Moy. Paiements/Locataire</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        contenuDynamique.innerHTML = contenu;
+    }
+    
+    /**
+     * Génère le contenu d'erreur pour les locataires
+     */
+    function genererContenuLocatairesErreur() {
+        const contenu = `
+            <div class="row">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Erreur de Chargement
+                            </h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <p class="text-muted">Impossible de charger les données des locataires.</p>
+                            <p class="text-muted small">Vérifiez votre connexion et réessayez.</p>
+                            <button class="btn btn-primary" onclick="genererContenuLocataires()">
+                                <i class="fas fa-refresh"></i> Réessayer
+                            </button>
+                            <button class="btn btn-outline-secondary ms-2" onclick="location.reload()">
+                                <i class="fas fa-home"></i> Recharger la page
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        contenuDynamique.innerHTML = contenu;
+    }
+});
+
+// Animation des cartes au scroll
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.stat-card, .section-card, .quick-access-card');
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    });
+    
+    cards.forEach(card => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(card);
+    });
+});
+</script>
+{% endblock %}
+
+

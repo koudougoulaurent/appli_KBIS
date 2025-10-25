@@ -31,12 +31,9 @@ def generer_contrat_pdf_updated(request, pk):
     contrat = get_object_or_404(Contrat, pk=pk)
     
     try:
-        # Remplir automatiquement les champs manquants
-        service = ContratPDFService(contrat)
-        contrat = service.auto_remplir_champs_contrat()
-        
         # Générer le PDF du contrat
-        pdf_buffer = service.generate_contrat_pdf()
+        service = ContratPDFService(contrat)
+        pdf_buffer = service.generate_contrat_pdf(use_cache=False)
         
         # Créer la réponse HTTP avec le PDF
         response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
@@ -98,11 +95,8 @@ def generer_garantie_pdf(request, pk):
     contrat = get_object_or_404(Contrat, pk=pk)
     
     try:
-        # Remplir automatiquement les champs manquants
-        service = ContratPDFService(contrat)
-        contrat = service.auto_remplir_champs_contrat()
-        
         # Générer le PDF de la garantie
+        service = ContratPDFService(contrat)
         pdf_buffer = service.generate_garantie_pdf()
         
         # Créer la réponse HTTP avec le PDF
@@ -133,12 +127,9 @@ def generer_documents_complets(request, pk):
     contrat = get_object_or_404(Contrat, pk=pk)
     
     try:
-        # Remplir automatiquement les champs manquants
-        service = ContratPDFService(contrat)
-        contrat = service.auto_remplir_champs_contrat()
-        
         # Générer tous les PDF
-        contrat_pdf = service.generate_contrat_pdf()
+        service = ContratPDFService(contrat)
+        contrat_pdf = service.generate_contrat_pdf(use_cache=False)
         etat_lieux_pdf = service.generate_etat_lieux_pdf()
         garantie_pdf = service.generate_garantie_pdf()
         
@@ -169,11 +160,9 @@ def auto_remplir_contrat(request, pk):
     contrat = get_object_or_404(Contrat, pk=pk)
     
     try:
-        # Remplir automatiquement les champs
-        service = ContratPDFService(contrat)
-        contrat = service.auto_remplir_champs_contrat()
-        
-        messages.success(request, f'Champs du contrat {contrat.numero_contrat} remplis automatiquement!')
+        # Le service ContratPDFService gère automatiquement le remplissage des champs
+        # lors de la génération du PDF, pas besoin d'appel séparé
+        messages.success(request, f'Le contrat {contrat.numero_contrat} est prêt pour la génération PDF!')
         return redirect('contrats:detail', pk=pk)
         
     except Exception as e:

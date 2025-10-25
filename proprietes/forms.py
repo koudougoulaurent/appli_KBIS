@@ -1183,7 +1183,7 @@ class LocataireForm(forms.ModelForm):
     
     # Champs de téléphone simples comme dans BailleurForm
     telephone = forms.CharField(
-        max_length=20,
+        max_length=30,
         required=True,
         label=_('Téléphone principal'),
         widget=forms.TextInput(attrs={
@@ -1193,7 +1193,7 @@ class LocataireForm(forms.ModelForm):
     )
     
     telephone_mobile = forms.CharField(
-        max_length=20,
+        max_length=30,
         required=False,
         label=_('Téléphone mobile'),
         widget=forms.TextInput(attrs={
@@ -1203,7 +1203,7 @@ class LocataireForm(forms.ModelForm):
     )
     
     garant_telephone = forms.CharField(
-        max_length=20,
+        max_length=30,
         required=False,
         label=_('Téléphone du garant'),
         widget=forms.TextInput(attrs={
@@ -1237,7 +1237,7 @@ class LocataireForm(forms.ModelForm):
         model = Locataire
         fields = [
             'civilite', 'nom', 'prenom', 'date_naissance',
-            'email', 'adresse', 'code_postal', 'ville', 'pays', 'profession', 
+            'email', 'telephone', 'telephone_mobile', 'adresse', 'code_postal', 'ville', 'pays', 'numero_cnib', 'profession', 
             'employeur', 'revenus_mensuels', 'garant_civilite', 'garant_nom', 
             'garant_prenom', 'garant_email', 'garant_profession', 'garant_employeur', 
             'garant_revenus_mensuels', 'garant_adresse', 'garant_code_postal',
@@ -1254,7 +1254,11 @@ class LocataireForm(forms.ModelForm):
             }),
             'prenom': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Prénom'
+                'placeholder': 'Prénom (optionnel pour les sociétés)'
+            }),
+            'numero_cnib': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Numéro CNIB/CNI'
             }),
             'date_naissance': forms.DateInput(attrs={
                 'class': 'form-control',

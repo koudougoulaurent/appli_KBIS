@@ -312,7 +312,7 @@
                 <div class="alert alert-info">
                     <i class="bi bi-info-circle me-2"></i>
                     <strong>Information :</strong> Tous les champs marqués d'un astérisque (*) sont obligatoires. 
-                    Les revenus du locataire et du garant sont optionnels. Si les revenus du garant sont renseignés, ils doivent être d'au moins 3 fois ceux du locataire.
+                    Le prénom est optionnel pour les sociétés/personnes morales. Les revenus du locataire et du garant sont optionnels. Si les revenus du garant sont renseignés, ils doivent être d'au moins 3 fois ceux du locataire.
                 </div>
 
                 <!-- Debug des erreurs de validation -->
@@ -389,13 +389,46 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="{{ form.prenom.id_for_label }}" class="form-label required-field">
+                                    <label for="{{ form.prenom.id_for_label }}" class="form-label">
                                         {{ form.prenom.label }}
+                                        <small class="text-muted">(Optionnel pour les sociétés)</small>
                                     </label>
                                     {{ form.prenom }}
                                     {% if form.prenom.errors %}
                                         <div class="text-danger">
                                             {% for error in form.prenom.errors %}
+                                                <i class="bi bi-exclamation-circle"></i>{{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.numero_cnib.id_for_label }}" class="form-label">
+                                        {{ form.numero_cnib.label }}
+                                    </label>
+                                    {{ form.numero_cnib }}
+                                    {% if form.numero_cnib.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.numero_cnib.errors %}
+                                                <i class="bi bi-exclamation-circle"></i>{{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.profession.id_for_label }}" class="form-label">
+                                        {{ form.profession.label }}
+                                    </label>
+                                    {{ form.profession }}
+                                    {% if form.profession.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.profession.errors %}
                                                 <i class="bi bi-exclamation-circle"></i>{{ error }}
                                             {% endfor %}
                                         </div>

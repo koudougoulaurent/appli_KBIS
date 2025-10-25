@@ -484,6 +484,16 @@
                                 <li><a class="dropdown-item" href="/paiements/avances/liste/">
                                     <i class="bi bi-list-check"></i> Liste des Avances
                                 </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'paiements:historique:accueil' %}">
+                                    <i class="bi bi-house"></i> Accueil Historique
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'contrats:liste' %}">
+                                    <i class="bi bi-history"></i> Par Contrat
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'proprietes:locataires_liste' %}">
+                                    <i class="bi bi-person-history"></i> Par Locataire
+                                </a></li>
                             </ul>
                         </li>
                         <li class="nav-item dropdown">

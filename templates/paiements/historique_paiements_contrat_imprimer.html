@@ -1,0 +1,310 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media print {
+        body {
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .no-print {
+            display: none !important;
+        }
+        
+        .page-break {
+            page-break-before: always;
+        }
+        
+        .header-print {
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .stats-print {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .paiement-print {
+            border-bottom: 1px solid #ddd;
+            padding: 8px 0;
+        }
+        
+        .paiement-print:last-child {
+            border-bottom: none;
+        }
+        
+        .montant-print {
+            font-weight: bold;
+            color: #27ae60;
+        }
+        
+        .statut-print {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        .statut-valide {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .statut-en-attente {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .statut-refuse {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    }
+    
+    .print-header {
+        background: #2c3e50;
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .print-stats {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .print-paiements {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Boutons d'action (masqués à l'impression) -->
+    <div class="no-print mb-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="mb-0">
+                    <i class="fas fa-print me-2"></i>
+                    Version Imprimable - Historique des Paiements
+                </h2>
+                <p class="text-muted mb-0">{{ contrat.numero_contrat }} - {{ locataire.get_nom_complet }}</p>
+            </div>
+            <div>
+                <button onclick="window.print()" class="btn btn-primary">
+                    <i class="fas fa-print me-1"></i>
+                    Imprimer
+                </button>
+                <a href="{% url 'paiements:historique:historique_contrat' contrat.id %}" class="btn btn-outline-secondary ms-2">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Retour
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- En-tête du document -->
+    <div class="print-header">
+        <div class="row">
+            <div class="col-md-8">
+                <h3 class="mb-2">
+                    <i class="fas fa-history me-2"></i>
+                    Historique des Paiements
+                </h3>
+                <h4 class="mb-0">{{ contrat.numero_contrat }}</h4>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="text-white-50">
+                    <div><strong>Locataire:</strong> {{ locataire.get_nom_complet }}</div>
+                    <div><strong>Propriété:</strong> {{ propriete.adresse }}</div>
+                    <div><strong>Généré le:</strong> {{ generation_date|date:"d/m/Y à H:i" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="print-stats">
+        <h5 class="mb-3">
+            <i class="fas fa-chart-bar me-2"></i>
+            Statistiques Générales
+        </h5>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="h4 text-primary">{{ stats.total_paiements }}</div>
+                    <div class="text-muted">Total Paiements</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="h4 text-success">{{ stats.total_montant|floatformat:0 }} F</div>
+                    <div class="text-muted">Montant Total</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="h4 text-success">{{ stats.paiements_valides }}</div>
+                    <div class="text-muted">Validés</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="h4 text-warning">{{ stats.paiements_en_attente }}</div>
+                    <div class="text-muted">En Attente</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques par type -->
+    {% if stats_par_type %}
+    <div class="print-stats">
+        <h5 class="mb-3">
+            <i class="fas fa-chart-pie me-2"></i>
+            Répartition par Type de Paiement
+        </h5>
+        <div class="row">
+            {% for type_paiement, data in stats_par_type.items %}
+            <div class="col-md-3 mb-2">
+                <div class="d-flex justify-content-between">
+                    <span>{{ data.display }}:</span>
+                    <span><strong>{{ data.count }} paiement{{ data.count|pluralize }} - {{ data.montant_total|floatformat:0 }} F</strong></span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Liste des paiements -->
+    <div class="print-paiements">
+        <h5 class="mb-3">
+            <i class="fas fa-list me-2"></i>
+            Détail des Paiements ({{ paiements.count }} paiement{{ paiements.count|pluralize }})
+        </h5>
+        
+        {% if paiements %}
+        <div class="table-responsive">
+            <table class="table table-striped table-sm">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Date</th>
+                        <th>Référence</th>
+                        <th>Type</th>
+                        <th>Mois Payé</th>
+                        <th>Montant</th>
+                        <th>Statut</th>
+                        <th>Mode</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for paiement in paiements %}
+                    <tr>
+                        <td>{{ paiement.date_paiement|date:"d/m/Y" }}</td>
+                        <td>{{ paiement.reference_paiement }}</td>
+                        <td>{{ paiement.get_type_paiement_display }}</td>
+                        <td>{{ paiement.mois_paye|default:"-" }}</td>
+                        <td class="montant-print">{{ paiement.montant|floatformat:0 }} F</td>
+                        <td>
+                            <span class="statut-print statut-{{ paiement.statut }}">
+                                {{ paiement.get_statut_display }}
+                            </span>
+                        </td>
+                        <td>{{ paiement.get_mode_paiement_display }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">Aucun paiement trouvé</h5>
+            <p class="text-muted">Ce contrat n'a pas encore de paiements enregistrés.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Paiements par mois -->
+    {% if paiements_par_mois %}
+    <div class="print-paiements page-break">
+        <h5 class="mb-3">
+            <i class="fas fa-calendar-alt me-2"></i>
+            Répartition par Mois
+        </h5>
+        
+        {% for mois, data in paiements_par_mois.items %}
+        <div class="mb-4">
+            <h6 class="text-primary">
+                <i class="fas fa-calendar me-1"></i>
+                {{ mois|date:"F Y" }}
+                <span class="badge bg-primary ms-2">{{ data.paiements|length }} paiement{{ data.paiements|length|pluralize }}</span>
+                <span class="badge bg-success ms-1">{{ data.montant_total|floatformat:0 }} F</span>
+            </h6>
+            
+            <div class="row">
+                {% for paiement in data.paiements %}
+                <div class="col-md-6 mb-2">
+                    <div class="paiement-print">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <strong>{{ paiement.get_type_paiement_display }}</strong>
+                                {% if paiement.mois_paye %}
+                                <br><small class="text-muted">{{ paiement.mois_paye }}</small>
+                                {% endif %}
+                            </div>
+                            <div class="text-end">
+                                <div class="montant-print">{{ paiement.montant|floatformat:0 }} F</div>
+                                <small class="text-muted">{{ paiement.date_paiement|date:"d/m/Y" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Pied de page -->
+    <div class="text-center mt-5 pt-3 border-top">
+        <p class="text-muted small">
+            <i class="fas fa-info-circle me-1"></i>
+            Document généré automatiquement par le système KBIS IMMOBILIER
+            <br>
+            Historique des paiements - {{ generation_date|date:"d/m/Y à H:i" }}
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-print si demandé
+if (window.location.search.includes('autoprint=1')) {
+    window.onload = function() {
+        setTimeout(function() {
+            window.print();
+        }, 1000);
+    };
+}
+</script>
+{% endblock %}
+

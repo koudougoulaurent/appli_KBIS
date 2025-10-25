@@ -446,6 +446,24 @@
             
             <div class="module-card">
                 <div class="module-icon">
+                    <i class="fas fa-history"></i>
+                </div>
+                <div class="module-title">Historique des Paiements</div>
+                <div class="module-description">
+                    Consulter l'historique complet des paiements par contrat et locataire.
+                </div>
+                <div class="module-actions">
+                    <a href="{% url 'paiements:historique:accueil' %}" class="btn-module btn-primary-module">
+                        <i class="fas fa-home"></i> Accueil
+                    </a>
+                    <a href="{% url 'contrats:liste' %}" class="btn-module btn-secondary-module">
+                        <i class="fas fa-file-contract"></i> Par Contrat
+                    </a>
+                </div>
+            </div>
+            
+            <div class="module-card">
+                <div class="module-icon">
                     <i class="fas fa-hand-holding-usd"></i>
                 </div>
                 <div class="module-title">Gestion des Retraits</div>

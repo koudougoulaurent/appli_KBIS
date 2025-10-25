@@ -1,0 +1,335 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .locataire-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .contrat-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border-left: 5px solid #3498db;
+    }
+    
+    .contrat-card.active {
+        border-left-color: #27ae60;
+    }
+    
+    .contrat-card.ended {
+        border-left-color: #e74c3c;
+    }
+    
+    .stats-global {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stats-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    
+    .stats-label {
+        color: #7f8c8d;
+        font-size: 0.9rem;
+    }
+    
+    .paiement-item {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-left: 4px solid #3498db;
+    }
+    
+    .paiement-item.loyer {
+        border-left-color: #27ae60;
+    }
+    
+    .paiement-item.avance {
+        border-left-color: #f39c12;
+    }
+    
+    .paiement-item.caution {
+        border-left-color: #e74c3c;
+    }
+    
+    .paiement-montant {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #27ae60;
+    }
+    
+    .paiement-date {
+        color: #7f8c8d;
+        font-size: 0.9rem;
+    }
+    
+    .paiement-statut {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    
+    .statut-valide {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .statut-en-attente {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .statut-refuse {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .contrat-toggle {
+        background: #3498db;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+    
+    .contrat-toggle:hover {
+        background: #2980b9;
+    }
+    
+    .paiements-section {
+        display: none;
+        margin-top: 15px;
+    }
+    
+    .paiements-section.show {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête du locataire -->
+    <div class="locataire-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2">
+                    <i class="fas fa-user me-2"></i>
+                    {{ locataire.get_nom_complet }}
+                </h2>
+                <p class="mb-0 opacity-75">
+                    <i class="fas fa-phone me-1"></i>
+                    {{ locataire.telephone }}
+                    {% if locataire.email %}
+                    <span class="ms-3">
+                        <i class="fas fa-envelope me-1"></i>
+                        {{ locataire.email }}
+                    </span>
+                    {% endif %}
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="opacity-75">
+                    <div><strong>Contrats:</strong> {{ contrats.count }}</div>
+                    <div><strong>Paiements:</strong> {{ stats.total_paiements }}</div>
+                    <div><strong>Total:</strong> {{ stats.total_montant|floatformat:0 }} F CFA</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques globales -->
+    <div class="stats-global">
+        <h4 class="mb-3">
+            <i class="fas fa-chart-bar me-2"></i>
+            Statistiques Globales
+        </h4>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="stats-number">{{ stats.total_contrats }}</div>
+                    <div class="stats-label">Contrats</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="stats-number">{{ stats.total_paiements }}</div>
+                    <div class="stats-label">Total Paiements</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="stats-number">{{ stats.total_montant|floatformat:0 }} F</div>
+                    <div class="stats-label">Montant Total</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="stats-number">{{ stats.paiements_valides }}</div>
+                    <div class="stats-label">Paiements Validés</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des contrats -->
+    <div class="row">
+        <div class="col-12">
+            <h4 class="mb-3">
+                <i class="fas fa-file-contract me-2"></i>
+                Contrats et Paiements
+            </h4>
+            
+            {% for contrat in contrats %}
+            <div class="contrat-card {% if contrat.est_actif %}active{% else %}ended{% endif %}">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h5 class="mb-2">
+                            <i class="fas fa-file-contract me-2"></i>
+                            {{ contrat.numero_contrat }}
+                        </h5>
+                        <p class="mb-1">
+                            <i class="fas fa-map-marker-alt me-1"></i>
+                            {{ contrat.propriete.adresse }}
+                        </p>
+                        <p class="mb-0 text-muted">
+                            <i class="fas fa-calendar me-1"></i>
+                            {{ contrat.date_debut|date:"d/m/Y" }} - {{ contrat.date_fin|date:"d/m/Y" }}
+                        </p>
+                    </div>
+                    <div class="col-md-3">
+                        {% if stats_par_contrat.contrat.id %}
+                        <div class="text-center">
+                            <div class="h5 text-primary">{{ stats_par_contrat.contrat.id.count }}</div>
+                            <div class="text-muted small">Paiements</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <button class="contrat-toggle" onclick="togglePaiements({{ contrat.id }})">
+                            <i class="fas fa-eye me-1"></i>
+                            Voir Paiements
+                        </button>
+                        <a href="{% url 'contrats:detail' contrat.id %}" class="btn btn-outline-primary ms-2">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Section des paiements (masquée par défaut) -->
+                <div id="paiements-{{ contrat.id }}" class="paiements-section">
+                    <hr>
+                    <h6 class="mb-3">
+                        <i class="fas fa-list me-2"></i>
+                        Paiements du Contrat {{ contrat.numero_contrat }}
+                    </h6>
+                    
+                    {% for paiement in paiements %}
+                    {% if paiement.contrat.id == contrat.id %}
+                    <div class="paiement-item {{ paiement.type_paiement }}">
+                        <div class="row align-items-center">
+                            <div class="col-md-2">
+                                <div class="paiement-date">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    {{ paiement.date_paiement|date:"d/m/Y" }}
+                                </div>
+                                <div class="text-muted small">
+                                    {{ paiement.reference_paiement }}
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="fw-bold">{{ paiement.get_type_paiement_display }}</div>
+                                {% if paiement.mois_paye %}
+                                <div class="text-muted small">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    {{ paiement.mois_paye }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-2">
+                                <div class="paiement-montant">{{ paiement.montant|floatformat:0 }} F CFA</div>
+                            </div>
+                            <div class="col-md-2">
+                                <span class="paiement-statut statut-{{ paiement.statut }}">
+                                    {{ paiement.get_statut_display }}
+                                </span>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="text-muted small">
+                                    <i class="fas fa-credit-card me-1"></i>
+                                    {{ paiement.get_mode_paiement_display }}
+                                </div>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <a href="{% url 'paiements:detail' paiement.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if paiement.statut == 'valide' %}
+                                <a href="{% url 'paiements:generer_recu_unifie_a5' paiement.id %}" 
+                                   class="btn btn-sm btn-outline-success" target="_blank">
+                                    <i class="fas fa-file-pdf"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if not paiements %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-inbox text-muted"></i>
+                        <p class="text-muted mb-0">Aucun paiement pour ce contrat</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-5">
+                <i class="fas fa-file-contract fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Aucun contrat trouvé</h5>
+                <p class="text-muted">Ce locataire n'a pas encore de contrats enregistrés.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function togglePaiements(contratId) {
+    const section = document.getElementById(`paiements-${contratId}`);
+    const button = event.target;
+    
+    if (section.classList.contains('show')) {
+        section.classList.remove('show');
+        button.innerHTML = '<i class="fas fa-eye me-1"></i>Voir Paiements';
+    } else {
+        section.classList.add('show');
+        button.innerHTML = '<i class="fas fa-eye-slash me-1"></i>Masquer Paiements';
+    }
+}
+</script>
+{% endblock %}
+
