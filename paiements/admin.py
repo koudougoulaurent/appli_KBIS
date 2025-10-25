@@ -722,14 +722,14 @@ class ChargeBailleurAdmin(admin.ModelAdmin):
     """Interface d'administration pour les charges bailleur."""
     
     list_display = (
-        'id', 'bailleur', 'description', 'montant', 'date_charge', 
+        'id', 'numero_charge', 'bailleur', 'description', 'montant', 'date_charge', 
         'mois_charge', 'statut_colore', 'retrait_utilise', 'cree_par'
     )
     list_filter = (
         'statut', 'date_charge', 'mois_charge', 'bailleur', 'cree_par'
     )
     search_fields = (
-        'bailleur__nom', 'bailleur__prenom', 'description', 'notes'
+        'numero_charge', 'bailleur__nom', 'bailleur__prenom', 'description', 'notes'
     )
     readonly_fields = ('created_at', 'updated_at')
     date_hierarchy = 'date_charge'
@@ -737,7 +737,7 @@ class ChargeBailleurAdmin(admin.ModelAdmin):
     
     fieldsets = (
         (_('Informations de base'), {
-            'fields': ('bailleur', 'description', 'montant', 'date_charge', 'mois_charge')
+            'fields': ('numero_charge', 'bailleur', 'description', 'montant', 'date_charge', 'mois_charge')
         }),
         (_('Statut et utilisation'), {
             'fields': ('statut', 'retrait_utilise')

@@ -189,11 +189,11 @@ class RecapMensuel(models.Model):
                     pass  # Ignorer les erreurs de liaison
             
             # Calculer les charges bailleur pour le mois
-            charges_bailleur_mois = ChargesBailleur.objects.filter(
-                propriete__bailleur=self.bailleur,
+            charges_bailleur_mois = ChargeBailleur.objects.filter(
+                bailleur=self.bailleur,
                 date_charge__year=self.mois_recap.year,
                 date_charge__month=self.mois_recap.month,
-                statut__in=['en_attente', 'deduite_retrait']
+                statut__in=['en_attente', 'utilise']
             )
             
             for charge in charges_bailleur_mois:
@@ -1672,6 +1672,14 @@ class ChargeBailleur(models.Model):
         ('annule', 'Annulé'),
     ]
     
+    # Numéro unique pour éviter les conflits
+    numero_charge = models.CharField(
+        max_length=50,
+        unique=True,
+        blank=True,
+        verbose_name=_("Numéro de charge")
+    )
+    
     # Relations
     bailleur = models.ForeignKey(
         'proprietes.Bailleur',
@@ -1752,6 +1760,35 @@ class ChargeBailleur(models.Model):
     
     def __str__(self):
         return f"{self.bailleur.get_nom_complet()} - {self.description} - {self.montant} F CFA"
+    
+    def generer_numero_charge(self):
+        """
+        Génère un numéro unique pour la charge de manière thread-safe
+        """
+        from django.db import transaction
+        from datetime import datetime
+        import uuid
+        
+        # Utiliser un UUID pour garantir l'unicité même en cas d'enregistrement simultané
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        unique_id = str(uuid.uuid4())[:8]
+        numero = f"CHG-{timestamp}-{unique_id}"
+        
+        # Vérifier l'unicité (très peu probable avec UUID mais par sécurité)
+        with transaction.atomic():
+            while ChargeBailleur.objects.filter(numero_charge=numero).exists():
+                unique_id = str(uuid.uuid4())[:8]
+                numero = f"CHG-{timestamp}-{unique_id}"
+        
+        return numero
+    
+    def save(self, *args, **kwargs):
+        """
+        Surcharge de save pour générer automatiquement le numéro de charge
+        """
+        if not self.numero_charge:
+            self.numero_charge = self.generer_numero_charge()
+        super().save(*args, **kwargs)
     
     def marquer_utilise(self, retrait):
         """Marque cette charge comme utilisée dans un retrait"""
