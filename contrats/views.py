@@ -1436,6 +1436,10 @@ def marquer_caution_payee(request, contrat_id):
         # Créer le reçu de caution
         recu, created = RecuCaution.objects.get_or_create(contrat=contrat)
         
+        # Vider le cache PDF pour ce reçu
+        from core.pdf_cache import PDFCacheManager
+        PDFCacheManager.invalidate_cache('recu_caution', recu.id)
+        
         return redirect('contrats:liste_contrats_caution')
     
     return render(request, 'contrats/marquer_caution_payee.html', {'contrat': contrat})
@@ -1493,6 +1497,10 @@ def marquer_avance_payee(request, contrat_id):
         
         # Créer le reçu de caution
         recu, created = RecuCaution.objects.get_or_create(contrat=contrat)
+        
+        # Vider le cache PDF pour ce reçu
+        from core.pdf_cache import PDFCacheManager
+        PDFCacheManager.invalidate_cache('recu_caution', recu.id)
         
         return redirect('contrats:liste_contrats_caution')
     
