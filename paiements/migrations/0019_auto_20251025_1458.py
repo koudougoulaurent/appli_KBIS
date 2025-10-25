@@ -14,27 +14,42 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.CreateModel(
-            name='ChargeBailleur',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('description', models.CharField(max_length=200, verbose_name='Description de la charge')),
-                ('montant', models.DecimalField(decimal_places=2, max_digits=12, validators=[MinValueValidator(0.01)], verbose_name='Montant de la charge')),
-                ('date_charge', models.DateField(verbose_name='Date de la charge')),
-                ('mois_charge', models.DateField(help_text="Mois pour lequel cette charge s'applique", verbose_name='Mois de la charge')),
-                ('statut', models.CharField(choices=[('en_attente', 'En attente'), ('valide', 'Validé'), ('utilise', 'Utilisé'), ('annule', 'Annulé')], default='en_attente', max_length=20, verbose_name='Statut')),
-                ('notes', models.TextField(blank=True, verbose_name='Notes')),
-                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Date de création')),
-                ('updated_at', models.DateTimeField(auto_now=True, verbose_name='Date de modification')),
-                ('bailleur', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='charges_bailleur', to='proprietes.bailleur', verbose_name='Bailleur')),
-                ('cree_par', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='charges_bailleur_crees', to='utilisateurs.utilisateur', verbose_name='Créé par')),
-                ('retrait_utilise', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='charges_utilisees', to='paiements.retraitbailleur', verbose_name='Retrait qui a utilisé cette charge')),
-            ],
-            options={
-                'verbose_name': 'Charge Bailleur',
-                'verbose_name_plural': 'Charges Bailleur',
-                'ordering': ['-date_charge', '-created_at'],
-                'app_label': 'paiements',
-            },
+        migrations.RunSQL(
+            # SQL pour créer la table seulement si elle n'existe pas
+            sql="""
+            CREATE TABLE IF NOT EXISTS paiements_chargebailleur (
+                id BIGSERIAL PRIMARY KEY,
+                description VARCHAR(200) NOT NULL,
+                montant DECIMAL(12,2) NOT NULL CHECK (montant >= 0.01),
+                date_charge DATE NOT NULL,
+                mois_charge DATE NOT NULL,
+                statut VARCHAR(20) NOT NULL DEFAULT 'en_attente',
+                notes TEXT,
+                created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                bailleur_id BIGINT NOT NULL REFERENCES proprietes_bailleur(id) ON DELETE CASCADE,
+                cree_par_id BIGINT REFERENCES utilisateurs_utilisateur(id) ON DELETE SET NULL,
+                retrait_utilise_id BIGINT REFERENCES paiements_retraitbailleur(id) ON DELETE SET NULL
+            );
+            """,
+            reverse_sql="DROP TABLE IF EXISTS paiements_chargebailleur;",
+        ),
+        # Ajouter les contraintes et index
+        migrations.RunSQL(
+            sql="""
+            ALTER TABLE paiements_chargebailleur 
+            ADD CONSTRAINT paiements_chargebailleur_statut_check 
+            CHECK (statut IN ('en_attente', 'valide', 'utilise', 'annule'));
+            
+            CREATE INDEX IF NOT EXISTS paiements_chargebailleur_bailleur_id_idx 
+            ON paiements_chargebailleur(bailleur_id);
+            
+            CREATE INDEX IF NOT EXISTS paiements_chargebailleur_date_charge_idx 
+            ON paiements_chargebailleur(date_charge);
+            
+            CREATE INDEX IF NOT EXISTS paiements_chargebailleur_statut_idx 
+            ON paiements_chargebailleur(statut);
+            """,
+            reverse_sql="",
         ),
     ]
