@@ -673,7 +673,7 @@ def check_group_permissions(user, allowed_groups, operation_type='modify'):
     groupe_nom = groupe.nom.upper()
     
     # Actions que tous les groupes peuvent faire (sauf modify/delete)
-    actions_tous_groupes = ['view', 'add', 'validate', 'resilier']
+    actions_tous_groupes = ['view', 'add', 'validate', 'resilier', 'change']
     
     # Actions que seul PRIVILEGE peut faire
     actions_privilege_only = ['modify', 'delete']
