@@ -27,7 +27,13 @@ def mettre_a_jour_retrait_charge_bailleur(sender, instance, created, **kwargs):
     """
     if instance.statut in ['en_attente', 'utilise']:
         # Mettre à jour les retraits pour le mois de la charge
-        mois_charge = instance.date_charge.replace(day=1)
+        from datetime import date
+        if isinstance(instance.date_charge, str):
+            # Si c'est une chaîne, la convertir en date
+            mois_charge = date.fromisoformat(instance.date_charge).replace(day=1)
+        else:
+            # Si c'est déjà un objet date
+            mois_charge = instance.date_charge.replace(day=1)
         # Pour ChargeBailleur, on utilise le bailleur au lieu de la propriété
         from paiements.models import RetraitBailleur
         from django.db import transaction
@@ -76,7 +82,13 @@ def mettre_a_jour_retrait_suppression_charge_bailleur(sender, instance, **kwargs
     """
     Met à jour automatiquement les retraits quand une charge bailleur est supprimée
     """
-    mois_charge = instance.date_charge.replace(day=1)
+    from datetime import date
+    if isinstance(instance.date_charge, str):
+        # Si c'est une chaîne, la convertir en date
+        mois_charge = date.fromisoformat(instance.date_charge).replace(day=1)
+    else:
+        # Si c'est déjà un objet date
+        mois_charge = instance.date_charge.replace(day=1)
     # Pour ChargeBailleur, on utilise le bailleur au lieu de la propriété
     # Mettre à jour tous les retraits du bailleur pour ce mois
     from paiements.models import RetraitBailleur
