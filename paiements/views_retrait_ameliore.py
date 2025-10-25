@@ -85,10 +85,9 @@ def creer_retrait_automatique_ameliore(request):
                     messages.error(request, message_periode)
                     return redirect('paiements:retrait_auto_create_ameliore')
                 
-                # Récupérer tous les bailleurs avec des propriétés louées
+                # Récupérer tous les bailleurs avec des propriétés (pas seulement ceux avec contrats actifs)
                 bailleurs = Bailleur.objects.filter(
-                    proprietes__contrats__est_actif=True,
-                    proprietes__contrats__est_resilie=False
+                    proprietes__isnull=False
                 ).distinct()
                 
                 retraits_crees = 0

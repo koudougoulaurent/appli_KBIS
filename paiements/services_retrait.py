@@ -30,6 +30,56 @@ class ServiceGestionRetrait:
             return False, f"Les retraits ne peuvent être générés que du 25 au 5 du mois suivant. Aujourd'hui : {aujourd_hui.strftime('%d/%m/%Y')}"
     
     @staticmethod
+    def verifier_mois_retrait_approprié(bailleur, mois_retrait):
+        """
+        Vérifie que le mois de retrait est approprié par rapport aux contrats du bailleur
+        Un retrait n'est possible qu'à partir du mois de commencement de chaque contrat
+        """
+        from contrats.models import Contrat
+        from paiements.models import Paiement
+        
+        # Récupérer tous les contrats actifs du bailleur
+        contrats_actifs = Contrat.objects.filter(
+            propriete__bailleur=bailleur,
+            est_actif=True,
+            est_resilie=False
+        )
+        
+        if not contrats_actifs.exists():
+            return False, f"Aucun contrat actif trouvé pour {bailleur.get_nom_complet()}"
+        
+        # Vérifier pour chaque contrat
+        contrats_problematiques = []
+        
+        for contrat in contrats_actifs:
+            # Récupérer le premier paiement du contrat (mois de commencement)
+            premier_paiement = Paiement.objects.filter(
+                contrat=contrat,
+                statut='valide'
+            ).order_by('date_paiement').first()
+            
+            if premier_paiement:
+                mois_commencement = premier_paiement.date_paiement.replace(day=1)
+                
+                # Vérifier si le mois de retrait est antérieur au mois de commencement
+                if mois_retrait < mois_commencement:
+                    contrats_problematiques.append({
+                        'contrat': contrat.numero_contrat,
+                        'mois_commencement': mois_commencement.strftime('%B %Y'),
+                        'mois_retrait': mois_retrait.strftime('%B %Y')
+                    })
+        
+        if contrats_problematiques:
+            message = f"Retrait impossible pour {mois_retrait.strftime('%B %Y')}. "
+            message += "Les contrats suivants n'ont pas encore commencé : "
+            for contrat_info in contrats_problematiques:
+                message += f"{contrat_info['contrat']} (commencé en {contrat_info['mois_commencement']}), "
+            message = message.rstrip(', ')
+            return False, message
+        
+        return True, "Mois de retrait approprié"
+    
+    @staticmethod
     def calculer_retrait_optimise(bailleur, mois_retrait):
         """
         Calcule le retrait optimisé avec sommation des loyers et charges bailleur
@@ -135,6 +185,15 @@ class ServiceGestionRetrait:
             return {
                 'success': False,
                 'message': message_periode
+            }
+        
+        # Vérifier que le mois de retrait est approprié par rapport aux contrats
+        mois_ok, message_mois = ServiceGestionRetrait.verifier_mois_retrait_approprié(bailleur, mois_retrait)
+        
+        if not mois_ok:
+            return {
+                'success': False,
+                'message': message_mois
             }
         
         # Vérifier s'il existe déjà un retrait pour ce bailleur et ce mois

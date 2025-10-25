@@ -1544,6 +1544,122 @@ class RetraitBailleur(models.Model):
             print(f"Erreur lors de la génération de la quittance de retrait KBIS: {str(e)}")
             return None
 
+    def appliquer_charges_automatiquement(self, mois_retrait=None):
+        """
+        Applique automatiquement toutes les charges de bailleur calculées.
+        
+        Args:
+            mois_retrait: Mois de retrait (par défaut: mois du retrait)
+            
+        Returns:
+            dict: Résumé de l'application des charges
+        """
+        try:
+            # Calculer les charges
+            calcul = self.calculer_charges_automatiquement(mois_retrait)
+            
+            if calcul['total_charges'] == 0:
+                return {'success': True, 'message': 'Aucune charge à appliquer', 'charges_appliquees': 0}
+            
+            charges_appliquees = 0
+            
+            # Appliquer chaque charge
+            for detail in calcul['charges_details']:
+                charge = detail['charge']
+                montant = detail['montant_deductible']
+                
+                if self.ajouter_charge_bailleur(charge, montant, "Application automatique"):
+                    charges_appliquees += 1
+            
+            # Mettre à jour le retrait
+            self.save()
+            
+            return {
+                'success': True,
+                'message': f'{charges_appliquees} charges appliquées pour un total de {calcul["total_charges"]} F CFA',
+                'charges_appliquees': charges_appliquees,
+                'total_applique': calcul['total_charges']
+            }
+            
+        except Exception as e:
+            # Log l'erreur
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Erreur lors de l'application automatique des charges: {e}")
+            return {'success': False, 'message': f'Erreur: {str(e)}', 'charges_appliquees': 0}
+
+    def calculer_charges_automatiquement(self, mois_retrait=None):
+        """
+        Calcule automatiquement les charges de bailleur pour ce retrait.
+        
+        Args:
+            mois_retrait: Mois de retrait (par défaut: mois du retrait)
+            
+        Returns:
+            dict: Détails du calcul des charges
+        """
+        if mois_retrait is None:
+            mois_retrait = self.mois_retrait
+        
+        from proprietes.models import ChargesBailleur
+        from decimal import Decimal
+        
+        charges_details = []
+        total_charges = Decimal('0')
+        
+        # Récupérer les charges de bailleur pour ce mois
+        charges = ChargesBailleur.objects.filter(
+            propriete__bailleur=self.bailleur,
+            date_charge__year=mois_retrait.year,
+            date_charge__month=mois_retrait.month,
+            statut='en_attente'
+        )
+        
+        for charge in charges:
+            montant_deductible = charge.montant
+            charges_details.append({
+                'charge': charge,
+                'montant_deductible': montant_deductible
+            })
+            total_charges += montant_deductible
+        
+        return {
+            'charges_details': charges_details,
+            'total_charges': total_charges,
+            'nombre_charges': len(charges_details)
+        }
+
+    def ajouter_charge_bailleur(self, charge, montant, raison):
+        """
+        Ajoute une charge bailleur au retrait.
+        
+        Args:
+            charge: Instance de ChargesBailleur
+            montant: Montant à déduire
+            raison: Raison de la déduction
+            
+        Returns:
+            bool: True si ajouté avec succès
+        """
+        try:
+            # Ajouter la charge au montant des charges bailleur
+            self.montant_charges_bailleur += montant
+            
+            # Recalculer le montant net
+            self.calculer_montant_net()
+            
+            # Marquer la charge comme utilisée
+            charge.statut = 'utilise'
+            charge.save()
+            
+            return True
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Erreur lors de l'ajout de la charge bailleur: {e}")
+            return False
+
 
 class ChargeBailleur(models.Model):
     """
