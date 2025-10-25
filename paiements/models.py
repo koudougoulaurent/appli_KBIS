@@ -101,7 +101,7 @@ class RecapMensuel(models.Model):
         """Calcule les totaux pour le bailleur avec les charges dynamiques et les paiements réels."""
         from decimal import Decimal
         from django.db.models import Sum, Q
-        from proprietes.models import ChargesBailleur
+        from paiements.models import ChargeBailleur
         from datetime import datetime, timedelta
         
         try:
@@ -1460,9 +1460,9 @@ class RetraitBailleur(models.Model):
         self.updated_at = timezone.now()
         
         # Marquer les charges bailleur comme utilisées
-        from proprietes.models import ChargesBailleur
-        charges_utilisees = ChargesBailleur.objects.filter(
-            propriete__bailleur=self.bailleur,
+        from paiements.models import ChargeBailleur
+        charges_utilisees = ChargeBailleur.objects.filter(
+            bailleur=self.bailleur,
             date_charge__year=self.mois_retrait.year,
             date_charge__month=self.mois_retrait.month,
             statut='en_attente'
@@ -1601,7 +1601,7 @@ class RetraitBailleur(models.Model):
         if mois_retrait is None:
             mois_retrait = self.mois_retrait
         
-        from proprietes.models import ChargesBailleur
+        from paiements.models import ChargeBailleur
         from decimal import Decimal
         
         charges_details = []
@@ -1634,7 +1634,7 @@ class RetraitBailleur(models.Model):
         Ajoute une charge bailleur au retrait.
         
         Args:
-            charge: Instance de ChargesBailleur
+            charge: Instance de ChargeBailleur
             montant: Montant à déduire
             raison: Raison de la déduction
             
