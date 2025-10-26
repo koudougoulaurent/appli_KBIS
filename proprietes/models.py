@@ -1069,9 +1069,9 @@ class ChargesBailleur(models.Model):
     
     # Informations de base
     numero_charge = models.CharField(
-        max_length=20,
+        max_length=50,
         unique=True,
-        default='CH0001',
+        blank=True,
         verbose_name=_("Numéro de charge"),
         help_text=_("Identifiant unique de la charge")
     )
@@ -1188,8 +1188,50 @@ class ChargesBailleur(models.Model):
             return timezone.now().date() > self.date_echeance
         return False
     
+    def generer_numero_charge_unique(self):
+        """
+        Génère un numéro de charge unique de manière thread-safe
+        """
+        from django.db import transaction
+        from datetime import datetime
+        import uuid
+        import time
+        
+        # Utiliser un UUID complet pour garantir l'unicité absolue
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        microseconds = int(time.time() * 1000000) % 1000000  # Microsecondes pour plus de précision
+        unique_id = str(uuid.uuid4()).replace('-', '')[:8]  # UUID court pour le format
+        numero = f"CHG-{timestamp}-{microseconds:06d}-{unique_id}"
+        
+        # Vérifier l'unicité avec retry automatique
+        max_retries = 5
+        retry_count = 0
+        
+        with transaction.atomic():
+            while ChargesBailleur.objects.filter(numero_charge=numero).exists() and retry_count < max_retries:
+                retry_count += 1
+                # Générer un nouveau numéro avec plus de randomisation
+                timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+                microseconds = int(time.time() * 1000000) % 1000000
+                unique_id = str(uuid.uuid4()).replace('-', '')[:8]
+                numero = f"CHG-{timestamp}-{microseconds:06d}-{unique_id}"
+        
+        # Si on arrive ici et que le numéro existe encore, utiliser un UUID pur
+        if ChargesBailleur.objects.filter(numero_charge=numero).exists():
+            numero = f"CHG-{str(uuid.uuid4()).replace('-', '')}"
+        
+        return numero
+
     def save(self, *args, **kwargs):
-        """Override save pour calculer automatiquement le montant restant."""
+        """Override save pour calculer automatiquement le montant restant et générer un numéro unique."""
+        from django.db import IntegrityError
+        import uuid
+        
+        # Générer le numéro de charge si nécessaire
+        if not self.numero_charge or self.numero_charge == 'CH0001':
+            self.numero_charge = self.generer_numero_charge_unique()
+        
+        # Calculer le montant restant
         if self.montant and self.montant_deja_deduit is not None:
             self.montant_restant = self.montant - self.montant_deja_deduit
             
@@ -1199,7 +1241,22 @@ class ChargesBailleur(models.Model):
             elif self.montant_deja_deduit > 0:
                 self.statut = 'deduite_retrait'
         
-        super().save(*args, **kwargs)
+        # Tentative de sauvegarde avec gestion des conflits
+        max_retries = 3
+        retry_count = 0
+        
+        while retry_count < max_retries:
+            try:
+                super().save(*args, **kwargs)
+                break  # Succès, sortir de la boucle
+            except IntegrityError as e:
+                if 'numero_charge' in str(e) and retry_count < max_retries - 1:
+                    # Conflit sur numero_charge, générer un nouveau numéro
+                    retry_count += 1
+                    self.numero_charge = f"CHG-{str(uuid.uuid4()).replace('-', '')}"
+                else:
+                    # Autre erreur ou max retries atteint
+                    raise e
     
     def marquer_comme_deduit(self, montant_deduction):
         """

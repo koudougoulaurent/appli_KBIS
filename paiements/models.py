@@ -1774,17 +1774,30 @@ class ChargeBailleur(models.Model):
         from django.db import transaction
         from datetime import datetime
         import uuid
+        import time
         
-        # Utiliser un UUID pour garantir l'unicité même en cas d'enregistrement simultané
+        # Utiliser un UUID complet pour garantir l'unicité absolue
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        unique_id = str(uuid.uuid4())[:8]
-        numero = f"CHG-{timestamp}-{unique_id}"
+        microseconds = int(time.time() * 1000000) % 1000000  # Microsecondes pour plus de précision
+        unique_id = str(uuid.uuid4()).replace('-', '')[:12]  # UUID complet sans tirets
+        numero = f"CHG-{timestamp}-{microseconds:06d}-{unique_id}"
         
-        # Vérifier l'unicité (très peu probable avec UUID mais par sécurité)
+        # Vérifier l'unicité avec retry automatique
+        max_retries = 5
+        retry_count = 0
+        
         with transaction.atomic():
-            while ChargeBailleur.objects.filter(numero_charge=numero).exists():
-                unique_id = str(uuid.uuid4())[:8]
-                numero = f"CHG-{timestamp}-{unique_id}"
+            while ChargeBailleur.objects.filter(numero_charge=numero).exists() and retry_count < max_retries:
+                retry_count += 1
+                # Générer un nouveau numéro avec plus de randomisation
+                timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+                microseconds = int(time.time() * 1000000) % 1000000
+                unique_id = str(uuid.uuid4()).replace('-', '')[:12]
+                numero = f"CHG-{timestamp}-{microseconds:06d}-{unique_id}"
+        
+        # Si on arrive ici et que le numéro existe encore, utiliser un UUID pur
+        if ChargeBailleur.objects.filter(numero_charge=numero).exists():
+            numero = f"CHG-{str(uuid.uuid4()).replace('-', '')}"
         
         return numero
     
@@ -1792,9 +1805,29 @@ class ChargeBailleur(models.Model):
         """
         Surcharge de save pour générer automatiquement le numéro de charge
         """
+        from django.db import IntegrityError
+        import uuid
+        
+        # Générer le numéro de charge si nécessaire
         if not self.numero_charge:
             self.numero_charge = self.generer_numero_charge()
-        super().save(*args, **kwargs)
+        
+        # Tentative de sauvegarde avec gestion des conflits
+        max_retries = 3
+        retry_count = 0
+        
+        while retry_count < max_retries:
+            try:
+                super().save(*args, **kwargs)
+                break  # Succès, sortir de la boucle
+            except IntegrityError as e:
+                if 'numero_charge' in str(e) and retry_count < max_retries - 1:
+                    # Conflit sur numero_charge, générer un nouveau numéro
+                    retry_count += 1
+                    self.numero_charge = f"CHG-{str(uuid.uuid4()).replace('-', '')}"
+                else:
+                    # Autre erreur ou max retries atteint
+                    raise e
     
     def marquer_utilise(self, retrait):
         """Marque cette charge comme utilisée dans un retrait"""
