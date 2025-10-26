@@ -19,13 +19,14 @@ class DocumentUnifieA5Service:
     def __init__(self):
         self.config_entreprise = ConfigurationEntreprise.get_configuration_active()
     
-    def generer_recu_unifie(self, paiement_id, document_type='recu'):
+    def generer_recu_unifie(self, paiement_id, document_type='recu', user=None):
         """
         Génère un récépissé unifié au format A5.
         
         Args:
             paiement_id (int): ID du paiement
             document_type (str): Type de document ('recu', 'quittance', 'avance', 'caution')
+            user: Utilisateur qui génère le document
         
         Returns:
             str: HTML du document généré
@@ -62,6 +63,7 @@ class DocumentUnifieA5Service:
                 'document_number': paiement.numero_paiement,
                 'generation_date': timezone.now(),
                 'config_entreprise': self.config_entreprise,
+                'user': user,  # Ajouter l'utilisateur au contexte
                 
                 # Informations du paiement
                 'type_paiement': paiement.get_type_paiement_display(),

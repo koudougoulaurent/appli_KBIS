@@ -25,7 +25,7 @@ def generer_recu_unifie_a5(request, paiement_id):
         
         # Générer le document directement
         service = DocumentUnifieA5Service()
-        html_content = service.generer_recu_unifie(paiement_id, 'recu')
+        html_content = service.generer_recu_unifie(paiement_id, 'recu', user=request.user)
         
         return HttpResponse(html_content, content_type='text/html')
         
@@ -46,7 +46,7 @@ def generer_quittance_unifie_a5(request, paiement_id):
         
         # Générer le document directement
         service = DocumentUnifieA5Service()
-        html_content = service.generer_recu_unifie(paiement_id, 'quittance')
+        html_content = service.generer_recu_unifie(paiement_id, 'quittance', user=request.user)
         
         return HttpResponse(html_content, content_type='text/html')
         
@@ -67,7 +67,7 @@ def generer_avance_unifie_a5(request, paiement_id):
         
         # Générer le document directement
         service = DocumentUnifieA5Service()
-        html_content = service.generer_recu_unifie(paiement_id, 'avance')
+        html_content = service.generer_recu_unifie(paiement_id, 'avance', user=request.user)
         
         return HttpResponse(html_content, content_type='text/html')
         
@@ -88,7 +88,7 @@ def generer_caution_unifie_a5(request, paiement_id):
         
         # Générer le document directement
         service = DocumentUnifieA5Service()
-        html_content = service.generer_recu_unifie(paiement_id, 'caution')
+        html_content = service.generer_recu_unifie(paiement_id, 'caution', user=request.user)
         
         return HttpResponse(html_content, content_type='text/html')
         
@@ -124,7 +124,7 @@ def generer_document_unifie_a5(request, paiement_id, document_type):
         
         # Générer le document
         service = DocumentUnifieA5Service()
-        html_content = service.generer_recu_unifie(paiement_id, document_type)
+        html_content = service.generer_recu_unifie(paiement_id, document_type, user=request.user)
         
         return HttpResponse(html_content, content_type='text/html')
         
@@ -156,7 +156,7 @@ def preview_document_unifie_a5(request, paiement_id, document_type):
         
         # Générer le document
         service = DocumentUnifieA5Service()
-        html_content = service.generer_recu_unifie(paiement_id, document_type)
+        html_content = service.generer_recu_unifie(paiement_id, document_type, user=request.user)
         
         # Retirer le script d'impression automatique pour l'aperçu
         html_content = html_content.replace(
