@@ -417,7 +417,9 @@
                 <strong>{{ config_entreprise.nom_entreprise }}</strong>{% if config_entreprise.slogan %} - {{ config_entreprise.slogan }}{% endif %}<br>
                 {{ config_entreprise.get_adresse_complete }} | {{ config_entreprise.get_contact_complet }}<br>
                 {{ config_entreprise.get_informations_legales }}<br>
-                Ce reçu est généré automatiquement par le système {{ config_entreprise.nom_entreprise }}
+                {% if user %}
+                <strong>Généré par : {{ user.get_full_name|default:user.username }}</strong><br>
+                {% endif %}
             </p>
             <p>
                 Reçu émis le {{ recu.date_emission|date:"d/m/Y à H:i" }}

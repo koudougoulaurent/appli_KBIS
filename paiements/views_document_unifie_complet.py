@@ -25,7 +25,7 @@ def generer_recu_paiement_a5(request, paiement_id):
     """Génère un récépissé de paiement A5."""
     try:
         service = DocumentUnifieA5ServiceComplet()
-        html_content = service.generer_document_unifie('paiement_recu', paiement_id=paiement_id)
+        html_content = service.generer_document_unifie('paiement_recu', user=request.user, paiement_id=paiement_id)
         return HttpResponse(html_content, content_type='text/html')
     except Exception as e:
         messages.error(request, f"Erreur lors de la génération du récépissé: {str(e)}")
