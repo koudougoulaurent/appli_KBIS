@@ -25,13 +25,14 @@ class ServiceGenerationRetraitPDF:
     def __init__(self):
         self.logger = logger
     
-    def generer_pdf_retrait(self, retrait, template_type='retrait_standard'):
+    def generer_pdf_retrait(self, retrait, template_type='retrait_standard', user=None):
         """
         Génère un PDF de retrait avec template.
         
         Args:
             retrait: Instance de RetraitBailleur
             template_type: Type de template à utiliser
+            user: Utilisateur qui génère le document
         
         Returns:
             HttpResponse: PDF généré
@@ -55,6 +56,7 @@ class ServiceGenerationRetraitPDF:
                     'template': template,
                     'config': config,
                     'date_generation': timezone.now(),
+                    'user': user,  # Ajouter l'utilisateur au contexte
                 }
             )
             
@@ -195,6 +197,9 @@ class ServiceGenerationRetraitPDF:
             
             <div class="footer">
                 <p>Document généré le {{ date_generation|date:"d/m/Y à H:i" }}</p>
+                {% if user %}
+                <p><strong>Généré par :</strong> {{ user.get_full_name|default:user.username }}</p>
+                {% endif %}
                 <p>{{ config.nom_entreprise }} - {{ config.adresse|default:"" }}</p>
             </div>
         </body>

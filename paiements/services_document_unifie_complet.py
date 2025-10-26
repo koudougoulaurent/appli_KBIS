@@ -22,7 +22,7 @@ class DocumentUnifieA5ServiceComplet:
     def __init__(self):
         self.config_entreprise = ConfigurationEntreprise.get_configuration_active()
     
-    def generer_document_unifie(self, document_type, **kwargs):
+    def generer_document_unifie(self, document_type, user=None, **kwargs):
         """
         Génère un document unifié au format A5.
         
@@ -34,6 +34,7 @@ class DocumentUnifieA5ServiceComplet:
                 - 'paiement_caution': Récépissé de caution
                 - 'retrait_quittance': Quittance de retrait
                 - 'recap_quittance': Quittance de récapitulatif
+            user: Utilisateur qui génère le document
         
         Returns:
             str: HTML du document généré
@@ -68,6 +69,7 @@ class DocumentUnifieA5ServiceComplet:
                 'document_type': document_type,
                 'generation_date': timezone.now(),
                 'config_entreprise': self.config_entreprise,
+                'user': user,  # Ajouter l'utilisateur au contexte
             })
             
             # Rendre le template

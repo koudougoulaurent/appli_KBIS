@@ -277,7 +277,7 @@ class RecapMensuel(models.Model):
                     ON CONFLICT DO NOTHING
                 """, [self.id, paiement_ids])
 
-    def generer_pdf_recapitulatif(self):
+    def generer_pdf_recapitulatif(self, user=None):
         """Génère le PDF du récapitulatif mensuel."""
         from django.template.loader import render_to_string
         from django.utils import timezone
@@ -315,6 +315,7 @@ class RecapMensuel(models.Model):
                     'proprietes_details': proprietes_details,
                     'date_generation': timezone.now(),
                     'entete_base64': entete_base64,
+                    'user': user,  # Ajouter l'utilisateur au contexte
                 }
             )
             
@@ -829,7 +830,7 @@ class Paiement(models.Model):
         }
         return colors.get(self.statut, 'secondary')
     
-    def generer_quittance_kbis_dynamique(self):
+    def generer_quittance_kbis_dynamique(self, user=None):
         """Génère une quittance KBIS dynamique avec le format correct."""
         import sys
         import os

@@ -1565,7 +1565,7 @@ def imprimer_recu_caution(request, contrat_id):
     # Utiliser le service PDF professionnel avec la bonne image d'en-tête
     from contrats.services import RecuCautionPDFService
     pdf_service = RecuCautionPDFService(recu)
-    pdf_buffer = pdf_service.generate_recu_pdf()
+    pdf_buffer = pdf_service.generate_recu_pdf(user=request.user)
     
     # Créer la réponse HTTP
     response = HttpResponse(content_type='application/pdf')
@@ -2125,7 +2125,7 @@ def generer_contrat_pdf(request, pk):
         # Générer le PDF du contrat avec le service mis à jour
         from .services import ContratPDFService
         pdf_service = ContratPDFService(contrat)
-        pdf_buffer = pdf_service.generate_contrat_pdf(use_cache=False)
+        pdf_buffer = pdf_service.generate_contrat_pdf(use_cache=False, user=request.user)
         
         # Créer la réponse HTTP avec le PDF
         from django.http import HttpResponse

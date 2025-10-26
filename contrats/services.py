@@ -206,7 +206,7 @@ class ContratPDFService:
             alignment=TA_CENTER
         ))
 
-    def generate_contrat_pdf(self, use_cache=False):
+    def generate_contrat_pdf(self, use_cache=False, user=None):
         """Génère le PDF du contrat de bail avec en-tête et pied de page fixes"""
         from core.pdf_cache import PDFCacheManager
         
@@ -225,6 +225,9 @@ class ContratPDFService:
         # Récupérer la configuration de l'entreprise
         from core.models import ConfigurationEntreprise
         self.config_entreprise = ConfigurationEntreprise.get_configuration_active()
+        
+        # Stocker l'utilisateur pour l'affichage
+        self.user = user
         
         # Créer le document avec des marges optimisées pour éviter le chevauchement
         doc = SimpleDocTemplate(
@@ -723,6 +726,12 @@ Merci pour votre compréhension"""
         elements.append(Paragraph(f"Fait en deux exemplaires à Ouagadougou, le {date_contrat}", self.styles['CustomBody']))
         elements.append(Spacer(1, 10))
         
+        # Ajouter le nom de l'utilisateur qui a généré le document
+        if hasattr(self, 'user') and self.user:
+            user_name = self.user.get_full_name() or self.user.username
+            elements.append(Paragraph(f"<b>Document généré par :</b> {user_name}", self.styles['CustomBody']))
+            elements.append(Spacer(1, 10))
+        
         # Le pied de page sera géré par _add_footer_only (vrai pied de page)
         
         return elements
@@ -1183,7 +1192,7 @@ class RecuCautionPDFService:
             alignment=TA_CENTER
         ))
 
-    def generate_recu_pdf(self, use_cache=True):
+    def generate_recu_pdf(self, use_cache=True, user=None):
         """Génère le PDF du reçu de caution avec en-tête et pied de page fixes"""
         from core.pdf_cache import PDFCacheManager
         
@@ -1198,6 +1207,9 @@ class RecuCautionPDFService:
         
         # Générer le PDF
         buffer = BytesIO()
+        
+        # Stocker l'utilisateur pour l'affichage
+        self.user = user
         
         # Créer le document avec des marges optimisées pour éviter le chevauchement
         doc = SimpleDocTemplate(
@@ -1703,6 +1715,12 @@ class RecuCautionPDFService:
         
         elements.append(signature_table)
         elements.append(Spacer(1, 30))
+        
+        # Ajouter le nom de l'utilisateur qui a généré le document
+        if hasattr(self, 'user') and self.user:
+            user_name = self.user.get_full_name() or self.user.username
+            elements.append(Paragraph(f"<b>Document généré par :</b> {user_name}", self.styles['CustomBody']))
+            elements.append(Spacer(1, 10))
         
         return elements
 

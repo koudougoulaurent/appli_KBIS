@@ -599,6 +599,9 @@
             <div class="footer-generation">
                 Ce document est généré automatiquement par le système {{ config_entreprise.nom_entreprise }}<br>
                 {{ document_title }} émis le {{ generation_date|date:"d/m/Y à H:i" }}<br>
+                {% if user %}
+                <strong>Généré par : {{ user.get_full_name|default:user.username }}</strong><br>
+                {% endif %}
                 <strong>Type de paiement : {{ type_paiement }}</strong>
             </div>
         </div>

@@ -38,7 +38,7 @@ def generer_quittance_paiement_a5(request, paiement_id):
     """Génère une quittance de paiement A5."""
     try:
         service = DocumentUnifieA5ServiceComplet()
-        html_content = service.generer_document_unifie('paiement_quittance', paiement_id=paiement_id)
+        html_content = service.generer_document_unifie('paiement_quittance', user=request.user, paiement_id=paiement_id)
         return HttpResponse(html_content, content_type='text/html')
     except Exception as e:
         messages.error(request, f"Erreur lors de la génération de la quittance: {str(e)}")
@@ -51,7 +51,7 @@ def generer_avance_paiement_a5(request, paiement_id):
     """Génère un récépissé d'avance A5."""
     try:
         service = DocumentUnifieA5ServiceComplet()
-        html_content = service.generer_document_unifie('paiement_avance', paiement_id=paiement_id)
+        html_content = service.generer_document_unifie('paiement_avance', user=request.user, paiement_id=paiement_id)
         return HttpResponse(html_content, content_type='text/html')
     except Exception as e:
         messages.error(request, f"Erreur lors de la génération du récépissé d'avance: {str(e)}")
@@ -64,7 +64,7 @@ def generer_caution_paiement_a5(request, paiement_id):
     """Génère un récépissé de caution A5."""
     try:
         service = DocumentUnifieA5ServiceComplet()
-        html_content = service.generer_document_unifie('paiement_caution', paiement_id=paiement_id)
+        html_content = service.generer_document_unifie('paiement_caution', user=request.user, paiement_id=paiement_id)
         return HttpResponse(html_content, content_type='text/html')
     except Exception as e:
         messages.error(request, f"Erreur lors de la génération du récépissé de caution: {str(e)}")
@@ -79,7 +79,7 @@ def generer_quittance_retrait_a5(request, retrait_id):
     """Génère une quittance de retrait A5."""
     try:
         service = DocumentUnifieA5ServiceComplet()
-        html_content = service.generer_document_unifie('retrait_quittance', retrait_id=retrait_id)
+        html_content = service.generer_document_unifie('retrait_quittance', user=request.user, retrait_id=retrait_id)
         return HttpResponse(html_content, content_type='text/html')
     except Exception as e:
         messages.error(request, f"Erreur lors de la génération de la quittance de retrait: {str(e)}")
@@ -107,7 +107,7 @@ def generer_quittance_recap_a5(request, recapitulatif_id):
     """Génère une quittance de récapitulatif A5."""
     try:
         service = DocumentUnifieA5ServiceComplet()
-        html_content = service.generer_document_unifie('recap_quittance', recapitulatif_id=recapitulatif_id)
+        html_content = service.generer_document_unifie('recap_quittance', user=request.user, recapitulatif_id=recapitulatif_id)
         return HttpResponse(html_content, content_type='text/html')
     except Exception as e:
         messages.error(request, f"Erreur lors de la génération de la quittance de récapitulatif: {str(e)}")

@@ -571,7 +571,7 @@ def telecharger_pdf_recapitulatif(request, recapitulatif_id):
     
     try:
         # Générer le PDF
-        pdf_content = recapitulatif.generer_pdf_recapitulatif()
+        pdf_content = recapitulatif.generer_pdf_recapitulatif(user=request.user)
         
         # Créer la réponse HTTP
         response = HttpResponse(pdf_content, content_type='application/pdf')

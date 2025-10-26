@@ -215,7 +215,7 @@ def generer_pdf_retrait(request, retrait_id):
         
         # Générer le PDF avec le service
         service_pdf = ServiceGenerationRetraitPDF()
-        response = service_pdf.generer_pdf_retrait(retrait)
+        response = service_pdf.generer_pdf_retrait(retrait, user=request.user)
         
         return response
         

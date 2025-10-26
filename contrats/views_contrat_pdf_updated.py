@@ -33,7 +33,7 @@ def generer_contrat_pdf_updated(request, pk):
     try:
         # Générer le PDF du contrat
         service = ContratPDFService(contrat)
-        pdf_buffer = service.generate_contrat_pdf(use_cache=False)
+        pdf_buffer = service.generate_contrat_pdf(use_cache=False, user=request.user)
         
         # Créer la réponse HTTP avec le PDF
         response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
