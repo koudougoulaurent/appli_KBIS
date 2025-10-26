@@ -1416,15 +1416,19 @@ class RetraitBailleur(models.Model):
         return self.bailleur.get_nom_complet()
     
     def calculer_charges_bailleur_disponibles(self):
-        """Calcule les charges bailleur disponibles pour ce mois"""
+        """
+        Calcule les charges bailleur disponibles pour ce mois
+        LOGIQUE: Charge s'applique UNE SEULE FOIS sur le mois de retrait
+        """
         from django.db.models import Sum
         
-        # Récupérer les charges validées et non utilisées pour ce mois
+        # Récupérer les charges pour ce mois (en_attente ou valide)
+        # LOGIQUE: Une charge ne peut être utilisée qu'une seule fois
         charges_disponibles = ChargeBailleur.objects.filter(
             bailleur=self.bailleur,
             mois_charge__year=self.mois_retrait.year,
             mois_charge__month=self.mois_retrait.month,
-            statut='valide'
+            statut__in=['en_attente', 'valide']  # Charges disponibles
         ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
         
         return charges_disponibles
@@ -1463,14 +1467,14 @@ class RetraitBailleur(models.Model):
         from paiements.models import ChargeBailleur
         charges_utilisees = ChargeBailleur.objects.filter(
             bailleur=self.bailleur,
-            date_charge__year=self.mois_retrait.year,
-            date_charge__month=self.mois_retrait.month,
-            statut='en_attente'
+            mois_charge__year=self.mois_retrait.year,
+            mois_charge__month=self.mois_retrait.month,
+            statut__in=['en_attente', 'valide']  # Charges disponibles
         )
         
-        # TODO: Implémenter la logique de marquage des charges comme utilisées
-        # for charge in charges_utilisees:
-        #     charge.marquer_utilise(self)
+        # Marquer chaque charge comme utilisée
+        for charge in charges_utilisees:
+            charge.marquer_utilise(self)
         
         # Sauvegarder seulement les champs modifiés
         self.save(update_fields=['statut', 'date_paiement', 'updated_at'])
