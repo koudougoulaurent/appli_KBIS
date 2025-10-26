@@ -24,7 +24,7 @@ class ContratPDFServiceUpdated:
         self.contrat = contrat
         self.logger = logger
     
-    def generate_contrat_pdf(self):
+    def generate_contrat_pdf(self, user=None):
         """
         Génère un PDF de contrat avec le template mis à jour.
         
@@ -62,6 +62,7 @@ class ContratPDFServiceUpdated:
                     'config': config,
                     'image_base64': image_base64,
                     'date_generation': timezone.now(),
+                    'user': user,  # Ajouter l'utilisateur au contexte
                 }
             )
             

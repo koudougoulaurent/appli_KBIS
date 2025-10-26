@@ -1774,7 +1774,7 @@ class ResiliationPDFService:
             alignment=TA_CENTER
         ))
 
-    def generate_resiliation_pdf(self, use_cache=True):
+    def generate_resiliation_pdf(self, use_cache=True, user=None):
         """Génère le PDF de résiliation avec en-tête et pied de page fixes"""
         from core.pdf_cache import PDFCacheManager
         
@@ -1827,7 +1827,7 @@ class ResiliationPDFService:
         story.append(Spacer(1, 20))
         
         # Signatures
-        story.extend(self._create_signatures())
+        story.extend(self._create_signatures(user=user))
         
         # Génération du PDF avec en-tête et pied de page personnalisés
         doc.build(story, onFirstPage=self._add_header_footer, onLaterPages=self._add_header_footer)
@@ -2065,7 +2065,7 @@ class ResiliationPDFService:
         
         return elements
 
-    def _create_signatures(self):
+    def _create_signatures(self, user=None):
         """Crée la section des signatures"""
         elements = []
         
@@ -2109,6 +2109,12 @@ class ResiliationPDFService:
                 self.styles['CustomSignature']
             ))
             elements.append(Spacer(1, 30))
+        
+        # Ajouter le nom de l'utilisateur qui a généré le document
+        if user:
+            user_name = user.get_full_name() or user.username
+            elements.append(Paragraph(f"<b>Document généré par :</b> {user_name}", self.styles['CustomBody']))
+            elements.append(Spacer(1, 10))
         
         # Ajouter les informations des documents joints (au lieu d'embarquer les images)
         elements.extend(self._create_documents_summary())

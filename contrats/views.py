@@ -2158,7 +2158,7 @@ def generer_resiliation_pdf(request, pk):
         # Générer le PDF de la résiliation
         from .services import ResiliationPDFService
         pdf_service = ResiliationPDFService(resiliation)
-        pdf_buffer = pdf_service.generate_resiliation_pdf()
+        pdf_buffer = pdf_service.generate_resiliation_pdf(user=request.user)
         
         # Créer la réponse HTTP avec le PDF
         from django.http import HttpResponse
@@ -2201,7 +2201,7 @@ def generer_resiliation_contrat_pdf(request, pk):
         # Générer le PDF de la résiliation
         from .services import ResiliationPDFService
         pdf_service = ResiliationPDFService(resiliation_temp)
-        pdf_buffer = pdf_service.generate_resiliation_pdf()
+        pdf_buffer = pdf_service.generate_resiliation_pdf(user=request.user)
         
         # Créer la réponse HTTP avec le PDF
         from django.http import HttpResponse

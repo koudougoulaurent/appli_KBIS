@@ -291,7 +291,7 @@ class ServiceGenerationRetraitPDF:
             succes=True
         )
     
-    def generer_pdf_retrait_multiple(self, retraits, template_type='retrait_standard'):
+    def generer_pdf_retrait_multiple(self, retraits, template_type='retrait_standard', user=None):
         """
         Génère un PDF consolidé pour plusieurs retraits.
         
@@ -321,6 +321,7 @@ class ServiceGenerationRetraitPDF:
                     'template': template,
                     'config': config,
                     'date_generation': timezone.now(),
+                    'user': user,  # Ajouter l'utilisateur au contexte
                 }
             )
             

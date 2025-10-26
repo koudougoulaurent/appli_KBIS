@@ -249,7 +249,7 @@ def generer_pdf_retraits_multiple(request):
         
         # Générer le PDF consolidé
         service_pdf = ServiceGenerationRetraitPDF()
-        response = service_pdf.generer_pdf_retrait_multiple(retraits)
+        response = service_pdf.generer_pdf_retrait_multiple(retraits, user=request.user)
         
         return response
         
@@ -288,7 +288,7 @@ def generer_pdf_retraits_mois(request):
         
         # Générer le PDF consolidé
         service_pdf = ServiceGenerationRetraitPDF()
-        response = service_pdf.generer_pdf_retrait_multiple(retraits)
+        response = service_pdf.generer_pdf_retrait_multiple(retraits, user=request.user)
         
         return response
         
