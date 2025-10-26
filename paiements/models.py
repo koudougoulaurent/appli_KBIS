@@ -1001,7 +1001,7 @@ class Paiement(models.Model):
         except:
             return 0
     
-    def _generer_recu_kbis_dynamique(self):
+    def _generer_recu_kbis_dynamique(self, user=None):
         """Génère un récépissé KBIS dynamique avec le format correct."""
         import sys
         import os
@@ -1066,7 +1066,7 @@ class Paiement(models.Model):
             donnees_recu.update(self._ajouter_donnees_specialisees_recu(type_recu))
             
             # Générer le document unifié
-            return DocumentKBISUnifie.generer_document_unifie(donnees_recu, type_recu)
+            return DocumentKBISUnifie.generer_document_unifie(donnees_recu, type_recu, user=user)
             
         except Exception as e:
             print(f"Erreur génération récépissé KBIS: {e}")

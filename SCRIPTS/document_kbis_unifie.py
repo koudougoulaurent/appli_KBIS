@@ -11,13 +11,14 @@ class DocumentKBISUnifie:
     """Classe unifiée pour la génération de documents KBIS"""
     
     @staticmethod
-    def generer_document_unifie(donnees, type_document='recu'):
+    def generer_document_unifie(donnees, type_document='recu', user=None):
         """
         Génère un document unifié avec en-tête image statique et pied de page dynamique
         
         Args:
             donnees (dict): Données du document
             type_document (str): Type de document ('recu', 'quittance', etc.)
+            user: Utilisateur qui génère le document
         
         Returns:
             str: HTML du document généré
@@ -282,8 +283,10 @@ class DocumentKBISUnifie:
                     <!-- PIED DE PAGE DYNAMIQUE -->
                     <div class="footer">
                         <p><strong>GESTIMMOB</strong> - Gestion Immobilière Professionnelle</p>
-                        <p>Ce document certifie que le paiement ci-dessus a été reçu en bonne et due forme.</p>
-                        <p>Généré le {{ date_generation }} - Document {{ numero }}</p>
+                        <p>Document {{ numero }} généré le {{ date_generation }}</p>
+                        {% if user_name %}
+                        <p><strong>Généré par : {{ user_name }}</strong></p>
+                        {% endif %}
                     </div>
                 </div>
             </body>
@@ -291,6 +294,10 @@ class DocumentKBISUnifie:
             """
             
             # Préparer les données pour le template
+            user_name = None
+            if user:
+                user_name = getattr(user, 'get_full_name', lambda: None)() or getattr(user, 'username', None)
+            
             donnees_template = {
                 'titre_document': DocumentKBISUnifie._get_titre_document(type_document),
                 'image_entete': DocumentKBISUnifie._get_image_entete(),
@@ -305,6 +312,7 @@ class DocumentKBISUnifie:
                 'quartier': donnees.get('quartier', 'Non spécifié'),
                 'donnees_speciales': DocumentKBISUnifie._extraire_donnees_speciales(donnees),
                 'date_generation': datetime.now().strftime('%d/%m/%Y à %H:%M'),
+                'user_name': user_name,
             }
             
             # Remplacer les variables dans le template

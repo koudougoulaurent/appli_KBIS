@@ -24,7 +24,7 @@ def generer_recu_kbis_dynamique(request, paiement_pk):
         paiement = get_object_or_404(Paiement, pk=paiement_pk)
         
         # Génération directe avec le système KBIS dynamique
-        html_recu = paiement._generer_recu_kbis_dynamique()
+        html_recu = paiement._generer_recu_kbis_dynamique(user=request.user)
         
         if html_recu:
             # Retourner directement le HTML (format A5 prêt pour impression)
