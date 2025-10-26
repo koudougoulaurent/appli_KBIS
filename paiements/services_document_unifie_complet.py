@@ -55,11 +55,11 @@ class DocumentUnifieA5ServiceComplet:
             
             # Préparer le contexte selon le type de document
             if document_type.startswith('paiement_'):
-                context = self._prepare_paiement_context(document_type, **kwargs)
+                context = self._prepare_paiement_context(document_type, kwargs.get('paiement_id'), user=user)
             elif document_type in ['retrait_quittance', 'retrait_recu']:
-                context = self._prepare_retrait_context(**kwargs)
+                context = self._prepare_retrait_context(kwargs.get('retrait_id'), user=user)
             elif document_type == 'recap_quittance':
-                context = self._prepare_recap_context(**kwargs)
+                context = self._prepare_recap_context(kwargs.get('recapitulatif_id'), user=user)
             else:
                 raise ValueError(f"Type de document non supporté: {document_type}")
             
@@ -83,7 +83,7 @@ class DocumentUnifieA5ServiceComplet:
         except Exception as e:
             raise Exception(f"Erreur lors de la génération du document: {str(e)}")
     
-    def _prepare_paiement_context(self, document_type, paiement_id):
+    def _prepare_paiement_context(self, document_type, paiement_id, user=None):
         """Prépare le contexte pour un document de paiement."""
         paiement = Paiement.objects.select_related(
             'contrat__locataire',
@@ -170,7 +170,7 @@ class DocumentUnifieA5ServiceComplet:
             'charges_deduites': getattr(paiement, 'charges_deduites', []),
         }
     
-    def _prepare_retrait_context(self, retrait_id):
+    def _prepare_retrait_context(self, retrait_id, user=None):
         """Prépare le contexte pour un document de retrait."""
         # Import ici pour éviter les imports circulaires
         from paiements.models import RetraitBailleur
@@ -198,7 +198,7 @@ class DocumentUnifieA5ServiceComplet:
             'periode_retrait': retrait.mois_retrait.strftime('%B %Y'),
         }
     
-    def _prepare_recap_context(self, recapitulatif_id):
+    def _prepare_recap_context(self, recapitulatif_id, user=None):
         """Prépare le contexte pour un document de récapitulatif."""
         # Import ici pour éviter les imports circulaires
         from paiements.models import RecapitulatifMensuel

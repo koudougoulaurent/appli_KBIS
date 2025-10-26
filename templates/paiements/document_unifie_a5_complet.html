@@ -390,9 +390,6 @@
             {% if montant_net_paye %}
                 <div class="amount">{{ montant_net_paye|floatformat:0 }} F CFA</div>
                 <div class="amount-words">{{ montant_net_lettres }}</div>
-                <div style="font-size: 10px; color: #666; margin-top: 10px;">
-                    <strong>Montant net payé après déduction des charges</strong>
-                </div>
             {% else %}
                 <div class="amount">{{ montant_total|floatformat:0 }} F CFA</div>
                 <div class="amount-words">{{ montant_lettres }}</div>
