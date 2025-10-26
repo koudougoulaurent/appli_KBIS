@@ -410,13 +410,25 @@
                         <span class="info-value">{{ contrat.numero_contrat }}</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">Reçu de:</span>
-                        <span class="info-value">{{ locataire.nom_complet }}</span>
+                        <span class="info-label">Reçu créé par:</span>
+                        <span class="info-value">
+                            {% if user %}
+                                {{ user.get_full_name|default:user.username }}
+                            {% else %}
+                                Utilisateur système
+                            {% endif %}
+                        </span>
                     </div>
                 {% elif document_type == 'retrait_quittance' or document_type == 'retrait_recu' %}
                     <div class="info-item">
-                        <span class="info-label">Retrait pour:</span>
-                        <span class="info-value">{{ bailleur.nom_complet }}</span>
+                        <span class="info-label">Retrait créé par:</span>
+                        <span class="info-value">
+                            {% if user %}
+                                {{ user.get_full_name|default:user.username }}
+                            {% else %}
+                                Utilisateur système
+                            {% endif %}
+                        </span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Type:</span>
@@ -428,8 +440,14 @@
                     </div>
                 {% elif document_type == 'recap_quittance' %}
                     <div class="info-item">
-                        <span class="info-label">Récapitulatif pour:</span>
-                        <span class="info-value">{{ bailleur.nom_complet }}</span>
+                        <span class="info-label">Récapitulatif créé par:</span>
+                        <span class="info-value">
+                            {% if user %}
+                                {{ user.get_full_name|default:user.username }}
+                            {% else %}
+                                Utilisateur système
+                            {% endif %}
+                        </span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Période:</span>
