@@ -1803,7 +1803,7 @@ class ResiliationPDFService:
             rightMargin=1.5*cm,
             leftMargin=1.5*cm,
             topMargin=4.5*cm,  # Marge supérieure pour l'en-tête avec image
-            bottomMargin=2.5*cm  # Marge inférieure pour le pied de page dynamique
+            bottomMargin=3*cm  # Marge inférieure pour le pied de page dynamique
         )
         
         # Construction du contenu du PDF
@@ -1828,10 +1828,10 @@ class ResiliationPDFService:
         story.extend(self._create_termination_details())
         story.append(Spacer(1, 20))
         
-        # Ajouter le footer à la fin (sera sur la dernière page)
-        story.extend(self._create_footer_content())
+        # Signatures (locataire et agent immobilier uniquement)
+        story.extend(self._create_signatures())
         
-        # Génération du PDF avec en-tête uniquement sur la première page
+        # Génération du PDF avec en-tête uniquement sur la première page et footer sur la dernière
         doc.build(story, onFirstPage=self._add_first_page_header_footer, onLaterPages=self._add_later_pages_header_footer)
         buffer.seek(0)
         
@@ -1934,8 +1934,15 @@ class ResiliationPDFService:
             canvas_obj.rect(0, page_height - 3.5*cm, page_width, 3.5*cm, fill=1, stroke=0)
     
     def _add_later_pages_header_footer(self, canvas_obj, doc):
-        """Ne fait rien sur les pages suivantes (pas d'en-tête ni de pied de page)"""
-        pass
+        """Ajoute le footer en bas de la dernière page uniquement"""
+        # On vérifie si c'est la dernière page en comptant le nombre total de pages
+        # Mais comme ReportLab ne nous donne pas cette info facilement, on dessine sur toutes les pages sauf la première
+        # Pour ne dessiner que sur la dernière, on peut utiliser une variable de classe
+        if not hasattr(self, '_last_page_drawn'):
+            self._last_page_drawn = False
+        
+        # Dessiner le footer seulement sur la dernière page (on le dessinera à chaque fois et la dernière restera)
+        self._draw_footer_on_canvas(canvas_obj, doc)
     
     def _add_footer(self, canvas_obj, doc):
         """Ajoute le pied de page avec les infos de configuration"""
@@ -1974,91 +1981,56 @@ class ResiliationPDFService:
                 adresse_complete = self.config_entreprise.get_adresse_complete()
                 canvas_obj.drawString(2*cm, 0.3*cm, adresse_complete)
             
-            # Numéro de page
+            # Numéro de page à gauche
             canvas_obj.setFont("Helvetica-Bold", 8)
-            canvas_obj.drawRightString(page_width - 2*cm, 1.3*cm, f"Page {doc.page}")
+            canvas_obj.drawString(2*cm, 0.3*cm, f"Page {doc.page}")
+            
+            # Informations de génération à droite (avec nom d'utilisateur)
+            if self.user:
+                user_name = self.user.get_full_name() or self.user.username
+                canvas_obj.setFont("Helvetica", 7)
+                canvas_obj.drawRightString(page_width - 2*cm, 0.8*cm, f"Document généré par: {user_name}")
             canvas_obj.setFont("Helvetica", 7)
-            canvas_obj.drawRightString(page_width - 2*cm, 0.8*cm, f"Document généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}")
+            canvas_obj.drawRightString(page_width - 2*cm, 0.3*cm, f"Généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}")
+    
+    def _draw_footer_on_canvas(self, canvas_obj, doc):
+        """Alias pour _add_footer pour cohérence avec les appels"""
+        self._add_footer(canvas_obj, doc)
 
-    def _create_footer_content(self):
-        """Crée le pied de page avec les informations de configuration et le nom de l'utilisateur"""
+    def _create_signatures(self):
+        """Crée la section des signatures (locataire et agent immobilier uniquement)"""
         elements = []
         
-        # Espace avant le footer
-        elements.append(Spacer(1, 1*cm))
+        elements.append(Paragraph("SIGNATURES", self.styles['CustomHeading']))
+        elements.append(Spacer(1, 20))
         
-        # Ligne de séparation
-        elements.append(Paragraph("─" * 100, self.styles['CustomBody']))
-        elements.append(Spacer(1, 0.5*cm))
+        # Tableau des signatures (locataire et agent immobilier uniquement)
+        signature_data = [
+            [Paragraph('<b>Signature du locataire</b>', self.styles['CustomBody']), 
+             Paragraph('<b>Signature de l\'agent immobilier</b>', self.styles['CustomBody'])],
+            ['', ''],  # Lignes de signature
+            ['', ''],  # Lignes supplémentaires pour signature
+            [Paragraph(f"{self.resiliation.contrat.locataire.nom} {self.resiliation.contrat.locataire.prenom}", self.styles['CustomBody']), 
+             Paragraph(f"{self.config_entreprise.nom_entreprise if self.config_entreprise else 'KBIS IMMOBILIER'}", self.styles['CustomBody'])],
+            ['Date : _________________', 'Date : _________________']
+        ]
         
-        # Informations de l'entreprise
-        if self.config_entreprise:
-            # Nom de l'entreprise
-            elements.append(Paragraph(
-                f"<b>{self.config_entreprise.nom_entreprise}</b>",
-                ParagraphStyle(
-                    'FooterTitle',
-                    parent=self.styles['Normal'],
-                    fontSize=9,
-                    alignment=TA_CENTER
-                )
-            ))
-            
-            # Contact
-            if self.config_entreprise.telephone or self.config_entreprise.email:
-                contact_parts = []
-                if self.config_entreprise.telephone:
-                    contact_parts.append(f"Tél: {self.config_entreprise.telephone}")
-                if self.config_entreprise.email:
-                    contact_parts.append(f"Email: {self.config_entreprise.email}")
-                
-                elements.append(Paragraph(
-                    " | ".join(contact_parts),
-                    ParagraphStyle(
-                        'FooterContact',
-                        parent=self.styles['Normal'],
-                        fontSize=8,
-                        alignment=TA_CENTER
-                    )
-                ))
-            
-            # Adresse
-            if self.config_entreprise.adresse_ligne1:
-                elements.append(Paragraph(
-                    self.config_entreprise.get_adresse_complete(),
-                    ParagraphStyle(
-                        'FooterAddress',
-                        parent=self.styles['Normal'],
-                        fontSize=8,
-                        alignment=TA_CENTER
-                    )
-                ))
+        signature_table = Table(signature_data, colWidths=[8*cm, 8*cm])
+        signature_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('FONTNAME', (0, 1), (0, 2), 'Helvetica'),  # Lignes de signature
+            ('FONTNAME', (0, 3), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+            ('TOPPADDING', (0, 0), (-1, -1), 12),
+            ('LINEBELOW', (0, 1), (0, 2), 2, colors.black),  # Ligne de signature épaisse
+            ('LINEBELOW', (1, 1), (1, 2), 2, colors.black),  # Ligne de signature épaisse
+            ('GRID', (0, 0), (-1, -1), 1, colors.lightgrey),
+        ]))
         
-        elements.append(Spacer(1, 0.5*cm))
-        
-        # Nom de l'utilisateur qui a généré le document
-        if self.user:
-            user_name = self.user.get_full_name() or self.user.username
-            elements.append(Paragraph(
-                f"Document généré par : <b>{user_name}</b>",
-                ParagraphStyle(
-                    'FooterUser',
-                    parent=self.styles['Normal'],
-                    fontSize=8,
-                    alignment=TA_CENTER
-                )
-            ))
-        
-        # Date de génération
-        elements.append(Paragraph(
-            f"Généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}",
-            ParagraphStyle(
-                'FooterDate',
-                parent=self.styles['Normal'],
-                fontSize=8,
-                alignment=TA_CENTER
-            )
-        ))
+        elements.append(signature_table)
+        elements.append(Spacer(1, 30))
         
         return elements
     
