@@ -513,8 +513,13 @@ def resilier_contrat(request, pk):
             date_resiliation = datetime.strptime(date_resiliation, '%Y-%m-%d').date()
             
             # Validation de la date
-            if date_resiliation < contrat.date_debut or date_resiliation > contrat.date_fin:
-                messages.error(request, "La date de résiliation doit être comprise entre la date de début et la date de fin du contrat.")
+            if date_resiliation < contrat.date_debut:
+                messages.error(request, "La date de résiliation doit être supérieure ou égale à la date de début du contrat.")
+                return render(request, 'contrats/resilier.html', {'contrat': contrat})
+            
+            # Si date_fin existe, vérifier qu'on ne dépasse pas
+            if contrat.date_fin and date_resiliation > contrat.date_fin:
+                messages.error(request, "La date de résiliation ne peut pas être supérieure à la date de fin du contrat.")
                 return render(request, 'contrats/resilier.html', {'contrat': contrat})
             
             # Validation des champs de remboursement

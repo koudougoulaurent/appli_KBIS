@@ -597,8 +597,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Calculer le total des dépenses
         const totalDepenses = travauxPeinture + factureOnea + factureSonabel + travauxVentilateur + autresDepenses;
         
-        // Récupérer la caution versée depuis le contrat
-        const cautionVersee = {{ contrat.depot_garantie }};
+        // Récupérer la caution versée depuis le contrat (convertir en float)
+        let cautionVersee = 0;
+        try {
+            cautionVersee = parseFloat('{{ contrat.depot_garantie }}') || 0;
+        } catch (e) {
+            console.log('Erreur récupération caution:', e);
+        }
         
         // Calculer le solde restant
         const soldeRestant = cautionVersee - totalDepenses;
