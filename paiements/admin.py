@@ -61,7 +61,13 @@ class PaiementAdmin(admin.ModelAdmin):
     
     def statut_colore(self, obj):
         """Affiche le statut avec une couleur."""
-        color = obj.get_statut_display_color()
+        colors = {
+            'en_attente': 'orange',
+            'valide': 'green',
+            'refuse': 'red',
+            'annule': 'gray',
+        }
+        color = colors.get(obj.statut, 'black')
         return format_html(
             '<span style="color: {}; font-weight: bold;">{}</span>',
             color, obj.get_statut_display()
@@ -143,7 +149,13 @@ class ChargeDeductibleAdmin(admin.ModelAdmin):
     
     def statut_colore(self, obj):
         """Affiche le statut avec une couleur."""
-        color = obj.get_statut_display_color()
+        colors = {
+            'en_attente': 'orange',
+            'valide': 'green',
+            'refuse': 'red',
+            'annule': 'gray',
+        }
+        color = colors.get(obj.statut, 'black')
         return format_html(
             '<span style="color: {}; font-weight: bold;">{}</span>',
             color, obj.get_statut_display()
@@ -227,7 +239,13 @@ class QuittancePaiementAdmin(admin.ModelAdmin):
     
     def statut_colore(self, obj):
         """Affiche le statut avec une couleur."""
-        color = obj.get_statut_display_color()
+        colors = {
+            'generee': 'blue',
+            'imprimee': 'green',
+            'envoyee': 'purple',
+            'archivee': 'gray',
+        }
+        color = colors.get(obj.statut, 'black')
         return format_html(
             '<span style="color: {}; font-weight: bold;">{}</span>',
             color, obj.get_statut_display()
