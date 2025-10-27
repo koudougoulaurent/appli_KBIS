@@ -686,6 +686,11 @@ def resilier_contrat(request, pk):
                     'success': False,
                     'message': error_msg
                 })
+            # Sinon, retourner vers le formulaire
+            context = {
+                'contrat': contrat,
+            }
+            return render(request, 'contrats/resilier.html', context)
         except Exception as e:
             error_msg = f"Erreur lors de la résiliation : {str(e)}"
             messages.error(request, error_msg)
@@ -696,7 +701,13 @@ def resilier_contrat(request, pk):
                     'success': False,
                     'message': error_msg
                 })
+            # Sinon, retourner vers le formulaire
+            context = {
+                'contrat': contrat,
+            }
+            return render(request, 'contrats/resilier.html', context)
     
+    # Si on arrive ici, c'est une requête GET (afficher le formulaire)
     context = {
         'contrat': contrat,
     }
