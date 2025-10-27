@@ -328,6 +328,8 @@ class Contrat(models.Model):
     def est_expire(self):
         """Vérifie si le contrat est expiré."""
         from django.utils import timezone
+        if self.date_fin is None:
+            return False  # Contrat sans date de fin n'est jamais expiré
         return self.date_fin < timezone.now().date()
     
     def get_statut(self):
