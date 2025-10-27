@@ -431,6 +431,16 @@ document.addEventListener('DOMContentLoaded', function() {
             dateGroup.style.display = 'block';
             montantInput.required = true;
             dateInput.required = true;
+            
+            // Auto-compléter le montant de remboursement avec le solde restant
+            const soldeElement = document.getElementById('solde_restant_value');
+            if (soldeElement && soldeElement.textContent) {
+                const soldeText = soldeElement.textContent.replace(/[^\d.,]/g, '').replace(',', '.');
+                const soldeRestant = parseFloat(soldeText) || 0;
+                if (soldeRestant > 0 && !montantInput.value) {
+                    montantInput.value = soldeRestant.toFixed(2);
+                }
+            }
         } else {
             montantGroup.style.display = 'none';
             dateGroup.style.display = 'none';
@@ -439,6 +449,8 @@ document.addEventListener('DOMContentLoaded', function() {
             montantInput.value = '';
             dateInput.value = '';
         }
+        // Re-valider le formulaire après le changement
+        validateForm();
     });
 
     // Validation de la date de résiliation
@@ -581,6 +593,16 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.disabled = !isValid;
         errorDiv.textContent = isValid ? '' : errorMsg;
     }
+    
+    // Ajouter les écouteurs d'événements sur les champs de remboursement
+    if (montantInput) {
+        montantInput.addEventListener('input', validateForm);
+        montantInput.addEventListener('change', validateForm);
+    }
+    if (dateInput) {
+        dateInput.addEventListener('input', validateForm);
+        dateInput.addEventListener('change', validateForm);
+    }
 
     // Validation initiale
     validateForm();
@@ -640,6 +662,12 @@ document.addEventListener('DOMContentLoaded', function() {
             soldeElement.className = 'text-warning fw-bold';
         } else {
             soldeElement.className = 'text-success fw-bold';
+        }
+        
+        // Auto-compléter le montant de remboursement si le solde est positif
+        if (montantInput && soldeRestant > 0 && !montantInput.value) {
+            montantInput.value = soldeRestant.toFixed(2);
+            validateForm(); // Re-valider le formulaire après auto-complétion
         }
     }
     
