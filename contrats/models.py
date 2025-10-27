@@ -1279,6 +1279,62 @@ class ResiliationContrat(models.Model):
         verbose_name=_("Date de remboursement")
     )
     
+    # Liste des travaux effectués (dépenses)
+    travaux_peinture = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Travaux de peinture (F CFA)")
+    )
+    facture_onea = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Facture ONEA (F CFA)")
+    )
+    facture_sonabel = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Facture SONABEL (F CFA)")
+    )
+    travaux_ventilateur = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Ventilateur (F CFA)")
+    )
+    autres_depenses = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Autres dépenses (F CFA)")
+    )
+    description_autres_depenses = models.TextField(
+        blank=True,
+        verbose_name=_("Description des autres dépenses")
+    )
+    
+    # Calcul automatique
+    total_depenses = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Total des dépenses")
+    )
+    caution_versee = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Caution versée lors du contrat")
+    )
+    solde_restant = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Solde restant (caution - dépenses)")
+    )
+    
     # Métadonnées
     date_creation = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de création"))
     date_modification = models.DateTimeField(auto_now=True, verbose_name=_("Date de modification"))
@@ -1311,8 +1367,51 @@ class ResiliationContrat(models.Model):
     def __str__(self):
         return f"Résiliation {self.contrat.numero_contrat} - {self.date_resiliation}"
     
+    def calculer_total_depenses(self):
+        """Calcule le total des dépenses."""
+        from decimal import Decimal
+        total = Decimal('0')
+        total += Decimal(str(self.travaux_peinture or 0))
+        total += Decimal(str(self.facture_onea or 0))
+        total += Decimal(str(self.facture_sonabel or 0))
+        total += Decimal(str(self.travaux_ventilateur or 0))
+        total += Decimal(str(self.autres_depenses or 0))
+        return total
+    
+    def recuperer_caution_contractuelle(self):
+        """Récupère le montant de la caution versée lors du contrat."""
+        from decimal import Decimal
+        
+        # Récupérer la caution du contrat
+        caution = Decimal('0')
+        
+        # Vérifier si une caution a été payée dans le contrat
+        if hasattr(self.contrat, 'caution_loyers'):
+            caution += Decimal(str(self.contrat.caution_loyers or 0))
+        
+        return caution
+    
+    def calculer_solde_restant(self):
+        """Calcule le solde restant (caution - dépenses)."""
+        from decimal import Decimal
+        
+        total_depenses = self.calculer_total_depenses()
+        caution_versee = self.recuperer_caution_contractuelle()
+        
+        solde = caution_versee - total_depenses
+        
+        # Ne pas retourner de solde négatif
+        return max(Decimal('0'), solde)
+    
     def save(self, *args, **kwargs):
-        """Override save pour mettre à jour le contrat."""
+        """Override save pour mettre à jour le contrat et calculer automatiquement les montants."""
+        from decimal import Decimal
+        
+        # Calculer les montants automatiquement
+        self.total_depenses = self.calculer_total_depenses()
+        self.caution_versee = self.recuperer_caution_contractuelle()
+        self.solde_restant = self.calculer_solde_restant()
+        
         super().save(*args, **kwargs)
         
         # Mettre à jour le contrat

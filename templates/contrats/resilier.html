@@ -177,6 +177,138 @@
                             </div>
                         </div>
 
+                        <!-- Liste des travaux et dépenses -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary mb-3">
+                                    <i class="bi bi-tools"></i> Liste des travaux effectués et dépenses
+                                </h6>
+                                <div class="alert alert-info">
+                                    <small>
+                                        <i class="bi bi-info-circle"></i> 
+                                        Indiquez les dépenses effectuées sur la propriété pour déduire de la caution versée.
+                                    </small>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="travaux_peinture" class="form-label">
+                                                <strong>Travaux de peinture (F CFA)</strong>
+                                            </label>
+                                            <input type="number" 
+                                                   class="form-control travaux-input" 
+                                                   id="travaux_peinture" 
+                                                   name="travaux_peinture" 
+                                                   step="0.01" 
+                                                   min="0" 
+                                                   value="0">
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="facture_onea" class="form-label">
+                                                <strong>Facture ONEA (F CFA)</strong>
+                                            </label>
+                                            <input type="number" 
+                                                   class="form-control travaux-input" 
+                                                   id="facture_onea" 
+                                                   name="facture_onea" 
+                                                   step="0.01" 
+                                                   min="0" 
+                                                   value="0">
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="facture_sonabel" class="form-label">
+                                                <strong>Facture SONABEL (F CFA)</strong>
+                                            </label>
+                                            <input type="number" 
+                                                   class="form-control travaux-input" 
+                                                   id="facture_sonabel" 
+                                                   name="facture_sonabel" 
+                                                   step="0.01" 
+                                                   min="0" 
+                                                   value="0">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="travaux_ventilateur" class="form-label">
+                                                <strong>Ventilateur / Climatisation (F CFA)</strong>
+                                            </label>
+                                            <input type="number" 
+                                                   class="form-control travaux-input" 
+                                                   id="travaux_ventilateur" 
+                                                   name="travaux_ventilateur" 
+                                                   step="0.01" 
+                                                   min="0" 
+                                                   value="0">
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="autres_depenses" class="form-label">
+                                                <strong>Autres dépenses (F CFA)</strong>
+                                            </label>
+                                            <input type="number" 
+                                                   class="form-control travaux-input" 
+                                                   id="autres_depenses" 
+                                                   name="autres_depenses" 
+                                                   step="0.01" 
+                                                   min="0" 
+                                                   value="0">
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="description_autres_depenses" class="form-label">
+                                                <strong>Description des autres dépenses</strong>
+                                            </label>
+                                            <textarea class="form-control" 
+                                                      id="description_autres_depenses" 
+                                                      name="description_autres_depenses" 
+                                                      rows="3" 
+                                                      placeholder="Décrivez les autres dépenses effectuées..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Résumé financier automatique -->
+                                <div class="row mt-4">
+                                    <div class="col-12">
+                                        <div class="card border-primary">
+                                            <div class="card-header bg-primary text-white">
+                                                <h6 class="mb-0">
+                                                    <i class="bi bi-calculator"></i> Résumé financier
+                                                </h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-4">
+                                                        <p class="mb-0">
+                                                            <strong>Caution versée :</strong><br>
+                                                            <span id="caution_versee_value" class="text-success">0 F CFA</span>
+                                                        </p>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <p class="mb-0">
+                                                            <strong>Total dépenses :</strong><br>
+                                                            <span id="total_depenses_value" class="text-danger">0 F CFA</span>
+                                                        </p>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <p class="mb-0">
+                                                            <strong>Solde restant :</strong><br>
+                                                            <span id="solde_restant_value" class="text-info fw-bold">0 F CFA</span>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Motif et observations -->
                         <div class="row mb-4">
                             <div class="col-12">
@@ -452,6 +584,69 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Validation initiale
     validateForm();
+    
+    // Calcul automatique du résumé financier
+    function calculerResumeFinancier() {
+        // Récupérer les montants
+        const travauxPeinture = parseFloat(document.getElementById('travaux_peinture').value) || 0;
+        const factureOnea = parseFloat(document.getElementById('facture_onea').value) || 0;
+        const factureSonabel = parseFloat(document.getElementById('facture_sonabel').value) || 0;
+        const travauxVentilateur = parseFloat(document.getElementById('travaux_ventilateur').value) || 0;
+        const autresDepenses = parseFloat(document.getElementById('autres_depenses').value) || 0;
+        
+        // Calculer le total des dépenses
+        const totalDepenses = travauxPeinture + factureOnea + factureSonabel + travauxVentilateur + autresDepenses;
+        
+        // Récupérer la caution versée depuis le contrat
+        const cautionVersee = {{ contrat.caution_loyers }};
+        
+        // Calculer le solde restant
+        const soldeRestant = cautionVersee - totalDepenses;
+        
+        // Mettre à jour l'affichage
+        document.getElementById('caution_versee_value').textContent = new Intl.NumberFormat('fr-FR', {
+            style: 'currency',
+            currency: 'XOF',
+            minimumFractionDigits: 0
+        }).format(cautionVersee).replace('XOF', 'F CFA');
+        
+        document.getElementById('total_depenses_value').textContent = new Intl.NumberFormat('fr-FR', {
+            style: 'currency',
+            currency: 'XOF',
+            minimumFractionDigits: 0
+        }).format(totalDepenses).replace('XOF', 'F CFA');
+        
+        // Colorier le solde restant selon s'il est positif ou négatif
+        const soldeElement = document.getElementById('solde_restant_value');
+        soldeElement.textContent = new Intl.NumberFormat('fr-FR', {
+            style: 'currency',
+            currency: 'XOF',
+            minimumFractionDigits: 0
+        }).format(Math.max(0, soldeRestant)).replace('XOF', 'F CFA');
+        
+        if (soldeRestant < 0) {
+            soldeElement.className = 'text-danger fw-bold';
+            document.getElementById('solde_restant_value').parentElement.innerHTML = 
+                '<strong>Solde restant :</strong><br>' +
+                '<span id="solde_restant_value" class="text-danger fw-bold">' + 
+                new Intl.NumberFormat('fr-FR', {style: 'currency', currency: 'XOF', minimumFractionDigits: 0}).format(Math.abs(soldeRestant)).replace('XOF', 'F CFA') + 
+                ' (dépassement)</span>';
+        } else if (soldeRestant === 0) {
+            soldeElement.className = 'text-warning fw-bold';
+        } else {
+            soldeElement.className = 'text-success fw-bold';
+        }
+    }
+    
+    // Écouter les changements sur les champs de travaux
+    const travauxInputs = document.querySelectorAll('.travaux-input');
+    travauxInputs.forEach(input => {
+        input.addEventListener('input', calculerResumeFinancier);
+        input.addEventListener('change', calculerResumeFinancier);
+    });
+    
+    // Calcul initial
+    calculerResumeFinancier();
 });
 </script>
 {% endblock %} 

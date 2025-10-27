@@ -537,6 +537,14 @@ def resilier_contrat(request, pk):
                 montant_remboursement = 0
                 date_remboursement = None
             
+            # Récupérer les données de travaux
+            travaux_peinture = request.POST.get('travaux_peinture', 0)
+            facture_onea = request.POST.get('facture_onea', 0)
+            facture_sonabel = request.POST.get('facture_sonabel', 0)
+            travaux_ventilateur = request.POST.get('travaux_ventilateur', 0)
+            autres_depenses = request.POST.get('autres_depenses', 0)
+            description_autres_depenses = request.POST.get('description_autres_depenses', '')
+            
             # Créer la résiliation
             resiliation = ResiliationContrat.objects.create(
                 contrat=contrat,
@@ -548,7 +556,14 @@ def resilier_contrat(request, pk):
                 montant_remboursement=montant_remboursement,
                 date_remboursement=date_remboursement,
                 notes=notes,
-                cree_par=request.user
+                cree_par=request.user,
+                # Nouveaux champs de travaux
+                travaux_peinture=travaux_peinture,
+                facture_onea=facture_onea,
+                facture_sonabel=facture_sonabel,
+                travaux_ventilateur=travaux_ventilateur,
+                autres_depenses=autres_depenses,
+                description_autres_depenses=description_autres_depenses
             )
             
             # Mettre à jour le contrat
