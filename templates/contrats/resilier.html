@@ -439,6 +439,8 @@ document.addEventListener('DOMContentLoaded', function() {
             montantInput.value = '';
             dateInput.value = '';
         }
+        // Re-valider le formulaire après le changement
+        validateForm();
     });
 
     // Validation de la date de résiliation
@@ -466,6 +468,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.setCustomValidity('');
             }
         }
+        // Re-valider le formulaire après le changement
+        validateForm();
     });
 
     // Gestion de la soumission du formulaire
@@ -553,7 +557,14 @@ document.addEventListener('DOMContentLoaded', function() {
     requiredFields.forEach(field => {
         field.addEventListener('input', validateForm);
         field.addEventListener('change', validateForm);
+        field.addEventListener('blur', validateForm);
     });
+    
+    // Ajouter la validation pour le select de type de résiliation
+    const typeResiliation = document.getElementById('type_resiliation');
+    if (typeResiliation) {
+        typeResiliation.addEventListener('change', validateForm);
+    }
 
     // Ajout d'un affichage d'erreur sous le bouton
     const errorDiv = document.createElement('div');
@@ -564,12 +575,17 @@ document.addEventListener('DOMContentLoaded', function() {
     function validateForm() {
         let isValid = true;
         let errorMsg = '';
+        
+        // Vérifier uniquement les champs requis visibles
         requiredFields.forEach(field => {
-            if (!field.value.trim()) {
+            // Vérifier si le champ est visible
+            const isVisible = field.offsetParent !== null;
+            if (isVisible && !field.value.trim()) {
                 isValid = false;
                 errorMsg = 'Veuillez remplir tous les champs obligatoires.';
             }
         });
+        
         // Validation spécifique pour les champs de remboursement
         if (cautionCheckbox.checked) {
             if (!montantInput.value || !dateInput.value) {
@@ -577,6 +593,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 errorMsg = 'Veuillez renseigner le montant et la date de remboursement de la caution.';
             }
         }
+        
         // Le motif de résiliation est maintenant facultatif, pas besoin de valider
         submitBtn.disabled = !isValid;
         errorDiv.textContent = isValid ? '' : errorMsg;
@@ -584,6 +601,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Validation initiale
     validateForm();
+    
+    // Ajouter les écouteurs d'événements sur les champs de remboursement
+    if (montantInput) {
+        montantInput.addEventListener('input', validateForm);
+        montantInput.addEventListener('change', validateForm);
+    }
+    if (dateInput) {
+        dateInput.addEventListener('input', validateForm);
+        dateInput.addEventListener('change', validateForm);
+    }
     
     // Calcul automatique du résumé financier
     function calculerResumeFinancier() {
