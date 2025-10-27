@@ -63,7 +63,7 @@
                         <i class="bi bi-pencil"></i> Modifier
                     </a>
                     {% if not contrat.est_resilie %}
-                        <a href="{% url 'contrats:creer_resiliation' contrat.pk %}" class="btn btn-danger">
+                        <a href="{% url 'contrats:resilier' contrat.pk %}" class="btn btn-danger">
                             <i class="bi bi-x-circle"></i> Résilier le Contrat
                         </a>
                     {% else %}

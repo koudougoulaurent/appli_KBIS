@@ -69,7 +69,7 @@
                                         </a>
                                         {% if user.groupe_travail.nom|upper == 'PRIVILEGE' %}
                                             {% if not contrat.est_resilie %}
-                                                <a href="{% url 'contrats:creer_resiliation' contrat.pk %}" class="btn btn-outline-danger" title="Résilier" onclick="return confirm('Êtes-vous sûr de vouloir résilier ce contrat ? Cette action est irréversible.');">
+                                                <a href="{% url 'contrats:resilier' contrat.pk %}" class="btn btn-outline-danger" title="Résilier" onclick="return confirm('Êtes-vous sûr de vouloir résilier ce contrat ? Cette action est irréversible.');">
                                                     <i class="bi bi-x-circle"></i>
                                                 </a>
                                                 <a href="{% url 'contrats:resiliation_professionnelle' contrat.pk %}" class="btn btn-outline-info" title="Formulaire de résiliation professionnel">
