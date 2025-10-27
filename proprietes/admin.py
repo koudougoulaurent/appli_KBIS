@@ -18,7 +18,7 @@ class TypeBienAdmin(admin.ModelAdmin):
     
     def proprietes_count(self, obj):
         """Affiche le nombre de propriétés pour ce type."""
-        return obj.proprietes.count()
+        return obj.propriete_set.count()
     proprietes_count.short_description = _("Nombre de propriétés")
 
 
@@ -53,7 +53,7 @@ class BailleurAdmin(admin.ModelAdmin):
     
     def proprietes_count(self, obj):
         """Affiche le nombre de propriétés du bailleur."""
-        return obj.get_proprietes_count()
+        return obj.proprietes.count()
     proprietes_count.short_description = _("Propriétés")
 
 
@@ -84,7 +84,7 @@ class LocataireAdmin(admin.ModelAdmin):
     
     def contrats_actifs_count(self, obj):
         """Affiche le nombre de contrats actifs du locataire."""
-        return obj.get_contrats_actifs_count()
+        return obj.get_contrats_actifs().count()
     contrats_actifs_count.short_description = _("Contrats actifs")
 
 
