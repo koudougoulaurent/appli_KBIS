@@ -1831,7 +1831,10 @@ class ResiliationPDFService:
         # Signatures (locataire et agent immobilier uniquement)
         story.extend(self._create_signatures())
         
-        # Génération du PDF avec en-tête uniquement sur la première page et footer sur la dernière
+        # Ajouter le footer comme contenu à la fin (apparaîtra seulement sur la dernière page)
+        story.extend(self._create_footer_content())
+        
+        # Génération du PDF avec en-tête uniquement sur la première page
         doc.build(story, onFirstPage=self._add_first_page_header_footer, onLaterPages=self._add_later_pages_header_footer)
         buffer.seek(0)
         
@@ -1935,14 +1938,18 @@ class ResiliationPDFService:
     
     def _add_later_pages_header_footer(self, canvas_obj, doc):
         """Ajoute le footer en bas de la dernière page uniquement"""
-        # On vérifie si c'est la dernière page en comptant le nombre total de pages
-        # Mais comme ReportLab ne nous donne pas cette info facilement, on dessine sur toutes les pages sauf la première
-        # Pour ne dessiner que sur la dernière, on peut utiliser une variable de classe
-        if not hasattr(self, '_last_page_drawn'):
-            self._last_page_drawn = False
+        # Initialiser le compteur de pages au début
+        if not hasattr(self, '_total_pages'):
+            self._total_pages = doc.page
         
-        # Dessiner le footer seulement sur la dernière page (on le dessinera à chaque fois et la dernière restera)
-        self._draw_footer_on_canvas(canvas_obj, doc)
+        # Mettre à jour le total de pages au fur et à mesure
+        if doc.page > self._total_pages:
+            self._total_pages = doc.page
+        
+        # Dessiner le footer seulement sur la dernière page
+        # Note: doc.page est le numéro de la page ACTUELLE, mais on ne connaît pas encore le total final
+        # Donc on ne dessine PAS le footer ici, on le laissera dans le contenu
+        pass
     
     def _add_footer(self, canvas_obj, doc):
         """Ajoute le pied de page avec les infos de configuration"""
@@ -1997,6 +2004,88 @@ class ResiliationPDFService:
         """Alias pour _add_footer pour cohérence avec les appels"""
         self._add_footer(canvas_obj, doc)
 
+    def _create_footer_content(self):
+        """Crée le pied de page avec les informations de configuration et le nom de l'utilisateur"""
+        elements = []
+        
+        # Espace avant le footer
+        elements.append(Spacer(1, 1*cm))
+        
+        # Ligne de séparation
+        elements.append(Paragraph("─" * 100, self.styles['CustomBody']))
+        elements.append(Spacer(1, 0.3*cm))
+        
+        # Informations de l'entreprise
+        if self.config_entreprise:
+            # Nom de l'entreprise
+            elements.append(Paragraph(
+                f"<b>{self.config_entreprise.nom_entreprise}</b>",
+                ParagraphStyle(
+                    'FooterTitle',
+                    parent=self.styles['Normal'],
+                    fontSize=9,
+                    alignment=TA_CENTER
+                )
+            ))
+            
+            # Contact
+            if self.config_entreprise.telephone or self.config_entreprise.email:
+                contact_parts = []
+                if self.config_entreprise.telephone:
+                    contact_parts.append(f"Tél: {self.config_entreprise.telephone}")
+                if self.config_entreprise.email:
+                    contact_parts.append(f"Email: {self.config_entreprise.email}")
+                
+                elements.append(Paragraph(
+                    " | ".join(contact_parts),
+                    ParagraphStyle(
+                        'FooterContact',
+                        parent=self.styles['Normal'],
+                        fontSize=8,
+                        alignment=TA_CENTER
+                    )
+                ))
+            
+            # Adresse
+            if self.config_entreprise.adresse_ligne1:
+                elements.append(Paragraph(
+                    self.config_entreprise.get_adresse_complete(),
+                    ParagraphStyle(
+                        'FooterAddress',
+                        parent=self.styles['Normal'],
+                        fontSize=8,
+                        alignment=TA_CENTER
+                    )
+                ))
+        
+        elements.append(Spacer(1, 0.3*cm))
+        
+        # Nom de l'utilisateur qui a généré le document
+        if self.user:
+            user_name = self.user.get_full_name() or self.user.username
+            elements.append(Paragraph(
+                f"Document généré par : <b>{user_name}</b>",
+                ParagraphStyle(
+                    'FooterUser',
+                    parent=self.styles['Normal'],
+                    fontSize=8,
+                    alignment=TA_CENTER
+                )
+            ))
+        
+        # Date de génération
+        elements.append(Paragraph(
+            f"Généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}",
+            ParagraphStyle(
+                'FooterDate',
+                parent=self.styles['Normal'],
+                fontSize=8,
+                alignment=TA_CENTER
+            )
+        ))
+        
+        return elements
+    
     def _create_signatures(self):
         """Crée la section des signatures (locataire et agent immobilier uniquement)"""
         elements = []
