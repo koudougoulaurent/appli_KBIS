@@ -504,6 +504,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Confirmation finale
     document.getElementById('confirmResiliation').addEventListener('click', function() {
+        console.log('Bouton de confirmation cliqué');
+        
         // Afficher le loader
         document.body.classList.add('modal-open');
         const loader = document.createElement('div');
@@ -520,6 +522,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Soumission AJAX
         const formData = new FormData(form);
+        console.log('FormData créé, URL:', form.action);
+        
         fetch(form.action, {
             method: 'POST',
             body: formData,
@@ -528,6 +532,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         })
         .then(response => {
+            console.log('Réponse reçue du serveur:', response.status);
+            
             // Fermer la modal de confirmation
             const modal = bootstrap.Modal.getInstance(document.getElementById('confirmationModal'));
             if (modal) {
@@ -536,39 +542,52 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Vérifier si la réponse est du JSON
             const contentType = response.headers.get('content-type');
+            console.log('Content-Type:', contentType);
+            
             if (contentType && contentType.includes('application/json')) {
+                console.log('Traitement comme JSON');
                 return response.json();
             } else {
+                console.log('Traitement comme texte');
                 // Si ce n'est pas du JSON, c'est probablement une redirection HTML
                 return response.text().then(text => {
+                    console.log('Réponse textuelle:', text.substring(0, 200));
                     // Parser le texte pour trouver l'URL de redirection
                     return {success: false, message: 'Réponse inattendue du serveur.'};
                 });
             }
         })
         .then(data => {
+            console.log('Données traitées:', data);
             document.body.classList.remove('modal-open');
-            loader.remove();
+            if (loader && loader.parentNode) {
+                loader.remove();
+            }
             
             if (data && data.success) {
+                console.log('Succès confirmé');
                 // Afficher le message de succès
                 showResiliationAlert('success', data.message || 'Résiliation réussie ! Le contrat a été désactivé.');
                 
                 // Rediriger vers l'URL fournie ou la liste par défaut
                 const redirectUrl = data.redirect_url || '/contrats/liste/';
+                console.log('Redirection vers:', redirectUrl);
                 setTimeout(() => {
                     window.location.href = redirectUrl;
                 }, 1800);
             } else {
+                console.log('Erreur détectée:', data);
                 // Afficher le message d'erreur
                 const errorMsg = data && data.message ? data.message : 'Erreur technique lors de la résiliation.';
                 showResiliationAlert('error', errorMsg);
             }
         })
         .catch(error => {
-            console.error('Erreur:', error);
+            console.error('Erreur dans la chaîne:', error);
             document.body.classList.remove('modal-open');
-            loader.remove();
+            if (loader && loader.parentNode) {
+                loader.remove();
+            }
             showResiliationAlert('error', 'Erreur technique lors de la résiliation. Veuillez réessayer.');
         });
     });
