@@ -2062,6 +2062,90 @@ class ResiliationPDFService:
             """
         
         elements.append(Paragraph(conditions_text, self.styles['CustomBody']))
+        elements.append(Spacer(1, 15))
+        
+        # SECTION DES TRAVAUX ET DÉPENSES
+        elements.append(Paragraph("LISTE DES TRAVAUX EFFECTUÉS ET DÉPENSES", self.styles['CustomHeading']))
+        elements.append(Spacer(1, 10))
+        
+        # Tableau des travaux
+        travaux_data = []
+        
+        if self.resiliation.travaux_peinture and self.resiliation.travaux_peinture > 0:
+            travaux_data.append(['Travaux de peinture', f"{float(self.resiliation.travaux_peinture):,.0f} F CFA"])
+        
+        if self.resiliation.facture_onea and self.resiliation.facture_onea > 0:
+            travaux_data.append(['Facture ONEA', f"{float(self.resiliation.facture_onea):,.0f} F CFA"])
+        
+        if self.resiliation.facture_sonabel and self.resiliation.facture_sonabel > 0:
+            travaux_data.append(['Facture SONABEL', f"{float(self.resiliation.facture_sonabel):,.0f} F CFA"])
+        
+        if self.resiliation.travaux_ventilateur and self.resiliation.travaux_ventilateur > 0:
+            travaux_data.append(['Ventilateur / Climatisation', f"{float(self.resiliation.travaux_ventilateur):,.0f} F CFA"])
+        
+        if self.resiliation.autres_depenses and self.resiliation.autres_depenses > 0:
+            autres_desc = self.resiliation.description_autres_depenses if self.resiliation.description_autres_depenses else "Autres dépenses"
+            travaux_data.append([f'Autres ({autres_desc[:30]}...)' if len(autres_desc) > 30 else f'Autres ({autres_desc})', f"{float(self.resiliation.autres_depenses):,.0f} F CFA"])
+        
+        if travaux_data:
+            # En-tête du tableau
+            travaux_data.insert(0, ['DESCRIPTION', 'MONTANT'])
+            
+            table_travaux = Table(travaux_data, colWidths=[9*cm, 3*cm])
+            table_travaux.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+                ('FONTNAME', (0, 1), (1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 10),
+                ('TOPPADDING', (0, 1), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+            ]))
+            
+            elements.append(table_travaux)
+        else:
+            elements.append(Paragraph(
+                "<i>Aucun travail n'a été effectué sur la propriété.</i>",
+                self.styles['CustomBody']
+            ))
+        
+        elements.append(Spacer(1, 15))
+        
+        # RÉSUMÉ FINANCIER
+        elements.append(Paragraph("RÉSUMÉ FINANCIER", self.styles['CustomHeading']))
+        
+        caution_versee = float(self.resiliation.caution_versee) if self.resiliation.caution_versee else 0
+        total_depenses = float(self.resiliation.total_depenses) if self.resiliation.total_depenses else 0
+        solde_restant = float(self.resiliation.solde_restant) if self.resiliation.solde_restant else 0
+        
+        resume_data = [
+            ['Caution versée lors du contrat', f"{caution_versee:,.0f} F CFA"],
+            ['Total des dépenses effectuées', f"{total_depenses:,.0f} F CFA"],
+            ['<b>Solde restant à rembourser</b>', f"<b>{solde_restant:,.0f} F CFA</b>"]
+        ]
+        
+        table_resume = Table(resume_data, colWidths=[6*cm, 6*cm])
+        table_resume.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('BACKGROUND', (0, 0), (0, 2), colors.lightblue),
+            ('BACKGROUND', (1, 0), (1, 0), colors.lightgreen),
+            ('BACKGROUND', (1, 1), (1, 1), colors.lightcoral),
+            ('BACKGROUND', (1, 2), (1, 2), colors.lightyellow),
+        ]))
+        
+        elements.append(table_resume)
         
         return elements
 
