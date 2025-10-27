@@ -376,37 +376,12 @@
                             <a href="{% url 'contrats:detail' contrat.pk %}" class="btn btn-outline-secondary">
                                 <i class="bi bi-x-circle"></i> Annuler
                             </a>
-                            <button type="submit" class="btn btn-danger" id="submitBtn">
-                                <i class="bi bi-check-circle"></i> Confirmer la résiliation
+                            <button type="submit" class="btn btn-danger btn-lg" id="submitBtn">
+                                <i class="bi bi-check-circle"></i> Créer la résiliation
                             </button>
                         </div>
                     </form>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal de confirmation -->
-<div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="confirmationModalLabel">
-                    <i class="bi bi-exclamation-triangle"></i> Confirmation de résiliation
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p><strong>Êtes-vous sûr de vouloir résilier ce contrat ?</strong></p>
-                <p>Cette action est irréversible et entraînera la désactivation du contrat.</p>
-                <div id="resiliationSummary"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                <button type="button" class="btn btn-danger" id="confirmResiliation">
-                    <i class="bi bi-check-circle"></i> Confirmer la résiliation
-                </button>
             </div>
         </div>
     </div>
@@ -472,52 +447,8 @@ document.addEventListener('DOMContentLoaded', function() {
         validateForm();
     });
 
-    // Gestion de la soumission du formulaire
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // Préparer le résumé pour la modal
-        const summary = `
-            <div class="mt-3 p-3 bg-light rounded">
-                <h6>Résumé de la résiliation :</h6>
-                <p><strong>Date :</strong> ${dateResiliation.value}</p>
-                <p><strong>Type :</strong> ${document.getElementById('type_resiliation').options[document.getElementById('type_resiliation').selectedIndex].text}</p>
-                <p><strong>Motif :</strong> ${document.getElementById('motif_resiliation').value.substring(0, 100)}${document.getElementById('motif_resiliation').value.length > 100 ? '...' : ''}</p>
-                ${cautionCheckbox.checked ? `<p><strong>Remboursement :</strong> ${montantInput.value} F CFA le ${dateInput.value}</p>` : ''}
-            </div>
-        `;
-        
-        document.getElementById('resiliationSummary').innerHTML = summary;
-        
-        // Afficher la modal
-        const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
-        modal.show();
-    });
-
-    // Confirmation finale
-    document.getElementById('confirmResiliation').addEventListener('click', function() {
-        // Fermer la modal
-        const modalInstance = bootstrap.Modal.getInstance(document.getElementById('confirmationModal'));
-        if (modalInstance) {
-            modalInstance.hide();
-        }
-        
-        // Soumettre le formulaire normalement (pas d'AJAX pour éviter les problèmes)
-        form.submit();
-    });
-
-    // Fonction d'affichage du feedback
-    function showResiliationAlert(type, message) {
-        let alertDiv = document.getElementById('resiliationAlert');
-        if (!alertDiv) {
-            alertDiv = document.createElement('div');
-            alertDiv.id = 'resiliationAlert';
-            alertDiv.className = 'alert mt-3';
-            form.parentNode.insertBefore(alertDiv, form);
-        }
-        alertDiv.className = 'alert mt-3 alert-' + (type === 'success' ? 'success' : 'danger');
-        alertDiv.innerHTML = '<i class="bi bi-' + (type === 'success' ? 'check-circle' : 'exclamation-triangle') + '"></i> ' + message;
-    }
+    // LE FORMULAIRE SE SOUMET NORMALEMENT - PAS DE BLOQUAGE
+    // La validation HTML5 gère tout automatiquement
 
     // Validation en temps réel
     const requiredFields = form.querySelectorAll('[required]');
