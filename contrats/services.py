@@ -2312,62 +2312,6 @@ class ResiliationPDFService:
         elements.append(table_resume)
         
         return elements
-
-    def _create_signatures(self, user=None):
-        """Crée la section des signatures"""
-        elements = []
-        
-        elements.append(Paragraph("SIGNATURES", self.styles['CustomHeading']))
-        
-        # Ligne de séparation
-        elements.append(Paragraph("<hr/>", self.styles['CustomBody']))
-        elements.append(Spacer(1, 30))
-        
-        # Tableau des signatures pour éviter le chevauchement
-        signature_data = [
-            ['Signature du bailleur', 'Signature du locataire'],
-            ['', ''],
-            [f"{self.resiliation.contrat.propriete.bailleur.nom} {self.resiliation.contrat.propriete.bailleur.prenom}", 
-             f"{self.resiliation.contrat.locataire.nom} {self.resiliation.contrat.locataire.prenom}"],
-            ['Date : _________________', 'Date : _________________']
-        ]
-        
-        signature_table = Table(signature_data, colWidths=[8*cm, 8*cm])
-        signature_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-            ('TOPPADDING', (0, 0), (-1, -1), 12),
-            ('LINEBELOW', (0, 1), (0, 1), 1, colors.black),
-            ('LINEBELOW', (1, 1), (1, 1), 1, colors.black),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ]))
-        
-        elements.append(signature_table)
-        elements.append(Spacer(1, 30))
-        
-        # Signature de l'agent immobilier séparée
-        if self.config_entreprise:
-            elements.append(Paragraph(
-                f"<b>Signature de l'agent immobilier :</b><br/>"
-                f"{self.config_entreprise.nom_entreprise}<br/>"
-                f"Date : _________________",
-                self.styles['CustomSignature']
-            ))
-            elements.append(Spacer(1, 30))
-        
-        # Ajouter le nom de l'utilisateur qui a généré le document
-        if user:
-            user_name = user.get_full_name() or user.username
-            elements.append(Paragraph(f"<b>Document généré par :</b> {user_name}", self.styles['CustomBody']))
-            elements.append(Spacer(1, 10))
-        
-        # Ajouter les informations des documents joints (au lieu d'embarquer les images)
-        elements.extend(self._create_documents_summary())
-        
-        return elements
     
     def _create_documents_summary(self):
         """Crée un résumé des documents joints au lieu d'embarquer les images."""
