@@ -1831,7 +1831,7 @@ class ResiliationPDFService:
         story.extend(self._create_signatures(user=user))
         
         # Génération du PDF avec en-tête et pied de page personnalisés
-        doc.build(story, onFirstPage=self._add_header_footer, onLaterPages=self._add_header_footer)
+        doc.build(story, onFirstPage=self._add_first_page_header_footer, onLaterPages=self._add_later_pages_header_footer)
         buffer.seek(0)
         
         # Mettre en cache le PDF généré
@@ -1884,15 +1884,15 @@ class ResiliationPDFService:
         
         return elements
 
-    def _add_header_footer(self, canvas_obj, doc):
-        """Ajoute l'en-tête et le pied de page fixes sur chaque page"""
+    def _add_first_page_header_footer(self, canvas_obj, doc):
+        """Ajoute l'en-tête et le pied de page sur la première page uniquement"""
         import os
         from django.conf import settings
         
         # Dimensions de la page
         page_width, page_height = A4
         
-        # === EN-TÊTE AVEC IMAGE STATIQUE ===
+        # === EN-TÊTE AVEC IMAGE STATIQUE (PREMIÈRE PAGE UNIQUEMENT) ===
         try:
             # Chemin de l'image d'en-tête
             image_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'enteteEnImage.png')
@@ -1902,7 +1902,6 @@ class ResiliationPDFService:
                 header_height = 3.5*cm
                 
                 # Calculer la largeur de l'image en conservant le ratio
-                # L'image fait 2480x350 pixels
                 image_width = page_width
                 
                 # Dessiner l'image d'en-tête
@@ -1933,7 +1932,18 @@ class ResiliationPDFService:
             canvas_obj.setFillColor(colors.lightcoral)
             canvas_obj.rect(0, page_height - 3.5*cm, page_width, 3.5*cm, fill=1, stroke=0)
         
-        # === PIED DE PAGE AVEC INFOS CONFIGURATION ===
+        # === PIED DE PAGE ===
+        self._add_footer(canvas_obj, doc)
+    
+    def _add_later_pages_header_footer(self, canvas_obj, doc):
+        """Ajoute seulement le pied de page sur les pages suivantes (sans en-tête)"""
+        # Pas d'en-tête sur les pages suivantes
+        # === PIED DE PAGE ===
+        self._add_footer(canvas_obj, doc)
+    
+    def _add_footer(self, canvas_obj, doc):
+        """Ajoute le pied de page avec les infos de configuration"""
+        page_width = A4[0]
         footer_height = 2*cm
         
         # Fond du pied de page
