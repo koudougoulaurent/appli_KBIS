@@ -78,7 +78,8 @@ class PaiementAdmin(admin.ModelAdmin):
         """Action pour valider les paiements sélectionnés."""
         updated = 0
         for paiement in queryset.filter(statut='en_attente'):
-            paiement.valider_paiement(request.user)
+            paiement.statut = 'valide'
+            paiement.save()
             updated += 1
         self.message_user(request, f'{updated} paiement(s) validé(s) avec succès.')
     valider_paiements.short_description = _("Valider les paiements sélectionnés")
@@ -87,7 +88,8 @@ class PaiementAdmin(admin.ModelAdmin):
         """Action pour refuser les paiements sélectionnés."""
         updated = 0
         for paiement in queryset.filter(statut='en_attente'):
-            paiement.refuser_paiement(request.user)
+            paiement.statut = 'refuse'
+            paiement.save()
             updated += 1
         self.message_user(request, f'{updated} paiement(s) refusé(s) avec succès.')
     refuser_paiements.short_description = _("Refuser les paiements sélectionnés")
@@ -96,7 +98,8 @@ class PaiementAdmin(admin.ModelAdmin):
         """Action pour annuler les paiements sélectionnés."""
         updated = 0
         for paiement in queryset.exclude(statut='annule'):
-            paiement.annuler_paiement(request.user)
+            paiement.statut = 'annule'
+            paiement.save()
             updated += 1
         self.message_user(request, f'{updated} paiement(s) annulé(s) avec succès.')
     annuler_paiements.short_description = _("Annuler les paiements sélectionnés")
