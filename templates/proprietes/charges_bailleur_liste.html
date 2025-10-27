@@ -74,7 +74,7 @@
                         <option value="">Tous les statuts</option>
                         <option value="en_attente" {% if filtres.statut == 'en_attente' %}selected{% endif %}>En attente</option>
                         <option value="rembourse" {% if filtres.statut == 'rembourse' %}selected{% endif %}>Remboursé</option>
-                        <option value="deduit_loyer" {% if filtres.statut == 'deduit_loyer' %}selected{% endif %}>Déduit du loyer</option>
+                        <option value="deduite_retrait" {% if filtres.statut == 'deduite_retrait' %}selected{% endif %}>Déduite du retrait</option>
                         <option value="annule" {% if filtres.statut == 'annule' %}selected{% endif %}>Annulé</option>
                     </select>
                 </div>
@@ -179,7 +179,7 @@
                                         <span class="badge bg-success">{{ item.charge.get_statut_display }}</span>
                                     {% elif item.charge.statut == 'en_attente' %}
                                         <span class="badge bg-warning">{{ item.charge.get_statut_display }}</span>
-                                    {% elif item.charge.statut == 'deduit_loyer' %}
+                                    {% elif item.charge.statut == 'deduite_retrait' %}
                                         <span class="badge bg-info">{{ item.charge.get_statut_display }}</span>
                                     {% elif item.charge.statut == 'annule' %}
                                         <span class="badge bg-secondary">{{ item.charge.get_statut_display }}</span>
@@ -210,7 +210,7 @@
                                         </a>
                                         {% if item.charge.statut == 'en_attente' %}
                                             <a href="{% url 'proprietes:deduction_charge_bailleur' item.charge.pk %}" 
-                                               class="btn btn-sm btn-outline-info" title="Déduire du loyer">
+                                               class="btn btn-sm btn-outline-info" title="Déduire du retrait">
                                                 <i class="bi bi-cash-coin"></i>
                                             </a>
                                         {% endif %}

@@ -715,7 +715,7 @@ class ChargesBailleurForm(forms.ModelForm):
 
 
 class ChargesBailleurDeductionForm(forms.Form):
-    """Formulaire pour la déduction des charges bailleur du loyer."""
+    """Formulaire pour la déduction des charges bailleur du retrait mensuel."""
     
     montant_deduction = forms.DecimalField(
         max_digits=10,

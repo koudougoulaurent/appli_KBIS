@@ -122,6 +122,34 @@ class Bailleur(DuplicatePreventionMixin, models.Model):
     def get_absolute_url(self):
         return reverse('proprietes:detail_bailleur', kwargs={'pk': self.pk})
     
+    def a_des_proprietes_louees(self):
+        """
+        Vérifie si le bailleur a des propriétés louées (avec contrats actifs).
+        Retourne True si le bailleur a au moins une propriété louée, False sinon.
+        """
+        from contrats.models import Contrat
+        
+        # Vérifier les propriétés avec contrats actifs
+        proprietes_louees = self.proprietes.filter(
+            contrats__est_actif=True,
+            contrats__est_resilie=False,
+            contrats__is_deleted=False
+        ).distinct()
+        
+        return proprietes_louees.exists()
+    
+    def get_proprietes_louees(self):
+        """
+        Retourne toutes les propriétés louées du bailleur (avec contrats actifs).
+        """
+        from contrats.models import Contrat
+        
+        return self.proprietes.filter(
+            contrats__est_actif=True,
+            contrats__est_resilie=False,
+            contrats__is_deleted=False
+        ).distinct().order_by('adresse')
+    
     def get_statistiques_paiements(self):
         """Récupère les statistiques des paiements pour ce bailleur."""
         from paiements.models import Paiement

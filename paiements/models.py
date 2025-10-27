@@ -113,17 +113,36 @@ class RecapMensuel(models.Model):
             nombre_contrats_actifs = 0
             nombre_paiements_recus = 0
             
-            # Récupérer les propriétés du bailleur
-            proprietes = self.bailleur.proprietes.filter(is_deleted=False)
+            # Récupérer les propriétés du bailleur avec contrats actifs seulement
+            proprietes = self.bailleur.proprietes.filter(
+                is_deleted=False,
+                contrats__est_actif=True,
+                contrats__est_resilie=False,
+                contrats__date_debut__lte=mois_fin
+            ).filter(
+                models.Q(contrats__date_fin__gte=mois_debut) | models.Q(contrats__date_fin__isnull=True)
+            ).distinct()
             nombre_proprietes = proprietes.count()
             
-            # Calculer les loyers bruts pour le mois - basé sur les contrats actifs
             # Calculer les dates de début et fin du mois
             mois_debut = self.mois_recap.replace(day=1)
             if self.mois_recap.month == 12:
                 mois_fin = self.mois_recap.replace(year=self.mois_recap.year + 1, month=1, day=1) - timedelta(days=1)
             else:
                 mois_fin = self.mois_recap.replace(month=self.mois_recap.month + 1, day=1) - timedelta(days=1)
+            
+            # Récupérer les propriétés du bailleur avec contrats actifs seulement
+            proprietes = self.bailleur.proprietes.filter(
+                is_deleted=False,
+                contrats__est_actif=True,
+                contrats__est_resilie=False,
+                contrats__date_debut__lte=mois_fin
+            ).filter(
+                models.Q(contrats__date_fin__gte=mois_debut) | models.Q(contrats__date_fin__isnull=True)
+            ).distinct()
+            nombre_proprietes = proprietes.count()
+            
+            # Calculer les loyers bruts pour le mois - basé sur les contrats actifs
             
             for propriete in proprietes:
                 # Récupérer les contrats actifs pour cette propriété au moment du récapitulatif
@@ -193,7 +212,7 @@ class RecapMensuel(models.Model):
                 bailleur=self.bailleur,
                 date_charge__year=self.mois_recap.year,
                 date_charge__month=self.mois_recap.month,
-                statut__in=['en_attente', 'utilise']
+                statut__in=['en_attente', 'valide']  # Seules les charges non encore utilisées
             )
             
             for charge in charges_bailleur_mois:
@@ -386,8 +405,15 @@ class RecapMensuel(models.Model):
         else:
             mois_fin = self.mois_recap.replace(month=self.mois_recap.month + 1, day=1) - timedelta(days=1)
         
-        # Récupérer les propriétés du bailleur
-        proprietes = self.bailleur.proprietes.filter(is_deleted=False)
+        # Récupérer les propriétés du bailleur avec contrats actifs seulement
+        proprietes = self.bailleur.proprietes.filter(
+            is_deleted=False,
+            contrats__est_actif=True,
+            contrats__est_resilie=False,
+            contrats__date_debut__lte=mois_fin
+        ).filter(
+            models.Q(contrats__date_fin__gte=mois_debut) | models.Q(contrats__date_fin__isnull=True)
+        ).distinct()
         
         for propriete in proprietes:
             # Récupérer les contrats actifs pour cette propriété au moment du récapitulatif
@@ -1612,12 +1638,12 @@ class RetraitBailleur(models.Model):
         charges_details = []
         total_charges = Decimal('0')
         
-        # Récupérer les charges de bailleur pour ce mois
+        # Récupérer les charges de bailleur pour ce mois (SEULEMENT celles non encore utilisées)
         charges = ChargeBailleur.objects.filter(
             bailleur=self.bailleur,
             date_charge__year=mois_retrait.year,
             date_charge__month=mois_retrait.month,
-            statut='en_attente'
+            statut='en_attente'  # SEULEMENT les charges en attente (pas encore utilisées)
         )
         
         for charge in charges:

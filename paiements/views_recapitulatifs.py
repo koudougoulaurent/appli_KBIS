@@ -171,10 +171,12 @@ def generer_recapitulatif_kbis(request, recapitulatif_id):
     # Calculer les totaux
     totaux = recapitulatif.calculer_totaux_bailleur()
     
-    # Récupérer les propriétés du bailleur avec leurs unités locatives
+    # Récupérer les propriétés du bailleur avec contrats actifs seulement
     proprietes = recapitulatif.bailleur.proprietes.filter(
-        is_deleted=False
-    ).select_related('type_bien').prefetch_related(
+        is_deleted=False,
+        contrats__est_actif=True,
+        contrats__est_resilie=False
+    ).distinct().select_related('type_bien').prefetch_related(
         'unites_locatives__contrats__locataire'
     )
     

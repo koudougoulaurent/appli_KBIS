@@ -19,7 +19,7 @@
                 </a>
                 {% if charge.statut == 'en_attente' %}
                     <a href="{% url 'proprietes:deduction_charge_bailleur' charge.pk %}" class="btn btn-info">
-                        <i class="bi bi-cash-coin"></i> Déduire du loyer
+                        <i class="bi bi-cash-coin"></i> Déduire du retrait
                     </a>
                 {% endif %}
             </div>
@@ -56,8 +56,8 @@
                                     <span class="badge bg-warning text-dark">En attente</span>
                                 {% elif charge.statut == 'rembourse' %}
                                     <span class="badge bg-success text-white">Remboursé</span>
-                                {% elif charge.statut == 'deduit_loyer' %}
-                                    <span class="badge bg-info text-white">Déduit du loyer</span>
+                                {% elif charge.statut == 'deduite_retrait' %}
+                                    <span class="badge bg-info text-white">Déduite du retrait</span>
                                 {% elif charge.statut == 'annule' %}
                                     <span class="badge bg-secondary text-white">Annulé</span>
                                 {% endif %}
@@ -169,7 +169,7 @@
                         
                         {% if charge.statut == 'en_attente' %}
                             <a href="{% url 'proprietes:deduction_charge_bailleur' charge.pk %}" class="btn btn-info">
-                                <i class="bi bi-cash-coin"></i> Déduire du loyer
+                                <i class="bi bi-cash-coin"></i> Déduire du retrait
                             </a>
                             
                             <form method="POST" action="{% url 'proprietes:marquer_charge_remboursee' charge.pk %}" class="d-inline">

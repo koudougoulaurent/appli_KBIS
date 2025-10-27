@@ -1328,7 +1328,7 @@ class ChargesBailleurListView(PrivilegeButtonsMixin, IntelligentListView):
         context['total_charges'] = ChargesBailleur.objects.count()
         context['charges_en_attente'] = ChargesBailleur.objects.filter(statut='en_attente').count()
         context['charges_remboursees'] = ChargesBailleur.objects.filter(statut='rembourse').count()
-        context['charges_deduites'] = ChargesBailleur.objects.filter(statut='deduit_loyer').count()
+        context['charges_deduites'] = ChargesBailleur.objects.filter(statut='deduite_retrait').count()
         
         # Montant total
         from django.db.models import Sum
