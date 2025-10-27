@@ -1727,8 +1727,9 @@ class RecuCautionPDFService:
 
 
 class ResiliationPDFService:
-    def __init__(self, resiliation):
+    def __init__(self, resiliation, user=None):
         self.resiliation = resiliation
+        self.user = user
         self.styles = getSampleStyleSheet()
         self._setup_custom_styles()
         # Récupérer la configuration de l'entreprise depuis la base de données
@@ -1827,10 +1828,10 @@ class ResiliationPDFService:
         story.extend(self._create_termination_details())
         story.append(Spacer(1, 20))
         
-        # Signatures
-        story.extend(self._create_signatures(user=user))
+        # Ajouter le footer à la fin (sera sur la dernière page)
+        story.extend(self._create_footer_content())
         
-        # Génération du PDF avec en-tête et pied de page personnalisés
+        # Génération du PDF avec en-tête uniquement sur la première page
         doc.build(story, onFirstPage=self._add_first_page_header_footer, onLaterPages=self._add_later_pages_header_footer)
         buffer.seek(0)
         
@@ -1885,7 +1886,7 @@ class ResiliationPDFService:
         return elements
 
     def _add_first_page_header_footer(self, canvas_obj, doc):
-        """Ajoute l'en-tête et le pied de page sur la première page uniquement"""
+        """Ajoute l'en-tête uniquement sur la première page (pas de pied de page)"""
         import os
         from django.conf import settings
         
@@ -1931,15 +1932,10 @@ class ResiliationPDFService:
             # En cas d'erreur, utiliser un en-tête simple
             canvas_obj.setFillColor(colors.lightcoral)
             canvas_obj.rect(0, page_height - 3.5*cm, page_width, 3.5*cm, fill=1, stroke=0)
-        
-        # === PIED DE PAGE ===
-        self._add_footer(canvas_obj, doc)
     
     def _add_later_pages_header_footer(self, canvas_obj, doc):
-        """Ajoute seulement le pied de page sur les pages suivantes (sans en-tête)"""
-        # Pas d'en-tête sur les pages suivantes
-        # === PIED DE PAGE ===
-        self._add_footer(canvas_obj, doc)
+        """Ne fait rien sur les pages suivantes (pas d'en-tête ni de pied de page)"""
+        pass
     
     def _add_footer(self, canvas_obj, doc):
         """Ajoute le pied de page avec les infos de configuration"""
@@ -1984,6 +1980,88 @@ class ResiliationPDFService:
             canvas_obj.setFont("Helvetica", 7)
             canvas_obj.drawRightString(page_width - 2*cm, 0.8*cm, f"Document généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}")
 
+    def _create_footer_content(self):
+        """Crée le pied de page avec les informations de configuration et le nom de l'utilisateur"""
+        elements = []
+        
+        # Espace avant le footer
+        elements.append(Spacer(1, 1*cm))
+        
+        # Ligne de séparation
+        elements.append(Paragraph("─" * 100, self.styles['CustomBody']))
+        elements.append(Spacer(1, 0.5*cm))
+        
+        # Informations de l'entreprise
+        if self.config_entreprise:
+            # Nom de l'entreprise
+            elements.append(Paragraph(
+                f"<b>{self.config_entreprise.nom_entreprise}</b>",
+                ParagraphStyle(
+                    'FooterTitle',
+                    parent=self.styles['Normal'],
+                    fontSize=9,
+                    alignment=TA_CENTER
+                )
+            ))
+            
+            # Contact
+            if self.config_entreprise.telephone or self.config_entreprise.email:
+                contact_parts = []
+                if self.config_entreprise.telephone:
+                    contact_parts.append(f"Tél: {self.config_entreprise.telephone}")
+                if self.config_entreprise.email:
+                    contact_parts.append(f"Email: {self.config_entreprise.email}")
+                
+                elements.append(Paragraph(
+                    " | ".join(contact_parts),
+                    ParagraphStyle(
+                        'FooterContact',
+                        parent=self.styles['Normal'],
+                        fontSize=8,
+                        alignment=TA_CENTER
+                    )
+                ))
+            
+            # Adresse
+            if self.config_entreprise.adresse_ligne1:
+                elements.append(Paragraph(
+                    self.config_entreprise.get_adresse_complete(),
+                    ParagraphStyle(
+                        'FooterAddress',
+                        parent=self.styles['Normal'],
+                        fontSize=8,
+                        alignment=TA_CENTER
+                    )
+                ))
+        
+        elements.append(Spacer(1, 0.5*cm))
+        
+        # Nom de l'utilisateur qui a généré le document
+        if self.user:
+            user_name = self.user.get_full_name() or self.user.username
+            elements.append(Paragraph(
+                f"Document généré par : <b>{user_name}</b>",
+                ParagraphStyle(
+                    'FooterUser',
+                    parent=self.styles['Normal'],
+                    fontSize=8,
+                    alignment=TA_CENTER
+                )
+            ))
+        
+        # Date de génération
+        elements.append(Paragraph(
+            f"Généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}",
+            ParagraphStyle(
+                'FooterDate',
+                parent=self.styles['Normal'],
+                fontSize=8,
+                alignment=TA_CENTER
+            )
+        ))
+        
+        return elements
+    
     def _create_resiliation_info(self):
         """Crée la section des informations de résiliation"""
         elements = []
@@ -2099,14 +2177,23 @@ class ResiliationPDFService:
             travaux_data.append([f'Autres ({autres_desc[:30]}...)' if len(autres_desc) > 30 else f'Autres ({autres_desc})', f"{float(self.resiliation.autres_depenses):,.0f} F CFA"])
         
         if travaux_data:
-            # En-tête du tableau
-            travaux_data.insert(0, ['DESCRIPTION', 'MONTANT'])
+            # Convertir toutes les cellules en Paragraph pour gérer les retours à la ligne
+            formatted_data = [
+                [Paragraph('<b>DESCRIPTION</b>', self.styles['CustomBody']), Paragraph('<b>MONTANT</b>', self.styles['CustomBody'])]
+            ]
             
-            table_travaux = Table(travaux_data, colWidths=[9*cm, 3*cm])
+            for row in travaux_data:
+                formatted_data.append([
+                    Paragraph(str(row[0]), self.styles['CustomBody']),
+                    Paragraph(str(row[1]), self.styles['CustomBody'])
+                ])
+            
+            table_travaux = Table(formatted_data, colWidths=[9*cm, 3*cm])
             table_travaux.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Alignement vertical
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                 ('FONTSIZE', (0, 0), (-1, 0), 11),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
@@ -2135,15 +2222,20 @@ class ResiliationPDFService:
         total_depenses = float(self.resiliation.total_depenses) if self.resiliation.total_depenses else 0
         solde_restant = float(self.resiliation.solde_restant) if self.resiliation.solde_restant else 0
         
+        # Convertir toutes les cellules en Paragraph
         resume_data = [
-            ['Caution versée lors du contrat', f"{caution_versee:,.0f} F CFA"],
-            ['Total des dépenses effectuées', f"{total_depenses:,.0f} F CFA"],
-            ['<b>Solde restant à rembourser</b>', f"<b>{solde_restant:,.0f} F CFA</b>"]
+            [Paragraph('Caution versée lors du contrat', self.styles['CustomBody']), 
+             Paragraph(f"{caution_versee:,.0f} F CFA", self.styles['CustomBody'])],
+            [Paragraph('Total des dépenses effectuées', self.styles['CustomBody']), 
+             Paragraph(f"{total_depenses:,.0f} F CFA", self.styles['CustomBody'])],
+            [Paragraph('<b>Solde restant à rembourser</b>', self.styles['CustomBody']), 
+             Paragraph(f"<b>{solde_restant:,.0f} F CFA</b>", self.styles['CustomBody'])]
         ]
         
         table_resume = Table(resume_data, colWidths=[6*cm, 6*cm])
         table_resume.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Alignement vertical
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 11),
             ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
