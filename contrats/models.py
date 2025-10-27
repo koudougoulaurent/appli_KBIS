@@ -1386,8 +1386,8 @@ class ResiliationContrat(models.Model):
         caution = Decimal('0')
         
         # Vérifier si une caution a été payée dans le contrat
-        if hasattr(self.contrat, 'caution_loyers'):
-            caution += Decimal(str(self.contrat.caution_loyers or 0))
+        if hasattr(self.contrat, 'depot_garantie') and self.contrat.depot_garantie:
+            caution += Decimal(str(self.contrat.depot_garantie))
         
         return caution
     
