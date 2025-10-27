@@ -527,23 +527,49 @@ document.addEventListener('DOMContentLoaded', function() {
                 'X-Requested-With': 'XMLHttpRequest'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            // Fermer la modal de confirmation
+            const modal = bootstrap.Modal.getInstance(document.getElementById('confirmationModal'));
+            if (modal) {
+                modal.hide();
+            }
+            
+            // Vérifier si la réponse est du JSON
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return response.json();
+            } else {
+                // Si ce n'est pas du JSON, c'est probablement une redirection HTML
+                return response.text().then(text => {
+                    // Parser le texte pour trouver l'URL de redirection
+                    return {success: false, message: 'Réponse inattendue du serveur.'};
+                });
+            }
+        })
         .then(data => {
             document.body.classList.remove('modal-open');
             loader.remove();
-            if (data.success) {
-                showResiliationAlert('success', 'Résiliation réussie ! Le contrat a été désactivé.');
+            
+            if (data && data.success) {
+                // Afficher le message de succès
+                showResiliationAlert('success', data.message || 'Résiliation réussie ! Le contrat a été désactivé.');
+                
+                // Rediriger vers l'URL fournie ou la liste par défaut
+                const redirectUrl = data.redirect_url || '/contrats/liste/';
                 setTimeout(() => {
-                    window.location.href = '/contrats/liste/';
+                    window.location.href = redirectUrl;
                 }, 1800);
             } else {
-                showResiliationAlert('error', data.message || 'Erreur technique lors de la résiliation.');
+                // Afficher le message d'erreur
+                const errorMsg = data && data.message ? data.message : 'Erreur technique lors de la résiliation.';
+                showResiliationAlert('error', errorMsg);
             }
         })
         .catch(error => {
+            console.error('Erreur:', error);
             document.body.classList.remove('modal-open');
             loader.remove();
-            showResiliationAlert('error', 'Erreur technique lors de la résiliation.');
+            showResiliationAlert('error', 'Erreur technique lors de la résiliation. Veuillez réessayer.');
         });
     });
 

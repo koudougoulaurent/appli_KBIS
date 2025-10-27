@@ -505,8 +505,13 @@ def resilier_contrat(request, pk):
             date_remboursement = request.POST.get('date_remboursement')
             notes = request.POST.get('notes', '')
             
+            from django.http import JsonResponse
+            
             if not all([date_resiliation, type_resiliation]):
-                messages.error(request, "La date de résiliation et le type de résiliation sont obligatoires.")
+                error_msg = "La date de résiliation et le type de résiliation sont obligatoires."
+                messages.error(request, error_msg)
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'message': error_msg})
                 return render(request, 'contrats/resilier.html', {'contrat': contrat})
             
             # Convertir la date
@@ -514,27 +519,42 @@ def resilier_contrat(request, pk):
             
             # Validation de la date
             if date_resiliation < contrat.date_debut:
-                messages.error(request, "La date de résiliation doit être supérieure ou égale à la date de début du contrat.")
+                error_msg = "La date de résiliation doit être supérieure ou égale à la date de début du contrat."
+                messages.error(request, error_msg)
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'message': error_msg})
                 return render(request, 'contrats/resilier.html', {'contrat': contrat})
             
             # Si date_fin existe, vérifier qu'on ne dépasse pas
             if contrat.date_fin and date_resiliation > contrat.date_fin:
-                messages.error(request, "La date de résiliation ne peut pas être supérieure à la date de fin du contrat.")
+                error_msg = "La date de résiliation ne peut pas être supérieure à la date de fin du contrat."
+                messages.error(request, error_msg)
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'message': error_msg})
                 return render(request, 'contrats/resilier.html', {'contrat': contrat})
             
             # Validation des champs de remboursement
             if caution_remboursee:
                 if not montant_remboursement or not date_remboursement:
-                    messages.error(request, "Le montant et la date de remboursement sont requis si la caution est remboursée.")
+                    error_msg = "Le montant et la date de remboursement sont requis si la caution est remboursée."
+                    messages.error(request, error_msg)
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({'success': False, 'message': error_msg})
                     return render(request, 'contrats/resilier.html', {'contrat': contrat})
                 
                 try:
                     montant_remboursement = float(montant_remboursement)
                     if montant_remboursement > contrat.get_total_caution_avance():
-                        messages.error(request, "Le montant de remboursement ne peut pas dépasser le total des cautions et avances.")
+                        error_msg = "Le montant de remboursement ne peut pas dépasser le total des cautions et avances."
+                        messages.error(request, error_msg)
+                        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                            return JsonResponse({'success': False, 'message': error_msg})
                         return render(request, 'contrats/resilier.html', {'contrat': contrat})
                 except ValueError:
-                    messages.error(request, "Le montant de remboursement doit être un nombre valide.")
+                    error_msg = "Le montant de remboursement doit être un nombre valide."
+                    messages.error(request, error_msg)
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({'success': False, 'message': error_msg})
                     return render(request, 'contrats/resilier.html', {'contrat': contrat})
                 
                 date_remboursement = datetime.strptime(date_remboursement, '%Y-%m-%d').date()
@@ -625,12 +645,39 @@ def resilier_contrat(request, pk):
             )
             
             messages.success(request, f"Contrat {contrat.numero_contrat} résilié avec succès. Résiliation créée avec l'ID {resiliation.pk}.")
+            
+            # Si c'est une requête AJAX, retourner du JSON
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                from django.http import JsonResponse
+                return JsonResponse({
+                    'success': True,
+                    'message': f"Contrat {contrat.numero_contrat} résilié avec succès.",
+                    'resiliation_id': resiliation.pk,
+                    'redirect_url': f'/contrats/resiliations/{resiliation.pk}/'
+                })
+            
             return redirect('contrats:detail_resiliation', resiliation_id=resiliation.pk)
             
         except ValueError as e:
-            messages.error(request, f"Erreur de format : {str(e)}")
+            error_msg = f"Erreur de format : {str(e)}"
+            messages.error(request, error_msg)
+            # Si c'est une requête AJAX, retourner du JSON
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                from django.http import JsonResponse
+                return JsonResponse({
+                    'success': False,
+                    'message': error_msg
+                })
         except Exception as e:
-            messages.error(request, f"Erreur lors de la résiliation : {str(e)}")
+            error_msg = f"Erreur lors de la résiliation : {str(e)}"
+            messages.error(request, error_msg)
+            # Si c'est une requête AJAX, retourner du JSON
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                from django.http import JsonResponse
+                return JsonResponse({
+                    'success': False,
+                    'message': error_msg
+                })
     
     context = {
         'contrat': contrat,
