@@ -1803,7 +1803,7 @@ class ResiliationPDFService:
             rightMargin=1.5*cm,
             leftMargin=1.5*cm,
             topMargin=4.5*cm,  # Marge supérieure pour l'en-tête avec image
-            bottomMargin=3*cm  # Marge inférieure pour le pied de page dynamique
+            bottomMargin=1*cm  # Marge inférieure réduite pour avoir plus d'espace
         )
         
         # Construction du contenu du PDF
@@ -2008,12 +2008,12 @@ class ResiliationPDFService:
         """Crée le pied de page avec les informations de configuration et le nom de l'utilisateur"""
         elements = []
         
-        # Espace avant le footer
-        elements.append(Spacer(1, 1*cm))
+        # Espace minimal avant le footer pour coller aux signatures
+        elements.append(Spacer(1, 5))
         
         # Ligne de séparation
         elements.append(Paragraph("─" * 100, self.styles['CustomBody']))
-        elements.append(Spacer(1, 0.3*cm))
+        elements.append(Spacer(1, 0.2*cm))
         
         # Informations de l'entreprise
         if self.config_entreprise:
@@ -2058,7 +2058,7 @@ class ResiliationPDFService:
                     )
                 ))
         
-        elements.append(Spacer(1, 0.3*cm))
+        elements.append(Spacer(1, 5))
         
         # Nom de l'utilisateur qui a généré le document
         if self.user:
@@ -2119,7 +2119,7 @@ class ResiliationPDFService:
         ]))
         
         elements.append(signature_table)
-        elements.append(Spacer(1, 30))
+        elements.append(Spacer(1, 10))  # Espace minimal pour coller le footer
         
         return elements
     
