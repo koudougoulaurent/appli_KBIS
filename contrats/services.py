@@ -2210,102 +2210,80 @@ class ResiliationPDFService:
         elements.append(Paragraph(conditions_text, self.styles['CustomBody']))
         elements.append(Spacer(1, 15))
         
-        # SECTION DES TRAVAUX ET DÉPENSES
-        elements.append(Paragraph("LISTE DES TRAVAUX EFFECTUÉS ET DÉPENSES", self.styles['CustomHeading']))
+        # SECTION DES TRAVAUX ET DÉPENSES + RÉSUMÉ FINANCIER (tableau unifié)
+        elements.append(Paragraph("LISTE DES TRAVAUX EFFECTUÉS ET RÉSUMÉ FINANCIER", self.styles['CustomHeading']))
         elements.append(Spacer(1, 10))
         
-        # Tableau des travaux
-        travaux_data = []
+        # Créer un tableau unifié
+        all_data = []
         
+        # En-tête
+        all_data.append([Paragraph('<b>DESCRIPTION</b>', self.styles['CustomBody']), Paragraph('<b>MONTANT</b>', self.styles['CustomBody'])])
+        
+        # Ligne de séparation "TRAVAUX"
+        all_data.append([Paragraph('<b>TRAVAUX ET DÉPENSES</b>', self.styles['CustomBody']), Paragraph('', self.styles['CustomBody'])])
+        
+        # Travaux
+        has_travaux = False
         if self.resiliation.travaux_peinture and self.resiliation.travaux_peinture > 0:
-            travaux_data.append(['Travaux de peinture', f"{float(self.resiliation.travaux_peinture):,.0f} F CFA"])
+            all_data.append([Paragraph('Travaux de peinture', self.styles['CustomBody']), Paragraph(f"{float(self.resiliation.travaux_peinture):,.0f} F CFA", self.styles['CustomBody'])])
+            has_travaux = True
         
         if self.resiliation.facture_onea and self.resiliation.facture_onea > 0:
-            travaux_data.append(['Facture ONEA', f"{float(self.resiliation.facture_onea):,.0f} F CFA"])
+            all_data.append([Paragraph('Facture ONEA', self.styles['CustomBody']), Paragraph(f"{float(self.resiliation.facture_onea):,.0f} F CFA", self.styles['CustomBody'])])
+            has_travaux = True
         
         if self.resiliation.facture_sonabel and self.resiliation.facture_sonabel > 0:
-            travaux_data.append(['Facture SONABEL', f"{float(self.resiliation.facture_sonabel):,.0f} F CFA"])
+            all_data.append([Paragraph('Facture SONABEL', self.styles['CustomBody']), Paragraph(f"{float(self.resiliation.facture_sonabel):,.0f} F CFA", self.styles['CustomBody'])])
+            has_travaux = True
         
         if self.resiliation.travaux_ventilateur and self.resiliation.travaux_ventilateur > 0:
-            travaux_data.append(['Ventilateur / Climatisation', f"{float(self.resiliation.travaux_ventilateur):,.0f} F CFA"])
+            all_data.append([Paragraph('Ventilateur / Climatisation', self.styles['CustomBody']), Paragraph(f"{float(self.resiliation.travaux_ventilateur):,.0f} F CFA", self.styles['CustomBody'])])
+            has_travaux = True
         
         if self.resiliation.autres_depenses and self.resiliation.autres_depenses > 0:
             autres_desc = self.resiliation.description_autres_depenses if self.resiliation.description_autres_depenses else "Autres dépenses"
-            travaux_data.append([f'Autres ({autres_desc[:30]}...)' if len(autres_desc) > 30 else f'Autres ({autres_desc})', f"{float(self.resiliation.autres_depenses):,.0f} F CFA"])
+            truncated_desc = autres_desc[:30] + '...' if len(autres_desc) > 30 else autres_desc
+            all_data.append([Paragraph(f'Autres ({truncated_desc})', self.styles['CustomBody']), Paragraph(f"{float(self.resiliation.autres_depenses):,.0f} F CFA", self.styles['CustomBody'])])
+            has_travaux = True
         
-        if travaux_data:
-            # Convertir toutes les cellules en Paragraph pour gérer les retours à la ligne
-            formatted_data = [
-                [Paragraph('<b>DESCRIPTION</b>', self.styles['CustomBody']), Paragraph('<b>MONTANT</b>', self.styles['CustomBody'])]
-            ]
-            
-            for row in travaux_data:
-                formatted_data.append([
-                    Paragraph(str(row[0]), self.styles['CustomBody']),
-                    Paragraph(str(row[1]), self.styles['CustomBody'])
-                ])
-            
-            table_travaux = Table(formatted_data, colWidths=[9*cm, 3*cm])
-            table_travaux.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Alignement vertical
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 11),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
-                ('FONTNAME', (0, 1), (1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 10),
-                ('TOPPADDING', (0, 1), (-1, -1), 8),
-                ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
-            ]))
-            
-            elements.append(table_travaux)
-        else:
-            elements.append(Paragraph(
-                "<i>Aucun travail n'a été effectué sur la propriété.</i>",
-                self.styles['CustomBody']
-            ))
+        if not has_travaux:
+            all_data.append([Paragraph('<i>Aucun travail effectué</i>', self.styles['CustomBody']), Paragraph('', self.styles['CustomBody'])])
         
-        elements.append(Spacer(1, 15))
+        # Ligne de séparation "RÉSUMÉ FINANCIER"
+        all_data.append([Paragraph('<b>RÉSUMÉ FINANCIER</b>', self.styles['CustomBody']), Paragraph('', self.styles['CustomBody'])])
         
-        # RÉSUMÉ FINANCIER
-        elements.append(Paragraph("RÉSUMÉ FINANCIER", self.styles['CustomHeading']))
-        
+        # Résumé financier
         caution_versee = float(self.resiliation.caution_versee) if self.resiliation.caution_versee else 0
         total_depenses = float(self.resiliation.total_depenses) if self.resiliation.total_depenses else 0
         solde_restant = float(self.resiliation.solde_restant) if self.resiliation.solde_restant else 0
         
-        # Convertir toutes les cellules en Paragraph
-        resume_data = [
-            [Paragraph('Caution versée lors du contrat', self.styles['CustomBody']), 
-             Paragraph(f"{caution_versee:,.0f} F CFA", self.styles['CustomBody'])],
-            [Paragraph('Total des dépenses effectuées', self.styles['CustomBody']), 
-             Paragraph(f"{total_depenses:,.0f} F CFA", self.styles['CustomBody'])],
-            [Paragraph('<b>Solde restant à rembourser</b>', self.styles['CustomBody']), 
-             Paragraph(f"<b>{solde_restant:,.0f} F CFA</b>", self.styles['CustomBody'])]
-        ]
+        all_data.append([Paragraph('Caution versée lors du contrat', self.styles['CustomBody']), Paragraph(f"{caution_versee:,.0f} F CFA", self.styles['CustomBody'])])
+        all_data.append([Paragraph('Total des dépenses effectuées', self.styles['CustomBody']), Paragraph(f"{total_depenses:,.0f} F CFA", self.styles['CustomBody'])])
+        all_data.append([Paragraph('<b>Solde restant à rembourser</b>', self.styles['CustomBody']), Paragraph(f"<b>{solde_restant:,.0f} F CFA</b>", self.styles['CustomBody'])])
         
-        table_resume = Table(resume_data, colWidths=[6*cm, 6*cm])
-        table_resume.setStyle(TableStyle([
+        # Créer le tableau unifié
+        unified_table = Table(all_data, colWidths=[9*cm, 3*cm])
+        unified_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),  # En-tête avec couleur claire
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),  # Texte noir pour meilleure lisibilité
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Alignement vertical
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 11),
-            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 11),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('TOPPADDING', (0, 0), (-1, 0), 12),
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('BACKGROUND', (0, 0), (0, 2), colors.lightblue),
-            ('BACKGROUND', (1, 0), (1, 0), colors.lightgreen),
-            ('BACKGROUND', (1, 1), (1, 1), colors.lightcoral),
-            ('BACKGROUND', (1, 2), (1, 2), colors.lightyellow),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+            ('BACKGROUND', (0, 1), (0, 1), colors.lightsteelblue),  # Fond gris pour "TRAVAUX"
+            ('BACKGROUND', (0, -1), (0, -1), colors.lightsteelblue),  # Fond gris pour "RÉSUMÉ"
+            ('FONTNAME', (0, 1), (1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ('TOPPADDING', (1, 1), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
         ]))
         
-        elements.append(table_resume)
+        elements.append(unified_table)
         
         return elements
     
