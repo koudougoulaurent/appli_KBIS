@@ -2009,11 +2009,7 @@ class ResiliationPDFService:
         elements = []
         
         # Espace minimal avant le footer pour coller aux signatures
-        elements.append(Spacer(1, 5))
-        
-        # Ligne de séparation
-        elements.append(Paragraph("─" * 100, self.styles['CustomBody']))
-        elements.append(Spacer(1, 0.2*cm))
+        elements.append(Spacer(1, 10))
         
         # Informations de l'entreprise
         if self.config_entreprise:
