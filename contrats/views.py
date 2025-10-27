@@ -512,7 +512,8 @@ def resilier_contrat(request, pk):
                 messages.error(request, error_msg)
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({'success': False, 'message': error_msg})
-                return render(request, 'contrats/resilier.html', {'contrat': contrat})
+                context = {'contrat': contrat}
+                return render(request, 'contrats/resilier.html', context)
             
             # Convertir la date
             date_resiliation = datetime.strptime(date_resiliation, '%Y-%m-%d').date()
@@ -523,7 +524,8 @@ def resilier_contrat(request, pk):
                 messages.error(request, error_msg)
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({'success': False, 'message': error_msg})
-                return render(request, 'contrats/resilier.html', {'contrat': contrat})
+                context = {'contrat': contrat}
+                return render(request, 'contrats/resilier.html', context)
             
             # Si date_fin existe, vérifier qu'on ne dépasse pas
             if contrat.date_fin and date_resiliation > contrat.date_fin:
@@ -531,7 +533,8 @@ def resilier_contrat(request, pk):
                 messages.error(request, error_msg)
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({'success': False, 'message': error_msg})
-                return render(request, 'contrats/resilier.html', {'contrat': contrat})
+                context = {'contrat': contrat}
+                return render(request, 'contrats/resilier.html', context)
             
             # Validation des champs de remboursement
             if caution_remboursee:
@@ -540,7 +543,8 @@ def resilier_contrat(request, pk):
                     messages.error(request, error_msg)
                     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                         return JsonResponse({'success': False, 'message': error_msg})
-                    return render(request, 'contrats/resilier.html', {'contrat': contrat})
+                    context = {'contrat': contrat}
+                    return render(request, 'contrats/resilier.html', context)
                 
                 try:
                     montant_remboursement = float(montant_remboursement)
@@ -549,13 +553,15 @@ def resilier_contrat(request, pk):
                         messages.error(request, error_msg)
                         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                             return JsonResponse({'success': False, 'message': error_msg})
-                        return render(request, 'contrats/resilier.html', {'contrat': contrat})
+                        context = {'contrat': contrat}
+                        return render(request, 'contrats/resilier.html', context)
                 except ValueError:
                     error_msg = "Le montant de remboursement doit être un nombre valide."
                     messages.error(request, error_msg)
                     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                         return JsonResponse({'success': False, 'message': error_msg})
-                    return render(request, 'contrats/resilier.html', {'contrat': contrat})
+                    context = {'contrat': contrat}
+                    return render(request, 'contrats/resilier.html', context)
                 
                 date_remboursement = datetime.strptime(date_remboursement, '%Y-%m-%d').date()
             else:
@@ -655,10 +661,10 @@ def resilier_contrat(request, pk):
                     'success': True,
                     'message': f"Contrat {contrat.numero_contrat} résilié avec succès.",
                     'resiliation_id': resiliation.pk,
-                    'redirect_url': f'/contrats/resiliations/{resiliation.pk}/'
+                    'redirect_url': '/contrats/liste/'
                 })
             
-            return redirect('contrats:detail_resiliation', resiliation_id=resiliation.pk)
+            return redirect('contrats:liste')
             
         except ValueError as e:
             error_msg = f"Erreur de format : {str(e)}"
