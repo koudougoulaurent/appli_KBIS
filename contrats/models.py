@@ -1233,7 +1233,7 @@ class ResiliationContrat(models.Model):
     
     # Informations de résiliation
     date_resiliation = models.DateField(verbose_name=_("Date de résiliation"))
-    motif_resiliation = models.TextField(verbose_name=_("Motif de résiliation"))
+    motif_resiliation = models.TextField(blank=True, null=True, verbose_name=_("Motif de résiliation"))
     type_resiliation = models.CharField(
         max_length=20,
         choices=[

@@ -505,8 +505,8 @@ def resilier_contrat(request, pk):
             date_remboursement = request.POST.get('date_remboursement')
             notes = request.POST.get('notes', '')
             
-            if not all([date_resiliation, motif_resiliation, type_resiliation]):
-                messages.error(request, "Tous les champs obligatoires doivent être remplis.")
+            if not all([date_resiliation, type_resiliation]):
+                messages.error(request, "La date de résiliation et le type de résiliation sont obligatoires.")
                 return render(request, 'contrats/resilier.html', {'contrat': contrat})
             
             # Convertir la date

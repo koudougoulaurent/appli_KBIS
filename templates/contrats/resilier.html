@@ -318,14 +318,13 @@
                                 
                                 <div class="mb-3">
                                     <label for="motif_resiliation" class="form-label">
-                                        <strong>Motif de résiliation *</strong>
+                                        <strong>Motif de résiliation</strong>
                                     </label>
                                     <textarea class="form-control" 
                                               id="motif_resiliation" 
                                               name="motif_resiliation" 
                                               rows="4" 
-                                              placeholder="Décrivez en détail le motif de la résiliation..."
-                                              required></textarea>
+                                              placeholder="Décrivez en détail le motif de la résiliation (optionnel)..."></textarea>
                                 </div>
 
                                 <div class="mb-3">
@@ -578,6 +577,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 errorMsg = 'Veuillez renseigner le montant et la date de remboursement de la caution.';
             }
         }
+        // Le motif de résiliation est maintenant facultatif, pas besoin de valider
         submitBtn.disabled = !isValid;
         errorDiv.textContent = isValid ? '' : errorMsg;
     }
