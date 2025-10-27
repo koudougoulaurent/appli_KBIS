@@ -512,30 +512,56 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Soumission AJAX
         const formData = new FormData(form);
-        fetch(form.action, {
+        
+        // Fermer la modal de confirmation immédiatement
+        const modalInstance = bootstrap.Modal.getInstance(document.getElementById('confirmationModal'));
+        if (modalInstance) {
+            modalInstance.hide();
+        }
+        
+        fetch(form.action || window.location.href, {
             method: 'POST',
             body: formData,
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            // Vérifier le status et le type de contenu
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Réponse non-JSON du serveur');
+            }
+            
+            if (!response.ok) {
+                throw new Error('Erreur serveur: ' + response.status);
+            }
+            
+            return response.json();
+        })
         .then(data => {
             document.body.classList.remove('modal-open');
-            loader.remove();
-            if (data.success) {
-                showResiliationAlert('success', 'Résiliation réussie ! Le contrat a été désactivé.');
+            if (loader && loader.parentNode) {
+                loader.remove();
+            }
+            
+            if (data && data.success) {
+                showResiliationAlert('success', data.message || 'Résiliation réussie ! Le contrat a été désactivé.');
                 setTimeout(() => {
-                    window.location.href = '/contrats/liste/';
-                }, 1800);
+                    const redirectUrl = data.redirect_url || '/contrats/liste/';
+                    window.location.href = redirectUrl;
+                }, 1500);
             } else {
-                showResiliationAlert('error', data.message || 'Erreur technique lors de la résiliation.');
+                showResiliationAlert('error', data && data.message ? data.message : 'Erreur technique lors de la résiliation.');
             }
         })
         .catch(error => {
+            console.error('Erreur lors de la résiliation:', error);
             document.body.classList.remove('modal-open');
-            loader.remove();
-            showResiliationAlert('error', 'Erreur technique lors de la résiliation.');
+            if (loader && loader.parentNode) {
+                loader.remove();
+            }
+            showResiliationAlert('error', 'Erreur technique lors de la résiliation. Veuillez réessayer.');
         });
     });
 

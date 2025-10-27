@@ -563,11 +563,13 @@ def resilier_contrat(request, pk):
                 date_remboursement = None
             
             # Récupérer les données de travaux
-            travaux_peinture = request.POST.get('travaux_peinture', 0)
-            facture_onea = request.POST.get('facture_onea', 0)
-            facture_sonabel = request.POST.get('facture_sonabel', 0)
-            travaux_ventilateur = request.POST.get('travaux_ventilateur', 0)
-            autres_depenses = request.POST.get('autres_depenses', 0)
+            from decimal import Decimal
+            
+            travaux_peinture = Decimal(request.POST.get('travaux_peinture', 0) or 0)
+            facture_onea = Decimal(request.POST.get('facture_onea', 0) or 0)
+            facture_sonabel = Decimal(request.POST.get('facture_sonabel', 0) or 0)
+            travaux_ventilateur = Decimal(request.POST.get('travaux_ventilateur', 0) or 0)
+            autres_depenses = Decimal(request.POST.get('autres_depenses', 0) or 0)
             description_autres_depenses = request.POST.get('description_autres_depenses', '')
             
             # Créer la résiliation
