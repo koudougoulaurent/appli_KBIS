@@ -600,7 +600,17 @@ def resilier_contrat(request, pk):
             )
             
             # Mettre à jour le contrat
-            old_data = {f.name: getattr(contrat, f.name) for f in contrat._meta.fields}
+            old_data = {}
+            for f in contrat._meta.fields:
+                value = getattr(contrat, f.name)
+                # Convertir les objets en strings ou IDs
+                if hasattr(value, 'pk'):
+                    old_data[f.name] = value.pk
+                elif hasattr(value, 'id'):
+                    old_data[f.name] = value.id
+                else:
+                    old_data[f.name] = str(value) if value is not None else None
+            
             contrat.est_actif = False
             contrat.est_resilie = True
             contrat.date_resiliation = date_resiliation
