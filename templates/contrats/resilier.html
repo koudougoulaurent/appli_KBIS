@@ -522,9 +522,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Soumission AJAX
         const formData = new FormData(form);
-        console.log('FormData créé, URL:', form.action);
         
-        fetch(form.action, {
+        // Définir l'action du formulaire si elle n'existe pas
+        const actionUrl = form.action || window.location.href;
+        console.log('FormData créé, URL:', actionUrl);
+        
+        fetch(actionUrl, {
             method: 'POST',
             body: formData,
             headers: {
