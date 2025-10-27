@@ -2251,10 +2251,10 @@ def generer_resiliation_pdf(request, pk):
     resiliation = get_object_or_404(ResiliationContrat, pk=pk)
     
     try:
-        # Générer le PDF de la résiliation
+        # Générer le PDF de la résiliation (sans cache pour avoir les dernières modifications)
         from .services import ResiliationPDFService
         pdf_service = ResiliationPDFService(resiliation, user=request.user)
-        pdf_buffer = pdf_service.generate_resiliation_pdf()
+        pdf_buffer = pdf_service.generate_resiliation_pdf(use_cache=False)
         
         # Créer la réponse HTTP avec le PDF
         from django.http import HttpResponse
