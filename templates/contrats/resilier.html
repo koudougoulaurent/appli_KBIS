@@ -503,96 +503,100 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Confirmation finale
-    document.getElementById('confirmResiliation').addEventListener('click', function() {
-        console.log('Bouton de confirmation cliqué');
-        
-        // Afficher le loader
-        document.body.classList.add('modal-open');
-        const loader = document.createElement('div');
-        loader.id = 'globalLoader';
-        loader.style.position = 'fixed';
-        loader.style.top = '0';
-        loader.style.left = '0';
-        loader.style.width = '100vw';
-        loader.style.height = '100vh';
-        loader.style.background = 'rgba(255,255,255,0.7)';
-        loader.style.zIndex = '9999';
-        loader.innerHTML = '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);"><div class="spinner-border text-primary" style="width:3rem;height:3rem;"></div></div>';
-        document.body.appendChild(loader);
-
-        // Soumission AJAX
-        const formData = new FormData(form);
-        
-        // Définir l'action du formulaire si elle n'existe pas
-        const actionUrl = form.action || window.location.href;
-        console.log('FormData créé, URL:', actionUrl);
-        
-        fetch(actionUrl, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => {
-            console.log('Réponse reçue du serveur:', response.status);
+    const confirmBtn = document.getElementById('confirmResiliation');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Bouton de confirmation cliqué');
+            
+            // Afficher le loader
+            document.body.classList.add('modal-open');
+            const loader = document.createElement('div');
+            loader.id = 'globalLoader';
+            loader.style.position = 'fixed';
+            loader.style.top = '0';
+            loader.style.left = '0';
+            loader.style.width = '100vw';
+            loader.style.height = '100vh';
+            loader.style.background = 'rgba(255,255,255,0.7)';
+            loader.style.zIndex = '9999';
+            loader.innerHTML = '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);"><div class="spinner-border text-primary" style="width:3rem;height:3rem;"></div></div>';
+            document.body.appendChild(loader);
             
             // Fermer la modal de confirmation
             const modal = bootstrap.Modal.getInstance(document.getElementById('confirmationModal'));
             if (modal) {
                 modal.hide();
             }
+
+            // Soumission AJAX
+            const formData = new FormData(form);
             
-            // Vérifier si la réponse est du JSON
-            const contentType = response.headers.get('content-type');
-            console.log('Content-Type:', contentType);
+            // Définir l'action du formulaire si elle n'existe pas
+            const actionUrl = form.action || window.location.href;
+            console.log('FormData créé, URL:', actionUrl);
             
-            if (contentType && contentType.includes('application/json')) {
-                console.log('Traitement comme JSON');
-                return response.json();
-            } else {
-                console.log('Traitement comme texte');
-                // Si ce n'est pas du JSON, c'est probablement une redirection HTML
-                return response.text().then(text => {
-                    console.log('Réponse textuelle:', text.substring(0, 200));
-                    // Parser le texte pour trouver l'URL de redirection
-                    return {success: false, message: 'Réponse inattendue du serveur.'};
-                });
-            }
-        })
-        .then(data => {
-            console.log('Données traitées:', data);
-            document.body.classList.remove('modal-open');
-            if (loader && loader.parentNode) {
-                loader.remove();
-            }
-            
-            if (data && data.success) {
-                console.log('Succès confirmé');
-                // Afficher le message de succès
-                showResiliationAlert('success', data.message || 'Résiliation réussie ! Le contrat a été désactivé.');
+            fetch(actionUrl, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                console.log('Réponse reçue du serveur:', response.status);
                 
-                // Rediriger vers l'URL fournie ou la liste par défaut
-                const redirectUrl = data.redirect_url || '/contrats/liste/';
-                console.log('Redirection vers:', redirectUrl);
-                setTimeout(() => {
-                    window.location.href = redirectUrl;
-                }, 1800);
-            } else {
-                console.log('Erreur détectée:', data);
-                // Afficher le message d'erreur
-                const errorMsg = data && data.message ? data.message : 'Erreur technique lors de la résiliation.';
-                showResiliationAlert('error', errorMsg);
-            }
-        })
-        .catch(error => {
-            console.error('Erreur dans la chaîne:', error);
-            document.body.classList.remove('modal-open');
-            if (loader && loader.parentNode) {
-                loader.remove();
-            }
-            showResiliationAlert('error', 'Erreur technique lors de la résiliation. Veuillez réessayer.');
-        });
+                // Vérifier si la réponse est du JSON
+                const contentType = response.headers.get('content-type');
+                console.log('Content-Type:', contentType);
+                
+                if (contentType && contentType.includes('application/json')) {
+                    console.log('Traitement comme JSON');
+                    return response.json();
+                } else {
+                    console.log('Traitement comme texte');
+                    // Si ce n'est pas du JSON, c'est probablement une redirection HTML
+                    return response.text().then(text => {
+                        console.log('Réponse textuelle:', text.substring(0, 200));
+                        // Parser le texte pour trouver l'URL de redirection
+                        return {success: false, message: 'Réponse inattendue du serveur.'};
+                    });
+                }
+            })
+            .then(data => {
+                console.log('Données traitées:', data);
+                document.body.classList.remove('modal-open');
+                if (loader && loader.parentNode) {
+                    loader.remove();
+                }
+                
+                if (data && data.success) {
+                    console.log('Succès confirmé');
+                    // Afficher le message de succès
+                    showResiliationAlert('success', data.message || 'Résiliation réussie ! Le contrat a été désactivé.');
+                    
+                    // Rediriger vers l'URL fournie ou la liste par défaut
+                    const redirectUrl = data.redirect_url || '/contrats/liste/';
+                    console.log('Redirection vers:', redirectUrl);
+                    setTimeout(() => {
+                        window.location.href = redirectUrl;
+                    }, 1800);
+                } else {
+                    console.log('Erreur détectée:', data);
+                    // Afficher le message d'erreur
+                    const errorMsg = data && data.message ? data.message : 'Erreur technique lors de la résiliation.';
+                    showResiliationAlert('error', errorMsg);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur dans la chaîne:', error);
+                document.body.classList.remove('modal-open');
+                if (loader && loader.parentNode) {
+                    loader.remove();
+                }
+                showResiliationAlert('error', 'Erreur technique lors de la résiliation. Veuillez réessayer.');
+            });
+        }
     });
 
     // Fonction d'affichage du feedback
