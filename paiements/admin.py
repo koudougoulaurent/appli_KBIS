@@ -254,7 +254,7 @@ class RetraitBailleurAdmin(admin.ModelAdmin):
     ]
     
     readonly_fields = [
-        'montant_net_a_payer', 'created_at', 'updated_at'
+        'montant_net_a_payer', 'date_demande', 'created_at', 'updated_at'
     ]
     
     fieldsets = (
@@ -264,11 +264,12 @@ class RetraitBailleurAdmin(admin.ModelAdmin):
         ('Montants', {
             'fields': ('montant_loyers_bruts', 'montant_charges_deductibles', 'montant_net_a_payer')
         }),
-        ('Dates', {
-            'fields': ('date_demande', 'date_validation', 'date_paiement')
+        ('Statut', {
+            'fields': ('statut',)
         }),
-        ('Statut et validation', {
-            'fields': ('statut', 'cree_par', 'valide_par')
+        ('Dates', {
+            'fields': ('date_demande', 'date_validation', 'date_paiement'),
+            'classes': ('collapse',)
         }),
         ('Métadonnées', {
             'fields': ('notes', 'created_at', 'updated_at'),
