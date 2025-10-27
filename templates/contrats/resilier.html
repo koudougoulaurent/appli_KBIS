@@ -496,6 +496,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Confirmation finale
     document.getElementById('confirmResiliation').addEventListener('click', function() {
+        console.log('🔘 Bouton de confirmation cliqué');
+        
         // Afficher le loader
         document.body.classList.add('modal-open');
         const loader = document.createElement('div');
@@ -509,60 +511,83 @@ document.addEventListener('DOMContentLoaded', function() {
         loader.style.zIndex = '9999';
         loader.innerHTML = '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);"><div class="spinner-border text-primary" style="width:3rem;height:3rem;"></div></div>';
         document.body.appendChild(loader);
+        console.log('✅ Loader affiché');
 
-        // Soumission AJAX
-        const formData = new FormData(form);
-        
-        // Fermer la modal de confirmation immédiatement
-        const modalInstance = bootstrap.Modal.getInstance(document.getElementById('confirmationModal'));
-        if (modalInstance) {
-            modalInstance.hide();
+        // Fonction pour retirer le loader de manière sûre
+        const removeLoader = () => {
+            console.log('🧹 Retrait du loader');
+            document.body.classList.remove('modal-open');
+            const loader = document.getElementById('globalLoader');
+            if (loader && loader.parentNode) {
+                loader.remove();
+                console.log('✅ Loader retiré');
+            }
+        };
+
+        try {
+            // Soumission AJAX
+            const formData = new FormData(form);
+            console.log('📦 FormData créé');
+            
+            // Fermer la modal de confirmation immédiatement
+            const modalInstance = bootstrap.Modal.getInstance(document.getElementById('confirmationModal'));
+            if (modalInstance) {
+                modalInstance.hide();
+                console.log('✅ Modal fermée');
+            }
+            
+            const url = form.action || window.location.href;
+            console.log('🌐 URL de soumission:', url);
+            
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                console.log('📥 Réponse reçue:', response.status);
+                
+                // Vérifier le status et le type de contenu
+                const contentType = response.headers.get('content-type');
+                console.log('📄 Content-Type:', contentType);
+                
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Réponse non-JSON du serveur. Content-Type: ' + contentType);
+                }
+                
+                if (!response.ok) {
+                    throw new Error('Erreur serveur: ' + response.status);
+                }
+                
+                return response.json();
+            })
+            .then(data => {
+                console.log('📊 Données reçues:', data);
+                removeLoader();
+                
+                if (data && data.success) {
+                    showResiliationAlert('success', data.message || 'Résiliation réussie ! Le contrat a été désactivé.');
+                    setTimeout(() => {
+                        const redirectUrl = data.redirect_url || '/contrats/liste/';
+                        console.log('🔄 Redirection vers:', redirectUrl);
+                        window.location.href = redirectUrl;
+                    }, 1500);
+                } else {
+                    showResiliationAlert('error', data && data.message ? data.message : 'Erreur technique lors de la résiliation.');
+                }
+            })
+            .catch(error => {
+                console.error('❌ Erreur lors de la résiliation:', error);
+                removeLoader();
+                showResiliationAlert('error', 'Erreur technique lors de la résiliation: ' + error.message);
+            });
+        } catch (error) {
+            console.error('❌ Erreur dans le try:', error);
+            removeLoader();
+            showResiliationAlert('error', 'Erreur lors de la préparation de la soumission: ' + error.message);
         }
-        
-        fetch(form.action || window.location.href, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => {
-            // Vérifier le status et le type de contenu
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                throw new Error('Réponse non-JSON du serveur');
-            }
-            
-            if (!response.ok) {
-                throw new Error('Erreur serveur: ' + response.status);
-            }
-            
-            return response.json();
-        })
-        .then(data => {
-            document.body.classList.remove('modal-open');
-            if (loader && loader.parentNode) {
-                loader.remove();
-            }
-            
-            if (data && data.success) {
-                showResiliationAlert('success', data.message || 'Résiliation réussie ! Le contrat a été désactivé.');
-                setTimeout(() => {
-                    const redirectUrl = data.redirect_url || '/contrats/liste/';
-                    window.location.href = redirectUrl;
-                }, 1500);
-            } else {
-                showResiliationAlert('error', data && data.message ? data.message : 'Erreur technique lors de la résiliation.');
-            }
-        })
-        .catch(error => {
-            console.error('Erreur lors de la résiliation:', error);
-            document.body.classList.remove('modal-open');
-            if (loader && loader.parentNode) {
-                loader.remove();
-            }
-            showResiliationAlert('error', 'Erreur technique lors de la résiliation. Veuillez réessayer.');
-        });
     });
 
     // Fonction d'affichage du feedback
