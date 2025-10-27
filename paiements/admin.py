@@ -127,68 +127,21 @@ class ChargeDeductibleAdmin(admin.ModelAdmin):
             'fields': ('montant',)
         }),
         (_('Dates'), {
-            'fields': ('date_charge', 'date_validation', 'date_deduction')
+            'fields': ('date_charge',)
         }),
-        (_('Justificatifs'), {
-            'fields': ('justificatif_url', 'facture_numero', 'fournisseur'),
-            'classes': ('collapse',)
-        }),
-        (_('Statut et validation'), {
-            'fields': ('statut', 'valide_par'),
+        (_('Statut'), {
+            'fields': ('est_valide', 'est_deductible_loyer'),
             'classes': ('collapse',)
         }),
         (_('Métadonnées'), {
-            'fields': ('cree_par', 'created_at', 'updated_at'),
+            'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
     
     readonly_fields = ('created_at', 'updated_at')
     
-    actions = ['valider_charges', 'refuser_charges', 'marquer_deduites', suppression_definitive_conditionnelle]
-    
-    def statut_colore(self, obj):
-        """Affiche le statut avec une couleur."""
-        colors = {
-            'en_attente': 'orange',
-            'valide': 'green',
-            'refuse': 'red',
-            'annule': 'gray',
-        }
-        color = colors.get(obj.statut, 'black')
-        return format_html(
-            '<span style="color: {}; font-weight: bold;">{}</span>',
-            color, obj.get_statut_display()
-        )
-    statut_colore.short_description = _("Statut")
-    
-    def valider_charges(self, request, queryset):
-        """Action pour valider les charges sélectionnées."""
-        updated = 0
-        for charge in queryset.filter(statut='en_attente'):
-            charge.valider_charge(request.user)
-            updated += 1
-        self.message_user(request, f'{updated} charge(s) validée(s) avec succès.')
-    valider_charges.short_description = _("Valider les charges sélectionnées")
-    
-    def refuser_charges(self, request, queryset):
-        """Action pour refuser les charges sélectionnées."""
-        updated = 0
-        for charge in queryset.filter(statut='en_attente'):
-            charge.statut = 'refusee'
-            charge.save()
-            updated += 1
-        self.message_user(request, f'{updated} charge(s) refusée(s) avec succès.')
-    refuser_charges.short_description = _("Refuser les charges sélectionnées")
-    
-    def marquer_deduites(self, request, queryset):
-        """Action pour marquer les charges comme déduites."""
-        updated = 0
-        for charge in queryset.filter(statut='validee'):
-            charge.deduire_du_loyer(request.user)
-            updated += 1
-        self.message_user(request, f'{updated} charge(s) marquée(s) comme déduites.')
-    marquer_deduites.short_description = _("Marquer comme déduites")
+    actions = [suppression_definitive_conditionnelle]
 
 
 @admin.register(QuittancePaiement)
