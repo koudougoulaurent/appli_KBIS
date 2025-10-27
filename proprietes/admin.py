@@ -44,7 +44,7 @@ class BailleurAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         (_('Métadonnées'), {
-            'fields': ('actif', 'cree_par'),
+            'fields': ('actif',),
             'classes': ('collapse',)
         }),
     )
@@ -75,7 +75,7 @@ class LocataireAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         (_('Métadonnées'), {
-            'fields': ('statut', 'cree_par'),
+            'fields': ('statut',),
             'classes': ('collapse',)
         }),
     )
@@ -125,7 +125,7 @@ class ProprieteAdmin(admin.ModelAdmin):
             'fields': ('etat', 'disponible')
         }),
         (_('Relations'), {
-            'fields': ('bailleur', 'cree_par'),
+            'fields': ('bailleur',),
             'classes': ('collapse',)
         }),
         (_('Métadonnées'), {
@@ -190,7 +190,7 @@ class DocumentAdmin(admin.ModelAdmin):
             'fields': ('statut', 'date_expiration')
         }),
         ('Métadonnées', {
-            'fields': ('tags', 'confidentiel', 'cree_par'),
+            'fields': ('tags', 'confidentiel'),
             'classes': ('collapse',)
         }),
         ('Informations système', {
