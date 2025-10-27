@@ -6,6 +6,7 @@ from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_RIGHT
 # from reportlab.pdfgen import canvas  # Non utilisé directement
 from io import BytesIO
+from datetime import datetime
 
 class ProprieteValidationService:
     """Service pour valider la disponibilité et la cohérence des propriétés."""
@@ -1800,8 +1801,8 @@ class ResiliationPDFService:
             pagesize=A4,
             rightMargin=1.5*cm,
             leftMargin=1.5*cm,
-            topMargin=4*cm,  # Marge supérieure augmentée pour éviter le chevauchement
-            bottomMargin=1*cm  # Marge inférieure pour le pied de page
+            topMargin=4.5*cm,  # Marge supérieure pour l'en-tête avec image
+            bottomMargin=2.5*cm  # Marge inférieure pour le pied de page dynamique
         )
         
         # Construction du contenu du PDF
@@ -1886,92 +1887,92 @@ class ResiliationPDFService:
     def _add_header_footer(self, canvas_obj, doc):
         """Ajoute l'en-tête et le pied de page fixes sur chaque page"""
         import os
+        from django.conf import settings
         
         # Dimensions de la page
         page_width, page_height = A4
         
-        # === EN-TÊTE ===
-        if self.config_entreprise:
-            # En-tête avec couleur de fond
+        # === EN-TÊTE AVEC IMAGE STATIQUE ===
+        try:
+            # Chemin de l'image d'en-tête
+            image_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'enteteEnImage.png')
+            
+            if os.path.exists(image_path):
+                # Hauteur de l'image (3.5 cm pour correspondre à l'en-tête)
+                header_height = 3.5*cm
+                
+                # Calculer la largeur de l'image en conservant le ratio
+                # L'image fait 2480x350 pixels
+                image_width = page_width
+                
+                # Dessiner l'image d'en-tête
+                canvas_obj.drawImage(
+                    image_path,
+                    0, page_height - header_height,  # Position
+                    image_width, header_height,     # Dimensions
+                    preserveAspectRatio=True,
+                    anchor='n'
+                )
+                
+                # Dessiner une bordure en bas de l'en-tête
+                canvas_obj.setStrokeColor(colors.darkred)
+                canvas_obj.setLineWidth(2)
+                canvas_obj.line(0, page_height - header_height, page_width, page_height - header_height)
+            else:
+                # Fallback si l'image n'existe pas
+                canvas_obj.setFillColor(colors.lightcoral)
+                canvas_obj.rect(0, page_height - 3.5*cm, page_width, 3.5*cm, fill=1, stroke=0)
+                
+                if self.config_entreprise:
+                    canvas_obj.setFillColor(colors.white)
+                    canvas_obj.setFont("Helvetica-Bold", 16)
+                    canvas_obj.drawString(2*cm, page_height - 2*cm, self.config_entreprise.nom_entreprise)
+                    
+        except Exception as e:
+            # En cas d'erreur, utiliser un en-tête simple
             canvas_obj.setFillColor(colors.lightcoral)
-            canvas_obj.rect(0, page_height - 3*cm, page_width, 3*cm, fill=1, stroke=0)
-            
-            # Bordure en bas de l'en-tête
-            canvas_obj.setStrokeColor(colors.darkred)
-            canvas_obj.setLineWidth(2)
-            canvas_obj.line(0, page_height - 3*cm, page_width, page_height - 3*cm)
-            
-            # Logo de l'entreprise (si disponible)
-            try:
-                logo_path = self.config_entreprise.get_logo_prioritaire()
-                if logo_path and os.path.exists(logo_path):
-                    # Redimensionner le logo pour l'en-tête
-                    logo_width = 2*cm
-                    logo_height = 1.5*cm
-                    
-                    # Positionner le logo à gauche
-                    logo_x = 1*cm
-                    logo_y = page_height - 2.5*cm
-                    
-                    canvas_obj.drawImage(logo_path, logo_x, logo_y, logo_width, logo_height)
-                    
-                    # Texte de l'entreprise à droite du logo
-                    text_x = logo_x + logo_width + 0.5*cm
-                    text_y = page_height - 2.2*cm
-                else:
-                    # Pas de logo - centrer le texte
-                    text_x = 2*cm
-                    text_y = page_height - 2.2*cm
-                    
-            except (OSError, IOError, ValueError):
-                # En cas d'erreur avec le logo
-                text_x = 2*cm
-                text_y = page_height - 2.2*cm
-            
-            # Nom de l'entreprise
-            canvas_obj.setFillColor(colors.darkred)
-            canvas_obj.setFont("Helvetica-Bold", 16)
-            canvas_obj.drawString(text_x, text_y, self.config_entreprise.nom_entreprise)
-            
-            # Adresse
-            canvas_obj.setFont("Helvetica", 10)
-            canvas_obj.drawString(text_x, text_y - 0.4*cm, self.config_entreprise.get_adresse_complete())
-            
-            # Informations de contact
-            contact_info = []
-            if self.config_entreprise.telephone:
-                contact_info.append(f"Tél: {self.config_entreprise.telephone}")
-            if self.config_entreprise.email:
-                contact_info.append(f"Email: {self.config_entreprise.email}")
-            
-            if contact_info:
-                canvas_obj.setFont("Helvetica", 9)
-                canvas_obj.drawString(text_x, text_y - 0.8*cm, " | ".join(contact_info))
+            canvas_obj.rect(0, page_height - 3.5*cm, page_width, 3.5*cm, fill=1, stroke=0)
         
-        # === PIED DE PAGE SIMPLIFIÉ ===
-        # Fond du pied de page réduit
+        # === PIED DE PAGE AVEC INFOS CONFIGURATION ===
+        footer_height = 2*cm
+        
+        # Fond du pied de page
         canvas_obj.setFillColor(colors.lightgrey)
-        canvas_obj.rect(0, 0, page_width, 1.5*cm, fill=1, stroke=0)
+        canvas_obj.rect(0, 0, page_width, footer_height, fill=1, stroke=0)
         
         # Bordure en haut du pied de page
         canvas_obj.setStrokeColor(colors.grey)
         canvas_obj.setLineWidth(1)
-        canvas_obj.line(0, 1.5*cm, page_width, 1.5*cm)
+        canvas_obj.line(0, footer_height, page_width, footer_height)
         
         if self.config_entreprise:
-            # Informations de l'entreprise simplifiées dans le pied de page
             canvas_obj.setFillColor(colors.darkgrey)
-            canvas_obj.setFont("Helvetica", 7)
             
-            # Nom de l'entreprise uniquement
-            canvas_obj.drawString(2*cm, 1*cm, f"{self.config_entreprise.nom_entreprise}")
+            # Nom de l'entreprise
+            canvas_obj.setFont("Helvetica-Bold", 8)
+            canvas_obj.drawString(2*cm, 1.3*cm, self.config_entreprise.nom_entreprise)
             
-            # Contact simplifié
-            canvas_obj.drawString(2*cm, 0.6*cm, f"Tél: {self.config_entreprise.telephone} | Email: {self.config_entreprise.email}")
+            # Contact
+            if self.config_entreprise.telephone or self.config_entreprise.email:
+                canvas_obj.setFont("Helvetica", 7)
+                contact_parts = []
+                if self.config_entreprise.telephone:
+                    contact_parts.append(f"Tél: {self.config_entreprise.telephone}")
+                if self.config_entreprise.email:
+                    contact_parts.append(f"Email: {self.config_entreprise.email}")
+                canvas_obj.drawString(2*cm, 0.8*cm, " | ".join(contact_parts))
+            
+            # Adresse
+            if self.config_entreprise.adresse:
+                canvas_obj.setFont("Helvetica", 7)
+                adresse_complete = self.config_entreprise.get_adresse_complete()
+                canvas_obj.drawString(2*cm, 0.3*cm, adresse_complete)
             
             # Numéro de page
-            canvas_obj.setFont("Helvetica-Bold", 7)
-            canvas_obj.drawRightString(page_width - 2*cm, 0.6*cm, f"Page {doc.page}")
+            canvas_obj.setFont("Helvetica-Bold", 8)
+            canvas_obj.drawRightString(page_width - 2*cm, 1.3*cm, f"Page {doc.page}")
+            canvas_obj.setFont("Helvetica", 7)
+            canvas_obj.drawRightString(page_width - 2*cm, 0.8*cm, f"Document généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}")
 
     def _create_resiliation_info(self):
         """Crée la section des informations de résiliation"""
