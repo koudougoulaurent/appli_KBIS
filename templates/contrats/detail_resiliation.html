@@ -194,6 +194,9 @@
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
+                    <a href="{% url 'contrats:generer_resiliation_pdf' resiliation.id %}" class="btn btn-success">
+                        <i class="bi bi-file-earmark-pdf"></i> Télécharger le document de résiliation
+                    </a>
                     <a href="{% url 'contrats:detail' resiliation.contrat.id %}" class="btn btn-outline-info">
                         <i class="bi bi-eye"></i> Voir le contrat
                     </a>

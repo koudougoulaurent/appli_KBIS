@@ -242,6 +242,12 @@
                                         <i class="bi bi-eye"></i>
                                     </a>
                                     
+                                    <a href="{% url 'contrats:generer_resiliation_pdf' resiliation.pk %}" 
+                                       class="btn btn-sm btn-success" 
+                                       title="Télécharger le document PDF">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </a>
+                                    
                                     {% if resiliation.statut == 'en_cours' %}
                                     <a href="{% url 'contrats:valider_resiliation' resiliation.pk %}" 
                                        class="btn btn-sm btn-outline-success" 
