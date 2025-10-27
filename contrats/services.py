@@ -1963,7 +1963,7 @@ class ResiliationPDFService:
                 canvas_obj.drawString(2*cm, 0.8*cm, " | ".join(contact_parts))
             
             # Adresse
-            if self.config_entreprise.adresse:
+            if self.config_entreprise.adresse_ligne1:
                 canvas_obj.setFont("Helvetica", 7)
                 adresse_complete = self.config_entreprise.get_adresse_complete()
                 canvas_obj.drawString(2*cm, 0.3*cm, adresse_complete)
