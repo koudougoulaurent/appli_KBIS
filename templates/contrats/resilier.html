@@ -186,90 +186,20 @@
                                 <div class="alert alert-info">
                                     <small>
                                         <i class="bi bi-info-circle"></i> 
-                                        Indiquez les dépenses effectuées sur la propriété pour déduire de la caution versée.
+                                        Ajoutez les dépenses effectuées sur la propriété pour déduire de la caution versée.
                                     </small>
                                 </div>
                                 
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="travaux_peinture" class="form-label">
-                                                <strong>Travaux de peinture (F CFA)</strong>
-                                            </label>
-                                            <input type="number" 
-                                                   class="form-control travaux-input" 
-                                                   id="travaux_peinture" 
-                                                   name="travaux_peinture" 
-                                                   step="0.01" 
-                                                   min="0" 
-                                                   value="0">
-                                        </div>
-
-                                        <div class="mb-3">
-                                            <label for="facture_onea" class="form-label">
-                                                <strong>Facture ONEA (F CFA)</strong>
-                                            </label>
-                                            <input type="number" 
-                                                   class="form-control travaux-input" 
-                                                   id="facture_onea" 
-                                                   name="facture_onea" 
-                                                   step="0.01" 
-                                                   min="0" 
-                                                   value="0">
-                                        </div>
-
-                                        <div class="mb-3">
-                                            <label for="facture_sonabel" class="form-label">
-                                                <strong>Facture SONABEL (F CFA)</strong>
-                                            </label>
-                                            <input type="number" 
-                                                   class="form-control travaux-input" 
-                                                   id="facture_sonabel" 
-                                                   name="facture_sonabel" 
-                                                   step="0.01" 
-                                                   min="0" 
-                                                   value="0">
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="travaux_ventilateur" class="form-label">
-                                                <strong>Ventilateur / Climatisation (F CFA)</strong>
-                                            </label>
-                                            <input type="number" 
-                                                   class="form-control travaux-input" 
-                                                   id="travaux_ventilateur" 
-                                                   name="travaux_ventilateur" 
-                                                   step="0.01" 
-                                                   min="0" 
-                                                   value="0">
-                                        </div>
-
-                                        <div class="mb-3">
-                                            <label for="autres_depenses" class="form-label">
-                                                <strong>Autres dépenses (F CFA)</strong>
-                                            </label>
-                                            <input type="number" 
-                                                   class="form-control travaux-input" 
-                                                   id="autres_depenses" 
-                                                   name="autres_depenses" 
-                                                   step="0.01" 
-                                                   min="0" 
-                                                   value="0">
-                                        </div>
-
-                                        <div class="mb-3">
-                                            <label for="description_autres_depenses" class="form-label">
-                                                <strong>Description des autres dépenses</strong>
-                                            </label>
-                                            <textarea class="form-control" 
-                                                      id="description_autres_depenses" 
-                                                      name="description_autres_depenses" 
-                                                      rows="3" 
-                                                      placeholder="Décrivez les autres dépenses effectuées..."></textarea>
-                                        </div>
-                                    </div>
+                                <!-- Interface dynamique pour les dépenses -->
+                                <div id="depenses-container">
+                                    <!-- Les dépenses seront ajoutées ici dynamiquement -->
+                                </div>
+                                
+                                <!-- Bouton pour ajouter une dépense -->
+                                <div class="text-center mb-3">
+                                    <button type="button" class="btn btn-outline-primary" id="ajouter-depense">
+                                        <i class="bi bi-plus-circle"></i> Ajouter une dépense
+                                    </button>
                                 </div>
 
                                 <!-- Résumé financier automatique -->
@@ -391,6 +321,113 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Variables pour les dépenses dynamiques
+    let depenseCounter = 0;
+    const depensesContainer = document.getElementById('depenses-container');
+    const ajouterDepenseBtn = document.getElementById('ajouter-depense');
+    
+    // Fonction pour créer une nouvelle dépense
+    function creerDepense(description = '', montant = '') {
+        depenseCounter++;
+        const depenseDiv = document.createElement('div');
+        depenseDiv.className = 'depense-item border rounded p-3 mb-3';
+        depenseDiv.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label">
+                        <strong>Description de la dépense</strong>
+                    </label>
+                    <input type="text" 
+                           class="form-control depense-description" 
+                           name="depenses[${depenseCounter}][description]"
+                           value="${description}"
+                           placeholder="Ex: Travaux de peinture, Réparation électrique..."
+                           required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">
+                        <strong>Montant (F CFA)</strong>
+                    </label>
+                    <input type="number" 
+                           class="form-control depense-montant" 
+                           name="depenses[${depenseCounter}][montant]"
+                           value="${montant}"
+                           step="0.01" 
+                           min="0"
+                           required>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-outline-danger btn-sm supprimer-depense">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        depensesContainer.appendChild(depenseDiv);
+        
+        // Ajouter l'événement de suppression
+        const supprimerBtn = depenseDiv.querySelector('.supprimer-depense');
+        supprimerBtn.addEventListener('click', function() {
+            depenseDiv.remove();
+            calculerTotalDepenses();
+        });
+        
+        // Ajouter l'événement de calcul automatique
+        const montantInput = depenseDiv.querySelector('.depense-montant');
+        montantInput.addEventListener('input', calculerTotalDepenses);
+        
+        return depenseDiv;
+    }
+    
+    // Fonction pour calculer le total des dépenses
+    function calculerTotalDepenses() {
+        const montantInputs = document.querySelectorAll('.depense-montant');
+        let total = 0;
+        
+        montantInputs.forEach(input => {
+            const valeur = parseFloat(input.value) || 0;
+            total += valeur;
+        });
+        
+        // Mettre à jour l'affichage du total
+        const totalDepensesElement = document.getElementById('total_depenses_value');
+        if (totalDepensesElement) {
+            totalDepensesElement.textContent = total.toLocaleString('fr-FR') + ' F CFA';
+        }
+        
+        // Calculer le solde restant
+        calculerSoldeRestant();
+    }
+    
+    // Fonction pour calculer le solde restant
+    function calculerSoldeRestant() {
+        const cautionVersee = parseFloat('{{ contrat.depot_garantie }}') || 0;
+        const montantInputs = document.querySelectorAll('.depense-montant');
+        let totalDepenses = 0;
+        
+        montantInputs.forEach(input => {
+            const valeur = parseFloat(input.value) || 0;
+            totalDepenses += valeur;
+        });
+        
+        const soldeRestant = cautionVersee - totalDepenses;
+        const soldeElement = document.getElementById('solde_restant_value');
+        if (soldeElement) {
+            soldeElement.textContent = soldeRestant.toLocaleString('fr-FR') + ' F CFA';
+            soldeElement.className = soldeRestant >= 0 ? 'text-success fw-bold' : 'text-danger fw-bold';
+        }
+    }
+    
+    // Événement pour ajouter une dépense
+    ajouterDepenseBtn.addEventListener('click', function() {
+        creerDepense();
+    });
+    
+    // Ajouter une dépense par défaut au chargement
+    creerDepense('Travaux de peinture', '0');
+    
+    // Variables existantes
     const cautionCheckbox = document.getElementById('caution_remboursee');
     const montantGroup = document.getElementById('montant_remboursement_group');
     const dateGroup = document.getElementById('date_remboursement_group');
@@ -567,13 +604,6 @@ document.addEventListener('DOMContentLoaded', function() {
             soldeElement.className = 'text-success fw-bold';
         }
     }
-    
-    // Écouter les changements sur les champs de travaux
-    const travauxInputs = document.querySelectorAll('.travaux-input');
-    travauxInputs.forEach(input => {
-        input.addEventListener('input', calculerResumeFinancier);
-        input.addEventListener('change', calculerResumeFinancier);
-    });
     
     // Calcul initial
     calculerResumeFinancier();

@@ -1221,6 +1221,43 @@ class DocumentContrat(models.Model):
         return context
 
 
+class DepenseResiliation(models.Model):
+    """Modèle pour les dépenses dynamiques lors de la résiliation."""
+    
+    resiliation = models.ForeignKey(
+        'ResiliationContrat',
+        on_delete=models.CASCADE,
+        related_name='depenses',
+        verbose_name=_("Résiliation")
+    )
+    
+    description = models.CharField(
+        max_length=200,
+        verbose_name=_("Description de la dépense")
+    )
+    
+    montant = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        verbose_name=_("Montant (F CFA)")
+    )
+    
+    ordre = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Ordre d'affichage")
+    )
+    
+    date_creation = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['ordre', 'date_creation']
+        verbose_name = _("Dépense de résiliation")
+        verbose_name_plural = _("Dépenses de résiliation")
+    
+    def __str__(self):
+        return f"{self.description} - {self.montant} F CFA"
+
+
 class ResiliationContrat(models.Model):
     """Modèle pour gérer les résiliations de contrat avec possibilité de suppression totale."""
     
@@ -1279,42 +1316,6 @@ class ResiliationContrat(models.Model):
         verbose_name=_("Date de remboursement")
     )
     
-    # Liste des travaux effectués (dépenses)
-    travaux_peinture = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=0,
-        verbose_name=_("Travaux de peinture (F CFA)")
-    )
-    facture_onea = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=0,
-        verbose_name=_("Facture ONEA (F CFA)")
-    )
-    facture_sonabel = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=0,
-        verbose_name=_("Facture SONABEL (F CFA)")
-    )
-    travaux_ventilateur = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=0,
-        verbose_name=_("Ventilateur (F CFA)")
-    )
-    autres_depenses = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=0,
-        verbose_name=_("Autres dépenses (F CFA)")
-    )
-    description_autres_depenses = models.TextField(
-        blank=True,
-        verbose_name=_("Description des autres dépenses")
-    )
-    
     # Calcul automatique
     total_depenses = models.DecimalField(
         max_digits=12,
@@ -1368,14 +1369,11 @@ class ResiliationContrat(models.Model):
         return f"Résiliation {self.contrat.numero_contrat} - {self.date_resiliation}"
     
     def calculer_total_depenses(self):
-        """Calcule le total des dépenses."""
+        """Calcule le total des dépenses dynamiques."""
         from decimal import Decimal
         total = Decimal('0')
-        total += Decimal(str(self.travaux_peinture or 0))
-        total += Decimal(str(self.facture_onea or 0))
-        total += Decimal(str(self.facture_sonabel or 0))
-        total += Decimal(str(self.travaux_ventilateur or 0))
-        total += Decimal(str(self.autres_depenses or 0))
+        for depense in self.depenses.all():
+            total += depense.montant
         return total
     
     def recuperer_caution_contractuelle(self):

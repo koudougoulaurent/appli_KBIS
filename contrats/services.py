@@ -2223,28 +2223,13 @@ class ResiliationPDFService:
         # Ligne de séparation "TRAVAUX"
         all_data.append([Paragraph('<b>TRAVAUX ET DÉPENSES</b>', self.styles['CustomBody']), Paragraph('', self.styles['CustomBody'])])
         
-        # Travaux
+        # Dépenses dynamiques
         has_travaux = False
-        if self.resiliation.travaux_peinture and self.resiliation.travaux_peinture > 0:
-            all_data.append([Paragraph('Travaux de peinture', self.styles['CustomBody']), Paragraph(f"{float(self.resiliation.travaux_peinture):,.0f} F CFA", self.styles['CustomBody'])])
-            has_travaux = True
-        
-        if self.resiliation.facture_onea and self.resiliation.facture_onea > 0:
-            all_data.append([Paragraph('Facture ONEA', self.styles['CustomBody']), Paragraph(f"{float(self.resiliation.facture_onea):,.0f} F CFA", self.styles['CustomBody'])])
-            has_travaux = True
-        
-        if self.resiliation.facture_sonabel and self.resiliation.facture_sonabel > 0:
-            all_data.append([Paragraph('Facture SONABEL', self.styles['CustomBody']), Paragraph(f"{float(self.resiliation.facture_sonabel):,.0f} F CFA", self.styles['CustomBody'])])
-            has_travaux = True
-        
-        if self.resiliation.travaux_ventilateur and self.resiliation.travaux_ventilateur > 0:
-            all_data.append([Paragraph('Ventilateur / Climatisation', self.styles['CustomBody']), Paragraph(f"{float(self.resiliation.travaux_ventilateur):,.0f} F CFA", self.styles['CustomBody'])])
-            has_travaux = True
-        
-        if self.resiliation.autres_depenses and self.resiliation.autres_depenses > 0:
-            autres_desc = self.resiliation.description_autres_depenses if self.resiliation.description_autres_depenses else "Autres dépenses"
-            truncated_desc = autres_desc[:30] + '...' if len(autres_desc) > 30 else autres_desc
-            all_data.append([Paragraph(f'Autres ({truncated_desc})', self.styles['CustomBody']), Paragraph(f"{float(self.resiliation.autres_depenses):,.0f} F CFA", self.styles['CustomBody'])])
+        for depense in self.resiliation.depenses.all():
+            all_data.append([
+                Paragraph(depense.description, self.styles['CustomBody']), 
+                Paragraph(f"{float(depense.montant):,.0f} F CFA", self.styles['CustomBody'])
+            ])
             has_travaux = True
         
         if not has_travaux:

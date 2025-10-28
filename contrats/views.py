@@ -568,15 +568,9 @@ def resilier_contrat(request, pk):
                 montant_remboursement = 0
                 date_remboursement = None
             
-            # Récupérer les données de travaux
+            # Récupérer les données de dépenses dynamiques
             from decimal import Decimal
-            
-            travaux_peinture = Decimal(request.POST.get('travaux_peinture', 0) or 0)
-            facture_onea = Decimal(request.POST.get('facture_onea', 0) or 0)
-            facture_sonabel = Decimal(request.POST.get('facture_sonabel', 0) or 0)
-            travaux_ventilateur = Decimal(request.POST.get('travaux_ventilateur', 0) or 0)
-            autres_depenses = Decimal(request.POST.get('autres_depenses', 0) or 0)
-            description_autres_depenses = request.POST.get('description_autres_depenses', '')
+            from .models import DepenseResiliation
             
             # Créer la résiliation
             resiliation = ResiliationContrat.objects.create(
@@ -589,15 +583,49 @@ def resilier_contrat(request, pk):
                 montant_remboursement=montant_remboursement,
                 date_remboursement=date_remboursement,
                 notes=notes,
-                cree_par=request.user,
-                # Nouveaux champs de travaux
-                travaux_peinture=travaux_peinture,
-                facture_onea=facture_onea,
-                facture_sonabel=facture_sonabel,
-                travaux_ventilateur=travaux_ventilateur,
-                autres_depenses=autres_depenses,
-                description_autres_depenses=description_autres_depenses
+                cree_par=request.user
             )
+            
+            # Traiter les dépenses dynamiques
+            depenses_data = {}
+            for key, value in request.POST.items():
+                if key.startswith('depenses[') and ']' in key:
+                    # Extraire l'index et le champ
+                    parts = key.split('[')
+                    if len(parts) >= 3:
+                        index = parts[1].split(']')[0]
+                        field = parts[2].split(']')[0]
+                        
+                        if index not in depenses_data:
+                            depenses_data[index] = {}
+                        depenses_data[index][field] = value
+            
+            # Créer les objets DepenseResiliation
+            ordre = 0
+            for index, data in depenses_data.items():
+                if data.get('description') and data.get('montant'):
+                    try:
+                        montant = Decimal(data['montant'])
+                        if montant > 0:  # Seulement si le montant est positif
+                            DepenseResiliation.objects.create(
+                                resiliation=resiliation,
+                                description=data['description'],
+                                montant=montant,
+                                ordre=ordre
+                            )
+                            ordre += 1
+                    except (ValueError, TypeError):
+                        continue  # Ignorer les valeurs invalides
+            
+            # Calculer et mettre à jour les totaux
+            total_depenses = resiliation.calculer_total_depenses()
+            caution_versee = resiliation.recuperer_caution_contractuelle()
+            solde_restant = caution_versee - total_depenses
+            
+            resiliation.total_depenses = total_depenses
+            resiliation.caution_versee = caution_versee
+            resiliation.solde_restant = solde_restant
+            resiliation.save()
             
             # Mettre à jour le contrat
             old_data = {}

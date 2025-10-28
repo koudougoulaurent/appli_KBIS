@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
 from django.utils import timezone
-from .models import Contrat, Quittance, EtatLieux
+from .models import Contrat, Quittance, EtatLieux, ResiliationContrat, DepenseResiliation
 
 
 @admin.register(Contrat)
@@ -194,3 +194,72 @@ class EtatLieuxAdmin(admin.ModelAdmin):
         
         self.message_user(request, f"État des lieux dupliqué avec succès (type: {nouveau_type}).")
     dupliquer_etat_lieux.short_description = _("Dupliquer l'état des lieux")
+
+
+@admin.register(ResiliationContrat)
+class ResiliationContratAdmin(admin.ModelAdmin):
+    """Interface d'administration pour les résiliations de contrat."""
+    
+    list_display = (
+        'contrat', 'date_resiliation', 'type_resiliation', 
+        'statut', 'total_depenses', 'solde_restant', 'cree_par'
+    )
+    list_filter = (
+        'statut', 'type_resiliation', 'caution_remboursee', 
+        'date_resiliation', 'cree_par'
+    )
+    search_fields = (
+        'contrat__numero_contrat', 'contrat__propriete__titre',
+        'contrat__locataire__nom', 'contrat__locataire__prenom'
+    )
+    ordering = ('-date_resiliation',)
+    
+    fieldsets = (
+        (_('Informations de résiliation'), {
+            'fields': ('contrat', 'date_resiliation', 'motif_resiliation', 'type_resiliation', 'statut')
+        }),
+        (_('État des lieux'), {
+            'fields': ('etat_lieux_sortie',)
+        }),
+        (_('Remboursement'), {
+            'fields': ('caution_remboursee', 'montant_remboursement', 'date_remboursement')
+        }),
+        (_('Calculs financiers'), {
+            'fields': ('total_depenses', 'caution_versee', 'solde_restant'),
+            'classes': ('collapse',)
+        }),
+        (_('Métadonnées'), {
+            'fields': ('notes', 'cree_par', 'validee_par', 'date_creation', 'date_modification'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('total_depenses', 'caution_versee', 'solde_restant', 'date_creation', 'date_modification')
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('contrat', 'contrat__propriete', 'contrat__locataire', 'cree_par')
+
+
+@admin.register(DepenseResiliation)
+class DepenseResiliationAdmin(admin.ModelAdmin):
+    """Interface d'administration pour les dépenses de résiliation."""
+    
+    list_display = ('resiliation', 'description', 'montant', 'ordre', 'date_creation')
+    list_filter = ('date_creation', 'resiliation__type_resiliation')
+    search_fields = ('description', 'resiliation__contrat__numero_contrat')
+    ordering = ('resiliation', 'ordre', 'date_creation')
+    
+    fieldsets = (
+        (_('Informations de la dépense'), {
+            'fields': ('resiliation', 'description', 'montant', 'ordre')
+        }),
+        (_('Métadonnées'), {
+            'fields': ('date_creation',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('date_creation',)
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('resiliation', 'resiliation__contrat')
