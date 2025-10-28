@@ -1800,10 +1800,10 @@ class ResiliationPDFService:
         doc = SimpleDocTemplate(
             buffer,
             pagesize=A4,
-            rightMargin=1.5*cm,
-            leftMargin=1.5*cm,
-            topMargin=4.5*cm,  # Marge supérieure pour l'en-tête avec image
-            bottomMargin=1*cm  # Marge inférieure réduite pour avoir plus d'espace
+            rightMargin=1*cm,
+            leftMargin=1*cm,
+            topMargin=3.5*cm,  # Marge supérieure réduite
+            bottomMargin=0.5*cm  # Marge inférieure très réduite
         )
         
         # Construction du contenu du PDF
@@ -1814,19 +1814,19 @@ class ResiliationPDFService:
             "AVIS DE RÉSILIATION DE CONTRAT",
             self.styles['CustomTitle']
         ))
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 10))  # Réduit de 20 à 10
         
         # Informations de la résiliation
         story.extend(self._create_resiliation_info())
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 10))  # Réduit de 20 à 10
         
         # Informations du contrat
         story.extend(self._create_contract_info())
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 10))  # Réduit de 20 à 10
         
         # Motifs et conditions
         story.extend(self._create_termination_details())
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 10))  # Réduit de 20 à 10
         
         # Signatures (locataire et agent immobilier uniquement)
         story.extend(self._create_signatures())
@@ -2009,76 +2009,61 @@ class ResiliationPDFService:
         elements = []
         
         # Espace minimal avant le footer pour coller aux signatures
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 5))
         
-        # Informations de l'entreprise
+        # Informations de l'entreprise compactes
         if self.config_entreprise:
-            # Nom de l'entreprise
+            # Nom de l'entreprise et contact sur une ligne
+            contact_parts = [self.config_entreprise.nom_entreprise]
+            if self.config_entreprise.telephone:
+                contact_parts.append(f"Tél: {self.config_entreprise.telephone}")
+            if self.config_entreprise.email:
+                contact_parts.append(f"Email: {self.config_entreprise.email}")
+            
             elements.append(Paragraph(
-                f"<b>{self.config_entreprise.nom_entreprise}</b>",
+                " | ".join(contact_parts),
                 ParagraphStyle(
-                    'FooterTitle',
+                    'FooterCompact',
                     parent=self.styles['Normal'],
-                    fontSize=9,
+                    fontSize=7,
                     alignment=TA_CENTER
                 )
             ))
             
-            # Contact
-            if self.config_entreprise.telephone or self.config_entreprise.email:
-                contact_parts = []
-                if self.config_entreprise.telephone:
-                    contact_parts.append(f"Tél: {self.config_entreprise.telephone}")
-                if self.config_entreprise.email:
-                    contact_parts.append(f"Email: {self.config_entreprise.email}")
-                
-                elements.append(Paragraph(
-                    " | ".join(contact_parts),
-                    ParagraphStyle(
-                        'FooterContact',
-                        parent=self.styles['Normal'],
-                        fontSize=8,
-                        alignment=TA_CENTER
-                    )
-                ))
-            
-            # Adresse
+            # Adresse compacte
             if self.config_entreprise.adresse_ligne1:
                 elements.append(Paragraph(
                     self.config_entreprise.get_adresse_complete(),
                     ParagraphStyle(
                         'FooterAddress',
                         parent=self.styles['Normal'],
-                        fontSize=8,
+                        fontSize=7,
                         alignment=TA_CENTER
                     )
                 ))
         
-        elements.append(Spacer(1, 5))
-        
-        # Nom de l'utilisateur qui a généré le document
+        # Informations de génération compactes
         if self.user:
             user_name = self.user.get_full_name() or self.user.username
             elements.append(Paragraph(
-                f"Document généré par : <b>{user_name}</b>",
+                f"Généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')} par {user_name}",
                 ParagraphStyle(
-                    'FooterUser',
+                    'FooterGeneration',
                     parent=self.styles['Normal'],
-                    fontSize=8,
+                    fontSize=6,
                     alignment=TA_CENTER
                 )
             ))
-        
-        # Date de génération
-        elements.append(Paragraph(
-            f"Généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}",
-            ParagraphStyle(
-                'FooterDate',
-                parent=self.styles['Normal'],
-                fontSize=8,
-                alignment=TA_CENTER
-            )
-        ))
+        else:
+            elements.append(Paragraph(
+                f"Généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}",
+                ParagraphStyle(
+                    'FooterGeneration',
+                    parent=self.styles['Normal'],
+                    fontSize=6,
+                    alignment=TA_CENTER
+                )
+            ))
         
         return elements
     
@@ -2087,14 +2072,13 @@ class ResiliationPDFService:
         elements = []
         
         elements.append(Paragraph("SIGNATURES", self.styles['CustomHeading']))
-        elements.append(Spacer(1, 20))
+        elements.append(Spacer(1, 10))  # Réduit de 20 à 10
         
-        # Tableau des signatures (locataire et agent immobilier uniquement)
+        # Tableau des signatures compact
         signature_data = [
             [Paragraph('<b>Signature du locataire</b>', self.styles['CustomBody']), 
              Paragraph('<b>Signature de l\'agent immobilier</b>', self.styles['CustomBody'])],
             ['', ''],  # Lignes de signature
-            ['', ''],  # Lignes supplémentaires pour signature
             [Paragraph(f"{self.resiliation.contrat.locataire.nom} {self.resiliation.contrat.locataire.prenom}", self.styles['CustomBody']), 
              Paragraph(f"{self.config_entreprise.nom_entreprise if self.config_entreprise else 'KBIS IMMOBILIER'}", self.styles['CustomBody'])],
             ['Date : _________________', 'Date : _________________']
@@ -2104,18 +2088,18 @@ class ResiliationPDFService:
         signature_table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('FONTNAME', (0, 1), (0, 2), 'Helvetica'),  # Lignes de signature
-            ('FONTNAME', (0, 3), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-            ('TOPPADDING', (0, 0), (-1, -1), 12),
-            ('LINEBELOW', (0, 1), (0, 2), 2, colors.black),  # Ligne de signature épaisse
-            ('LINEBELOW', (1, 1), (1, 2), 2, colors.black),  # Ligne de signature épaisse
+            ('FONTNAME', (0, 1), (0, 1), 'Helvetica'),  # Lignes de signature
+            ('FONTNAME', (0, 2), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('LINEBELOW', (0, 1), (0, 1), 2, colors.black),  # Ligne de signature épaisse
+            ('LINEBELOW', (1, 1), (1, 1), 2, colors.black),  # Ligne de signature épaisse
             ('GRID', (0, 0), (-1, -1), 1, colors.lightgrey),
         ]))
         
         elements.append(signature_table)
-        elements.append(Spacer(1, 10))  # Espace minimal pour coller le footer
+        elements.append(Spacer(1, 5))  # Espace minimal pour coller le footer
         
         return elements
     
@@ -2125,22 +2109,20 @@ class ResiliationPDFService:
         
         elements.append(Paragraph("INFORMATIONS DE LA RÉSILIATION", self.styles['CustomHeading']))
         
-        # Tableau des informations
+        # Tableau des informations condensé
         data = [
-            ['ID de résiliation:', str(self.resiliation.id)],
-            ['Date de résiliation:', self.resiliation.date_resiliation.strftime('%d/%m/%Y')],
-            ['Type de résiliation:', self.resiliation.get_type_resiliation_display()],
-            ['Statut:', self.resiliation.get_statut_display()],
-            ['Motif:', self.resiliation.motif_resiliation[:50] + '...' if len(self.resiliation.motif_resiliation) > 50 else self.resiliation.motif_resiliation],
+            ['Date:', self.resiliation.date_resiliation.strftime('%d/%m/%Y')],
+            ['Type:', self.resiliation.get_type_resiliation_display()],
+            ['Motif:', self.resiliation.motif_resiliation[:40] + '...' if len(self.resiliation.motif_resiliation) > 40 else self.resiliation.motif_resiliation],
         ]
         
-        table = Table(data, colWidths=[5*cm, 7*cm])
+        table = Table(data, colWidths=[3*cm, 9*cm])
         table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
             ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
             ('GRID', (0, 0), (-1, -1), 1, colors.grey),
             ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
         ]))
@@ -2157,22 +2139,21 @@ class ResiliationPDFService:
         
         contrat = self.resiliation.contrat
         
+        # Tableau condensé avec informations essentielles
         data_contrat = [
-            ['Numéro de contrat:', contrat.numero_contrat],
-            ['Date de signature:', contrat.date_signature.strftime('%d/%m/%Y')],
-            ['Date de début:', contrat.date_debut.strftime('%d/%m/%Y')],
-            ['Propriété:', contrat.propriete.titre],
+            ['Contrat:', contrat.numero_contrat],
+            ['Propriété:', contrat.propriete.titre[:30] + '...' if len(contrat.propriete.titre) > 30 else contrat.propriete.titre],
             ['Locataire:', f"{contrat.locataire.nom} {contrat.locataire.prenom}"],
-            ['Loyer mensuel:', contrat.get_loyer_mensuel_formatted()],
+            ['Loyer:', contrat.get_loyer_mensuel_formatted()],
         ]
         
-        table_contrat = Table(data_contrat, colWidths=[5*cm, 7*cm])
+        table_contrat = Table(data_contrat, colWidths=[3*cm, 9*cm])
         table_contrat.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
             ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
             ('GRID', (0, 0), (-1, -1), 1, colors.grey),
         ]))
         
@@ -2210,9 +2191,30 @@ class ResiliationPDFService:
         elements.append(Paragraph(conditions_text, self.styles['CustomBody']))
         elements.append(Spacer(1, 15))
         
+    def _create_termination_details(self):
+        """Crée la section des détails de la résiliation"""
+        elements = []
+        
+        elements.append(Paragraph("DÉTAILS DE LA RÉSILIATION", self.styles['CustomHeading']))
+        
+        # Motifs de résiliation (condensé)
+        if self.resiliation.motif_resiliation:
+            elements.append(Paragraph(
+                f"<b>Motif :</b> {self.resiliation.motif_resiliation[:60]}{'...' if len(self.resiliation.motif_resiliation) > 60 else ''}",
+                self.styles['CustomBody']
+            ))
+        
+        # Conditions de sortie (version courte)
+        conditions_text = """
+        <b>Conditions :</b> Libération des lieux, état des lieux, restitution caution après déduction dommages.
+        """
+        
+        elements.append(Paragraph(conditions_text, self.styles['CustomBody']))
+        elements.append(Spacer(1, 8))
+        
         # SECTION DES TRAVAUX ET DÉPENSES + RÉSUMÉ FINANCIER (tableau unifié)
-        elements.append(Paragraph("LISTE DES TRAVAUX EFFECTUÉS ET RÉSUMÉ FINANCIER", self.styles['CustomHeading']))
-        elements.append(Spacer(1, 10))
+        elements.append(Paragraph("TRAVAUX ET RÉSUMÉ FINANCIER", self.styles['CustomHeading']))
+        elements.append(Spacer(1, 5))
         
         # Créer un tableau unifié
         all_data = []
@@ -2239,36 +2241,31 @@ class ResiliationPDFService:
         all_data.append([Paragraph('<b>RÉSUMÉ FINANCIER</b>', self.styles['CustomBody']), Paragraph('', self.styles['CustomBody'])])
         
         # Résumé financier
-        caution_versee = float(self.resiliation.caution_versee) if self.resiliation.caution_versee else 0
-        total_depenses = float(self.resiliation.total_depenses) if self.resiliation.total_depenses else 0
-        solde_restant = float(self.resiliation.solde_restant) if self.resiliation.solde_restant else 0
+        caution_versee = self.resiliation.recuperer_caution_contractuelle()
+        total_depenses = self.resiliation.calculer_total_depenses()
+        solde_restant = caution_versee - total_depenses
         
-        all_data.append([Paragraph('Caution versée lors du contrat', self.styles['CustomBody']), Paragraph(f"{caution_versee:,.0f} F CFA", self.styles['CustomBody'])])
-        all_data.append([Paragraph('Total des dépenses effectuées', self.styles['CustomBody']), Paragraph(f"{total_depenses:,.0f} F CFA", self.styles['CustomBody'])])
-        all_data.append([Paragraph('<b>Solde restant à rembourser</b>', self.styles['CustomBody']), Paragraph(f"<b>{solde_restant:,.0f} F CFA</b>", self.styles['CustomBody'])])
+        all_data.append([Paragraph('Caution versée', self.styles['CustomBody']), Paragraph(f"{float(caution_versee):,.0f} F CFA", self.styles['CustomBody'])])
+        all_data.append([Paragraph('Total dépenses', self.styles['CustomBody']), Paragraph(f"{float(total_depenses):,.0f} F CFA", self.styles['CustomBody'])])
+        all_data.append([Paragraph('<b>Solde restant</b>', self.styles['CustomBody']), Paragraph(f"<b>{float(solde_restant):,.0f} F CFA</b>", self.styles['CustomBody'])])
         
-        # Créer le tableau unifié
-        unified_table = Table(all_data, colWidths=[9*cm, 3*cm])
-        unified_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),  # En-tête avec couleur claire
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),  # Texte noir pour meilleure lisibilité
+        # Créer le tableau avec style optimisé
+        table = Table(all_data, colWidths=[7*cm, 5*cm])
+        table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 11),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('TOPPADDING', (0, 0), (-1, 0), 12),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
-            ('BACKGROUND', (0, 1), (0, 1), colors.lightsteelblue),  # Fond gris pour "TRAVAUX"
-            ('BACKGROUND', (0, -1), (0, -1), colors.lightsteelblue),  # Fond gris pour "RÉSUMÉ"
-            ('FONTNAME', (0, 1), (1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 10),
-            ('TOPPADDING', (1, 1), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BACKGROUND', (0, 0), (1, 0), colors.lightblue),
+            ('TEXTCOLOR', (0, 0), (1, 0), colors.black),
+            ('BACKGROUND', (0, 1), (1, 1), colors.lightgrey),  # TRAVAUX ET DÉPENSES
+            ('BACKGROUND', (0, -3), (1, -3), colors.lightgrey),  # RÉSUMÉ FINANCIER
         ]))
         
-        elements.append(unified_table)
+        elements.append(table)
         
         return elements
     
