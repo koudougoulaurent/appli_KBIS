@@ -393,16 +393,27 @@ document.addEventListener('DOMContentLoaded', function() {
         // Mettre à jour l'affichage du total
         const totalDepensesElement = document.getElementById('total_depenses_value');
         if (totalDepensesElement) {
-            totalDepensesElement.textContent = total.toLocaleString('fr-FR') + ' F CFA';
+            totalDepensesElement.textContent = new Intl.NumberFormat('fr-FR', {
+                style: 'currency',
+                currency: 'XOF',
+                minimumFractionDigits: 0
+            }).format(total).replace('XOF', 'F CFA');
         }
         
-        // Calculer le solde restant
+        // Calculer le solde restant qui mettra aussi à jour le résumé
         calculerSoldeRestant();
     }
     
-    // Fonction pour calculer le solde restant
+    // Fonction pour calculer le solde restant et mettre à jour le résumé financier complet
     function calculerSoldeRestant() {
-        const cautionVersee = parseFloat('{{ contrat.depot_garantie }}') || 0;
+        // Récupérer la caution versée depuis le contrat
+        let cautionVersee = 0;
+        try {
+            cautionVersee = parseFloat('{{ contrat.depot_garantie }}') || 0;
+        } catch (e) {
+            console.log('Erreur récupération caution:', e);
+        }
+        
         const montantInputs = document.querySelectorAll('.depense-montant');
         let totalDepenses = 0;
         
@@ -412,10 +423,52 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         const soldeRestant = cautionVersee - totalDepenses;
+        
+        // Mettre à jour la caution versée
+        const cautionVerseeElement = document.getElementById('caution_versee_value');
+        if (cautionVerseeElement) {
+            cautionVerseeElement.textContent = new Intl.NumberFormat('fr-FR', {
+                style: 'currency',
+                currency: 'XOF',
+                minimumFractionDigits: 0
+            }).format(cautionVersee).replace('XOF', 'F CFA');
+        }
+        
+        // Mettre à jour le solde restant
         const soldeElement = document.getElementById('solde_restant_value');
         if (soldeElement) {
-            soldeElement.textContent = soldeRestant.toLocaleString('fr-FR') + ' F CFA';
-            soldeElement.className = soldeRestant >= 0 ? 'text-success fw-bold' : 'text-danger fw-bold';
+            if (soldeRestant < 0) {
+                soldeElement.textContent = new Intl.NumberFormat('fr-FR', {
+                    style: 'currency',
+                    currency: 'XOF',
+                    minimumFractionDigits: 0
+                }).format(Math.abs(soldeRestant)).replace('XOF', 'F CFA') + ' (dépassement)';
+                soldeElement.className = 'text-danger fw-bold';
+            } else if (soldeRestant === 0) {
+                soldeElement.textContent = new Intl.NumberFormat('fr-FR', {
+                    style: 'currency',
+                    currency: 'XOF',
+                    minimumFractionDigits: 0
+                }).format(0).replace('XOF', 'F CFA');
+                soldeElement.className = 'text-warning fw-bold';
+            } else {
+                soldeElement.textContent = new Intl.NumberFormat('fr-FR', {
+                    style: 'currency',
+                    currency: 'XOF',
+                    minimumFractionDigits: 0
+                }).format(soldeRestant).replace('XOF', 'F CFA');
+                soldeElement.className = 'text-success fw-bold';
+            }
+        }
+        
+        // Mettre à jour le total des dépenses (déjà fait dans calculerTotalDepenses, mais on le refait ici pour être sûr)
+        const totalDepensesElement = document.getElementById('total_depenses_value');
+        if (totalDepensesElement) {
+            totalDepensesElement.textContent = new Intl.NumberFormat('fr-FR', {
+                style: 'currency',
+                currency: 'XOF',
+                minimumFractionDigits: 0
+            }).format(totalDepenses).replace('XOF', 'F CFA');
         }
     }
     
@@ -426,6 +479,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Ajouter une dépense par défaut au chargement
     creerDepense('Travaux de peinture', '0');
+    
+    // Calculer le résumé financier initial
+    calculerSoldeRestant();
     
     // Variables existantes
     const cautionCheckbox = document.getElementById('caution_remboursee');
@@ -547,66 +603,8 @@ document.addEventListener('DOMContentLoaded', function() {
         dateInput.addEventListener('change', validateForm);
     }
     
-    // Calcul automatique du résumé financier
-    function calculerResumeFinancier() {
-        // Récupérer les montants
-        const travauxPeinture = parseFloat(document.getElementById('travaux_peinture').value) || 0;
-        const factureOnea = parseFloat(document.getElementById('facture_onea').value) || 0;
-        const factureSonabel = parseFloat(document.getElementById('facture_sonabel').value) || 0;
-        const travauxVentilateur = parseFloat(document.getElementById('travaux_ventilateur').value) || 0;
-        const autresDepenses = parseFloat(document.getElementById('autres_depenses').value) || 0;
-        
-        // Calculer le total des dépenses
-        const totalDepenses = travauxPeinture + factureOnea + factureSonabel + travauxVentilateur + autresDepenses;
-        
-        // Récupérer la caution versée depuis le contrat (convertir en float)
-        let cautionVersee = 0;
-        try {
-            cautionVersee = parseFloat('{{ contrat.depot_garantie }}') || 0;
-        } catch (e) {
-            console.log('Erreur récupération caution:', e);
-        }
-        
-        // Calculer le solde restant
-        const soldeRestant = cautionVersee - totalDepenses;
-        
-        // Mettre à jour l'affichage
-        document.getElementById('caution_versee_value').textContent = new Intl.NumberFormat('fr-FR', {
-            style: 'currency',
-            currency: 'XOF',
-            minimumFractionDigits: 0
-        }).format(cautionVersee).replace('XOF', 'F CFA');
-        
-        document.getElementById('total_depenses_value').textContent = new Intl.NumberFormat('fr-FR', {
-            style: 'currency',
-            currency: 'XOF',
-            minimumFractionDigits: 0
-        }).format(totalDepenses).replace('XOF', 'F CFA');
-        
-        // Colorier le solde restant selon s'il est positif ou négatif
-        const soldeElement = document.getElementById('solde_restant_value');
-        soldeElement.textContent = new Intl.NumberFormat('fr-FR', {
-            style: 'currency',
-            currency: 'XOF',
-            minimumFractionDigits: 0
-        }).format(Math.max(0, soldeRestant)).replace('XOF', 'F CFA');
-        
-        if (soldeRestant < 0) {
-            soldeElement.className = 'text-danger fw-bold';
-            document.getElementById('solde_restant_value').parentElement.innerHTML = 
-                '<strong>Solde restant :</strong><br>' +
-                '<span id="solde_restant_value" class="text-danger fw-bold">' + 
-                new Intl.NumberFormat('fr-FR', {style: 'currency', currency: 'XOF', minimumFractionDigits: 0}).format(Math.abs(soldeRestant)).replace('XOF', 'F CFA') + 
-                ' (dépassement)</span>';
-        } else if (soldeRestant === 0) {
-            soldeElement.className = 'text-warning fw-bold';
-        } else {
-            soldeElement.className = 'text-success fw-bold';
-        }
-    }
-    
-    // Calcul initial
-    calculerResumeFinancier();
+    // Calcul initial du résumé financier
+    // (Effectué automatiquement par calculerSoldeRestant() après la création de la dépense par défaut)
 });
 </script>
 {% endblock %} 
