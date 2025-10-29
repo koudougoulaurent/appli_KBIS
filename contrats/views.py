@@ -570,53 +570,69 @@ def resilier_contrat(request, pk):
             
             # Récupérer les données de dépenses dynamiques
             from decimal import Decimal
+            from django.db import transaction
             from .models import DepenseResiliation
             
-            # Créer la résiliation et s'assurer qu'elle est sauvegardée
-            resiliation = ResiliationContrat(
-                contrat=contrat,
-                date_resiliation=date_resiliation,
-                motif_resiliation=motif_resiliation,
-                type_resiliation=type_resiliation,
-                etat_lieux_sortie=etat_lieux_sortie,
-                caution_remboursee=caution_remboursee,
-                montant_remboursement=montant_remboursement,
-                date_remboursement=date_remboursement,
-                notes=notes,
-                cree_par=request.user
-            )
-            resiliation.save()  # Sauvegarder explicitement pour avoir un ID
-            
-            # Traiter les dépenses dynamiques
-            depenses_data = {}
-            for key, value in request.POST.items():
-                if key.startswith('depenses[') and ']' in key:
-                    # Extraire l'index et le champ
-                    parts = key.split('[')
-                    if len(parts) >= 3:
-                        index = parts[1].split(']')[0]
-                        field = parts[2].split(']')[0]
-                        
-                        if index not in depenses_data:
-                            depenses_data[index] = {}
-                        depenses_data[index][field] = value
-            
-            # Créer les objets DepenseResiliation (après que la résiliation ait un ID)
-            ordre = 0
-            for index, data in depenses_data.items():
-                if data.get('description') and data.get('montant'):
-                    try:
-                        montant = Decimal(data['montant'])
-                        if montant > 0:  # Seulement si le montant est positif
-                            DepenseResiliation.objects.create(
-                                resiliation=resiliation,
-                                description=data['description'],
-                                montant=montant,
-                                ordre=ordre
-                            )
-                            ordre += 1
-                    except (ValueError, TypeError):
-                        continue  # Ignorer les valeurs invalides
+            # Utiliser une transaction atomique pour garantir la cohérence
+            with transaction.atomic():
+                # Créer la résiliation et s'assurer qu'elle est sauvegardée avec un ID
+                resiliation = ResiliationContrat.objects.create(
+                    contrat=contrat,
+                    date_resiliation=date_resiliation,
+                    motif_resiliation=motif_resiliation,
+                    type_resiliation=type_resiliation,
+                    etat_lieux_sortie=etat_lieux_sortie,
+                    caution_remboursee=caution_remboursee,
+                    montant_remboursement=montant_remboursement,
+                    date_remboursement=date_remboursement,
+                    notes=notes,
+                    cree_par=request.user
+                )
+                
+                # Rafraîchir depuis la DB pour s'assurer que l'ID est disponible
+                resiliation.refresh_from_db()
+                
+                # Vérifier que la résiliation a bien un ID avant de continuer
+                if not resiliation.pk:
+                    raise ValueError("La résiliation n'a pas d'ID après sauvegarde")
+                
+                # Traiter les dépenses dynamiques AVANT de créer les objets
+                depenses_data = {}
+                for key, value in request.POST.items():
+                    if key.startswith('depenses[') and ']' in key:
+                        # Extraire l'index et le champ
+                        parts = key.split('[')
+                        if len(parts) >= 3:
+                            index = parts[1].split(']')[0]
+                            field = parts[2].split(']')[0]
+                            
+                            if index not in depenses_data:
+                                depenses_data[index] = {}
+                            depenses_data[index][field] = value
+                
+                # Créer les objets DepenseResiliation avec la clé primaire explicite
+                depenses_a_creer = []
+                ordre = 0
+                for index, data in depenses_data.items():
+                    if data.get('description') and data.get('montant'):
+                        try:
+                            montant = Decimal(data['montant'])
+                            if montant > 0:  # Seulement si le montant est positif
+                                depenses_a_creer.append(
+                                    DepenseResiliation(
+                                        resiliation_id=resiliation.pk,  # Utiliser l'ID explicitement
+                                        description=data['description'],
+                                        montant=montant,
+                                        ordre=ordre
+                                    )
+                                )
+                                ordre += 1
+                        except (ValueError, TypeError):
+                            continue  # Ignorer les valeurs invalides
+                
+                # Créer toutes les dépenses en une seule fois avec bulk_create
+                if depenses_a_creer:
+                    DepenseResiliation.objects.bulk_create(depenses_a_creer)
             
             # Calculer et mettre à jour les totaux
             total_depenses = resiliation.calculer_total_depenses()
