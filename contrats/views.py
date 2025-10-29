@@ -572,8 +572,8 @@ def resilier_contrat(request, pk):
             from decimal import Decimal
             from .models import DepenseResiliation
             
-            # Créer la résiliation
-            resiliation = ResiliationContrat.objects.create(
+            # Créer la résiliation et s'assurer qu'elle est sauvegardée
+            resiliation = ResiliationContrat(
                 contrat=contrat,
                 date_resiliation=date_resiliation,
                 motif_resiliation=motif_resiliation,
@@ -585,6 +585,7 @@ def resilier_contrat(request, pk):
                 notes=notes,
                 cree_par=request.user
             )
+            resiliation.save()  # Sauvegarder explicitement pour avoir un ID
             
             # Traiter les dépenses dynamiques
             depenses_data = {}
@@ -600,7 +601,7 @@ def resilier_contrat(request, pk):
                             depenses_data[index] = {}
                         depenses_data[index][field] = value
             
-            # Créer les objets DepenseResiliation
+            # Créer les objets DepenseResiliation (après que la résiliation ait un ID)
             ordre = 0
             for index, data in depenses_data.items():
                 if data.get('description') and data.get('montant'):
