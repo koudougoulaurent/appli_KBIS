@@ -3,6 +3,23 @@
 from django.db import migrations
 
 
+def _postgres_drop_columns(apps, schema_editor):
+    # Only run on PostgreSQL. For SQLite/MySQL locally, do nothing.
+    if schema_editor.connection.vendor != 'postgresql':
+        return
+    statements = [
+        "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='contrats_resiliationcontrat' AND column_name='travaux_peinture') THEN ALTER TABLE contrats_resiliationcontrat DROP COLUMN travaux_peinture; END IF; END $$;",
+        "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='contrats_resiliationcontrat' AND column_name='facture_onea') THEN ALTER TABLE contrats_resiliationcontrat DROP COLUMN facture_onea; END IF; END $$;",
+        "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='contrats_resiliationcontrat' AND column_name='facture_sonabel') THEN ALTER TABLE contrats_resiliationcontrat DROP COLUMN facture_sonabel; END IF; END $$;",
+        "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='contrats_resiliationcontrat' AND column_name='travaux_ventilateur') THEN ALTER TABLE contrats_resiliationcontrat DROP COLUMN travaux_ventilateur; END IF; END $$;",
+        "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='contrats_resiliationcontrat' AND column_name='autres_depenses') THEN ALTER TABLE contrats_resiliationcontrat DROP COLUMN autres_depenses; END IF; END $$;",
+        "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='contrats_resiliationcontrat' AND column_name='description_autres_depenses') THEN ALTER TABLE contrats_resiliationcontrat DROP COLUMN description_autres_depenses; END IF; END $$;",
+    ]
+    with schema_editor.connection.cursor() as cursor:
+        for sql in statements:
+            cursor.execute(sql)
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,58 +27,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # Try to remove fields that might still exist in the database
-        # These operations will be ignored if the fields don't exist
-        migrations.SeparateDatabaseAndState(
-            database_operations=[
-                # PostgreSQL - Check and drop columns if they exist
-                migrations.RunSQL(
-                    sql="""
-                        DO $$ 
-                        BEGIN 
-                            IF EXISTS (SELECT 1 FROM information_schema.columns 
-                                       WHERE table_name='contrats_resiliationcontrat' 
-                                       AND column_name='travaux_peinture') THEN 
-                                ALTER TABLE contrats_resiliationcontrat DROP COLUMN travaux_peinture; 
-                            END IF; 
-                            
-                            IF EXISTS (SELECT 1 FROM information_schema.columns 
-                                       WHERE table_name='contrats_resiliationcontrat' 
-                                       AND column_name='facture_onea') THEN 
-                                ALTER TABLE contrats_resiliationcontrat DROP COLUMN facture_onea; 
-                            END IF; 
-                            
-                            IF EXISTS (SELECT 1 FROM information_schema.columns 
-                                       WHERE table_name='contrats_resiliationcontrat' 
-                                       AND column_name='facture_sonabel') THEN 
-                                ALTER TABLE contrats_resiliationcontrat DROP COLUMN facture_sonabel; 
-                            END IF; 
-                            
-                            IF EXISTS (SELECT 1 FROM information_schema.columns 
-                                       WHERE table_name='contrats_resiliationcontrat' 
-                                       AND column_name='travaux_ventilateur') THEN 
-                                ALTER TABLE contrats_resiliationcontrat DROP COLUMN travaux_ventilateur; 
-                            END IF; 
-                            
-                            IF EXISTS (SELECT 1 FROM information_schema.columns 
-                                       WHERE table_name='contrats_resiliationcontrat' 
-                                       AND column_name='autres_depenses') THEN 
-                                ALTER TABLE contrats_resiliationcontrat DROP COLUMN autres_depenses; 
-                            END IF; 
-                            
-                            IF EXISTS (SELECT 1 FROM information_schema.columns 
-                                       WHERE table_name='contrats_resiliationcontrat' 
-                                       AND column_name='description_autres_depenses') THEN 
-                                ALTER TABLE contrats_resiliationcontrat DROP COLUMN description_autres_depenses; 
-                            END IF; 
-                        END $$;
-                    """,
-                    reverse_sql=migrations.RunSQL.noop,
-                ),
-            ],
-            state_operations=[
-                # No state changes needed - fields already removed in migration 0036
-            ],
-        ),
+        migrations.RunPython(code=_postgres_drop_columns, reverse_code=migrations.RunPython.noop),
     ]
 
