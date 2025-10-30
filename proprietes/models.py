@@ -6,6 +6,9 @@ from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 from .managers import NonDeletedManager
 from core.duplicate_prevention import DuplicatePreventionMixin, validate_unique_contact_info
+from django.db import transaction
+from core.models import AutoNumberSequence
+from django.utils import timezone
 
 
 class TypeBien(models.Model):
@@ -115,6 +118,14 @@ class Bailleur(DuplicatePreventionMixin, models.Model):
     
     def __str__(self):
         return f"{self.get_nom_complet()} ({self.numero_bailleur})"
+
+    def save(self, *args, **kwargs):
+        # Numéro séquentiel: BAI-YYYY-xxxxx
+        if not self.numero_bailleur or self.numero_bailleur in ("", "BL0001"):
+            annee = timezone.now().year
+            next_num = AutoNumberSequence.next_number(scope='BAILLEUR', year=annee)
+            self.numero_bailleur = f"BAI-{annee}-{next_num:05d}"
+        super().save(*args, **kwargs)
     
     def get_nom_complet(self):
         return f"{self.civilite} {self.prenom} {self.nom}"
@@ -326,6 +337,14 @@ class Locataire(DuplicatePreventionMixin, models.Model):
     
     def __str__(self):
         return f"{self.get_nom_complet()} ({self.numero_locataire})"
+
+    def save(self, *args, **kwargs):
+        # Numéro séquentiel: LOC-YYYY-xxxxx
+        if not self.numero_locataire or self.numero_locataire in ("", "LT0001"):
+            annee = timezone.now().year
+            next_num = AutoNumberSequence.next_number(scope='LOCATAIRE', year=annee)
+            self.numero_locataire = f"LOC-{annee}-{next_num:05d}"
+        super().save(*args, **kwargs)
     
     def get_nom_complet(self):
         """Retourne le nom complet en gérant les cas où le prénom est vide (personnes morales)"""

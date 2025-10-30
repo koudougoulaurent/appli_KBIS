@@ -6,6 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from django.db import transaction
 
 User = get_user_model()
 
@@ -760,3 +761,31 @@ class SecurityEvent(models.Model):
     
     def __str__(self):
         return f"{self.get_event_type_display()} - {self.user or 'Anonyme'} - {self.timestamp}"
+
+
+class AutoNumberSequence(models.Model):
+    """Séquences de numérotation atomiques par portée et année."""
+    scope = models.CharField(max_length=50, verbose_name=_("Portée"))
+    year = models.PositiveIntegerField(verbose_name=_("Année"))
+    current = models.PositiveIntegerField(default=0, verbose_name=_("Compteur courant"))
+
+    class Meta:
+        app_label = 'core'
+        verbose_name = _("Séquence de numérotation")
+        verbose_name_plural = _("Séquences de numérotation")
+        unique_together = [('scope', 'year')]
+        indexes = [models.Index(fields=['scope', 'year'])]
+
+    def __str__(self):
+        return f"{self.scope}-{self.year}: {self.current}"
+
+    @classmethod
+    def next_number(cls, scope: str, year: int) -> int:
+        """Retourne le prochain numéro en toute sécurité (verrouillage transactionnel)."""
+        with transaction.atomic():
+            seq = cls.objects.select_for_update().filter(scope=scope, year=year).first()
+            if not seq:
+                seq = cls.objects.create(scope=scope, year=year, current=0)
+            seq.current += 1
+            seq.save(update_fields=['current'])
+            return seq.current
