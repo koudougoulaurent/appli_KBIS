@@ -21,7 +21,8 @@ class RecapMensuel(models.Model):
     
     # Informations de base
     bailleur = models.ForeignKey(
-        'proprietes.Bailleur', on_delete=models.PROTECT, related_name='recaps_mensuels', verbose_name=_("Bailleur")
+        'proprietes.Bailleur', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='recaps_mensuels', verbose_name=_("Bailleur")
     )
     mois_recap = models.DateField(verbose_name=_("Mois du récapitulatif"))
     
@@ -73,7 +74,8 @@ class RecapMensuel(models.Model):
         ]
     
     def __str__(self):
-        return f"Récapitulatif {self.bailleur.get_nom_complet()} - {self.mois_recap.strftime('%B %Y')}"
+        bailleur_nom = self.bailleur.get_nom_complet() if self.bailleur else "Bailleur supprimé"
+        return f"Récapitulatif {bailleur_nom} - {self.mois_recap.strftime('%B %Y')}"
     
     def get_absolute_url(self):
         return reverse('paiements:detail_recap_mensuel_auto', kwargs={'recap_id': self.pk})
