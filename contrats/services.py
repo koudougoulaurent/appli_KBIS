@@ -1802,7 +1802,8 @@ class ResiliationPDFService:
             pagesize=A4,
             rightMargin=1*cm,
             leftMargin=1*cm,
-            topMargin=3.0*cm,
+            # Laisser un léger espace sous l'en-tête pour éviter tout chevauchement
+            topMargin=3.4*cm,
             bottomMargin=0.3*cm
         )
         
@@ -1902,8 +1903,8 @@ class ResiliationPDFService:
             image_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'enteteEnImage.png')
             
             if os.path.exists(image_path):
-                # Hauteur de l'image (3.5 cm pour correspondre à l'en-tête)
-                header_height = 3.5*cm
+                # Hauteur de l'image d'en-tête, légèrement réduite pour éviter la collision avec le titre
+                header_height = 3.0*cm
                 
                 # Calculer la largeur de l'image en conservant le ratio
                 image_width = page_width
@@ -1920,16 +1921,18 @@ class ResiliationPDFService:
                 # Dessiner une bordure en bas de l'en-tête
                 canvas_obj.setStrokeColor(colors.darkred)
                 canvas_obj.setLineWidth(2)
+                # Ligne de séparation juste sous l'en-tête
                 canvas_obj.line(0, page_height - header_height, page_width, page_height - header_height)
             else:
                 # Fallback si l'image n'existe pas
+                header_height = 3.0*cm
                 canvas_obj.setFillColor(colors.lightcoral)
-                canvas_obj.rect(0, page_height - 3.5*cm, page_width, 3.5*cm, fill=1, stroke=0)
+                canvas_obj.rect(0, page_height - header_height, page_width, header_height, fill=1, stroke=0)
                 
                 if self.config_entreprise:
                     canvas_obj.setFillColor(colors.white)
                     canvas_obj.setFont("Helvetica-Bold", 16)
-                    canvas_obj.drawString(2*cm, page_height - 2*cm, self.config_entreprise.nom_entreprise)
+                    canvas_obj.drawString(2*cm, page_height - (header_height/2), self.config_entreprise.nom_entreprise)
                     
         except Exception as e:
             # En cas d'erreur, utiliser un en-tête simple
