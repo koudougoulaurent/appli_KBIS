@@ -127,14 +127,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const successElements = document.querySelectorAll('.alert-success');
     successElements.forEach(element => {
         const text = element.textContent.toLowerCase();
-        
-        if (text.includes('paiement') && text.includes('enregistré')) {
+
+        // Priorité à la résiliation pour éviter les collisions avec "créée"
+        if (text.includes('résiliation') || text.includes('résilié')) {
+            element.innerHTML = `
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <strong>Résiliation effectuée avec succès !</strong><br>
+                <small>Le contrat est désormais clôturé. Vous pouvez gérer les dépenses de sortie et générer le PDF de résiliation.</small>
+            `;
+        } else if (text.includes('paiement') && text.includes('enregistré')) {
             element.innerHTML = `
                 <i class="bi bi-check-circle-fill me-2"></i>
                 <strong>Paiement enregistré avec succès !</strong><br>
                 <small>Vous pouvez maintenant générer un récépissé ou une quittance. Utilisez les boutons d'action dans la liste.</small>
             `;
-        } else if (text.includes('contrat') && text.includes('créé')) {
+        } else if (text.includes('contrat') && /\bcréé(?!e)/.test(text)) {
             element.innerHTML = `
                 <i class="bi bi-check-circle-fill me-2"></i>
                 <strong>Contrat créé avec succès !</strong><br>

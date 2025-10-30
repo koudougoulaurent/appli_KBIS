@@ -1686,7 +1686,7 @@ class RecuCautionPDFService:
         elements = []
         
         elements.append(Paragraph("SIGNATURES", self.styles['CustomHeading']))
-        elements.append(Spacer(1, 20))
+        elements.append(Spacer(1, 8))
         
         # Tableau des signatures amélioré
         signature_data = [
@@ -1704,9 +1704,9 @@ class RecuCautionPDFService:
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTNAME', (0, 1), (0, 2), 'Helvetica'),  # Lignes de signature
             ('FONTNAME', (0, 3), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
-            ('TOPPADDING', (0, 0), (-1, -1), 15),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
             ('LINEBELOW', (0, 1), (0, 2), 2, colors.black),  # Ligne de signature plus épaisse
             ('LINEBELOW', (1, 1), (1, 2), 2, colors.black),  # Ligne de signature plus épaisse
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
@@ -1715,13 +1715,13 @@ class RecuCautionPDFService:
         ]))
         
         elements.append(signature_table)
-        elements.append(Spacer(1, 30))
+        elements.append(Spacer(1, 12))
         
         # Ajouter le nom de l'utilisateur qui a généré le document
         if hasattr(self, 'user') and self.user:
             user_name = self.user.get_full_name() or self.user.username
             elements.append(Paragraph(f"<b>Document généré par :</b> {user_name}", self.styles['CustomBody']))
-            elements.append(Spacer(1, 10))
+            elements.append(Spacer(1, 6))
         
         return elements
 
@@ -1742,8 +1742,8 @@ class ResiliationPDFService:
         self.styles.add(ParagraphStyle(
             name='CustomTitle',
             parent=self.styles['Title'],
-            fontSize=18,
-            spaceAfter=20,
+            fontSize=16,
+            spaceAfter=12,
             alignment=TA_CENTER,
             textColor=colors.darkred
         ))
@@ -1752,9 +1752,9 @@ class ResiliationPDFService:
         self.styles.add(ParagraphStyle(
             name='CustomHeading',
             parent=self.styles['Heading1'],
-            fontSize=14,
-            spaceAfter=12,
-            spaceBefore=20,
+            fontSize=12,
+            spaceAfter=8,
+            spaceBefore=12,
             textColor=colors.darkred
         ))
         
@@ -1762,8 +1762,8 @@ class ResiliationPDFService:
         self.styles.add(ParagraphStyle(
             name='CustomBody',
             parent=self.styles['Normal'],
-            fontSize=10,
-            spaceAfter=6,
+            fontSize=9,
+            spaceAfter=4,
             alignment=TA_JUSTIFY
         ))
         
@@ -1771,8 +1771,8 @@ class ResiliationPDFService:
         self.styles.add(ParagraphStyle(
             name='CustomSignature',
             parent=self.styles['Normal'],
-            fontSize=10,
-            spaceAfter=20,
+            fontSize=9,
+            spaceAfter=12,
             alignment=TA_CENTER
         ))
 
@@ -1802,8 +1802,8 @@ class ResiliationPDFService:
             pagesize=A4,
             rightMargin=1*cm,
             leftMargin=1*cm,
-            topMargin=3.5*cm,  # Marge supérieure réduite
-            bottomMargin=0.5*cm  # Marge inférieure très réduite
+            topMargin=3.0*cm,
+            bottomMargin=0.3*cm
         )
         
         # Construction du contenu du PDF
@@ -1814,15 +1814,15 @@ class ResiliationPDFService:
             "AVIS DE RÉSILIATION DE CONTRAT",
             self.styles['CustomTitle']
         ))
-        story.append(Spacer(1, 10))  # Réduit de 20 à 10
+        story.append(Spacer(1, 6))
         
         # Informations de la résiliation
         story.extend(self._create_resiliation_info())
-        story.append(Spacer(1, 10))  # Réduit de 20 à 10
+        story.append(Spacer(1, 6))
         
         # Informations du contrat
         story.extend(self._create_contract_info())
-        story.append(Spacer(1, 10))  # Réduit de 20 à 10
+        story.append(Spacer(1, 6))
         
         # Motifs et conditions
         story.extend(self._create_termination_details())
