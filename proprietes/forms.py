@@ -6,6 +6,8 @@ from .models import Propriete, Bailleur, Locataire, TypeBien, ChargesBailleur, P
 from django.core.validators import RegexValidator
 # Imports supprimés - utilisation du système simple comme BailleurForm
 import re
+from django.utils import timezone
+from core.models import AutoNumberSequence
 
 # Validation personnalisée pour les numéros de téléphone français
 phone_regex_fr = RegexValidator(
@@ -862,6 +864,11 @@ class BailleurForm(forms.ModelForm):
         self.fields['numero_bailleur'].widget.attrs['readonly'] = True
         # Ne pas exiger la valeur: le modèle l'assignera au save()
         self.fields['numero_bailleur'].required = False
+        # Pré-remplir automatiquement (aperçu non bloquant)
+        if not self.instance.pk and not self.is_bound:
+            annee = timezone.now().year
+            preview = AutoNumberSequence.preview_next_number('BAILLEUR', annee)
+            self.fields['numero_bailleur'].initial = f"BAI-{annee}-{preview:04d}"
     
     
     # Validation personnalisée pour le téléphone
@@ -935,7 +942,8 @@ class BailleurForm(forms.ModelForm):
             'numero_bailleur': forms.TextInput(attrs={
                 'class': 'form-control',
                 'readonly': 'readonly',
-                'placeholder': 'Généré automatiquement'
+                # Affiche directement la valeur initialisée par le formulaire
+                'placeholder': ''
             }),
             'civilite': forms.Select(attrs={
                 'class': 'form-select'
