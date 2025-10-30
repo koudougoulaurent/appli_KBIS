@@ -860,6 +860,8 @@ class BailleurForm(forms.ModelForm):
         
         # Rendre le champ numero_bailleur en lecture seule
         self.fields['numero_bailleur'].widget.attrs['readonly'] = True
+        # Ne pas exiger la valeur: le modèle l'assignera au save()
+        self.fields['numero_bailleur'].required = False
     
     
     # Validation personnalisée pour le téléphone
