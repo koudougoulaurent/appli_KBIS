@@ -698,22 +698,8 @@ def ajouter_bailleur(request):
             bailleur = form.save(commit=False)
             bailleur.cree_par = request.user
             
-            # Générer automatiquement le numéro unique de bailleur avec protection contre les conflits
-            if not bailleur.numero_bailleur:
-                from core.robust_id_generator import RobustIDGenerator
-                from django.db import transaction
-                
-                try:
-                    # Utiliser le générateur robuste qui gère les conflits de concurrence
-                    with transaction.atomic():
-                        bailleur.numero_bailleur = RobustIDGenerator.generate_unique_id('bailleur')
-                except Exception as e:
-                    # En cas d'échec, utiliser un ID avec timestamp et UUID
-                    import uuid
-                    from datetime import datetime
-                    timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')[:-3]
-                    unique_id = str(uuid.uuid4())[:8]
-                    bailleur.numero_bailleur = f"BAI-{datetime.now().year}-{timestamp}-{unique_id}"
+            # Laisser le modèle (save) attribuer le numéro séquentiel (AutoNumberSequence)
+            # Pas de génération ici pour éviter les formats incohérents
             
             bailleur.save()
             
@@ -759,19 +745,8 @@ def ajouter_bailleur(request):
                 messages.error(request, '❌ <strong>Veuillez corriger les erreurs dans le formulaire.</strong>')
     else:
         form = BailleurForm()
-        # Pré-générer le numéro unique pour l'affichage
-        try:
-            from core.robust_id_generator import RobustIDGenerator
-            initial_numero = RobustIDGenerator.generate_unique_id('bailleur')
-            form.fields['numero_bailleur'].initial = initial_numero
-        except Exception as e:
-            print(f"Erreur lors de la génération du numéro: {e}")
-            # Fallback avec timestamp
-            from datetime import datetime
-            import uuid
-            timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')[:-3]
-            unique_id = str(uuid.uuid4())[:8]
-            form.fields['numero_bailleur'].initial = f"BAI-{datetime.now().year}-{timestamp}-{unique_id}"
+        # Ne pas pré-générer; laisser vide/readonly, il sera attribué à l'enregistrement
+        form.fields['numero_bailleur'].initial = ''
     
     context = {
         'form': form,

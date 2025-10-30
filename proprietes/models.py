@@ -120,11 +120,11 @@ class Bailleur(DuplicatePreventionMixin, models.Model):
         return f"{self.get_nom_complet()} ({self.numero_bailleur})"
 
     def save(self, *args, **kwargs):
-        # Numéro séquentiel: BAI-YYYY-xxxxx
+        # Numéro séquentiel: BAI-YYYY-0001
         if not self.numero_bailleur or self.numero_bailleur in ("", "BL0001"):
             annee = timezone.now().year
             next_num = AutoNumberSequence.next_number(scope='BAILLEUR', year=annee)
-            self.numero_bailleur = f"BAI-{annee}-{next_num:05d}"
+            self.numero_bailleur = f"BAI-{annee}-{next_num:04d}"
         super().save(*args, **kwargs)
     
     def get_nom_complet(self):
@@ -339,11 +339,11 @@ class Locataire(DuplicatePreventionMixin, models.Model):
         return f"{self.get_nom_complet()} ({self.numero_locataire})"
 
     def save(self, *args, **kwargs):
-        # Numéro séquentiel: LOC-YYYY-xxxxx
+        # Numéro séquentiel: LOC-YYYY-0001
         if not self.numero_locataire or self.numero_locataire in ("", "LT0001"):
             annee = timezone.now().year
             next_num = AutoNumberSequence.next_number(scope='LOCATAIRE', year=annee)
-            self.numero_locataire = f"LOC-{annee}-{next_num:05d}"
+            self.numero_locataire = f"LOC-{annee}-{next_num:04d}"
         super().save(*args, **kwargs)
     
     def get_nom_complet(self):
