@@ -867,7 +867,26 @@ class BailleurForm(forms.ModelForm):
         # Pré-remplir automatiquement (aperçu non bloquant)
         if not self.instance.pk and not self.is_bound:
             annee = timezone.now().year
-            idx = AutoNumberSequence.preview_next_number('BAILLEUR', annee)
+            # Prévisualisation robuste: compatible même si le serveur n'a pas la méthode preview
+            try:
+                preview_fn = getattr(AutoNumberSequence, 'preview_next_number', None)
+                if callable(preview_fn):
+                    idx = preview_fn('BAILLEUR', annee)
+                else:
+                    raise AttributeError
+            except Exception:
+                # Fallback: déterminer le prochain numéro en lisant la base existante
+                # Chercher le max pour l'année courante
+                pattern = rf"^BAI-{annee}-(\d{{4}})$"
+                max_idx = 0
+                for nb in Bailleur.objects.filter(numero_bailleur__startswith=f"BAI-{annee}-").values_list('numero_bailleur', flat=True):
+                    m = re.match(pattern, nb or '')
+                    if m:
+                        try:
+                            max_idx = max(max_idx, int(m.group(1)))
+                        except ValueError:
+                            continue
+                idx = max_idx + 1
             # Eviter collisions: avancer jusqu'à numéro libre
             while True:
                 candidate = f"BAI-{annee}-{idx:04d}"
