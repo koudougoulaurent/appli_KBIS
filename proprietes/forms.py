@@ -867,8 +867,15 @@ class BailleurForm(forms.ModelForm):
         # Pré-remplir automatiquement (aperçu non bloquant)
         if not self.instance.pk and not self.is_bound:
             annee = timezone.now().year
-            preview = AutoNumberSequence.preview_next_number('BAILLEUR', annee)
-            self.fields['numero_bailleur'].initial = f"BAI-{annee}-{preview:04d}"
+            idx = AutoNumberSequence.preview_next_number('BAILLEUR', annee)
+            # Eviter collisions: avancer jusqu'à numéro libre
+            while True:
+                candidate = f"BAI-{annee}-{idx:04d}"
+                if not Bailleur.objects.filter(numero_bailleur=candidate).exists():
+                    break
+                idx += 1
+            self.fields['numero_bailleur'].initial = candidate
+            self.initial['numero_bailleur'] = candidate
     
     
     # Validation personnalisée pour le téléphone

@@ -123,8 +123,14 @@ class Bailleur(DuplicatePreventionMixin, models.Model):
         # Numéro séquentiel: BAI-YYYY-0001
         if not self.numero_bailleur or self.numero_bailleur in ("", "BL0001"):
             annee = timezone.now().year
+            # Première attribution depuis la séquence
             next_num = AutoNumberSequence.next_number(scope='BAILLEUR', year=annee)
-            self.numero_bailleur = f"BAI-{annee}-{next_num:04d}"
+            candidate = f"BAI-{annee}-{next_num:04d}"
+            # Sécuriser contre un éventuel décalage historique (données existantes)
+            while Bailleur.objects.filter(numero_bailleur=candidate).exists():
+                next_num = AutoNumberSequence.next_number(scope='BAILLEUR', year=annee)
+                candidate = f"BAI-{annee}-{next_num:04d}"
+            self.numero_bailleur = candidate
         super().save(*args, **kwargs)
     
     def get_nom_complet(self):
