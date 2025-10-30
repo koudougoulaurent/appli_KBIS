@@ -1371,6 +1371,10 @@ class ResiliationContrat(models.Model):
     def calculer_total_depenses(self):
         """Calcule le total des dépenses dynamiques."""
         from decimal import Decimal
+        # Si l'instance n'a pas encore de PK, il est impossible
+        # d'accéder à la relation self.depenses sans erreur.
+        if not self.pk:
+            return Decimal('0')
         total = Decimal('0')
         for depense in self.depenses.all():
             total += depense.montant
@@ -1402,17 +1406,35 @@ class ResiliationContrat(models.Model):
         return max(Decimal('0'), solde)
     
     def save(self, *args, **kwargs):
-        """Override save pour mettre à jour le contrat et calculer automatiquement les montants."""
+        """Override save pour mettre à jour le contrat et calculer automatiquement les montants.
+        
+        - Lors de la création (pas de PK), on évite d'accéder à la relation `depenses`.
+        - Après la première sauvegarde, on recalcule proprement les montants.
+        """
         from decimal import Decimal
-        
-        # Calculer les montants automatiquement
-        self.total_depenses = self.calculer_total_depenses()
-        self.caution_versee = self.recuperer_caution_contractuelle()
-        self.solde_restant = self.calculer_solde_restant()
-        
-        super().save(*args, **kwargs)
-        
-        # Mettre à jour le contrat
+
+        is_new_instance = self.pk is None
+
+        if is_new_instance:
+            # Initialiser des valeurs sûres sans accéder à `depenses`
+            self.total_depenses = Decimal('0')
+            self.caution_versee = self.recuperer_caution_contractuelle()
+            self.solde_restant = self.caution_versee
+            super().save(*args, **kwargs)
+
+            # Recalcul après obtention du PK (les dépenses peuvent maintenant exister)
+            self.total_depenses = self.calculer_total_depenses()
+            self.caution_versee = self.recuperer_caution_contractuelle()
+            self.solde_restant = self.calculer_solde_restant()
+            super().save(update_fields=['total_depenses', 'caution_versee', 'solde_restant'])
+        else:
+            # Mise à jour normale
+            self.total_depenses = self.calculer_total_depenses()
+            self.caution_versee = self.recuperer_caution_contractuelle()
+            self.solde_restant = self.calculer_solde_restant()
+            super().save(*args, **kwargs)
+
+        # Mettre à jour le contrat si la résiliation est validée
         if self.statut == 'validee':
             self.contrat.est_resilie = True
             self.contrat.date_resiliation = self.date_resiliation
