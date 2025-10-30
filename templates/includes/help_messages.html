@@ -28,6 +28,19 @@
         </div>
     </div>
 
+    <div class="help-message" id="help-resiliation-success" style="display: none;">
+        <div class="help-content">
+            <i class="bi bi-check-circle-fill text-success"></i>
+            <div class="help-text">
+                <strong>Résiliation effectuée avec succès !</strong><br>
+                <small>Le contrat est désormais clôturé. Vous pouvez gérer les dépenses de sortie et générer le PDF de résiliation.</small>
+            </div>
+            <button class="help-close" onclick="closeHelp('help-resiliation-success')">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+    </div>
+
     <div class="help-message" id="help-property-success" style="display: none;">
         <div class="help-content">
             <i class="bi bi-check-circle-fill text-success"></i>
@@ -203,10 +216,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const alerts = document.querySelectorAll('.alert-success');
     alerts.forEach(alert => {
         const text = alert.textContent.toLowerCase();
-        
+
+        // Résiliation en priorité pour éviter de matcher "créé" dans "créée"
+        if (text.includes('résiliation') || text.includes('résilié')) {
+            setTimeout(() => showHelp('help-resiliation-success'), 1000);
+            return;
+        }
+
         if (text.includes('paiement') && text.includes('enregistré')) {
             setTimeout(() => showHelp('help-payment-success'), 1000);
-        } else if (text.includes('contrat') && text.includes('créé')) {
+        } else if (text.includes('contrat') && text.includes('créé ') || (text.includes('contrat') && text.match(/créé(?!e)/))) {
+            // Contrat créé (évite de déclencher sur "créée")
             setTimeout(() => showHelp('help-contract-success'), 1000);
         } else if (text.includes('propriété') && text.includes('ajoutée')) {
             setTimeout(() => showHelp('help-property-success'), 1000);
