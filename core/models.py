@@ -789,3 +789,11 @@ class AutoNumberSequence(models.Model):
             seq.current += 1
             seq.save(update_fields=['current'])
             return seq.current
+
+    @classmethod
+    def preview_next_number(cls, scope: str, year: int) -> int:
+        """Aperçu du prochain numéro sans consommer la séquence (pas de lock)."""
+        seq = cls.objects.filter(scope=scope, year=year).only('current').first()
+        if not seq:
+            return 1
+        return (seq.current or 0) + 1

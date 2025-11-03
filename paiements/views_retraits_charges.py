@@ -114,7 +114,8 @@ def integrer_charge_specifique(request, retrait_id, charge_id):
         if montant_effectivement_deduit > 0:
             # Mettre à jour le retrait
             retrait.montant_charges_bailleur += Decimal(str(montant_effectivement_deduit))
-            retrait.montant_net_a_payer = retrait.montant_loyers_bruts - retrait.montant_charges_deductibles - retrait.montant_charges_bailleur
+            # Recalculer tous les montants (net, commission, montant réellement payé)
+            retrait.calculer_montant_net()
             retrait.save()
             
             messages.success(
@@ -172,7 +173,8 @@ def retirer_charge_retrait(request, retrait_id, charge_id):
         
         # Mettre à jour le retrait
         retrait.montant_charges_bailleur -= montant_deja_deduit
-        retrait.montant_net_a_payer = retrait.montant_loyers_bruts - retrait.montant_charges_deductibles - retrait.montant_charges_bailleur
+        # Recalculer tous les montants (net, commission, montant réellement payé)
+        retrait.calculer_montant_net()
         retrait.save()
         
         messages.success(

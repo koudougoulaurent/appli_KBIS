@@ -356,15 +356,15 @@ class DocumentKBISUnifie:
     def _get_titre_document(type_document):
         """Retourne le titre selon le type de document"""
         titres = {
-            'recu': 'RÉCÉPISSÉ DE PAIEMENT',
-            'recu_loyer': 'RÉCÉPISSÉ DE LOYER',
-            'recu_caution': 'RÉCÉPISSÉ DE CAUTION',
-            'recu_avance': 'RÉCÉPISSÉ D\'AVANCE',
-            'recu_charges': 'RÉCÉPISSÉ DE CHARGES',
+            'recu': 'QUITTANCE DE PAIEMENT',
+            'recu_loyer': 'QUITTANCE DE LOYER',
+            'recu_caution': 'QUITTANCE DE CAUTION',
+            'recu_avance': 'QUITTANCE D\'AVANCE',
+            'recu_charges': 'QUITTANCE DE CHARGES',
             'quittance': 'QUITTANCE DE PAIEMENT',
             'quittance_loyer': 'QUITTANCE DE LOYER',
         }
-        return titres.get(type_document, 'RÉCÉPISSÉ DE PAIEMENT')
+        return titres.get(type_document, 'QUITTANCE DE PAIEMENT')
     
     @staticmethod
     def _get_image_entete():

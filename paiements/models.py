@@ -1337,6 +1337,22 @@ class RetraitBailleur(models.Model):
         verbose_name=_("Montant net à payer")
     )
     
+    commission_agence = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Commission agence (10%)"),
+        help_text=_("Commission de l'agence de gestion immobilière (10% du montant net)")
+    )
+    
+    montant_reellement_paye = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Montant réellement payé"),
+        help_text=_("Montant net - Commission agence - Charges bailleur")
+    )
+    
     # Configuration
     statut = models.CharField(
         max_length=20,
@@ -1463,13 +1479,20 @@ class RetraitBailleur(models.Model):
         return charges_disponibles
     
     def calculer_montant_net(self):
-        """Calcule le montant net à payer avec les charges bailleur dynamiques"""
+        """Calcule le montant net à payer avec les charges bailleur dynamiques et la commission agence"""
         # Calculer les charges bailleur disponibles
         self.montant_charges_bailleur = self.calculer_charges_bailleur_disponibles()
         
         # Calculer le montant net
         net = self.montant_loyers_bruts - self.montant_charges_deductibles - self.montant_charges_bailleur
         self.montant_net_a_payer = max(net, Decimal('0'))
+        
+        # Commission agence = 10% du montant net à payer (obligatoire)
+        self.commission_agence = self.montant_net_a_payer * Decimal('0.10')
+        
+        # Montant réellement payé = montant net - commission agence - charges bailleur
+        self.montant_reellement_paye = self.montant_net_a_payer - self.commission_agence - self.montant_charges_bailleur
+        
         return self.montant_net_a_payer
     
     def valider(self, user):

@@ -3,6 +3,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from datetime import date
 from dateutil.relativedelta import relativedelta
+from decimal import Decimal
 from .models import ChargeDeductible, ChargeBailleur
 from .services_retrait import ServiceGestionRetrait
 
@@ -89,6 +90,8 @@ def mettre_a_jour_retrait_charge_bailleur(sender, instance, created, **kwargs):
                                 retrait.montant_charges_deductibles = calcul['montant_charges_deductibles']
                                 retrait.montant_charges_bailleur = calcul['montant_charges_bailleur']
                                 retrait.montant_net_a_payer = calcul['montant_net_total']
+                                retrait.commission_agence = calcul.get('commission_agence', Decimal('0'))
+                                retrait.montant_reellement_paye = calcul.get('montant_reellement_paye', Decimal('0'))
                                 retrait.save()
                                 
             except Exception as e:
@@ -168,6 +171,8 @@ def mettre_a_jour_retrait_suppression_charge_bailleur(sender, instance, **kwargs
                     retrait.montant_charges_deductibles = calcul['montant_charges_deductibles']
                     retrait.montant_charges_bailleur = calcul['montant_charges_bailleur']
                     retrait.montant_net_a_payer = calcul['montant_net_total']
+                    retrait.commission_agence = calcul.get('commission_agence', Decimal('0'))
+                    retrait.montant_reellement_paye = calcul.get('montant_reellement_paye', Decimal('0'))
                     retrait.save()
     except Exception as e:
         # Log l'erreur mais ne pas faire échouer la suppression

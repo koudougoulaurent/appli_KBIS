@@ -387,7 +387,15 @@
         
         <!-- Section montant -->
         <div class="amount-section">
-            {% if montant_net_paye %}
+            {% if document_type == 'retrait_quittance' or document_type == 'retrait_recu' %}
+                {% if montant_reellement_paye %}
+                    <div class="amount">{{ montant_reellement_paye|floatformat:0 }} F CFA</div>
+                    <div class="amount-words">{{ montant_reellement_paye_lettres }}</div>
+                {% else %}
+                    <div class="amount">{{ montant_total|floatformat:0 }} F CFA</div>
+                    <div class="amount-words">{{ montant_lettres }}</div>
+                {% endif %}
+            {% elif montant_net_paye %}
                 <div class="amount">{{ montant_net_paye|floatformat:0 }} F CFA</div>
                 <div class="amount-words">{{ montant_net_lettres }}</div>
             {% else %}
@@ -489,7 +497,20 @@
             <div class="payment-info-right">
                 <div class="amount-display">
                     <div style="font-size: 12px; color: #2c5aa0; font-weight: bold; text-align: center;">
-                        {% if montant_net_paye %}
+                        {% if document_type == 'retrait_quittance' or document_type == 'retrait_recu' %}
+                            {% if montant_reellement_paye %}
+                                <div style="margin-bottom: 3px;">Montant net: {{ montant_net|floatformat:0 }} F CFA</div>
+                                <div style="margin-bottom: 3px; color: #dc3545;">- Commission (10%): {{ commission_agence|floatformat:0 }} F CFA</div>
+                                {% if charges_bailleur > 0 %}
+                                <div style="margin-bottom: 3px; color: #dc3545;">- Charges bailleur: {{ charges_bailleur|floatformat:0 }} F CFA</div>
+                                {% endif %}
+                                <div style="margin-top: 5px; font-size: 14px; border-top: 1px solid #2c5aa0; padding-top: 3px;">
+                                    <strong>Montant réellement payé: {{ montant_reellement_paye|floatformat:0 }} F CFA</strong>
+                                </div>
+                            {% else %}
+                                Montant net: {{ montant_total|floatformat:0 }} F CFA
+                            {% endif %}
+                        {% elif montant_net_paye %}
                             Montant net: {{ montant_net_paye|floatformat:0 }} F CFA
                         {% else %}
                             Montant: {{ montant_total|floatformat:0 }} F CFA
@@ -525,7 +546,7 @@
                     {% elif document_type == 'paiement_quittance' %}
                         Paiement de loyer - Période {{ paiement.mois_paye|default:"courante" }}
                     {% elif document_type == 'retrait_quittance' or document_type == 'retrait_recu' %}
-                        Récépissé de retrait - Montant versé au bailleur ({{ periode_retrait }})
+                        Retrait bailleur - Montant réellement payé ({{ periode_retrait }}){% if commission_agence %} - Commission agence: {{ commission_agence|floatformat:0 }} F CFA (10%){% endif %}
                     {% elif document_type == 'recap_quittance' %}
                         Quittance de récapitulatif - Montant versé au bailleur
                     {% elif document_type == 'paiement_recu' and 'avance' in type_paiement|lower %}

@@ -243,6 +243,7 @@ class RetraitBailleurAdmin(admin.ModelAdmin):
     list_display = [
         'bailleur', 'mois_retrait', 'montant_loyers_bruts', 
         'montant_charges_deductibles', 'montant_net_a_payer',
+        'commission_agence', 'montant_reellement_paye',
         'type_retrait', 'statut', 'mode_retrait', 'date_demande'
     ]
     
@@ -257,7 +258,8 @@ class RetraitBailleurAdmin(admin.ModelAdmin):
     ]
     
     readonly_fields = [
-        'montant_net_a_payer', 'date_demande', 'created_at', 'updated_at'
+        'montant_net_a_payer', 'commission_agence', 'montant_reellement_paye',
+        'date_demande', 'created_at', 'updated_at'
     ]
     
     fieldsets = (
@@ -265,7 +267,11 @@ class RetraitBailleurAdmin(admin.ModelAdmin):
             'fields': ('bailleur', 'mois_retrait', 'type_retrait', 'mode_retrait')
         }),
         ('Montants', {
-            'fields': ('montant_loyers_bruts', 'montant_charges_deductibles', 'montant_net_a_payer')
+            'fields': (
+                'montant_loyers_bruts', 'montant_charges_deductibles', 
+                'montant_charges_bailleur', 'montant_net_a_payer',
+                'commission_agence', 'montant_reellement_paye'
+            )
         }),
         ('Statut', {
             'fields': ('statut',)

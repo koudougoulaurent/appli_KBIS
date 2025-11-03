@@ -28,10 +28,10 @@ class DocumentUnifieA5ServiceComplet:
         
         Args:
             document_type (str): Type de document
-                - 'paiement_recu': Récépissé de paiement
+                - 'paiement_recu': Quittance de paiement
                 - 'paiement_quittance': Quittance de paiement
-                - 'paiement_avance': Récépissé d'avance
-                - 'paiement_caution': Récépissé de caution
+                - 'paiement_avance': Quittance de paiement d'avance
+                - 'paiement_caution': Quittance de paiement de caution
                 - 'retrait_quittance': Quittance de retrait
                 - 'recap_quittance': Quittance de récapitulatif
             user: Utilisateur qui génère le document
@@ -42,12 +42,12 @@ class DocumentUnifieA5ServiceComplet:
         try:
             # Déterminer le type de document et le titre
             document_titles = {
-                'paiement_recu': 'RÉCÉPISSÉ DE PAIEMENT',
+                'paiement_recu': 'QUITTANCE DE PAIEMENT',
                 'paiement_quittance': 'QUITTANCE DE PAIEMENT',
-                'paiement_avance': 'RÉCÉPISSÉ DE PAIEMENT D\'AVANCE',
-                'paiement_caution': 'RÉCÉPISSÉ DE PAIEMENT DE CAUTION',
-                'retrait_quittance': 'RÉCÉPISSÉ DE RETRAIT',
-                'retrait_recu': 'RÉCÉPISSÉ DE RETRAIT',
+                'paiement_avance': 'QUITTANCE DE PAIEMENT D\'AVANCE',
+                'paiement_caution': 'QUITTANCE DE PAIEMENT DE CAUTION',
+                'retrait_quittance': 'QUITTANCE DE RETRAIT',
+                'retrait_recu': 'QUITTANCE DE RETRAIT',
                 'recap_quittance': 'QUITTANCE DE RÉCAPITULATIF'
             }
             
@@ -185,11 +185,14 @@ class DocumentUnifieA5ServiceComplet:
             'mode_paiement': retrait.get_mode_retrait_display(),
             'date_paiement': retrait.mois_retrait,
             'montant_total': retrait.montant_net_a_payer,
-            'montant_lettres': self._convertir_en_lettres(retrait.montant_net_a_payer),
+            'montant_lettres': self._convertir_en_lettres(retrait.montant_reellement_paye or retrait.montant_net_a_payer),
             'montant_brut': retrait.montant_loyers_bruts,
             'charges_deduites': retrait.montant_charges_deductibles,
             'charges_bailleur': retrait.montant_charges_bailleur,
             'montant_net': retrait.montant_net_a_payer,
+            'commission_agence': retrait.commission_agence,
+            'montant_reellement_paye': retrait.montant_reellement_paye,
+            'montant_reellement_paye_lettres': self._convertir_en_lettres(retrait.montant_reellement_paye) if retrait.montant_reellement_paye else '',
             'bailleur': retrait.bailleur,
             'contrat': None,  # Pas de contrat direct pour les retraits
             'locataire': None,  # Pas de locataire direct pour les retraits

@@ -157,12 +157,23 @@ class ServiceGestionRetrait:
             # Montant net total
             montant_net_total = total_loyers_bruts - total_charges_deductibles - total_charges_bailleur
             
+            # Commission agence = 10% du montant net à payer (obligatoire)
+            commission_agence = montant_net_total * Decimal('0.10')
+            
+            # Montant réellement payé = montant net - commission agence - charges bailleur
+            # Note: Les charges bailleur sont déjà déduites dans montant_net_total,
+            # donc montant_reellement_paye = montant_net_total - commission_agence
+            # Mais selon la demande, on déduit aussi les charges bailleur si elles existent
+            montant_reellement_paye = montant_net_total - commission_agence - total_charges_bailleur
+            
             return {
                 'success': True,
                 'montant_loyers_bruts': total_loyers_bruts,
                 'montant_charges_deductibles': total_charges_deductibles,
                 'montant_charges_bailleur': total_charges_bailleur,
                 'montant_net_total': montant_net_total,
+                'commission_agence': commission_agence,
+                'montant_reellement_paye': montant_reellement_paye,
                 'details_proprietes': details_proprietes,
                 'proprietes_count': proprietes_actives.count()
             }
@@ -226,6 +237,8 @@ class ServiceGestionRetrait:
                     montant_charges_deductibles=calcul['montant_charges_deductibles'],
                     montant_charges_bailleur=calcul['montant_charges_bailleur'],
                     montant_net_a_payer=calcul['montant_net_total'],
+                    commission_agence=calcul.get('commission_agence', Decimal('0')),
+                    montant_reellement_paye=calcul.get('montant_reellement_paye', Decimal('0')),
                     statut='en_attente',
                     type_retrait='mensuel',
                     mode_retrait='virement',
@@ -274,6 +287,8 @@ class ServiceGestionRetrait:
                     retrait.montant_charges_deductibles = calcul['montant_charges_deductibles']
                     retrait.montant_charges_bailleur = calcul['montant_charges_bailleur']
                     retrait.montant_net_a_payer = calcul['montant_net_total']
+                    retrait.commission_agence = calcul.get('commission_agence', Decimal('0'))
+                    retrait.montant_reellement_paye = calcul.get('montant_reellement_paye', Decimal('0'))
                     retrait.save()
             
             return {

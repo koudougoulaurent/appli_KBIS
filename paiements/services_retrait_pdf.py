@@ -189,9 +189,23 @@ class ServiceGenerationRetraitPDF:
                     <span>Total Charges Bailleur:</span>
                     <span>- {{ donnees.total_charges_bailleur|floatformat:0 }} F CFA</span>
                 </div>
-                <div class="total-line total-final">
+                <div class="total-line">
                     <span>MONTANT NET À PAYER:</span>
                     <span>{{ donnees.montant_net_total|floatformat:0 }} F CFA</span>
+                </div>
+                <div class="total-line" style="color: #dc3545;">
+                    <span>- Commission agence (10%):</span>
+                    <span>- {{ donnees.commission_agence|floatformat:0 }} F CFA</span>
+                </div>
+                {% if donnees.total_charges_bailleur > 0 %}
+                <div class="total-line" style="color: #dc3545;">
+                    <span>- Charges bailleur:</span>
+                    <span>- {{ donnees.total_charges_bailleur|floatformat:0 }} F CFA</span>
+                </div>
+                {% endif %}
+                <div class="total-line total-final">
+                    <span>MONTANT RÉELLEMENT PAYÉ:</span>
+                    <span>{{ donnees.montant_reellement_paye|floatformat:0 }} F CFA</span>
                 </div>
             </div>
             
@@ -269,12 +283,20 @@ class ServiceGenerationRetraitPDF:
         
         montant_net_total = total_loyers_bruts - total_charges_deductibles - total_charges_bailleur
         
+        # Commission agence = 10% du montant net à payer (obligatoire)
+        commission_agence = montant_net_total * Decimal('0.10')
+        
+        # Montant réellement payé = montant net - commission agence - charges bailleur
+        montant_reellement_paye = montant_net_total - commission_agence - total_charges_bailleur
+        
         return {
             'proprietes': proprietes_details,
             'total_loyers_bruts': total_loyers_bruts,
             'total_charges_deductibles': total_charges_deductibles,
             'total_charges_bailleur': total_charges_bailleur,
             'montant_net_total': montant_net_total,
+            'commission_agence': commission_agence,
+            'montant_reellement_paye': montant_reellement_paye,
         }
     
     def _enregistrer_historique(self, template, retrait, nom_fichier, taille_fichier):

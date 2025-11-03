@@ -21,7 +21,7 @@ class DocumentUnifieA5Service:
     
     def generer_recu_unifie(self, paiement_id, document_type='recu', user=None):
         """
-        Génère un récépissé unifié au format A5.
+        Génère une quittance unifiée au format A5.
         
         Args:
             paiement_id (int): ID du paiement
@@ -40,13 +40,13 @@ class DocumentUnifieA5Service:
             
             # Déterminer le type de document et le titre
             document_titles = {
-                'recu': 'RÉCÉPISSÉ DE PAIEMENT',
+                'recu': 'QUITTANCE DE PAIEMENT',
                 'quittance': 'QUITTANCE DE LOYER',
-                'avance': 'RÉCÉPISSÉ D\'AVANCE',
-                'caution': 'RÉCÉPISSÉ DE CAUTION'
+                'avance': 'QUITTANCE DE PAIEMENT D\'AVANCE',
+                'caution': 'QUITTANCE DE PAIEMENT DE CAUTION'
             }
             
-            document_title = document_titles.get(document_type, 'RÉCÉPISSÉ DE PAIEMENT')
+            document_title = document_titles.get(document_type, 'QUITTANCE DE PAIEMENT')
             
             # Calculer les mois couverts par l'avance si c'est une avance
             mois_couverts = None
