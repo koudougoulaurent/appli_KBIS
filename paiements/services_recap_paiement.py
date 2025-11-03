@@ -331,14 +331,44 @@ class ServiceRecapPaiementMensuel:
                 'details': f'Loyer payé ({montant_total_paye:.0f} F CFA)'
             }
         else:
+            # Le loyer est en retard - calculer le nombre de mois de retard
+            # Le dernier mois réglé est mois_courant (le dernier mois qui a été payé)
+            dernier_mois_regle = mois_courant
+            mois_en_retard = []
+            
+            # Calculer tous les mois en retard depuis le dernier mois réglé jusqu'au mois vérifié
+            mois_retard = dernier_mois_regle + relativedelta(months=1)
+            while mois_retard <= mois_debut:
+                mois_en_retard.append(mois_retard)
+                mois_retard = mois_retard + relativedelta(months=1)
+            
+            # Formater les mois en français
+            mois_liste_str = []
+            for mois in mois_en_retard:
+                mois_liste_str.append(formater_mois_francais(mois))
+            
+            nombre_mois_retard = len(mois_en_retard)
+            
             montant_manquant = loyer_mensuel - montant_total_paye
+            
+            # Préparer le message de détails avec les mois en retard
+            if nombre_mois_retard > 0:
+                details_retard = f'Retard de {nombre_mois_retard} mois'
+                if mois_liste_str:
+                    details_retard += f' : {", ".join(mois_liste_str)}'
+                details_retard += f' - Manque {montant_manquant:.0f} F CFA sur {loyer_mensuel:.0f} F CFA'
+            else:
+                details_retard = f'Manque {montant_manquant:.0f} F CFA sur {loyer_mensuel:.0f} F CFA'
+            
             return {
                 'statut': 'en_retard',
                 'statut_display': 'EN RETARD',
                 'montant_paye': montant_total_paye,
                 'montant_attendu': loyer_mensuel,
                 'montant_manquant': montant_manquant,
-                'details': f'Manque {montant_manquant:.0f} F CFA sur {loyer_mensuel:.0f} F CFA'
+                'nombre_mois_retard': nombre_mois_retard,
+                'mois_en_retard': mois_liste_str,
+                'details': details_retard
             }
     
     @staticmethod
