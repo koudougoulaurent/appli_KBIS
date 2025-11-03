@@ -48,6 +48,14 @@ class ConfigurationEntrepriseForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'Téléphone secondaire (optionnel)'
             }),
+            'telephone_3': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Téléphone 3 (optionnel)'
+            }),
+            'telephone_4': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Téléphone 4 (optionnel)'
+            }),
             'email': forms.EmailInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'adresse@email.com'

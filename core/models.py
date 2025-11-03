@@ -494,6 +494,8 @@ class ConfigurationEntreprise(models.Model):
     # Contact
     telephone = models.CharField(max_length=20, default="+225 XX XX XX XX XX")
     telephone_2 = models.CharField(max_length=20, blank=True)
+    telephone_3 = models.CharField(max_length=20, blank=True, verbose_name="Téléphone 3")
+    telephone_4 = models.CharField(max_length=20, blank=True, verbose_name="Téléphone 4")
     email = models.EmailField(default="contact@kbis-immobilier.ci")
     site_web = models.URLField(default="www.kbis-immobilier.ci", blank=True)
     
