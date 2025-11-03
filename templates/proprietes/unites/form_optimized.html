@@ -630,7 +630,7 @@ body {
                             </label>
                             <input type="number" name="loyer_mensuel" id="id_loyer_mensuel" 
                                    class="field-input" value="{{ form.loyer_mensuel.value|default:'' }}" 
-                                   placeholder="Ex: 150000" min="0" step="1000" required>
+                                   placeholder="Ex: 150000" min="0" step="0.01" required>
                             {% if form.loyer_mensuel.errors %}
                                 {% for error in form.loyer_mensuel.errors %}
                                     <div class="field-error">{{ error }}</div>
@@ -644,7 +644,7 @@ body {
                             </label>
                             <input type="number" name="charges_mensuelles" id="id_charges_mensuelles" 
                                    class="field-input" value="{{ form.charges_mensuelles.value|default:'' }}" 
-                                   placeholder="Ex: 15000 (optionnel)" min="0" step="1000">
+                                   placeholder="Ex: 15000 (optionnel)" min="0" step="0.01">
                             {% if form.charges_mensuelles.errors %}
                                 {% for error in form.charges_mensuelles.errors %}
                                     <div class="field-error">{{ error }}</div>
@@ -662,7 +662,7 @@ body {
                             </label>
                             <input type="number" name="caution_demandee" id="id_caution_demandee" 
                                    class="field-input" value="{{ form.caution_demandee.value|default:'' }}" 
-                                   placeholder="Ex: 300000" min="0" step="1000">
+                                   placeholder="Ex: 300000" min="0" step="0.01">
                             {% if form.caution_demandee.errors %}
                                 {% for error in form.caution_demandee.errors %}
                                     <div class="field-error">{{ error }}</div>

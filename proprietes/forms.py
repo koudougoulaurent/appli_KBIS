@@ -2449,9 +2449,9 @@ class UniteLocativeForm(forms.ModelForm):
             'parking_inclus': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'climatisation': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'internet_inclus': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'loyer_mensuel': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 150000', 'min': '0', 'step': '1000'}),
-            'charges_mensuelles': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 15000 (optionnel)', 'min': '0', 'step': '1000'}),
-            'caution_demandee': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 300000', 'min': '0', 'step': '1000'}),
+            'loyer_mensuel': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 150000', 'min': '0', 'step': '0.01'}),
+            'charges_mensuelles': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 15000 (optionnel)', 'min': '0', 'step': '0.01'}),
+            'caution_demandee': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 300000', 'min': '0', 'step': '0.01'}),
             'date_disponibilite': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Décrivez l\'unité, ses caractéristiques particulières...'}),
             'notes_privees': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Notes internes, observations, remarques...'}),
@@ -2484,6 +2484,30 @@ class UniteLocativeForm(forms.ModelForm):
             ('cave', 'Cave/Débarras'),
             ('autre', 'Autre'),
         ]
+    
+    def clean_loyer_mensuel(self):
+        """Validation du loyer mensuel."""
+        loyer = self.cleaned_data.get('loyer_mensuel')
+        if loyer is not None:
+            if loyer < 0:
+                raise ValidationError(_('Le loyer mensuel ne peut pas être négatif.'))
+            if loyer == 0:
+                raise ValidationError(_('Le loyer mensuel doit être supérieur à 0.'))
+        return loyer
+    
+    def clean_charges_mensuelles(self):
+        """Validation des charges mensuelles."""
+        charges = self.cleaned_data.get('charges_mensuelles')
+        if charges is not None and charges < 0:
+            raise ValidationError(_('Les charges mensuelles ne peuvent pas être négatives.'))
+        return charges
+    
+    def clean_caution_demandee(self):
+        """Validation de la caution demandée."""
+        caution = self.cleaned_data.get('caution_demandee')
+        if caution is not None and caution < 0:
+            raise ValidationError(_('La caution demandée ne peut pas être négative.'))
+        return caution
     
     def clean(self):
         cleaned_data = super().clean()
