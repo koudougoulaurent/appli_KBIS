@@ -226,7 +226,6 @@ class Locataire(DuplicatePreventionMixin, models.Model):
         ('M', 'Monsieur'),
         ('Mme', 'Madame'),
         ('Mlle', 'Mademoiselle'),
-        ('Mademoiselle', 'Mademoiselle'),
         ('Societe', 'Société'),
     ]
     
@@ -290,6 +289,7 @@ class Locataire(DuplicatePreventionMixin, models.Model):
     # Informations du garant
     garant_civilite = models.CharField(
         max_length=50,
+        choices=CIVILITE_CHOICES,
         blank=True,
         null=True,
         verbose_name=_("Civilité du garant")

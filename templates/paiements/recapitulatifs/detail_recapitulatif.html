@@ -78,12 +78,34 @@
             <a href="{% url 'paiements:liste_recapitulatifs' %}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Retour à la liste
             </a>
-            <a href="{% url 'paiements:apercu_recapitulatif' recapitulatif.pk %}" class="btn btn-info">
-                <i class="bi bi-eye"></i> Aperçu
-            </a>
-            <a href="{% url 'paiements:telecharger_pdf_recapitulatif' recapitulatif.pk %}" class="btn btn-success">
-                <i class="bi bi-download"></i> Télécharger PDF
-            </a>
+            
+            <!-- Barre déroulante d'actions -->
+            <div class="btn-group">
+                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-gear"></i> Actions
+                </button>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a class="dropdown-item" href="{% url 'paiements:apercu_recapitulatif' recapitulatif.pk %}">
+                            <i class="bi bi-eye"></i> Aperçu
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="{% url 'paiements:telecharger_pdf_recapitulatif' recapitulatif.pk %}">
+                            <i class="bi bi-download"></i> Télécharger PDF
+                        </a>
+                    </li>
+                    {% if recapitulatif.bailleur %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item" href="{% url 'paiements:generer_recap_paiement_mensuel' recapitulatif.bailleur.pk %}?mois={{ recapitulatif.mois_recap|date:'Y-m' }}" 
+                           target="_blank">
+                            <i class="bi bi-cash-stack"></i> État de paiement mensuel
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
             {% if not recapitulatif.recu %}
             <a href="{% url 'paiements:creer_recu_recapitulatif' recapitulatif.pk %}" class="btn btn-primary">
                 <i class="bi bi-receipt"></i> Créer Reçu Standard

@@ -61,6 +61,9 @@ urlpatterns = [
     path('recaps-mensuels/statistiques/', views_recapitulatifs.statistiques_recapitulatifs, name='statistiques_recaps_mensuels'),
     path('recaps-mensuels/generer-automatique/', views_recapitulatifs.generer_recapitulatif_automatique, name='generer_recap_automatique'),
     
+    # Récapitulatif d'état de paiement mensuel (nouveau)
+    path('recap-paiement-mensuel/<int:bailleur_id>/', views_recapitulatifs.generer_recap_paiement_mensuel, name='generer_recap_paiement_mensuel'),
+    
     # NOUVELLES URLs pour le système automatisé
     path('recaps-mensuels-automatiques/', views.liste_recaps_mensuels, name='liste_recaps_mensuels_auto'),
     path('recaps-mensuels-automatiques/creer/', views.creer_recap_mensuel, name='creer_recap_mensuel_auto'),

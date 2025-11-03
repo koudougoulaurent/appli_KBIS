@@ -8,6 +8,7 @@ qui résument toutes les opérations financières pour chaque bailleur.
 """
 
 import logging
+from datetime import datetime as dt, date
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -19,6 +20,7 @@ from django.urls import reverse
 
 from .models import RecapMensuel
 from .forms import RecapMensuelForm
+from .services_recap_paiement import ServiceRecapPaiementMensuel
 from proprietes.models import Bailleur
 
 logger = logging.getLogger(__name__)
@@ -770,3 +772,88 @@ def generer_recapitulatif_automatique(request):
             'success': False,
             'message': f'Erreur lors de la génération: {str(e)}'
         })
+
+
+@login_required
+def generer_recap_paiement_mensuel(request, bailleur_id):
+    """
+    Génère un récapitulatif PDF A4 de l'état de paiement mensuel pour un bailleur.
+    Affiche toutes les propriétés louées avec leurs locataires et le statut de paiement.
+    """
+    import datetime
+    from dateutil.relativedelta import relativedelta
+    from django.template.loader import render_to_string
+    from io import BytesIO
+    from xhtml2pdf import pisa
+    from core.utils import check_group_permissions_with_fallback
+    
+    # Vérification des permissions
+    permissions = check_group_permissions_with_fallback(
+        request.user, 
+        ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 
+        'view'
+    )
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('paiements:dashboard')
+    
+    bailleur = get_object_or_404(Bailleur, pk=bailleur_id)
+    
+    # Récupérer le mois depuis les paramètres GET (par défaut mois précédent)
+    mois_str = request.GET.get('mois')
+    if mois_str:
+        try:
+            mois_recap = datetime.datetime.strptime(mois_str, '%Y-%m').date().replace(day=1)
+        except ValueError:
+            mois_recap = datetime.date.today().replace(day=1) - relativedelta(months=1)
+    else:
+        # Par défaut, mois précédent
+        mois_recap = datetime.date.today().replace(day=1) - relativedelta(months=1)
+    
+    try:
+        # Préparer les données du récapitulatif
+        recap_data = ServiceRecapPaiementMensuel.preparer_donnees_recap_paiement(
+            bailleur, mois_recap
+        )
+        
+        # Générer le HTML du récapitulatif avec date correcte
+        date_generation = datetime.datetime.now()
+        
+        html_content = render_to_string(
+            'paiements/recapitulatifs/recap_paiement_mensuel_pdf.html',
+            {
+                'recap': recap_data,
+                'date_generation': date_generation,
+            }
+        )
+        
+        # Générer le PDF
+        pdf_buffer = BytesIO()
+        pisa_status = pisa.CreatePDF(
+            html_content,
+            dest=pdf_buffer,
+            encoding='UTF-8'
+        )
+        
+        if pisa_status.err:
+            logger.error(f"Erreur lors de la génération PDF: {pisa_status.err}")
+            messages.error(request, f"Erreur lors de la génération du PDF: {pisa_status.err}")
+            return redirect('paiements:dashboard')
+        
+        # Préparer la réponse
+        pdf_content = pdf_buffer.getvalue()
+        pdf_buffer.close()
+        
+        response = HttpResponse(pdf_content, content_type='application/pdf')
+        filename = (
+            f"recap_paiement_{bailleur.get_nom_complet().replace(' ', '_')}_"
+            f"{mois_recap.strftime('%Y_%m')}.pdf"
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Erreur lors de la génération du récapitulatif de paiement: {str(e)}", exc_info=True)
+        messages.error(request, f"Erreur lors de la génération: {str(e)}")
+        return redirect('paiements:dashboard')

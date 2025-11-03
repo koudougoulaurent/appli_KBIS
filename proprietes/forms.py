@@ -1248,24 +1248,23 @@ class LocataireForm(forms.ModelForm):
         })
     )
     
-    # Champs civilité en saisie libre
-    civilite = forms.CharField(
-        max_length=50,
+    # Champ civilité avec sélection
+    civilite = forms.ChoiceField(
+        choices=[('', '---------')] + list(Locataire.CIVILITE_CHOICES),
         required=False,
         label=_('Civilité'),
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Monsieur, Madame, Mademoiselle, Docteur, etc.'
+        widget=forms.Select(attrs={
+            'class': 'form-control form-select',
         })
     )
     
-    garant_civilite = forms.CharField(
-        max_length=50,
+    # Champ civilité du garant avec sélection
+    garant_civilite = forms.ChoiceField(
+        choices=[('', '---------')] + list(Locataire.CIVILITE_CHOICES),
         required=False,
         label=_('Civilité du garant'),
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Monsieur, Madame, Mademoiselle, Docteur, etc.'
+        widget=forms.Select(attrs={
+            'class': 'form-control form-select',
         })
     )
     
@@ -1280,10 +1279,6 @@ class LocataireForm(forms.ModelForm):
             'garant_ville', 'garant_pays', 'garant_piece_identite', 'statut'
         ]
         widgets = {
-            'civilite': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Monsieur, Madame, Mademoiselle, Docteur, etc.'
-            }),
             'nom': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Nom de famille'
@@ -1343,10 +1338,6 @@ class LocataireForm(forms.ModelForm):
                 'placeholder': 'Revenus mensuels en F CFA (optionnel)',
                 'step': '0.01',
                 'min': '0'
-            }),
-            'garant_civilite': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Monsieur, Madame, Mademoiselle, Docteur, etc.'
             }),
             'garant_nom': forms.TextInput(attrs={
                 'class': 'form-control',

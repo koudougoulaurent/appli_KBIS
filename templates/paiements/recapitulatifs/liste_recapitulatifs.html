@@ -196,7 +196,7 @@
                                         
                                         <p class="card-text text-muted mb-2">
                                             <i class="bi bi-calendar"></i>
-                                            {{ recapitulatif.mois_recapitulatif|date:"F Y" }}
+                                            {{ recapitulatif.mois_recap|date:"F Y" }}
                                         </p>
                                         
                                         {% if recapitulatif.gestionnaire %}
@@ -217,31 +217,61 @@
                                                 <i class="bi bi-eye"></i> Voir
                                             </a>
                                             
-                                            {% if recapitulatif.peut_etre_valide %}
-                                            <button type="button" class="btn btn-sm btn-success" 
-                                                    onclick="validerRecapitulatif({{ recapitulatif.pk }})">
-                                                <i class="bi bi-check-circle"></i> Valider
-                                            </button>
-                                            {% endif %}
-                                            
-                                            {% if recapitulatif.peut_etre_envoye %}
-                                            <button type="button" class="btn btn-sm btn-info" 
-                                                    onclick="envoyerRecapitulatif({{ recapitulatif.pk }})">
-                                                <i class="bi bi-send"></i> Envoyer
-                                            </button>
-                                            {% endif %}
-                                            
-                                            {% if recapitulatif.peut_etre_paye %}
-                                            <button type="button" class="btn btn-sm btn-warning" 
-                                                    onclick="marquerPayeRecapitulatif({{ recapitulatif.pk }})">
-                                                <i class="bi bi-cash"></i> Marquer Payé
-                                            </button>
-                                            {% endif %}
-                                            
-                                            <a href="{% url 'paiements:telecharger_pdf_recapitulatif' recapitulatif.pk %}" 
-                                               class="btn btn-sm btn-outline-secondary">
-                                                <i class="bi bi-download"></i> PDF
-                                            </a>
+                                            <!-- Barre déroulante d'actions -->
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="bi bi-gear"></i> Actions
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    {% if recapitulatif.peut_etre_valide %}
+                                                    <li>
+                                                        <a class="dropdown-item" href="#" onclick="validerRecapitulatif({{ recapitulatif.pk }}); return false;">
+                                                            <i class="bi bi-check-circle text-success"></i> Valider
+                                                        </a>
+                                                    </li>
+                                                    {% endif %}
+                                                    
+                                                    {% if recapitulatif.peut_etre_envoye %}
+                                                    <li>
+                                                        <a class="dropdown-item" href="#" onclick="envoyerRecapitulatif({{ recapitulatif.pk }}); return false;">
+                                                            <i class="bi bi-send text-info"></i> Envoyer
+                                                        </a>
+                                                    </li>
+                                                    {% endif %}
+                                                    
+                                                    {% if recapitulatif.peut_etre_paye %}
+                                                    <li>
+                                                        <a class="dropdown-item" href="#" onclick="marquerPayeRecapitulatif({{ recapitulatif.pk }}); return false;">
+                                                            <i class="bi bi-cash text-warning"></i> Marquer Payé
+                                                        </a>
+                                                    </li>
+                                                    {% endif %}
+                                                    
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    
+                                                    <li>
+                                                        <a class="dropdown-item" href="{% url 'paiements:apercu_recapitulatif' recapitulatif.pk %}">
+                                                            <i class="bi bi-eye"></i> Aperçu
+                                                        </a>
+                                                    </li>
+                                                    
+                                                    <li>
+                                                        <a class="dropdown-item" href="{% url 'paiements:telecharger_pdf_recapitulatif' recapitulatif.pk %}">
+                                                            <i class="bi bi-download"></i> Télécharger PDF
+                                                        </a>
+                                                    </li>
+                                                    
+                                                    {% if recapitulatif.bailleur %}
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <a class="dropdown-item" href="{% url 'paiements:generer_recap_paiement_mensuel' recapitulatif.bailleur.pk %}?mois={{ recapitulatif.mois_recap|date:'Y-m' }}" 
+                                                           target="_blank">
+                                                            <i class="bi bi-cash-stack text-info"></i> État de paiement mensuel
+                                                        </a>
+                                                    </li>
+                                                    {% endif %}
+                                                </ul>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
