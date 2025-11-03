@@ -600,7 +600,7 @@
         // Exposer la fonction globalement
         window.updateDashboardStats = updateDashboardStats;
         
-        // Précharger les ressources critiques
+        // Précharger les ressources critiques (avec gestion d'erreur pour fichiers optionnels)
         const criticalResources = [
             '/static/css/dashboard.css',
             '/static/js/components.js'
@@ -611,6 +611,10 @@
             link.rel = 'preload';
             link.href = resource;
             link.as = resource.endsWith('.css') ? 'style' : 'script';
+            link.onerror = function() {
+                // Ignorer silencieusement si le fichier n'existe pas
+                this.remove();
+            };
             document.head.appendChild(link);
         });
     });
