@@ -76,13 +76,6 @@
     </style>
 </head>
 <body>
-    <!-- En-tête dynamique avec image Base64 -->
-    {% if entete_base64 %}
-    <div class="header">
-        <img src="data:image/png;base64,{{ entete_base64 }}" alt="En-tête KBIS" style="width: 100%; max-width: 100%; height: auto; display: block; margin-bottom: 20px;" />
-    </div>
-    {% endif %}
-    
     <div class="header">
         <div class="title">RÉCAPITULATIF MENSUEL</div>
         <div class="subtitle">{{ recapitulatif.bailleur.get_nom_complet }} - {{ recapitulatif.mois_recap|date:"F Y" }}</div>
