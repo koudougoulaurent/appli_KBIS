@@ -50,28 +50,16 @@ class ProprieteListView(PrivilegeButtonsMixin, EnhancedSearchMixin, IntelligentL
     paginate_by = 20
     page_title = 'Propriétés'
     page_icon = 'home'
-    
-    def get_queryset(self):
-        """Optimisation des requêtes avec select_related et prefetch_related"""
-        return Propriete.objects.filter(is_deleted=False).select_related(
-            'bailleur', 'type_bien', 'cree_par'
-        ).prefetch_related(
-            'unites_locatives', 'pieces'
-        ).only(
-            'id', 'numero_propriete', 'titre', 'surface', 'nombre_pieces', 
-            'nombre_chambres', 'nombre_salles_bain', 'etat', 'disponible',
-            'loyer_actuel', 'charges_locataire', 'date_creation', 'type_gestion',
-            'bailleur__nom', 'bailleur__prenom', 'type_bien__nom'
-        )
     add_url = 'proprietes:ajouter'
     add_text = 'Ajouter une propriété'
-    search_fields = ['titre', 'adresse', 'ville', 'bailleur__nom', 'bailleur__prenom']
+    search_fields = ['titre', 'adresse', 'ville', 'quartier', 'bailleur__nom', 'bailleur__prenom']
     filter_fields = ['etat', 'type_bien', 'disponible']
     default_sort = 'ville'
     columns = [
         {'field': 'numero_propriete', 'label': 'N° Propriété', 'sortable': True},
         {'field': 'titre', 'label': 'Titre', 'sortable': True},
         {'field': 'adresse', 'label': 'Adresse', 'sortable': True},
+        {'field': 'quartier', 'label': 'Quartier', 'sortable': True},
         {'field': 'ville', 'label': 'Ville', 'sortable': True},
         {'field': 'bailleur', 'label': 'Bailleur', 'sortable': True},
         {'field': 'type_bien', 'label': 'Type', 'sortable': True},
@@ -85,6 +73,7 @@ class ProprieteListView(PrivilegeButtonsMixin, EnhancedSearchMixin, IntelligentL
         {'url_name': 'proprietes:supprimer_propriete', 'icon': 'trash', 'style': 'outline-danger', 'title': 'Supprimer', 'condition': 'user.is_privilege_user'},
     ]
     sort_options = [
+        {'value': 'quartier', 'label': 'Quartier'},
         {'value': 'ville', 'label': 'Ville'},
         {'value': 'loyer_actuel', 'label': 'Loyer'},
         {'value': 'surface', 'label': 'Surface'},
@@ -96,7 +85,17 @@ class ProprieteListView(PrivilegeButtonsMixin, EnhancedSearchMixin, IntelligentL
         Optimisation des requêtes de base de données
         """
         queryset = super().get_queryset()
-        return queryset.select_related('bailleur', 'type_bien')
+        return queryset.filter(is_deleted=False).select_related(
+            'bailleur', 'type_bien', 'cree_par'
+        ).prefetch_related(
+            'unites_locatives', 'pieces'
+        ).only(
+            'id', 'numero_propriete', 'titre', 'surface', 'nombre_pieces', 
+            'nombre_chambres', 'nombre_salles_bain', 'etat', 'disponible',
+            'loyer_actuel', 'charges_locataire', 'date_creation', 'type_gestion',
+            'adresse', 'quartier', 'ville',
+            'bailleur__nom', 'bailleur__prenom', 'type_bien__nom'
+        )
     
     def get_context_data(self, **kwargs):
         """
