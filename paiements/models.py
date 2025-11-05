@@ -378,10 +378,12 @@ class RecapMensuel(models.Model):
             logger = logging.getLogger(__name__)
             logger.error(f"Erreur lors du calcul des totaux pour le récapitulatif {self.id if self.id else 'nouveau'}: {str(e)}", exc_info=True)
         
-            # Calculer aussi la commission et le montant réellement payé même en cas d'erreur
+            # CRITIQUE : Calculer aussi la commission et le montant réellement payé même en cas d'erreur
+            # Validation et arrondissement pour garantir la précision
             total_net = max(total_net, Decimal('0'))
-            commission_agence = total_net * Decimal('0.10')
+            commission_agence = (total_net * Decimal('0.10')).quantize(Decimal('0.01'))
             montant_reellement_paye = max(total_net - commission_agence, Decimal('0'))
+            montant_reellement_paye = montant_reellement_paye.quantize(Decimal('0.01'))
             
             # Mettre à jour les champs même en cas d'erreur
             self.total_loyers_bruts = total_loyers
