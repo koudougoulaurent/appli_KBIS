@@ -23,23 +23,29 @@ def supprimer_recaps_sans_bailleur(apps, schema_editor):
         # Supprimer physiquement ces récapitulatifs
         # On doit d'abord supprimer les relations ManyToMany
         with schema_editor.connection.cursor() as cursor:
+            # Construire les placeholders pour la clause IN
+            placeholders = ','.join(['%s'] * len(ids_sans_bailleur))
+            
             # Supprimer les relations ManyToMany avec paiements_concernes
-            cursor.execute("""
-                DELETE FROM paiements_recapmensuel_paiements_concernes 
-                WHERE recapmensuel_id = ANY(%s)
-            """, [ids_sans_bailleur])
+            if ids_sans_bailleur:
+                cursor.execute(f"""
+                    DELETE FROM paiements_recapmensuel_paiements_concernes 
+                    WHERE recapmensuel_id IN ({placeholders})
+                """, ids_sans_bailleur)
             
             # Supprimer les relations ManyToMany avec charges_deductibles
-            cursor.execute("""
-                DELETE FROM paiements_recapmensuel_charges_deductibles 
-                WHERE recapmensuel_id = ANY(%s)
-            """, [ids_sans_bailleur])
+            if ids_sans_bailleur:
+                cursor.execute(f"""
+                    DELETE FROM paiements_recapmensuel_charges_deductibles 
+                    WHERE recapmensuel_id IN ({placeholders})
+                """, ids_sans_bailleur)
             
             # Enfin, supprimer les récapitulatifs eux-mêmes
-            cursor.execute("""
-                DELETE FROM paiements_recapmensuel 
-                WHERE id = ANY(%s)
-            """, [ids_sans_bailleur])
+            if ids_sans_bailleur:
+                cursor.execute(f"""
+                    DELETE FROM paiements_recapmensuel 
+                    WHERE id IN ({placeholders})
+                """, ids_sans_bailleur)
         
         print(f"⚠️  {count} récapitulatif(s) sans bailleur ont été supprimés physiquement.")
         print("   Ces récapitulatifs ne peuvent pas être utilisés sans bailleur.")
