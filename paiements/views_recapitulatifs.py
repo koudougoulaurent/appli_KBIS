@@ -231,26 +231,51 @@ def detail_recapitulatif(request, recapitulatif_id):
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
     
-    recapitulatif = get_object_or_404(RecapMensuel, pk=recapitulatif_id)
+    recapitulatif = get_object_or_404(
+        RecapMensuel.objects.select_related('bailleur'),
+        pk=recapitulatif_id
+    )
     
-    # Recalculer les totaux pour s'assurer qu'ils sont à jour (y compris commission et montant réellement payé)
-    recapitulatif.calculer_totaux_bailleur()
+    # CRITIQUE : Recalculer TOUJOURS les totaux depuis la base de données pour garantir l'exactitude
+    # Cela garantit que les calculs sont basés sur les données les plus récentes
+    # et incluent toutes les propriétés louées du bailleur pour le mois concerné
+    totaux_calcules = recapitulatif.calculer_totaux_bailleur()
+    
+    # Rafraîchir l'objet depuis la base de données pour récupérer les valeurs sauvegardées
     recapitulatif.refresh_from_db()
     
-    # Calculer les totaux complets avec commission et montant réellement payé
+    # Utiliser les totaux calculés directement pour garantir l'exactitude
+    # Si les totaux calculés sont valides, les utiliser, sinon utiliser les valeurs sauvegardées
     from decimal import Decimal
-    totaux = {
-        'total_loyers_bruts': recapitulatif.total_loyers_bruts,
-        'total_charges_deductibles': recapitulatif.total_charges_deductibles,
-        'total_charges_bailleur': recapitulatif.total_charges_bailleur,
-        'total_net_a_payer': recapitulatif.total_net_a_payer,
-        'commission_agence': getattr(recapitulatif, 'commission_agence', None) or Decimal('0'),
-        'montant_reellement_paye': getattr(recapitulatif, 'montant_reellement_paye', None) or Decimal('0'),
-        'nombre_proprietes': recapitulatif.nombre_proprietes,
-        'nombre_contrats_actifs': recapitulatif.nombre_contrats_actifs,
-        'nombre_paiements_recus': recapitulatif.nombre_paiements_recus,
-        'bailleur': recapitulatif.bailleur,  # Ajouter le bailleur pour le template
-    }
+    
+    if totaux_calcules and isinstance(totaux_calcules, dict):
+        # Utiliser les valeurs calculées directement (plus récentes)
+        totaux = {
+            'total_loyers_bruts': totaux_calcules.get('total_loyers_bruts', recapitulatif.total_loyers_bruts),
+            'total_charges_deductibles': totaux_calcules.get('total_charges_deductibles', recapitulatif.total_charges_deductibles),
+            'total_charges_bailleur': totaux_calcules.get('total_charges_bailleur', recapitulatif.total_charges_bailleur or Decimal('0')),
+            'total_net_a_payer': totaux_calcules.get('total_net_a_payer', recapitulatif.total_net_a_payer),
+            'commission_agence': totaux_calcules.get('commission_agence', getattr(recapitulatif, 'commission_agence', None) or Decimal('0')),
+            'montant_reellement_paye': totaux_calcules.get('montant_reellement_paye', getattr(recapitulatif, 'montant_reellement_paye', None) or Decimal('0')),
+            'nombre_proprietes': totaux_calcules.get('nombre_proprietes', recapitulatif.nombre_proprietes),
+            'nombre_contrats_actifs': totaux_calcules.get('nombre_contrats_actifs', recapitulatif.nombre_contrats_actifs),
+            'nombre_paiements_recus': totaux_calcules.get('nombre_paiements_recus', recapitulatif.nombre_paiements_recus),
+            'bailleur': recapitulatif.bailleur,  # Ajouter le bailleur pour le template
+        }
+    else:
+        # Fallback : utiliser les valeurs sauvegardées si le calcul a échoué
+        totaux = {
+            'total_loyers_bruts': recapitulatif.total_loyers_bruts,
+            'total_charges_deductibles': recapitulatif.total_charges_deductibles,
+            'total_charges_bailleur': recapitulatif.total_charges_bailleur or Decimal('0'),
+            'total_net_a_payer': recapitulatif.total_net_a_payer,
+            'commission_agence': getattr(recapitulatif, 'commission_agence', None) or Decimal('0'),
+            'montant_reellement_paye': getattr(recapitulatif, 'montant_reellement_paye', None) or Decimal('0'),
+            'nombre_proprietes': recapitulatif.nombre_proprietes,
+            'nombre_contrats_actifs': recapitulatif.nombre_contrats_actifs,
+            'nombre_paiements_recus': recapitulatif.nombre_paiements_recus,
+            'bailleur': recapitulatif.bailleur,
+        }
     
     context = {
         'page_title': f'Récapitulatif - {recapitulatif.mois_recap.strftime("%B %Y")}',

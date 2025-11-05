@@ -199,7 +199,9 @@ class RecapMensuel(models.Model):
             else:
                 mois_fin = self.mois_recap.replace(month=self.mois_recap.month + 1, day=1) - timedelta(days=1)
             
-            # Récupérer les propriétés du bailleur avec contrats actifs seulement
+            # CRITIQUE : Récupérer TOUTES les propriétés du bailleur avec contrats actifs pour le mois
+            # Utiliser distinct() pour éviter les doublons dus aux jointures
+            # Cela garantit qu'on inclut toutes les propriétés louées du bailleur
             proprietes = self.bailleur.proprietes.filter(
                 is_deleted=False,
                 contrats__est_actif=True,
@@ -207,47 +209,64 @@ class RecapMensuel(models.Model):
                 contrats__date_debut__lte=mois_fin
             ).filter(
                 models.Q(contrats__date_fin__gte=mois_debut) | models.Q(contrats__date_fin__isnull=True)
-            ).distinct()
+            ).distinct().select_related('type_bien')
+            
+            # Compter les propriétés distinctes
             nombre_proprietes = proprietes.count()
             
-            # Calculer les loyers bruts pour le mois - basé sur les contrats actifs
+            # CRITIQUE : Calculer les loyers bruts pour le mois - basé sur TOUS les contrats actifs
+            # Parcourir toutes les propriétés pour garantir qu'aucune n'est oubliée
             
             for propriete in proprietes:
                 # Récupérer les contrats actifs pour cette propriété au moment du récapitulatif
+                # Utiliser select_related pour optimiser les requêtes
                 contrats_actifs = propriete.contrats.filter(
                     est_actif=True,
                     est_resilie=False,
                     date_debut__lte=mois_fin
                 ).filter(
                     models.Q(date_fin__gte=mois_debut) | models.Q(date_fin__isnull=True)
-                )
+                ).select_related('locataire', 'unite_locative')
                 
                 for contrat in contrats_actifs:
                     nombre_contrats_actifs += 1
-                    # Loyer mensuel - conversion sécurisée
+                    
+                    # CRITIQUE : Loyer mensuel - conversion sécurisée et validation
+                    # Utiliser loyer_mensuel du contrat (priorité) ou montant_loyer en fallback
                     loyer_mensuel = contrat.loyer_mensuel
-                    if loyer_mensuel is None:
-                        loyer_mensuel = Decimal('0')
-                    elif isinstance(loyer_mensuel, str):
+                    if loyer_mensuel is None or loyer_mensuel == 0:
+                        # Fallback sur montant_loyer si loyer_mensuel n'est pas défini
+                        loyer_mensuel = getattr(contrat, 'montant_loyer', None) or Decimal('0')
+                    
+                    # Conversion sécurisée en Decimal
+                    if isinstance(loyer_mensuel, str):
                         try:
                             loyer_mensuel = Decimal(str(loyer_mensuel))
-                        except:
+                        except (ValueError, TypeError):
                             loyer_mensuel = Decimal('0')
+                    elif loyer_mensuel is None:
+                        loyer_mensuel = Decimal('0')
                     else:
                         loyer_mensuel = Decimal(str(loyer_mensuel))
+                    
+                    # Validation : le loyer ne peut pas être négatif
+                    loyer_mensuel = max(loyer_mensuel, Decimal('0'))
                     total_loyers += loyer_mensuel
                     
-                    # Charges déductibles du contrat - conversion sécurisée
+                    # CRITIQUE : Charges déductibles du contrat - conversion sécurisée et validation
                     charges_mensuelles = contrat.charges_mensuelles
                     if charges_mensuelles is None:
                         charges_mensuelles = Decimal('0')
                     elif isinstance(charges_mensuelles, str):
                         try:
                             charges_mensuelles = Decimal(str(charges_mensuelles))
-                        except:
+                        except (ValueError, TypeError):
                             charges_mensuelles = Decimal('0')
                     else:
                         charges_mensuelles = Decimal(str(charges_mensuelles))
+                    
+                    # Validation : les charges ne peuvent pas être négatives
+                    charges_mensuelles = max(charges_mensuelles, Decimal('0'))
                     total_charges_deductibles += charges_mensuelles
             
             # NOUVEAU : Calculer les paiements réels reçus pour ce mois
@@ -292,16 +311,23 @@ class RecapMensuel(models.Model):
             for charge in charges_bailleur_mois:
                 total_charges_bailleur += charge.montant_restant or charge.montant
             
-            # Calculer le total net
+            # CRITIQUE : Calculer le total net avec validation
+            # Total net = Loyers bruts - Charges déductibles - Charges bailleur
             total_net = total_loyers - total_charges_deductibles - total_charges_bailleur
+            # Validation : le total net ne peut pas être négatif
             total_net = max(total_net, Decimal('0'))
             
-            # Commission agence = 10% du montant net à payer (obligatoire, comme dans les retraits)
-            commission_agence = total_net * Decimal('0.10')
+            # CRITIQUE : Commission agence = 10% du montant net à payer (obligatoire, comme dans les retraits)
+            # Arrondir à 2 décimales pour éviter les problèmes de précision
+            commission_agence = (total_net * Decimal('0.10')).quantize(Decimal('0.01'))
             
-            # Montant réellement payé = montant net - commission agence
+            # CRITIQUE : Montant réellement payé = montant net - commission agence
+            # C'est le montant final qui sera payé au bailleur
             montant_reellement_paye = total_net - commission_agence
+            # Validation : le montant réellement payé ne peut pas être négatif
             montant_reellement_paye = max(montant_reellement_paye, Decimal('0'))
+            # Arrondir à 2 décimales
+            montant_reellement_paye = montant_reellement_paye.quantize(Decimal('0.01'))
             
             # Mettre à jour les champs
             self.total_loyers_bruts = total_loyers
