@@ -117,10 +117,8 @@
                 <thead>
                     <tr style="background-color: #f8f9fa;">
                         <th style="border: 1px solid #dee2e6; padding: 12px; text-align: left;">Propriété</th>
-                        <th style="border: 1px solid #dee2e6; padding: 12px; text-align: left;">Adresse</th>
                         <th style="border: 1px solid #dee2e6; padding: 12px; text-align: left;">Locataire</th>
                         <th style="border: 1px solid #dee2e6; padding: 12px; text-align: right;">Loyer Mensuel</th>
-                        <th style="border: 1px solid #dee2e6; padding: 12px; text-align: right;">Charges Déductibles</th>
                         <th style="border: 1px solid #dee2e6; padding: 12px; text-align: right;">Charges Bailleur</th>
                         <th style="border: 1px solid #dee2e6; padding: 12px; text-align: right;">Net à Payer</th>
                     </tr>
@@ -139,10 +137,8 @@
                                 Propriété ID: {{ detail.propriete.id }}
                             {% endif %}
                         </td>
-                        <td style="border: 1px solid #dee2e6; padding: 12px;">{{ detail.adresse_complete }}</td>
                         <td style="border: 1px solid #dee2e6; padding: 12px;">{{ detail.locataire.get_nom_complet|default:detail.locataire.nom|default:"N/A" }}</td>
                         <td style="border: 1px solid #dee2e6; padding: 12px; text-align: right;">{{ detail.loyer_mensuel|floatformat:0 }} F CFA</td>
-                        <td style="border: 1px solid #dee2e6; padding: 12px; text-align: right;">{{ detail.charges_deductibles|floatformat:0 }} F CFA</td>
                         <td style="border: 1px solid #dee2e6; padding: 12px; text-align: right;">{{ detail.charges_bailleur|default:0|floatformat:0 }} F CFA</td>
                         <td style="border: 1px solid #dee2e6; padding: 12px; text-align: right; font-weight: bold;">{{ detail.net_a_payer|floatformat:0 }} F CFA</td>
                     </tr>

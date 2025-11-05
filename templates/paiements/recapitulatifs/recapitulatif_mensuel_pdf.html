@@ -261,10 +261,8 @@
             <thead>
                 <tr>
                     <th>Propriété</th>
-                    <th>Adresse</th>
                     <th>Locataire</th>
                     <th>Loyer Mensuel</th>
-                    <th>Charges Déductibles</th>
                     <th>Charges Bailleur</th>
                     <th>Net à Payer</th>
                 </tr>
@@ -284,7 +282,6 @@
                                 Propriété ID: {{ detail.propriete.id }}
                             {% endif %}
                         </td>
-                        <td>{{ detail.adresse_complete }}</td>
                         <td>
                             {% if detail.locataire %}
                                 {{ detail.locataire.get_nom_complet|default:detail.locataire.nom|default:"N/A" }}
@@ -293,14 +290,13 @@
                             {% endif %}
                         </td>
                         <td class="text-right">{{ detail.loyer_mensuel|floatformat:0 }} F CFA</td>
-                        <td class="text-right">{{ detail.charges_deductibles|floatformat:0 }} F CFA</td>
                         <td class="text-right">{{ detail.charges_bailleur|default:0|floatformat:0 }} F CFA</td>
                         <td class="text-right">{{ detail.net_a_payer|floatformat:0 }} F CFA</td>
                     </tr>
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="7" class="text-center">Aucune propriété active trouvée pour ce mois</td>
+                        <td colspan="5" class="text-center">Aucune propriété active trouvée pour ce mois</td>
                     </tr>
                 {% endif %}
             </tbody>
