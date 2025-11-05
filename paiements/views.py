@@ -1753,6 +1753,12 @@ def detail_recap_mensuel(request, recap_id):
     total_global_charges = sum(prop['total_charges'] for prop in paiements_par_propriete.values()) or Decimal('0')
     total_global_net = sum(prop['montant_net'] for prop in paiements_par_propriete.values()) or Decimal('0')
     
+    # Préparer le titre avec gestion du bailleur None
+    if recap.bailleur:
+        bailleur_nom = recap.bailleur.get_nom_complet()
+    else:
+        bailleur_nom = "Sans bailleur"
+    
     context = get_context_with_entreprise_config({
         'recap': recap,
         'stats': stats,
@@ -1760,7 +1766,7 @@ def detail_recap_mensuel(request, recap_id):
         'total_global_loyers': total_global_loyers,
         'total_global_charges': total_global_charges,
         'total_global_net': total_global_net,
-        'title': f'Récapitulatif {recap.bailleur.get_nom_complet()} - {recap.mois_recap.strftime("%B %Y")}',
+        'title': f'Récapitulatif {bailleur_nom} - {recap.mois_recap.strftime("%B %Y")}',
         'is_privilege_user': is_privilege_user,
     })
     
