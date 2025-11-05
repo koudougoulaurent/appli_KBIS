@@ -146,13 +146,57 @@
             color: #007bff;
         }
         
+        /* Pied de page - même style que documents A5 */
         .footer {
-            margin-top: 40px;
+            margin-top: 2mm;
             text-align: center;
-            font-size: 10px;
-            color: #666;
-            border-top: 1px solid #ddd;
-            padding-top: 20px;
+            font-size: 8px;
+            color: #000;
+            border-top: 2px solid #000;
+            padding-top: 2.5mm;
+            font-weight: 900;
+            line-height: 1.4;
+        }
+        
+        .footer-company {
+            font-weight: 900;
+            font-size: 9px;
+            margin-bottom: 1.5mm;
+            color: #000;
+            text-align: center;
+        }
+        
+        .footer-address {
+            margin-bottom: 1.5mm;
+            color: #000;
+            font-weight: 900;
+            font-size: 8px;
+            text-align: center;
+        }
+        
+        .footer-contact {
+            margin-bottom: 1.5mm;
+            color: #000;
+            font-weight: 900;
+            font-size: 8px;
+            text-align: center;
+        }
+        
+        .footer-legal {
+            font-size: 7px;
+            color: #000;
+            font-weight: 900;
+            text-align: center;
+            margin-bottom: 1mm;
+        }
+        
+        .footer-generation {
+            margin-top: 2mm;
+            font-style: italic;
+            color: #000;
+            font-weight: 900;
+            font-size: 7px;
+            text-align: center;
         }
         
         .status-badge {
@@ -336,12 +380,28 @@
     </div>
     {% endif %}
     
-        <!-- Pied de page dynamique depuis CONFIGURATION ENTREPRISE -->
+        <!-- Pied de page dynamique - même style que documents A5 -->
         <div class="footer">
-            <p><strong>{{ entreprise_config.nom_entreprise|default:"KBIS IMMOBILIER" }}</strong> - {{ entreprise_config.adresse|default:"pissy 10050 ouagadougou Burkina Faso" }}{% if entreprise_config.ville %}, {{ entreprise_config.ville }}{% endif %}{% if entreprise_config.code_postal %}, {{ entreprise_config.code_postal }}{% endif %}</p>
-            <p>Tél: {{ entreprise_config.telephone|default:"+226 70 20 54 91" }}{% if entreprise_config.telephone_2 %} | Tél 2: {{ entreprise_config.telephone_2 }}{% endif %} | Email: {{ entreprise_config.email|default:"kbissarl2022@gmail.com" }}</p>
-            {% if entreprise_config.site_web %}<p>Web: {{ entreprise_config.site_web }}</p>{% endif %}
-            <p>{% if entreprise_config.rccm %}RCCM: {{ entreprise_config.rccm }}{% endif %}{% if entreprise_config.ifu %} | IFU: {{ entreprise_config.ifu }}{% endif %}</p>
+            {% if entreprise_config %}
+                <div class="footer-company">{{ entreprise_config.nom_entreprise }}</div>
+                {% if entreprise_config.slogan %}
+                <div class="footer-address">{{ entreprise_config.slogan }}</div>
+                {% endif %}
+                <div class="footer-address">{{ entreprise_config.get_adresse_complete }}</div>
+                <div class="footer-contact">{{ entreprise_config.get_contact_complet }}</div>
+                <div class="footer-legal">{{ entreprise_config.get_informations_legales }}</div>
+                <div class="footer-generation">
+                    Récapitulatif mensuel généré le {{ date_generation|date:"d/m/Y à H:i" }}
+                </div>
+            {% else %}
+                <div class="footer-company">KBIS IMMOBILIER</div>
+                <div class="footer-address">pissy 10050 ouagadougou Burkina Faso, Quartier Centre-Ville, BP 440 ouagadougou, Burkina Faso</div>
+                <div class="footer-contact">Tél: +226 70 20 54 91 | Email: kbissarl2022@gmail.com</div>
+                <div class="footer-legal">RCCM: CI-ABJ-XXXX-X-XXXXX | IFU: XXXXXXXXXX</div>
+                <div class="footer-generation">
+                    Récapitulatif mensuel généré le {{ date_generation|date:"d/m/Y à H:i" }}
+                </div>
+            {% endif %}
         </div>
     </div>
 </body>
