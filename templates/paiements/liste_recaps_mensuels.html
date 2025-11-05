@@ -94,7 +94,11 @@
                         {% for recap in recaps %}
                         <tr>
                             <td>
-                                <strong>{{ recap.bailleur.get_nom_complet|default:recap.bailleur.nom|default:recap.bailleur.username }}</strong>
+                                {% if recap.bailleur %}
+                                    <strong>{{ recap.bailleur.get_nom_complet|default:"Bailleur inconnu" }}</strong>
+                                {% else %}
+                                    <span class="text-muted">Sans bailleur</span>
+                                {% endif %}
                             </td>
                             <td>
                                 {{ recap.mois_recap|date:"F Y" }}
