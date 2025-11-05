@@ -1788,6 +1788,11 @@ def detail_recap_mensuel(request, recap_id):
     total_global_charges = sum(prop['total_charges'] for prop in paiements_par_propriete.values()) or Decimal('0')
     total_global_net = sum(prop['montant_net'] for prop in paiements_par_propriete.values()) or Decimal('0')
     
+    # Utiliser le montant réellement payé du récapitulatif (qui inclut déjà la commission)
+    # Recalculer si nécessaire pour s'assurer qu'il est à jour
+    recap.calculer_totaux_bailleur()
+    total_global_net_reellement_paye = recap.montant_reellement_paye or Decimal('0')
+    
     # Préparer le titre avec gestion du bailleur None
     if recap.bailleur:
         bailleur_nom = recap.bailleur.get_nom_complet()
@@ -1801,6 +1806,7 @@ def detail_recap_mensuel(request, recap_id):
         'total_global_loyers': total_global_loyers,
         'total_global_charges': total_global_charges,
         'total_global_net': total_global_net,
+        'total_global_net_reellement_paye': total_global_net_reellement_paye,
         'title': f'Récapitulatif {bailleur_nom} - {recap.mois_recap.strftime("%B %Y")}',
         'is_privilege_user': is_privilege_user,
     })
