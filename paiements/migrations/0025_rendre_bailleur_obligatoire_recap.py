@@ -15,10 +15,12 @@ def supprimer_recaps_sans_bailleur(apps, schema_editor):
     if count > 0:
         # Option 1: Les supprimer logiquement
         from django.utils import timezone
-        recaps_sans_bailleur.update(
-            is_deleted=True,
-            deleted_at=timezone.now()
-        )
+        # Mettre à jour chaque récapitulatif individuellement pour éviter les problèmes de champs
+        for recap in recaps_sans_bailleur:
+            recap.is_deleted = True
+            if hasattr(recap, 'deleted_at'):
+                recap.deleted_at = timezone.now()
+            recap.save()
         print(f"⚠️  {count} récapitulatif(s) sans bailleur ont été marqués comme supprimés.")
         print("   Vous pouvez les restaurer manuellement si nécessaire.")
 
