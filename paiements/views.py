@@ -1958,7 +1958,8 @@ def imprimer_recap_mensuel(request, recap_id):
         story.append(Spacer(1, 20))
         
         # Informations du bailleur
-        story.append(Paragraph(f"<b>Bailleur:</b> {recap.bailleur.get_nom_complet()}", subtitle_style))
+        bailleur_nom = recap.bailleur.get_nom_complet() if recap.bailleur else "Sans bailleur"
+        story.append(Paragraph(f"<b>Bailleur:</b> {bailleur_nom}", subtitle_style))
         story.append(Paragraph(f"<b>Mois:</b> {recap.mois_recap.strftime('%B %Y')}", normal_style))
         story.append(Spacer(1, 15))
         
@@ -2190,7 +2191,8 @@ def imprimer_recap_mensuel(request, recap_id):
         # Créer la réponse HTTP
         from django.http import HttpResponse
         response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="recap_mensuel_{recap.bailleur.get_nom_complet()}_{recap.mois_recap.strftime("%Y_%m")}.pdf"'
+        bailleur_nom = recap.bailleur.get_nom_complet() if recap.bailleur else "sans_bailleur"
+        response['Content-Disposition'] = f'attachment; filename="recap_mensuel_{bailleur_nom.replace(" ", "_")}_{recap.mois_recap.strftime("%Y_%m")}.pdf"'
         
         # Marquer comme imprimé si ce n'est pas déjà fait
         if recap.statut == 'envoye' and not recap.date_impression:
@@ -3171,14 +3173,26 @@ def supprimer_recap_mensuel(request, recap_id):
             recap.deleted_by = request.user
             recap.save()
             
-            messages.success(request, f"Le récapitulatif de {recap.bailleur.get_nom_complet()} pour {recap.mois_recap.strftime('%B %Y')} a été supprimé avec succès.")
+            # Gérer le cas où le bailleur pourrait être None (pour les anciens récapitulatifs)
+            if recap.bailleur:
+                bailleur_nom = recap.bailleur.get_nom_complet()
+            else:
+                bailleur_nom = "Sans bailleur"
+            
+            messages.success(request, f"Le récapitulatif de {bailleur_nom} pour {recap.mois_recap.strftime('%B %Y')} a été supprimé avec succès.")
             return redirect('paiements:liste_recaps_mensuels_auto')
         
         # Afficher la page de confirmation
+        # Gérer le cas où le bailleur pourrait être None
+        if recap.bailleur:
+            bailleur_nom = recap.bailleur.get_nom_complet()
+        else:
+            bailleur_nom = "Sans bailleur"
+        
         context = get_context_with_entreprise_config({
             'recap': recap,
             'page_title': 'Confirmer la suppression',
-            'title': f'Supprimer le récapitulatif - {recap.bailleur.get_nom_complet()}',
+            'title': f'Supprimer le récapitulatif - {bailleur_nom}',
         })
         
         return render(request, 'paiements/confirmer_suppression_recap.html', context)
@@ -3205,7 +3219,13 @@ def restaurer_recap_mensuel(request, recap_id):
         recap.deleted_by = None
         recap.save()
         
-        messages.success(request, f"Le récapitulatif de {recap.bailleur.get_nom_complet()} pour {recap.mois_recap.strftime('%B %Y')} a été restauré avec succès.")
+        # Gérer le cas où le bailleur pourrait être None (pour les anciens récapitulatifs)
+        if recap.bailleur:
+            bailleur_nom = recap.bailleur.get_nom_complet()
+        else:
+            bailleur_nom = "Sans bailleur"
+        
+        messages.success(request, f"Le récapitulatif de {bailleur_nom} pour {recap.mois_recap.strftime('%B %Y')} a été restauré avec succès.")
         return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
         
     except Exception as e:
@@ -3249,9 +3269,10 @@ def apercu_pdf_recap_mensuel(request, recap_id):
             messages.error(request, "Vous n'avez pas les permissions pour voir ce récapitulatif.")
             return redirect('paiements:tableau_bord_recaps_mensuels')
         
+        bailleur_nom = recap.bailleur.get_nom_complet() if recap.bailleur else "Sans bailleur"
         return render(request, 'paiements/apercu_pdf_recap_mensuel.html', {
             'recap': recap,
-            'page_title': f'Aperçu - {recap.bailleur.get_nom_complet()} - {recap.mois_recap.strftime("%B %Y")}'
+            'page_title': f'Aperçu - {bailleur_nom} - {recap.mois_recap.strftime("%B %Y")}'
         })
         
     except Exception as e:
@@ -3623,7 +3644,8 @@ def generer_pdf_recap_detaille_paysage(request, recap_id):
         pdf_buffer.close()
         
         response = HttpResponse(pdf_content, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="recapitulatif_detaille_{recap.bailleur.get_nom_complet().replace(" ", "_")}_{recap.mois_recap.strftime("%Y_%m")}.pdf"'
+        bailleur_nom = recap.bailleur.get_nom_complet() if recap.bailleur else "sans_bailleur"
+        response['Content-Disposition'] = f'attachment; filename="recapitulatif_detaille_{bailleur_nom.replace(" ", "_")}_{recap.mois_recap.strftime("%Y_%m")}.pdf"'
         
         return response
         
