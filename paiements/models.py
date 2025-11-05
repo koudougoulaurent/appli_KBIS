@@ -488,6 +488,13 @@ class RecapMensuel(models.Model):
                 # Si l'image n'est pas trouvée, utiliser une chaîne vide
                 entete_base64 = ""
             
+            # Récupérer la configuration de l'entreprise
+            try:
+                from core.models import ConfigurationEntreprise
+                entreprise_config = ConfigurationEntreprise.get_configuration_active()
+            except:
+                entreprise_config = None
+            
             # Rendre le template HTML
             html_content = render_to_string(
                 'paiements/recapitulatifs/recapitulatif_mensuel_pdf.html',
@@ -497,6 +504,7 @@ class RecapMensuel(models.Model):
                     'proprietes_details': proprietes_details,
                     'date_generation': timezone.now(),
                     'entete_base64': entete_base64,
+                    'entreprise_config': entreprise_config,
                     'user': user,  # Ajouter l'utilisateur au contexte
                 }
             )
