@@ -636,7 +636,7 @@ function confirmerPaiement() {
     
     // Confirmation
     const montant = '{{ recap.montant_reellement_paye|floatformat:0|intcomma }}';
-    const bailleur = '{{ recap.bailleur.get_nom_complet }}';
+    const bailleur = '{% if recap.bailleur %}{{ recap.bailleur.get_nom_complet|default:"Bailleur inconnu" }}{% else %}Sans bailleur{% endif %}';
     const mois = '{{ recap.mois_recap|date:"F Y" }}';
     const modeText = mode === 'virement' ? 'Virement bancaire' : 
                     mode === 'cheque' ? 'Chèque' : 'Espèces';
