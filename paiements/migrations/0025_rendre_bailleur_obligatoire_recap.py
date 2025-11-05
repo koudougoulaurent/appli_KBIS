@@ -10,16 +10,10 @@ def supprimer_recaps_sans_bailleur(apps, schema_editor):
     
     # Récupérer tous les IDs des récapitulatifs sans bailleur
     with schema_editor.connection.cursor() as cursor:
-        if schema_editor.connection.vendor == 'sqlite':
-            cursor.execute("""
-                SELECT id FROM paiements_recapmensuel 
-                WHERE bailleur_id IS NULL
-            """)
-        else:
-            cursor.execute("""
-                SELECT id FROM paiements_recapmensuel 
-                WHERE bailleur_id IS NULL
-            """)
+        cursor.execute("""
+            SELECT id FROM paiements_recapmensuel 
+            WHERE bailleur_id IS NULL
+        """)
         ids_sans_bailleur = [row[0] for row in cursor.fetchall()]
     
     count = len(ids_sans_bailleur)
@@ -41,6 +35,10 @@ def supprimer_recaps_sans_bailleur(apps, schema_editor):
         
         # Ensuite, supprimer les récapitulatifs eux-mêmes
         RecapMensuel.objects.filter(id__in=ids_sans_bailleur).delete()
+        
+        # Pour PostgreSQL, forcer la fin de la transaction pour éviter les "pending trigger events"
+        if schema_editor.connection.vendor == 'postgresql':
+            schema_editor.connection.commit()
         
         print(f"[INFO] {count} recapitulatif(s) sans bailleur ont ete supprimes physiquement.")
         print("   Ces recapitulatifs ne peuvent pas etre utilises sans bailleur.")
@@ -64,6 +62,17 @@ class Migration(migrations.Migration):
         migrations.RunPython(
             supprimer_recaps_sans_bailleur,
             reverse_supprimer_recaps_sans_bailleur
+        ),
+        
+        # Utiliser RunSQL pour forcer une séparation de transaction avec PostgreSQL
+        # Cela évite les problèmes de "pending trigger events"
+        migrations.RunSQL(
+            sql="""
+                -- Pour PostgreSQL: forcer la fin de la transaction
+                -- Cette opération vide ne fait rien mais force une séparation
+            """,
+            reverse_sql=migrations.RunSQL.noop,
+            atomic=False,  # Important : ne pas exécuter dans une transaction atomique
         ),
         
         # Ensuite, rendre le champ obligatoire
