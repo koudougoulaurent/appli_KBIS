@@ -501,11 +501,19 @@ class RecapMensuel(models.Model):
 
     def calculer_totaux_globaux(self):
         """Calcule les totaux globaux pour l'affichage."""
+        from decimal import Decimal
+        # S'assurer que les totaux sont à jour (recalculer si nécessaire)
+        if not self.commission_agence or self.commission_agence == 0:
+            # Recalculer les totaux pour s'assurer que la commission est calculée
+            self.calculer_totaux_bailleur()
+        
         return {
             'total_loyers_bruts': self.total_loyers_bruts,
             'total_charges_deductibles': self.total_charges_deductibles,
             'total_charges_bailleur': self.total_charges_bailleur or 0,
             'total_net_a_payer': self.total_net_a_payer,
+            'commission_agence': self.commission_agence or Decimal('0'),
+            'montant_reellement_paye': self.montant_reellement_paye or Decimal('0'),
             'nombre_proprietes': self.nombre_proprietes,
             'nombre_contrats_actifs': self.nombre_contrats_actifs,
             'nombre_paiements_recus': self.nombre_paiements_recus,
