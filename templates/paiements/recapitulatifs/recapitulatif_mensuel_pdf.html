@@ -310,6 +310,14 @@
             <span>Montant net à payer :</span>
             <span>{{ totaux.montant_net_a_payer|floatformat:0 }} F CFA</span>
         </div>
+        <div class="total-row">
+            <span>Commission agence (10%) :</span>
+            <span>-{{ totaux.commission_agence|floatformat:0 }} F CFA</span>
+        </div>
+        <div class="total-row total-row-highlight">
+            <span><strong>Montant réellement payé :</strong></span>
+            <span><strong>{{ totaux.montant_reellement_paye|floatformat:0 }} F CFA</strong></span>
+        </div>
     </div>
     
     <!-- Notes -->
