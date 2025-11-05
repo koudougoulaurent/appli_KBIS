@@ -9,6 +9,7 @@ qui résument toutes les opérations financières pour chaque bailleur.
 
 import logging
 from datetime import datetime as dt, date
+from decimal import Decimal
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -669,16 +670,27 @@ def apercu_recapitulatif(request, recapitulatif_id):
         return redirect('paiements:dashboard')
     
     try:
-        recapitulatif = RecapMensuel.objects.get(pk=recapitulatif_id)
+        recapitulatif = RecapMensuel.objects.select_related('bailleur').get(pk=recapitulatif_id)
         
-        # Forcer le recalcul des totaux pour s'assurer qu'ils sont à jour
+        # Forcer le recalcul des totaux pour s'assurer qu'ils sont à jour et dynamiques
+        # Rafraîchir l'objet depuis la base de données pour éviter les problèmes de cache
+        recapitulatif.refresh_from_db()
+        
+        # Calculer les totaux (cette méthode sauvegarde aussi les valeurs)
         totaux = recapitulatif.calculer_totaux_bailleur()
         
-        # Si les totaux sont vides ou nuls, réessayer le calcul
-        if not totaux or totaux.get('total_loyers_bruts', 0) == 0:
-            # Recalculer en forçant la mise à jour
-            recapitulatif.calculer_totaux_bailleur()
-            totaux = recapitulatif.calculer_totaux_bailleur()
+        # Vérifier que les totaux sont valides
+        if not totaux:
+            totaux = {
+                'total_loyers_bruts': Decimal('0'),
+                'total_charges_deductibles': Decimal('0'),
+                'total_charges_bailleur': Decimal('0'),
+                'total_net_a_payer': Decimal('0'),
+                'nombre_proprietes': 0,
+                'nombre_contrats_actifs': 0,
+                'nombre_paiements_recus': 0,
+                'nombre_bailleurs': 1 if recapitulatif.bailleur else 0,
+            }
         
         context = {
             'recapitulatif': recapitulatif,

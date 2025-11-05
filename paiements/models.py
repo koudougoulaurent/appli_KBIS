@@ -202,8 +202,8 @@ class RecapMensuel(models.Model):
                     total_charges_deductibles += charges_mensuelles
             
             # NOUVEAU : Calculer les paiements réels reçus pour ce mois
-            # Utiliser une requête directe pour éviter les imports circulaires
-            from django.db import connection
+            # Importer Paiement de manière différée pour éviter les imports circulaires
+            from paiements.models import Paiement
             
             # Calculer les paiements réels reçus pour ce mois
             paiements_mois = Paiement.objects.filter(
@@ -258,6 +258,20 @@ class RecapMensuel(models.Model):
             # Sauvegarder les modifications
             self.save()
             
+            # Préparer le retour avec les valeurs calculées
+            nombre_bailleurs = 1 if self.bailleur else 0
+            
+            return {
+                'total_loyers_bruts': total_loyers,
+                'total_charges_deductibles': total_charges_deductibles,
+                'total_charges_bailleur': total_charges_bailleur,
+                'total_net_a_payer': max(total_net, Decimal('0')),
+                'nombre_proprietes': nombre_proprietes,
+                'nombre_contrats_actifs': nombre_contrats_actifs,
+                'nombre_paiements_recus': nombre_paiements_recus,
+                'nombre_bailleurs': nombre_bailleurs,
+            }
+            
         except Exception as e:
             # En cas d'erreur, utiliser les valeurs par défaut
             total_loyers = Decimal('0')
@@ -267,14 +281,14 @@ class RecapMensuel(models.Model):
             nombre_contrats_actifs = 0
             nombre_paiements_recus = 0
             total_net = Decimal('0')
+            nombre_bailleurs = 1 if self.bailleur else 0
+            
             # Logger l'erreur pour le débogage
             import logging
             logger = logging.getLogger(__name__)
-            logger.error(f"Erreur lors du calcul des totaux pour le récapitulatif {self.id}: {str(e)}")
+            logger.error(f"Erreur lors du calcul des totaux pour le récapitulatif {self.id if self.id else 'nouveau'}: {str(e)}", exc_info=True)
         
-        # Ajouter nombre_bailleurs (toujours 1 car c'est pour un seul bailleur)
-        nombre_bailleurs = 1 if self.bailleur else 0
-        
+        # Retourner les valeurs (même en cas d'erreur)
         return {
             'total_loyers_bruts': total_loyers,
             'total_charges_deductibles': total_charges_deductibles,
