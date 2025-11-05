@@ -616,7 +616,7 @@ class RecapMensuelAdmin(admin.ModelAdmin):
             'fields': ('nombre_proprietes', 'nombre_contrats_actifs', 'nombre_paiements_recus')
         }),
         (_('Relations'), {
-            'fields': ('retraits_associes', 'paiements_concernes', 'charges_deductibles'),
+            'fields': ('paiements_concernes', 'charges_deductibles'),
             'classes': ('collapse',)
         }),
         (_('Dates'), {
@@ -688,7 +688,7 @@ class RecapMensuelAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related(
             'bailleur', 'cree_par', 'valide_par'
         ).prefetch_related(
-            'retraits_associes', 'paiements_concernes', 'charges_deductibles'
+            'paiements_concernes', 'charges_deductibles'
         )
     
     def save_model(self, request, obj, form, change):
