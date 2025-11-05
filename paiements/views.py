@@ -224,29 +224,70 @@ class PaiementListView(LoginRequiredMixin, ListView):
     paginate_by = 20
     
     def get_queryset(self):
+        from django.db.models import Q
+        
         queryset = super().get_queryset()
-        return queryset.select_related(
+        queryset = queryset.select_related(
             'contrat__locataire',
             'contrat__propriete',
             'contrat__propriete__bailleur'
-        ).order_by('-created_at')
+        )
+        
+        # Récupérer les paramètres de recherche et filtres
+        query = self.request.GET.get('q', '').strip()
+        statut_filter = self.request.GET.get('statut', '')
+        type_filter = self.request.GET.get('type_paiement', '')
+        mode_filter = self.request.GET.get('mode_paiement', '')
+        
+        # Recherche textuelle
+        if query:
+            queryset = queryset.filter(
+                Q(reference_paiement__icontains=query) |
+                Q(contrat__numero_contrat__icontains=query) |
+                Q(contrat__locataire__nom__icontains=query) |
+                Q(contrat__locataire__prenom__icontains=query) |
+                Q(contrat__propriete__adresse__icontains=query) |
+                Q(contrat__propriete__ville__icontains=query) |
+                Q(nom_payeur__icontains=query)
+            )
+        
+        # Filtre par statut
+        if statut_filter:
+            queryset = queryset.filter(statut=statut_filter)
+        
+        # Filtre par type de paiement
+        if type_filter:
+            queryset = queryset.filter(type_paiement=type_filter)
+        
+        # Filtre par mode de paiement
+        if mode_filter:
+            queryset = queryset.filter(mode_paiement=mode_filter)
+        
+        return queryset.order_by('-created_at')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
-        # Statistiques pour le contexte
-        context['total_paiements'] = Paiement.objects.count()
-        context['paiements_valides'] = Paiement.objects.filter(statut='valide').count()
-        context['paiements_en_attente'] = Paiement.objects.filter(statut='en_attente').count()
-        context['paiements_refuses'] = Paiement.objects.filter(statut='refuse').count()
+        # Récupérer les paramètres de recherche pour les afficher dans le template
+        context['query'] = self.request.GET.get('q', '')
+        context['statut_filter'] = self.request.GET.get('statut', '')
+        context['type_filter'] = self.request.GET.get('type_paiement', '')
+        context['mode_filter'] = self.request.GET.get('mode_paiement', '')
+        
+        # Statistiques pour le contexte (basées sur les filtres actifs)
+        queryset = self.get_queryset()
+        context['total_paiements'] = queryset.count()
+        context['paiements_valides'] = queryset.filter(statut='valide').count()
+        context['paiements_en_attente'] = queryset.filter(statut='en_attente').count()
+        context['paiements_refuses'] = queryset.filter(statut='refuse').count()
         
         # Montant total
-        context['montant_total'] = Paiement.objects.aggregate(
+        context['montant_total'] = queryset.aggregate(
             total=Sum('montant')
         )['total'] or 0
         
         # Statistiques par type
-        context['stats_types'] = Paiement.objects.values('type_paiement').annotate(
+        context['stats_types'] = queryset.values('type_paiement').annotate(
             count=Count('id'),
             total=Sum('montant')
         ).order_by('-count')
