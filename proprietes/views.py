@@ -89,12 +89,6 @@ class ProprieteListView(PrivilegeButtonsMixin, EnhancedSearchMixin, IntelligentL
             'bailleur', 'type_bien'
         ).prefetch_related(
             'unites_locatives', 'pieces'
-        ).only(
-            'id', 'numero_propriete', 'titre', 'surface', 'nombre_pieces', 
-            'nombre_chambres', 'nombre_salles_bain', 'etat', 'disponible',
-            'loyer_actuel', 'charges_locataire', 'date_creation', 'type_gestion',
-            'adresse', 'quartier', 'ville',
-            'bailleur__nom', 'bailleur__prenom', 'type_bien__nom'
         )
     
     def get_context_data(self, **kwargs):
