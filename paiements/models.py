@@ -216,15 +216,21 @@ class RecapMensuel(models.Model):
             nombre_paiements_recus = paiements_mois.count()
             total_paiements_reels = sum(p.montant for p in paiements_mois) if paiements_mois.exists() else Decimal('0')
             
-            # Si des paiements réels existent, les utiliser pour les totaux
-            if nombre_paiements_recus > 0 and total_paiements_reels > total_loyers:
-                total_loyers = total_paiements_reels
-                
+            # Si des paiements réels existent et sont liés au récapitulatif, les utiliser pour les totaux
+            # Mais seulement si le total des paiements est cohérent avec les loyers contractuels
+            if nombre_paiements_recus > 0:
                 # Lier automatiquement les paiements au récapitulatif
                 try:
                     self.lier_paiements_automatiquement()
                 except:
                     pass  # Ignorer les erreurs de liaison
+                
+                # Utiliser les paiements réels seulement s'ils sont raisonnables (pas plus de 150% des loyers contractuels)
+                # Cela évite les incohérences dues à des paiements multiples ou incorrects
+                seuil_max = total_loyers * Decimal('1.5')
+                if total_paiements_reels <= seuil_max and total_paiements_reels >= total_loyers * Decimal('0.5'):
+                    # Les paiements réels sont cohérents, les utiliser
+                    total_loyers = total_paiements_reels
             
             # Calculer les charges bailleur pour le mois
             charges_bailleur_mois = ChargeBailleur.objects.filter(
