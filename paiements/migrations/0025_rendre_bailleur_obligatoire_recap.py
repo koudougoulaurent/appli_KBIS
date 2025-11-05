@@ -6,49 +6,71 @@ import django.db.models.deletion
 
 def supprimer_recaps_sans_bailleur(apps, schema_editor):
     """Supprime physiquement les récapitulatifs sans bailleur."""
-    RecapMensuel = apps.get_model('paiements', 'RecapMensuel')
-    
     # Utiliser une requête SQL directe pour éviter les problèmes avec les relations
-    # Récupérer tous les IDs des récapitulatifs sans bailleur
-    with schema_editor.connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT id FROM paiements_recapmensuel 
-            WHERE bailleur_id IS NULL
-        """)
-        ids_sans_bailleur = [row[0] for row in cursor.fetchall()]
-    
-    count = len(ids_sans_bailleur)
-    
-    if count > 0:
-        # Supprimer physiquement ces récapitulatifs
-        # On doit d'abord supprimer les relations ManyToMany
+    # PostgreSQL: utiliser un bloc DO pour forcer la suppression avant l'alteration
+    if schema_editor.connection.vendor == 'postgresql':
         with schema_editor.connection.cursor() as cursor:
-            # Construire les placeholders pour la clause IN
-            placeholders = ','.join(['%s'] * len(ids_sans_bailleur))
-            
-            # Supprimer les relations ManyToMany avec paiements_concernes
-            if ids_sans_bailleur:
-                cursor.execute(f"""
-                    DELETE FROM paiements_recapmensuel_paiements_concernes 
-                    WHERE recapmensuel_id IN ({placeholders})
-                """, ids_sans_bailleur)
-            
-            # Supprimer les relations ManyToMany avec charges_deductibles
-            if ids_sans_bailleur:
-                cursor.execute(f"""
-                    DELETE FROM paiements_recapmensuel_charges_deductibles 
-                    WHERE recapmensuel_id IN ({placeholders})
-                """, ids_sans_bailleur)
-            
-            # Enfin, supprimer les récapitulatifs eux-mêmes
-            if ids_sans_bailleur:
-                cursor.execute(f"""
-                    DELETE FROM paiements_recapmensuel 
-                    WHERE id IN ({placeholders})
-                """, ids_sans_bailleur)
+            # Supprimer les relations ManyToMany et les récapitulatifs en une seule transaction
+            cursor.execute("""
+                DO $$
+                DECLARE
+                    recap_ids INTEGER[];
+                BEGIN
+                    -- Récupérer les IDs des récapitulatifs sans bailleur
+                    SELECT ARRAY_AGG(id) INTO recap_ids
+                    FROM paiements_recapmensuel
+                    WHERE bailleur_id IS NULL;
+                    
+                    -- Si des récapitulatifs existent, les supprimer
+                    IF recap_ids IS NOT NULL AND array_length(recap_ids, 1) > 0 THEN
+                        -- Supprimer les relations ManyToMany
+                        DELETE FROM paiements_recapmensuel_paiements_concernes 
+                        WHERE recapmensuel_id = ANY(recap_ids);
+                        
+                        DELETE FROM paiements_recapmensuel_charges_deductibles 
+                        WHERE recapmensuel_id = ANY(recap_ids);
+                        
+                        -- Supprimer les récapitulatifs eux-mêmes
+                        DELETE FROM paiements_recapmensuel 
+                        WHERE id = ANY(recap_ids);
+                        
+                        RAISE NOTICE 'Supprimé % récapitulatifs sans bailleur', array_length(recap_ids, 1);
+                    END IF;
+                END $$;
+            """)
+    else:
+        # Pour les autres bases de données
+        RecapMensuel = apps.get_model('paiements', 'RecapMensuel')
+        with schema_editor.connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT id FROM paiements_recapmensuel 
+                WHERE bailleur_id IS NULL
+            """)
+            ids_sans_bailleur = [row[0] for row in cursor.fetchall()]
         
-        print(f"⚠️  {count} récapitulatif(s) sans bailleur ont été supprimés physiquement.")
-        print("   Ces récapitulatifs ne peuvent pas être utilisés sans bailleur.")
+        count = len(ids_sans_bailleur)
+        
+        if count > 0:
+            with schema_editor.connection.cursor() as cursor:
+                placeholders = ','.join(['%s'] * len(ids_sans_bailleur))
+                
+                if ids_sans_bailleur:
+                    cursor.execute(f"""
+                        DELETE FROM paiements_recapmensuel_paiements_concernes 
+                        WHERE recapmensuel_id IN ({placeholders})
+                    """, ids_sans_bailleur)
+                    
+                    cursor.execute(f"""
+                        DELETE FROM paiements_recapmensuel_charges_deductibles 
+                        WHERE recapmensuel_id IN ({placeholders})
+                    """, ids_sans_bailleur)
+                    
+                    cursor.execute(f"""
+                        DELETE FROM paiements_recapmensuel 
+                        WHERE id IN ({placeholders})
+                    """, ids_sans_bailleur)
+            
+            print(f"⚠️  {count} récapitulatif(s) sans bailleur ont été supprimés physiquement.")
 
 
 def reverse_supprimer_recaps_sans_bailleur(apps, schema_editor):
@@ -64,10 +86,31 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # D'abord, supprimer (logiquement) les récapitulatifs sans bailleur
-        migrations.RunPython(
-            supprimer_recaps_sans_bailleur,
-            reverse_supprimer_recaps_sans_bailleur
+        # D'abord, supprimer physiquement les récapitulatifs sans bailleur
+        # Utiliser RunSQL pour forcer l'exécution avant l'alteration
+        migrations.RunSQL(
+            sql="""
+                DO $$
+                DECLARE
+                    recap_ids INTEGER[];
+                BEGIN
+                    SELECT ARRAY_AGG(id) INTO recap_ids
+                    FROM paiements_recapmensuel
+                    WHERE bailleur_id IS NULL;
+                    
+                    IF recap_ids IS NOT NULL AND array_length(recap_ids, 1) > 0 THEN
+                        DELETE FROM paiements_recapmensuel_paiements_concernes 
+                        WHERE recapmensuel_id = ANY(recap_ids);
+                        
+                        DELETE FROM paiements_recapmensuel_charges_deductibles 
+                        WHERE recapmensuel_id = ANY(recap_ids);
+                        
+                        DELETE FROM paiements_recapmensuel 
+                        WHERE id = ANY(recap_ids);
+                    END IF;
+                END $$;
+            """,
+            reverse_sql=migrations.RunSQL.noop,
         ),
         
         # Ensuite, rendre le champ obligatoire
