@@ -272,7 +272,17 @@
                 {% if proprietes_details %}
                     {% for detail in proprietes_details %}
                     <tr>
-                        <td>{{ detail.propriete.titre|default:"N/A" }}</td>
+                        <td>
+                            {% if detail.propriete.titre %}
+                                {{ detail.propriete.titre }}
+                            {% elif detail.propriete.numero_propriete %}
+                                Propriété #{{ detail.propriete.numero_propriete }}
+                            {% elif detail.adresse_complete %}
+                                {{ detail.adresse_complete }}
+                            {% else %}
+                                Propriété ID: {{ detail.propriete.id }}
+                            {% endif %}
+                        </td>
                         <td>{{ detail.adresse_complete }}</td>
                         <td>
                             {% if detail.locataire %}

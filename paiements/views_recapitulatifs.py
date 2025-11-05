@@ -277,11 +277,20 @@ def detail_recapitulatif(request, recapitulatif_id):
             'bailleur': recapitulatif.bailleur,
         }
     
+    # CRITIQUE : Récupérer les détails des propriétés pour l'affichage dans le template
+    # Cela garantit que toutes les propriétés louées sont affichées avec leurs informations correctes
+    proprietes_details = recapitulatif.get_proprietes_details()
+    
+    # Ajouter les détails des propriétés aux totaux pour le template
+    if totaux:
+        totaux['details_proprietes'] = proprietes_details
+    
     context = {
         'page_title': f'Récapitulatif - {recapitulatif.mois_recap.strftime("%B %Y")}',
         'page_icon': 'file-earmark-text',
         'recapitulatif': recapitulatif,
-        'totaux': totaux
+        'totaux': totaux,
+        'proprietes_details': proprietes_details,  # Pour compatibilité avec d'autres templates
     }
     
     return render(request, 'paiements/recapitulatifs/detail_recapitulatif.html', context)

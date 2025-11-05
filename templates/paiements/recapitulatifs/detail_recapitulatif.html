@@ -293,7 +293,20 @@
             {% for propriete_detail in totaux.details_proprietes %}
             <div class="border rounded p-3 mb-3">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="mb-0">{{ propriete_detail.propriete.adresse }}</h6>
+                    <h6 class="mb-0">
+                        {% if propriete_detail.propriete.titre %}
+                            {{ propriete_detail.propriete.titre }}
+                        {% elif propriete_detail.propriete.numero_propriete %}
+                            Propriété #{{ propriete_detail.propriete.numero_propriete }}
+                        {% elif propriete_detail.propriete.adresse %}
+                            {{ propriete_detail.propriete.adresse }}
+                        {% else %}
+                            Propriété ID: {{ propriete_detail.propriete.id }}
+                        {% endif %}
+                        {% if propriete_detail.propriete.adresse %}
+                            <br><small class="text-muted">{{ propriete_detail.propriete.adresse }}</small>
+                        {% endif %}
+                    </h6>
                     <span class="badge bg-primary">{{ propriete_detail.propriete.type_propriete }}</span>
                 </div>
                 

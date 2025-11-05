@@ -127,7 +127,17 @@
                 <tbody>
                     {% for detail in proprietes_details %}
                     <tr>
-                        <td style="border: 1px solid #dee2e6; padding: 12px;">{{ detail.propriete.titre|default:"N/A" }}</td>
+                        <td style="border: 1px solid #dee2e6; padding: 12px;">
+                            {% if detail.propriete.titre %}
+                                {{ detail.propriete.titre }}
+                            {% elif detail.propriete.numero_propriete %}
+                                Propriété #{{ detail.propriete.numero_propriete }}
+                            {% elif detail.adresse_complete %}
+                                {{ detail.adresse_complete }}
+                            {% else %}
+                                Propriété ID: {{ detail.propriete.id }}
+                            {% endif %}
+                        </td>
                         <td style="border: 1px solid #dee2e6; padding: 12px;">{{ detail.adresse_complete }}</td>
                         <td style="border: 1px solid #dee2e6; padding: 12px;">{{ detail.locataire.get_nom_complet|default:detail.locataire.nom|default:"N/A" }}</td>
                         <td style="border: 1px solid #dee2e6; padding: 12px; text-align: right;">{{ detail.loyer_mensuel|floatformat:0 }} F CFA</td>
