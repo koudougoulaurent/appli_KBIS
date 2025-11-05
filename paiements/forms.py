@@ -776,6 +776,12 @@ class RecapMensuelForm(forms.ModelForm):
         bailleur = cleaned_data.get('bailleur')
         mois_recap = cleaned_data.get('mois_recap')
         
+        # Vérifier que le bailleur est obligatoire
+        if not bailleur:
+            raise forms.ValidationError({
+                'bailleur': _('Le bailleur est obligatoire pour créer un récapitulatif.')
+            })
+        
         if bailleur and mois_recap:
             # Vérifier s'il existe déjà un récapitulatif pour cette combinaison
             existing_recap = RecapMensuel.objects.filter(

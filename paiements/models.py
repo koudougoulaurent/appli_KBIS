@@ -21,7 +21,7 @@ class RecapMensuel(models.Model):
     
     # Informations de base
     bailleur = models.ForeignKey(
-        'proprietes.Bailleur', on_delete=models.SET_NULL, null=True, blank=True,
+        'proprietes.Bailleur', on_delete=models.PROTECT, null=False, blank=False,
         related_name='recaps_mensuels', verbose_name=_("Bailleur")
     )
     mois_recap = models.DateField(verbose_name=_("Mois du récapitulatif"))

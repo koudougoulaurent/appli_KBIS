@@ -828,19 +828,40 @@ def generer_recapitulatif_automatique(request):
         return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
     
     try:
-        # Vérifier s'il existe déjà un récapitulatif pour ce mois
+        # Récupérer le bailleur depuis les paramètres POST
+        from proprietes.models import Bailleur
+        bailleur_id = request.POST.get('bailleur_id')
+        
+        if not bailleur_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'Un bailleur est requis pour créer un récapitulatif'
+            })
+        
+        try:
+            bailleur = Bailleur.objects.get(id=bailleur_id, is_deleted=False)
+        except Bailleur.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'Bailleur introuvable'
+            })
+        
+        # Vérifier s'il existe déjà un récapitulatif pour ce mois et ce bailleur
         mois_actuel = timezone.now().replace(day=1)
         
         if RecapMensuel.objects.filter(
-            mois_recap=mois_actuel
+            bailleur=bailleur,
+            mois_recap=mois_actuel,
+            is_deleted=False
         ).exists():
             return JsonResponse({
                 'success': False,
-                'message': f'Un récapitulatif mensuel existe déjà pour {mois_actuel.strftime("%B %Y")}'
+                'message': f'Un récapitulatif mensuel existe déjà pour {bailleur.get_nom_complet()} - {mois_actuel.strftime("%B %Y")}'
             })
         
-        # Créer le récapitulatif automatiquement
+        # Créer le récapitulatif automatiquement avec le bailleur
         recapitulatif = RecapMensuel.objects.create(
+            bailleur=bailleur,
             mois_recap=mois_actuel,
             cree_par=request.user,
             garanties_suffisantes=True
