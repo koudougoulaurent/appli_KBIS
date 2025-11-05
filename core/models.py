@@ -548,13 +548,26 @@ class ConfigurationEntreprise(models.Model):
         
         return ", ".join(adresse_parts) if adresse_parts else "Adresse non configurée"
     
+    def get_telephones_formates(self):
+        """Retourne tous les téléphones formatés séparés par ' / '."""
+        telephones = []
+        if self.telephone:
+            telephones.append(self.telephone)
+        if self.telephone_2:
+            telephones.append(self.telephone_2)
+        if self.telephone_3:
+            telephones.append(self.telephone_3)
+        if self.telephone_4:
+            telephones.append(self.telephone_4)
+        
+        return " / ".join(telephones) if telephones else ""
+    
     def get_contact_complet(self):
         """Retourne les informations de contact formatées."""
         contact_parts = []
-        if self.telephone:
-            contact_parts.append(f"Tél: {self.telephone}")
-        if self.telephone_2:
-            contact_parts.append(f"Tél 2: {self.telephone_2}")
+        telephones = self.get_telephones_formates()
+        if telephones:
+            contact_parts.append(f"Tél: {telephones}")
         if self.email:
             contact_parts.append(f"Email: {self.email}")
         if self.site_web:

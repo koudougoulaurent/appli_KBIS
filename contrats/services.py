@@ -436,7 +436,14 @@ class ContratPDFService:
             canvas_obj.drawString(2*cm, 1*cm, f"{self.config_entreprise.nom_entreprise}")
             
             # Contact simplifié
-            canvas_obj.drawString(2*cm, 0.6*cm, f"Tél: {self.config_entreprise.telephone} | Email: {self.config_entreprise.email}")
+            telephones = self.config_entreprise.get_telephones_formates()
+            contact_str = f"Tél: {telephones}" if telephones else ""
+            if contact_str and self.config_entreprise.email:
+                contact_str += f" | Email: {self.config_entreprise.email}"
+            elif self.config_entreprise.email:
+                contact_str = f"Email: {self.config_entreprise.email}"
+            if contact_str:
+                canvas_obj.drawString(2*cm, 0.6*cm, contact_str)
             
             # Numéro de page
             canvas_obj.setFont("Helvetica-Bold", 7)
@@ -881,8 +888,9 @@ Merci pour votre compréhension"""
                 
                 # Téléphone et email
                 contact_info = []
-                if self.config_entreprise.telephone:
-                    contact_info.append(f"Tel: {self.config_entreprise.telephone}")
+                telephones = self.config_entreprise.get_telephones_formates()
+                if telephones:
+                    contact_info.append(f"Tel: {telephones}")
                 if self.config_entreprise.email:
                     contact_info.append(f"Email: {self.config_entreprise.email}")
                 
@@ -1016,7 +1024,12 @@ Merci pour votre compréhension"""
                     pied_page_text = getattr(self.config_entreprise, 'pied_page_personnalise', '')
                     if not pied_page_text:
                         # Pied de page par défaut centré
-                        pied_page_text = f"{self.config_entreprise.nom_entreprise} | {self.config_entreprise.get_adresse_complete()} | Tel: {self.config_entreprise.telephone} | Email: {self.config_entreprise.email}"
+                        telephones = self.config_entreprise.get_telephones_formates()
+                        contact_str = f"Tel: {telephones}" if telephones else ""
+                        if contact_str:
+                            pied_page_text = f"{self.config_entreprise.nom_entreprise} | {self.config_entreprise.get_adresse_complete()} | {contact_str} | Email: {self.config_entreprise.email}"
+                        else:
+                            pied_page_text = f"{self.config_entreprise.nom_entreprise} | {self.config_entreprise.get_adresse_complete()} | Email: {self.config_entreprise.email}"
                     
                     # Utiliser le pied de page
                     canvas_obj.setFillColor(colors.black)
@@ -1300,8 +1313,9 @@ class RecuCautionPDFService:
                 
                 # Téléphone et email
                 contact_info = []
-                if self.config_entreprise.telephone:
-                    contact_info.append(f"Tel: {self.config_entreprise.telephone}")
+                telephones = self.config_entreprise.get_telephones_formates()
+                if telephones:
+                    contact_info.append(f"Tel: {telephones}")
                 if self.config_entreprise.email:
                     contact_info.append(f"Email: {self.config_entreprise.email}")
                 
@@ -1429,7 +1443,14 @@ class RecuCautionPDFService:
             canvas_obj.drawString(2*cm, 1*cm, f"{self.config_entreprise.nom_entreprise}")
             
             # Contact simplifié
-            canvas_obj.drawString(2*cm, 0.6*cm, f"Tél: {self.config_entreprise.telephone} | Email: {self.config_entreprise.email}")
+            telephones = self.config_entreprise.get_telephones_formates()
+            contact_str = f"Tél: {telephones}" if telephones else ""
+            if contact_str and self.config_entreprise.email:
+                contact_str += f" | Email: {self.config_entreprise.email}"
+            elif self.config_entreprise.email:
+                contact_str = f"Email: {self.config_entreprise.email}"
+            if contact_str:
+                canvas_obj.drawString(2*cm, 0.6*cm, contact_str)
             
             # Numéro de page
             canvas_obj.setFont("Helvetica-Bold", 7)
@@ -1976,11 +1997,12 @@ class ResiliationPDFService:
             canvas_obj.drawString(2*cm, 1.3*cm, self.config_entreprise.nom_entreprise)
             
             # Contact
-            if self.config_entreprise.telephone or self.config_entreprise.email:
+            telephones = self.config_entreprise.get_telephones_formates()
+            if telephones or self.config_entreprise.email:
                 canvas_obj.setFont("Helvetica", 7)
                 contact_parts = []
-                if self.config_entreprise.telephone:
-                    contact_parts.append(f"Tél: {self.config_entreprise.telephone}")
+                if telephones:
+                    contact_parts.append(f"Tél: {telephones}")
                 if self.config_entreprise.email:
                     contact_parts.append(f"Email: {self.config_entreprise.email}")
                 canvas_obj.drawString(2*cm, 0.8*cm, " | ".join(contact_parts))

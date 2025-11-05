@@ -21,13 +21,17 @@
                     <div class="kbis-footer-phones">
                         <i class="bi bi-telephone"></i>
                         <span class="kbis-phone-primary">{{ config_entreprise.telephone }}</span>
-                        {% if config_entreprise.telephone_secondaire %}
+                        {% if config_entreprise.telephone_2 %}
                         <span class="kbis-phone-separator">/</span>
-                        <span class="kbis-phone-secondary">{{ config_entreprise.telephone_secondaire }}</span>
+                        <span class="kbis-phone-secondary">{{ config_entreprise.telephone_2 }}</span>
                         {% endif %}
-                        {% if config_entreprise.telephone_mobile %}
+                        {% if config_entreprise.telephone_3 %}
                         <span class="kbis-phone-separator">/</span>
-                        <span class="kbis-phone-mobile">{{ config_entreprise.telephone_mobile }}</span>
+                        <span class="kbis-phone-mobile">{{ config_entreprise.telephone_3 }}</span>
+                        {% endif %}
+                        {% if config_entreprise.telephone_4 %}
+                        <span class="kbis-phone-separator">/</span>
+                        <span class="kbis-phone-mobile">{{ config_entreprise.telephone_4 }}</span>
                         {% endif %}
                     </div>
                     
@@ -36,9 +40,6 @@
                     <div class="kbis-footer-address-secondary">
                         <i class="bi bi-geo-alt-fill"></i>
                         <span>{{ config_entreprise.adresse_secondaire }}</span>
-                        {% if config_entreprise.telephone_secondaire %}
-                        <span class="kbis-phone-inline">: {{ config_entreprise.telephone_secondaire }}</span>
-                        {% endif %}
                     </div>
                     {% endif %}
                     

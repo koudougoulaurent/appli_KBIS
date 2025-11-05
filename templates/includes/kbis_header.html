@@ -35,6 +35,18 @@
                     <div class="kbis-phone">
                         <i class="bi bi-telephone"></i>
                         <span>{{ config_entreprise.telephone }}</span>
+                        {% if config_entreprise.telephone_2 %}
+                        <span class="kbis-phone-separator">/</span>
+                        <span>{{ config_entreprise.telephone_2 }}</span>
+                        {% endif %}
+                        {% if config_entreprise.telephone_3 %}
+                        <span class="kbis-phone-separator">/</span>
+                        <span>{{ config_entreprise.telephone_3 }}</span>
+                        {% endif %}
+                        {% if config_entreprise.telephone_4 %}
+                        <span class="kbis-phone-separator">/</span>
+                        <span>{{ config_entreprise.telephone_4 }}</span>
+                        {% endif %}
                     </div>
                     <div class="kbis-email">
                         <i class="bi bi-envelope"></i>
