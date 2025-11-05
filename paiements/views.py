@@ -1705,7 +1705,12 @@ def detail_recap_mensuel(request, recap_id):
         messages.error(request, 'Récapitulatif introuvable.')
         return redirect('paiements:liste_recaps_mensuels')
     
+    # Vérifier que le récapitulatif a un bailleur
+    if not recap.bailleur:
+        messages.warning(request, 'Ce récapitulatif n\'a pas de bailleur associé. Certaines fonctionnalités peuvent être limitées.')
+    
     # Recalculer automatiquement les totaux pour s'assurer qu'ils sont à jour
+    # (la méthode gère déjà le cas où bailleur est None)
     recap.calculer_totaux_bailleur()
     
     # Calculer les statistiques détaillées
