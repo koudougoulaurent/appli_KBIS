@@ -1697,8 +1697,10 @@ def detail_recap_mensuel(request, recap_id):
             'bailleur', 'cree_par', 'modifie_par'
         ).prefetch_related(
             'paiements_concernes__contrat__propriete',
+            'paiements_concernes__contrat__unite_locative',
             'paiements_concernes__contrat__locataire',
             'charges_deductibles__contrat__propriete',
+            'charges_deductibles__contrat__unite_locative',
             'charges_deductibles__contrat__locataire'
         ).get(id=recap_id, is_deleted=False)
     except RecapMensuel.DoesNotExist:
@@ -1722,15 +1724,27 @@ def detail_recap_mensuel(request, recap_id):
         'total_net': recap.total_net_a_payer,
     }
     
-    # Grouper les paiements par propriété
+    # Grouper les paiements par propriété (en tenant compte des unités locatives)
+    # Utiliser une clé composée (propriete, unite_locative) pour différencier les unités
     paiements_par_propriete = {}
     for paiement in recap.paiements_concernes.all():
-        propriete = paiement.contrat.propriete
-        if propriete not in paiements_par_propriete:
+        contrat = paiement.contrat
+        propriete = contrat.propriete
+        unite_locative = contrat.unite_locative
+        
+        # Créer une clé unique pour la propriété + unité locative
+        if unite_locative:
+            cle = (propriete.id, unite_locative.id)
+        else:
+            cle = (propriete.id, None)
+        
+        if cle not in paiements_par_propriete:
             from decimal import Decimal
-            paiements_par_propriete[propriete] = {
-                'contrat': paiement.contrat,
-                'locataire': paiement.contrat.locataire,
+            paiements_par_propriete[cle] = {
+                'propriete': propriete,
+                'unite_locative': unite_locative,
+                'contrat': contrat,
+                'locataire': contrat.locataire,
                 'paiements': [],
                 'total_loyers': Decimal('0'),
                 'charges_deductibles': [],
@@ -1738,19 +1752,35 @@ def detail_recap_mensuel(request, recap_id):
                 'montant_net': Decimal('0')
             }
         
-        paiements_par_propriete[propriete]['paiements'].append(paiement)
-        paiements_par_propriete[propriete]['total_loyers'] += paiement.montant
+        paiements_par_propriete[cle]['paiements'].append(paiement)
+        paiements_par_propriete[cle]['total_loyers'] += paiement.montant
     
     # Ajouter les charges déductibles par propriété
     for charge in recap.charges_deductibles.all():
-        propriete = charge.contrat.propriete
-        if propriete in paiements_par_propriete:
-            paiements_par_propriete[propriete]['charges_deductibles'].append(charge)
-            paiements_par_propriete[propriete]['total_charges'] += charge.montant
-            paiements_par_propriete[propriete]['montant_net'] = (
-                paiements_par_propriete[propriete]['total_loyers'] - 
-                paiements_par_propriete[propriete]['total_charges']
+        contrat = charge.contrat
+        propriete = contrat.propriete
+        unite_locative = contrat.unite_locative
+        
+        # Utiliser la même clé que pour les paiements
+        if unite_locative:
+            cle = (propriete.id, unite_locative.id)
+        else:
+            cle = (propriete.id, None)
+        
+        if cle in paiements_par_propriete:
+            paiements_par_propriete[cle]['charges_deductibles'].append(charge)
+            paiements_par_propriete[cle]['total_charges'] += charge.montant
+            paiements_par_propriete[cle]['montant_net'] = (
+                paiements_par_propriete[cle]['total_loyers'] - 
+                paiements_par_propriete[cle]['total_charges']
             )
+    
+    # Convertir le dictionnaire avec clés composées en liste triée pour le template
+    # Trier par propriété puis par unité locative
+    paiements_par_propriete_liste = sorted(
+        paiements_par_propriete.values(),
+        key=lambda x: (x['propriete'].adresse_complete, x['unite_locative'].numero_unite if x['unite_locative'] else '')
+    )
     
     # Calculer les totaux globaux
     from decimal import Decimal
@@ -1767,7 +1797,7 @@ def detail_recap_mensuel(request, recap_id):
     context = get_context_with_entreprise_config({
         'recap': recap,
         'stats': stats,
-        'paiements_par_propriete': paiements_par_propriete,
+        'paiements_par_propriete': paiements_par_propriete_liste,  # Utiliser la liste triée
         'total_global_loyers': total_global_loyers,
         'total_global_charges': total_global_charges,
         'total_global_net': total_global_net,
