@@ -48,7 +48,40 @@ def liste_recapitulatifs(request):
     tri_par = request.GET.get('tri', 'mois')  # 'mois' ou 'statut'
     
     # Récupérer uniquement les récapitulatifs non supprimés
-    recapitulatifs = RecapMensuel.objects.filter(is_deleted=False).select_related('bailleur')
+    # Vérifier si les migrations sont appliquées en testant la présence des nouveaux champs
+    from django.db import connection
+    table_name = RecapMensuel._meta.db_table
+    has_new_fields = False
+    
+    try:
+        with connection.cursor() as cursor:
+            # Vérifier si la colonne commission_agence existe
+            if connection.vendor == 'sqlite':
+                cursor.execute(f"""
+                    SELECT name FROM pragma_table_info('{table_name}') WHERE name IN ('commission_agence', 'montant_reellement_paye')
+                """)
+            elif connection.vendor == 'postgresql':
+                cursor.execute("""
+                    SELECT column_name FROM information_schema.columns 
+                    WHERE table_name = %s AND column_name IN ('commission_agence', 'montant_reellement_paye')
+                """, [table_name])
+            else:
+                # Pour MySQL
+                cursor.execute("""
+                    SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_NAME = %s AND COLUMN_NAME IN ('commission_agence', 'montant_reellement_paye')
+                """, [table_name])
+            has_new_fields = len(cursor.fetchall()) > 0
+    except Exception:
+        # En cas d'erreur, supposer que les champs n'existent pas
+        has_new_fields = False
+    
+    # Récupérer les récapitulatifs
+    # Si les nouveaux champs n'existent pas, utiliser defer() pour exclure les nouveaux champs de la requête SQL
+    if not has_new_fields:
+        recapitulatifs = RecapMensuel.objects.filter(is_deleted=False).select_related('bailleur').defer('commission_agence', 'montant_reellement_paye')
+    else:
+        recapitulatifs = RecapMensuel.objects.filter(is_deleted=False).select_related('bailleur')
     
     # Appliquer les filtres
     if mois:
