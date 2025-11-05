@@ -8,11 +8,17 @@ def calculer_commission_recaps_existants(apps, schema_editor):
     """Calcule la commission agence et le montant réellement payé pour les récapitulatifs existants."""
     RecapMensuel = apps.get_model('paiements', 'RecapMensuel')
     
-    recaps = RecapMensuel.objects.all().select_related('bailleur')
+    # Filtrer seulement les récapitulatifs avec un bailleur (après la migration 0025, tous doivent en avoir un)
+    recaps = RecapMensuel.objects.filter(bailleur__isnull=False).select_related('bailleur')
     updated_count = 0
     
     for recap in recaps:
         try:
+            # Vérifier que le bailleur existe toujours
+            if not recap.bailleur:
+                print(f"⚠️  Récapitulatif {recap.id}: bailleur manquant, ignoré")
+                continue
+            
             # Utiliser la méthode calculer_totaux_bailleur qui recalcule tout avec la nouvelle logique
             # Cette méthode calcule automatiquement la commission et le montant réellement payé
             totaux = recap.calculer_totaux_bailleur()
@@ -35,8 +41,13 @@ def calculer_commission_recaps_existants(apps, schema_editor):
         except Exception as e:
             # En cas d'erreur, calculer au moins la commission basique
             try:
-                commission_agence = recap.total_net_a_payer * Decimal('0.10')
-                montant_reellement_paye = max(recap.total_net_a_payer - commission_agence, Decimal('0'))
+                if recap.total_net_a_payer:
+                    commission_agence = recap.total_net_a_payer * Decimal('0.10')
+                    montant_reellement_paye = max(recap.total_net_a_payer - commission_agence, Decimal('0'))
+                else:
+                    commission_agence = Decimal('0')
+                    montant_reellement_paye = Decimal('0')
+                
                 recap.commission_agence = commission_agence
                 recap.montant_reellement_paye = montant_reellement_paye
                 recap.save(update_fields=['commission_agence', 'montant_reellement_paye'])

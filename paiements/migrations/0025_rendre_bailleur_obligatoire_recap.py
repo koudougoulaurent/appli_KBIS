@@ -5,28 +5,48 @@ import django.db.models.deletion
 
 
 def supprimer_recaps_sans_bailleur(apps, schema_editor):
-    """Supprime (logiquement) les récapitulatifs sans bailleur."""
+    """Supprime physiquement les récapitulatifs sans bailleur."""
     RecapMensuel = apps.get_model('paiements', 'RecapMensuel')
     
-    # Marquer comme supprimés les récapitulatifs sans bailleur
-    recaps_sans_bailleur = RecapMensuel.objects.filter(bailleur__isnull=True, is_deleted=False)
-    count = recaps_sans_bailleur.count()
+    # Utiliser une requête SQL directe pour éviter les problèmes avec les relations
+    # Récupérer tous les IDs des récapitulatifs sans bailleur
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT id FROM paiements_recapmensuel 
+            WHERE bailleur_id IS NULL
+        """)
+        ids_sans_bailleur = [row[0] for row in cursor.fetchall()]
+    
+    count = len(ids_sans_bailleur)
     
     if count > 0:
-        # Option 1: Les supprimer logiquement
-        from django.utils import timezone
-        # Mettre à jour chaque récapitulatif individuellement pour éviter les problèmes de champs
-        for recap in recaps_sans_bailleur:
-            recap.is_deleted = True
-            if hasattr(recap, 'deleted_at'):
-                recap.deleted_at = timezone.now()
-            recap.save()
-        print(f"⚠️  {count} récapitulatif(s) sans bailleur ont été marqués comme supprimés.")
-        print("   Vous pouvez les restaurer manuellement si nécessaire.")
+        # Supprimer physiquement ces récapitulatifs
+        # On doit d'abord supprimer les relations ManyToMany
+        with schema_editor.connection.cursor() as cursor:
+            # Supprimer les relations ManyToMany avec paiements_concernes
+            cursor.execute("""
+                DELETE FROM paiements_recapmensuel_paiements_concernes 
+                WHERE recapmensuel_id = ANY(%s)
+            """, [ids_sans_bailleur])
+            
+            # Supprimer les relations ManyToMany avec charges_deductibles
+            cursor.execute("""
+                DELETE FROM paiements_recapmensuel_charges_deductibles 
+                WHERE recapmensuel_id = ANY(%s)
+            """, [ids_sans_bailleur])
+            
+            # Enfin, supprimer les récapitulatifs eux-mêmes
+            cursor.execute("""
+                DELETE FROM paiements_recapmensuel 
+                WHERE id = ANY(%s)
+            """, [ids_sans_bailleur])
+        
+        print(f"⚠️  {count} récapitulatif(s) sans bailleur ont été supprimés physiquement.")
+        print("   Ces récapitulatifs ne peuvent pas être utilisés sans bailleur.")
 
 
 def reverse_supprimer_recaps_sans_bailleur(apps, schema_editor):
-    """Fonction de rollback - ne fait rien car on ne peut pas restaurer automatiquement."""
+    """Fonction de rollback - ne fait rien car on ne peut pas restaurer automatiquement les suppressions physiques."""
     pass
 
 
