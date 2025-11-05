@@ -1689,6 +1689,9 @@ def detail_recap_mensuel(request, recap_id):
         messages.error(request, permissions['message'])
         return redirect('paiements:liste_recaps_mensuels')
     
+    # Vérifier si l'utilisateur est PRIVILEGE
+    is_privilege_user = hasattr(request.user, 'groupe_travail') and request.user.groupe_travail and request.user.groupe_travail.nom == 'PRIVILEGE'
+    
     try:
         recap = RecapMensuel.objects.select_related(
             'bailleur', 'cree_par', 'modifie_par'
@@ -1759,6 +1762,7 @@ def detail_recap_mensuel(request, recap_id):
         'total_global_charges': total_global_charges,
         'total_global_net': total_global_net,
         'title': f'Récapitulatif {recap.bailleur.get_nom_complet()} - {recap.mois_recap.strftime("%B %Y")}',
+        'is_privilege_user': is_privilege_user,
     })
     
     return render(request, 'paiements/detail_recap_mensuel.html', context)

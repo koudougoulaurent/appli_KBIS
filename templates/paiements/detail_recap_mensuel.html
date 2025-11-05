@@ -28,7 +28,7 @@
             <i class="bi bi-cash-coin"></i> Payer le Bailleur
         </button>
         {% endif %}
-        {% if user.is_superuser or 'PRIVILEGE' in user.groups.values_list:'name' %}
+        {% if user.is_superuser or is_privilege_user %}
         <a href="{% url 'paiements:supprimer_recap_mensuel' recap_id=recap.id %}" class="btn btn-danger">
             <i class="bi bi-trash"></i> Supprimer
         </a>

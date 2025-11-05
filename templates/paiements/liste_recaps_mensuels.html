@@ -153,7 +153,7 @@
                                        class="btn btn-outline-secondary" title="Imprimer PDF" target="_blank">
                                         <i class="bi bi-printer"></i>
                                     </a>
-                                    {% if user.is_superuser or 'PRIVILEGE' in user.groups.values_list:'name' %}
+                                    {% if user.is_superuser or is_privilege_user %}
                                         <a href="{% url 'paiements:supprimer_recap_mensuel' recap_id=recap.id %}" 
                                            class="btn btn-outline-danger" title="Supprimer" 
                                            onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce récapitulatif ?')">
