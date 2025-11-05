@@ -94,7 +94,7 @@
                     <li><hr class="dropdown-divider"></li>
                     <li>
                         <a class="dropdown-item text-danger" href="{% url 'paiements:supprimer_recap_mensuel' recapitulatif.pk %}" 
-                           onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce récapitulatif de {{ recapitulatif.mois_recap|date:\"F Y\" }} ?');">
+                           onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce récapitulatif de {{ recapitulatif.mois_recap|date:'F Y' }} ?');">
                             <i class="bi bi-trash"></i> Supprimer
                         </a>
                     </li>
