@@ -41,42 +41,22 @@
                 <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="bi bi-gear"></i> Actions
                 </button>
-                <ul class="dropdown-menu">
-                    {% if recapitulatif.peut_etre_valide %}
+                <ul class="dropdown-menu dropdown-menu-end">
                     <li>
-                        <a class="dropdown-item" href="#" onclick="validerRecapitulatif({{ recapitulatif.pk }}); return false;">
-                            <i class="bi bi-check-circle text-success"></i> Valider
+                        <a class="dropdown-item" href="{% url 'paiements:detail_recapitulatif' recapitulatif.pk %}">
+                            <i class="bi bi-eye text-primary"></i> Voir le détail
                         </a>
                     </li>
-                    {% endif %}
-                    
-                    {% if recapitulatif.peut_etre_envoye %}
-                    <li>
-                        <a class="dropdown-item" href="#" onclick="envoyerRecapitulatif({{ recapitulatif.pk }}); return false;">
-                            <i class="bi bi-send text-info"></i> Envoyer
-                        </a>
-                    </li>
-                    {% endif %}
-                    
-                    {% if recapitulatif.peut_etre_paye %}
-                    <li>
-                        <a class="dropdown-item" href="#" onclick="marquerPayeRecapitulatif({{ recapitulatif.pk }}); return false;">
-                            <i class="bi bi-cash text-warning"></i> Marquer Payé
-                        </a>
-                    </li>
-                    {% endif %}
-                    
-                    <li><hr class="dropdown-divider"></li>
                     
                     <li>
-                        <a class="dropdown-item" href="{% url 'paiements:apercu_recapitulatif' recapitulatif.pk %}">
-                            <i class="bi bi-eye"></i> Aperçu
+                        <a class="dropdown-item" href="{% url 'paiements:apercu_recapitulatif' recapitulatif.pk %}" target="_blank">
+                            <i class="bi bi-eye text-info"></i> Aperçu
                         </a>
                     </li>
                     
                     <li>
                         <a class="dropdown-item" href="{% url 'paiements:telecharger_pdf_recapitulatif' recapitulatif.pk %}">
-                            <i class="bi bi-download"></i> Télécharger PDF
+                            <i class="bi bi-download text-success"></i> Télécharger PDF
                         </a>
                     </li>
                     
@@ -90,11 +70,40 @@
                     </li>
                     {% endif %}
                     
+                    {% if recapitulatif.statut == 'brouillon' %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item" href="{% url 'paiements:valider_recapitulatif' recapitulatif.pk %}" 
+                           onclick="return confirm('Êtes-vous sûr de vouloir valider ce récapitulatif ?');">
+                            <i class="bi bi-check-circle text-success"></i> Valider
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% if recapitulatif.statut == 'valide' %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item" href="{% url 'paiements:envoyer_recapitulatif' recapitulatif.pk %}" 
+                           onclick="return confirm('Marquer ce récapitulatif comme envoyé ?');">
+                            <i class="bi bi-send text-info"></i> Marquer comme envoyé
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% if recapitulatif.statut == 'envoye' %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item" href="{% url 'paiements:marquer_paye_recapitulatif' recapitulatif.pk %}" 
+                           onclick="return confirm('Marquer ce récapitulatif comme payé ?');">
+                            <i class="bi bi-cash text-warning"></i> Marquer comme payé
+                        </a>
+                    </li>
+                    {% endif %}
+                    
                     {% if is_privilege_user %}
                     <li><hr class="dropdown-divider"></li>
                     <li>
-                        <a class="dropdown-item text-danger" href="{% url 'paiements:supprimer_recap_mensuel' recapitulatif.pk %}" 
-                           onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce récapitulatif de {{ recapitulatif.mois_recap|date:'F Y' }} ?');">
+                        <a class="dropdown-item text-danger" href="{% url 'paiements:supprimer_recap_mensuel' recapitulatif.pk %}">
                             <i class="bi bi-trash"></i> Supprimer
                         </a>
                     </li>
