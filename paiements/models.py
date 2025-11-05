@@ -524,6 +524,24 @@ class RecapMensuel(models.Model):
             # Récupérer les détails des propriétés et contrats
             proprietes_details = self.get_proprietes_details()
             
+            # Charger l'image en Base64 pour l'en-tête
+            import base64
+            import os
+            image_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'images', 'enteteEnImage.png')
+            entete_base64 = ""
+            try:
+                with open(image_path, "rb") as image_file:
+                    entete_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+            except:
+                entete_base64 = ""
+            
+            # Récupérer la configuration de l'entreprise
+            try:
+                from core.models import ConfigurationEntreprise
+                entreprise_config = ConfigurationEntreprise.get_configuration_active()
+            except:
+                entreprise_config = None
+            
             # Rendre le template HTML simple
             html_content = render_to_string(
                 'paiements/recapitulatifs/recapitulatif_mensuel_simple.html',
@@ -532,6 +550,8 @@ class RecapMensuel(models.Model):
                     'totaux': totaux,
                     'proprietes_details': proprietes_details,
                     'date_generation': timezone.now(),
+                    'entete_base64': entete_base64,
+                    'entreprise_config': entreprise_config,
                 }
             )
             

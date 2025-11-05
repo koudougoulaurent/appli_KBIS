@@ -76,6 +76,13 @@
     </style>
 </head>
 <body>
+    <!-- En-tête dynamique avec image Base64 -->
+    {% if entete_base64 %}
+    <div class="header">
+        <img src="data:image/png;base64,{{ entete_base64 }}" alt="En-tête KBIS" style="width: 100%; max-width: 100%; height: auto; display: block; margin-bottom: 20px;" />
+    </div>
+    {% endif %}
+    
     <div class="header">
         <div class="title">RÉCAPITULATIF MENSUEL</div>
         <div class="subtitle">{{ recapitulatif.bailleur.get_nom_complet }} - {{ recapitulatif.mois_recap|date:"F Y" }}</div>
@@ -178,10 +185,18 @@
         </div>
     </div>
 
+    <!-- Pied de page dynamique depuis CONFIGURATION ENTREPRISE -->
     <div class="footer">
-        <p><strong>KBIS IMMOBILIER</strong> - pissy 10050 ouagadougou Burkina Faso, Quartier Centre-Ville, BP 440 ouagadougou, Burkina Faso</p>
-        <p>Tél: +226 70 20 54 91 | Email: kbissarl2022@gmail.com</p>
-        <p>RCCM: CI-ABJ-XXXX-X-XXXXX | IFU: XXXXXXXXXX</p>
+        {% if entreprise_config %}
+            <p><strong>{{ entreprise_config.nom_entreprise|default:"KBIS IMMOBILIER" }}</strong> - {{ entreprise_config.adresse|default:"" }}{% if entreprise_config.ville %}, {{ entreprise_config.ville }}{% endif %}{% if entreprise_config.code_postal %}, {{ entreprise_config.code_postal }}{% endif %}{% if entreprise_config.pays %}, {{ entreprise_config.pays }}{% endif %}</p>
+            <p>Tél: {{ entreprise_config.telephone|default:"" }}{% if entreprise_config.telephone_2 %} | Tél 2: {{ entreprise_config.telephone_2 }}{% endif %}{% if entreprise_config.telephone_3 %} | Tél 3: {{ entreprise_config.telephone_3 }}{% endif %}{% if entreprise_config.telephone_4 %} | Tél 4: {{ entreprise_config.telephone_4 }}{% endif %}{% if entreprise_config.email %} | Email: {{ entreprise_config.email }}{% endif %}</p>
+            {% if entreprise_config.site_web %}<p>Web: {{ entreprise_config.site_web }}</p>{% endif %}
+            <p>{% if entreprise_config.rccm %}RCCM: {{ entreprise_config.rccm }}{% endif %}{% if entreprise_config.ifu %} | IFU: {{ entreprise_config.ifu }}{% endif %}</p>
+        {% else %}
+            <p><strong>KBIS IMMOBILIER</strong> - pissy 10050 ouagadougou Burkina Faso, Quartier Centre-Ville, BP 440 ouagadougou, Burkina Faso</p>
+            <p>Tél: +226 70 20 54 91 | Email: kbissarl2022@gmail.com</p>
+            <p>RCCM: CI-ABJ-XXXX-X-XXXXX | IFU: XXXXXXXXXX</p>
+        {% endif %}
     </div>
 </body>
 </html>
