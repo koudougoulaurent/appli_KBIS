@@ -28,53 +28,41 @@ def supprimer_recaps_sans_bailleur(apps, schema_editor):
         # Supprimer physiquement ces récapitulatifs
         with schema_editor.connection.cursor() as cursor:
             if schema_editor.connection.vendor == 'sqlite':
-                # Pour SQLite, utiliser une approche différente
+                # Pour SQLite, utiliser des placeholders ?
                 placeholders = ','.join(['?'] * len(ids_sans_bailleur))
                 
                 # Supprimer les relations ManyToMany avec paiements_concernes
                 if ids_sans_bailleur:
-                    cursor.execute(f"""
-                        DELETE FROM paiements_recapmensuel_paiements_concernes 
-                        WHERE recapmensuel_id IN ({placeholders})
-                    """, ids_sans_bailleur)
+                    sql = f"DELETE FROM paiements_recapmensuel_paiements_concernes WHERE recapmensuel_id IN ({placeholders})"
+                    cursor.execute(sql, ids_sans_bailleur)
                 
                 # Supprimer les relations ManyToMany avec charges_deductibles
                 if ids_sans_bailleur:
-                    cursor.execute(f"""
-                        DELETE FROM paiements_recapmensuel_charges_deductibles 
-                        WHERE recapmensuel_id IN ({placeholders})
-                    """, ids_sans_bailleur)
+                    sql = f"DELETE FROM paiements_recapmensuel_charges_deductibles WHERE recapmensuel_id IN ({placeholders})"
+                    cursor.execute(sql, ids_sans_bailleur)
                 
                 # Enfin, supprimer les récapitulatifs eux-mêmes
                 if ids_sans_bailleur:
-                    cursor.execute(f"""
-                        DELETE FROM paiements_recapmensuel 
-                        WHERE id IN ({placeholders})
-                    """, ids_sans_bailleur)
+                    sql = f"DELETE FROM paiements_recapmensuel WHERE id IN ({placeholders})"
+                    cursor.execute(sql, ids_sans_bailleur)
             else:
                 # Pour PostgreSQL et autres bases de données
                 placeholders = ','.join(['%s'] * len(ids_sans_bailleur))
                 
                 # Supprimer les relations ManyToMany avec paiements_concernes
                 if ids_sans_bailleur:
-                    cursor.execute(f"""
-                        DELETE FROM paiements_recapmensuel_paiements_concernes 
-                        WHERE recapmensuel_id IN ({placeholders})
-                    """, ids_sans_bailleur)
+                    sql = f"DELETE FROM paiements_recapmensuel_paiements_concernes WHERE recapmensuel_id IN ({placeholders})"
+                    cursor.execute(sql, ids_sans_bailleur)
                 
                 # Supprimer les relations ManyToMany avec charges_deductibles
                 if ids_sans_bailleur:
-                    cursor.execute(f"""
-                        DELETE FROM paiements_recapmensuel_charges_deductibles 
-                        WHERE recapmensuel_id IN ({placeholders})
-                    """, ids_sans_bailleur)
+                    sql = f"DELETE FROM paiements_recapmensuel_charges_deductibles WHERE recapmensuel_id IN ({placeholders})"
+                    cursor.execute(sql, ids_sans_bailleur)
                 
                 # Enfin, supprimer les récapitulatifs eux-mêmes
                 if ids_sans_bailleur:
-                    cursor.execute(f"""
-                        DELETE FROM paiements_recapmensuel 
-                        WHERE id IN ({placeholders})
-                    """, ids_sans_bailleur)
+                    sql = f"DELETE FROM paiements_recapmensuel WHERE id IN ({placeholders})"
+                    cursor.execute(sql, ids_sans_bailleur)
         
         print(f"⚠️  {count} récapitulatif(s) sans bailleur ont été supprimés physiquement.")
         print("   Ces récapitulatifs ne peuvent pas être utilisés sans bailleur.")
