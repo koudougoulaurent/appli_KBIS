@@ -169,9 +169,11 @@ class RecapMensuel(models.Model):
                 
                 self.save()
                 
-                # Calculer aussi la commission et le montant réellement payé
-                commission_agence = total_net * Decimal('0.10')
+                # CRITIQUE : Calculer aussi la commission et le montant réellement payé
+                # Arrondir à 2 décimales pour garantir la précision
+                commission_agence = (total_net * Decimal('0.10')).quantize(Decimal('0.01'))
                 montant_reellement_paye = max(total_net - commission_agence, Decimal('0'))
+                montant_reellement_paye = montant_reellement_paye.quantize(Decimal('0.01'))
                 
                 # Utiliser setattr pour éviter les erreurs si les migrations ne sont pas encore appliquées
                 if hasattr(self, 'commission_agence'):
