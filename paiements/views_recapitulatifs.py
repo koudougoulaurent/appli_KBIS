@@ -234,6 +234,11 @@ def generer_recapitulatif_kbis(request, recapitulatif_id):
     
     recapitulatif = get_object_or_404(RecapMensuel, pk=recapitulatif_id)
     
+    # Vérifier que le bailleur existe
+    if not recapitulatif.bailleur:
+        messages.error(request, 'Ce récapitulatif n\'a pas de bailleur associé. Impossible de générer le PDF.')
+        return redirect('paiements:detail_recapitulatif', recapitulatif_id=recapitulatif_id)
+    
     # Calculer les totaux
     totaux = recapitulatif.calculer_totaux_bailleur()
     
@@ -636,6 +641,11 @@ def telecharger_pdf_recapitulatif(request, recapitulatif_id):
         return redirect('paiements:dashboard')
     
     recapitulatif = get_object_or_404(RecapMensuel, pk=recapitulatif_id)
+    
+    # Vérifier que le bailleur existe
+    if not recapitulatif.bailleur:
+        messages.error(request, 'Ce récapitulatif n\'a pas de bailleur associé. Impossible de générer le PDF.')
+        return redirect('paiements:detail_recapitulatif', recapitulatif_id=recapitulatif_id)
     
     try:
         # Générer le PDF

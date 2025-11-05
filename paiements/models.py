@@ -131,10 +131,6 @@ class RecapMensuel(models.Model):
         from datetime import datetime, timedelta
         
         try:
-            # Vérifier que le bailleur existe
-            if not self.bailleur:
-                raise ValueError("Le récapitulatif doit avoir un bailleur associé")
-            
             # Initialiser les totaux
             total_loyers = Decimal('0')
             total_charges_deductibles = Decimal('0')
@@ -142,6 +138,33 @@ class RecapMensuel(models.Model):
             nombre_proprietes = 0
             nombre_contrats_actifs = 0
             nombre_paiements_recus = 0
+            
+            # Vérifier que le bailleur existe
+            if not self.bailleur:
+                # Retourner des valeurs par défaut si pas de bailleur
+                nombre_bailleurs = 0
+                total_net = Decimal('0')
+                
+                self.total_loyers_bruts = total_loyers
+                self.total_charges_deductibles = total_charges_deductibles
+                self.total_charges_bailleur = total_charges_bailleur
+                self.total_net_a_payer = total_net
+                self.nombre_proprietes = nombre_proprietes
+                self.nombre_contrats_actifs = nombre_contrats_actifs
+                self.nombre_paiements_recus = nombre_paiements_recus
+                
+                self.save()
+                
+                return {
+                    'total_loyers_bruts': total_loyers,
+                    'total_charges_deductibles': total_charges_deductibles,
+                    'total_charges_bailleur': total_charges_bailleur,
+                    'total_net_a_payer': total_net,
+                    'nombre_proprietes': nombre_proprietes,
+                    'nombre_contrats_actifs': nombre_contrats_actifs,
+                    'nombre_paiements_recus': nombre_paiements_recus,
+                    'nombre_bailleurs': nombre_bailleurs,
+                }
             
             # Calculer les dates de début et fin du mois AVANT de les utiliser
             mois_debut = self.mois_recap.replace(day=1)
@@ -436,7 +459,11 @@ class RecapMensuel(models.Model):
 
     def get_nom_fichier_pdf(self):
         """Génère le nom du fichier PDF du récapitulatif."""
-        return f"recapitulatif_{self.mois_recap.strftime('%Y_%m')}_{self.bailleur.get_nom_complet().replace(' ', '_')}.pdf"
+        if self.bailleur:
+            bailleur_nom = self.bailleur.get_nom_complet().replace(' ', '_')
+        else:
+            bailleur_nom = "sans_bailleur"
+        return f"recapitulatif_{self.mois_recap.strftime('%Y_%m')}_{bailleur_nom}.pdf"
 
     def get_proprietes_details(self):
         """Récupère les détails des propriétés, contrats et locataires pour le PDF."""
@@ -444,6 +471,10 @@ class RecapMensuel(models.Model):
         from decimal import Decimal
         
         proprietes_details = []
+        
+        # Vérifier que le bailleur existe
+        if not self.bailleur:
+            return proprietes_details
         
         # Calculer les dates de début et fin du mois
         mois_debut = self.mois_recap.replace(day=1)
