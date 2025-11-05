@@ -36,9 +36,19 @@
                 <i class="bi bi-eye"></i> Voir
             </a>
             
+            {% if is_privilege_user %}
+            <!-- Bouton de suppression visible -->
+            <a href="{% url 'paiements:supprimer_recap_mensuel' recapitulatif.pk %}" 
+               class="btn btn-sm btn-outline-danger" 
+               onclick="return confirm('Êtes-vous sûr de vouloir supprimer le récapitulatif de {{ recapitulatif.mois_recap|date:'F Y' }} pour {{ recapitulatif.bailleur.get_nom_complet|default:'ce bailleur' }} ?');"
+               title="Supprimer le récapitulatif">
+                <i class="bi bi-trash"></i>
+            </a>
+            {% endif %}
+            
             <!-- Barre déroulante d'actions -->
             <div class="btn-group">
-                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="true" aria-expanded="false">
                     <i class="bi bi-gear"></i> Actions
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">

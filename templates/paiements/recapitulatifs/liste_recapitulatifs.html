@@ -426,6 +426,15 @@ function marquerPayeRecapitulatif(recapitulatifId) {
         });
     }
 }
+
+// Initialiser les dropdowns Bootstrap
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser tous les dropdowns Bootstrap
+    var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
+    var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
+        return new bootstrap.Dropdown(dropdownToggleEl);
+    });
+});
 </script>
 
 <!-- Token CSRF pour les requêtes AJAX -->
