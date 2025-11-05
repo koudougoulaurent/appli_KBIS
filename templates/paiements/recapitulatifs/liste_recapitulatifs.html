@@ -151,6 +151,9 @@
                     <option value="statut" {% if tri_par == 'statut' %}selected{% endif %}>
                         Par statut
                     </option>
+                    <option value="bailleur" {% if tri_par == 'bailleur' %}selected{% endif %}>
+                        Par bailleur
+                    </option>
                 </select>
             </div>
             <div class="col-md-2 d-flex align-items-end">
@@ -187,6 +190,29 @@
                                             {{ recap.get_statut_display }}
                                         {% endfor %}
                                         <span class="badge bg-secondary">{{ groupe.list|length }}</span>
+                                    </h5>
+                                    <div class="row">
+                                        {% for recapitulatif in groupe.list %}
+                                            <div class="col-md-6 col-lg-4 mb-3">
+                                                {% include 'paiements/recapitulatifs/includes/recap_card.html' %}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% elif tri_par == 'bailleur' %}
+                            <!-- Affichage groupé par bailleur -->
+                            {% regroup page_obj by bailleur as recaps_grouped %}
+                            {% for groupe in recaps_grouped %}
+                                <div class="mb-4">
+                                    <h5 class="mb-3">
+                                        <i class="bi bi-person"></i> 
+                                        {% if groupe.grouper %}
+                                            {{ groupe.grouper.get_nom_complet }}
+                                        {% else %}
+                                            Sans bailleur
+                                        {% endif %}
+                                        <span class="badge bg-info">{{ groupe.list|length }}</span>
                                     </h5>
                                     <div class="row">
                                         {% for recapitulatif in groupe.list %}

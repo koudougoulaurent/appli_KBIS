@@ -64,6 +64,9 @@ def liste_recapitulatifs(request):
     if tri_par == 'statut':
         # Trier par statut puis par mois (plus récent en premier)
         recapitulatifs = recapitulatifs.order_by('statut', '-mois_recap', 'bailleur__nom')
+    elif tri_par == 'bailleur':
+        # Trier par bailleur puis par mois (plus récent en premier)
+        recapitulatifs = recapitulatifs.order_by('bailleur__nom', 'bailleur__prenom', '-mois_recap')
     else:
         # Trier par mois (plus récent en premier) puis par statut puis par bailleur
         recapitulatifs = recapitulatifs.order_by('-mois_recap', 'statut', 'bailleur__nom')
@@ -71,6 +74,7 @@ def liste_recapitulatifs(request):
     # Grouper les récapitulatifs
     recaps_par_mois = {}
     recaps_par_statut = {}
+    recaps_par_bailleur = {}
     
     for recap in recapitulatifs:
         mois_key = recap.mois_recap.strftime('%Y-%m')
@@ -93,6 +97,17 @@ def liste_recapitulatifs(request):
                 'recaps': []
             }
         recaps_par_statut[statut_key]['recaps'].append(recap)
+        
+        # Grouper par bailleur
+        if recap.bailleur:
+            bailleur_key = recap.bailleur.id
+            bailleur_label = recap.bailleur.get_nom_complet()
+            if bailleur_key not in recaps_par_bailleur:
+                recaps_par_bailleur[bailleur_key] = {
+                    'label': bailleur_label,
+                    'recaps': []
+                }
+            recaps_par_bailleur[bailleur_key]['recaps'].append(recap)
     
     # Pagination - on pagine le queryset complet
     paginator = Paginator(recapitulatifs, 20)
@@ -114,6 +129,7 @@ def liste_recapitulatifs(request):
         'page_obj': page_obj,
         'recaps_par_mois': recaps_par_mois,
         'recaps_par_statut': recaps_par_statut,
+        'recaps_par_bailleur': recaps_par_bailleur,
         'tri_par': tri_par,
         'stats': stats,
         'is_privilege_user': is_privilege_user,
