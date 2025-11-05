@@ -142,22 +142,18 @@
                     </option>
                 </select>
             </div>
-            <div class="col-md-3">
-                <label for="type_recap" class="form-label">Type</label>
-                <select class="form-control" id="type_recap" name="type_recap">
-                    <option value="">Tous les types</option>
-                    <option value="mensuel" {% if filtres.type_recap == 'mensuel' %}selected{% endif %}>
-                        Mensuel
+            <div class="col-md-2">
+                <label for="tri" class="form-label">Trier par</label>
+                <select class="form-control" id="tri" name="tri">
+                    <option value="mois" {% if tri_par == 'mois' %}selected{% endif %}>
+                        Par mois
                     </option>
-                    <option value="trimestriel" {% if filtres.type_recap == 'trimestriel' %}selected{% endif %}>
-                        Trimestriel
-                    </option>
-                    <option value="annuel" {% if filtres.type_recap == 'annuel' %}selected{% endif %}>
-                        Annuel
+                    <option value="statut" {% if tri_par == 'statut' %}selected{% endif %}>
+                        Par statut
                     </option>
                 </select>
             </div>
-            <div class="col-md-3 d-flex align-items-end">
+            <div class="col-md-2 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary me-2">
                     <i class="bi bi-search"></i> Filtrer
                 </button>
@@ -180,104 +176,46 @@
                 </div>
                 <div class="card-body">
                     {% if page_obj %}
-                        <div class="row">
-                            {% for recapitulatif in page_obj %}
-                            <div class="col-md-6 col-lg-4 mb-3">
-                                <div class="card recap-card {{ recapitulatif.statut }}">
-                                    <div class="card-body">
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <h6 class="card-title mb-0">
-                                                {{ recapitulatif.get_type_recapitulatif_display }}
-                                            </h6>
-                                            <span class="badge bg-{{ recapitulatif.get_statut_display_color }}">
-                                                {{ recapitulatif.get_statut_display }}
-                                            </span>
-                                        </div>
-                                        
-                                        <p class="card-text text-muted mb-2">
-                                            <i class="bi bi-calendar"></i>
-                                            {{ recapitulatif.mois_recap|date:"F Y" }}
-                                        </p>
-                                        
-                                        {% if recapitulatif.gestionnaire %}
-                                        <p class="card-text small mb-2">
-                                            <i class="bi bi-person"></i>
-                                            {{ recapitulatif.gestionnaire.get_full_name|default:recapitulatif.gestionnaire.username }}
-                                        </p>
-                                        {% endif %}
-                                        
-                                        <p class="card-text small text-muted mb-3">
-                                            <i class="bi bi-clock"></i>
-                                            Créé le {{ recapitulatif.date_creation|date:"d/m/Y H:i" }}
-                                        </p>
-                                        
-                                        <div class="action-buttons">
-                                            <a href="{% url 'paiements:detail_recapitulatif' recapitulatif.pk %}" 
-                                               class="btn btn-sm btn-outline-primary">
-                                                <i class="bi bi-eye"></i> Voir
-                                            </a>
-                                            
-                                            <!-- Barre déroulante d'actions -->
-                                            <div class="btn-group">
-                                                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                                                    <i class="bi bi-gear"></i> Actions
-                                                </button>
-                                                <ul class="dropdown-menu">
-                                                    {% if recapitulatif.peut_etre_valide %}
-                                                    <li>
-                                                        <a class="dropdown-item" href="#" onclick="validerRecapitulatif({{ recapitulatif.pk }}); return false;">
-                                                            <i class="bi bi-check-circle text-success"></i> Valider
-                                                        </a>
-                                                    </li>
-                                                    {% endif %}
-                                                    
-                                                    {% if recapitulatif.peut_etre_envoye %}
-                                                    <li>
-                                                        <a class="dropdown-item" href="#" onclick="envoyerRecapitulatif({{ recapitulatif.pk }}); return false;">
-                                                            <i class="bi bi-send text-info"></i> Envoyer
-                                                        </a>
-                                                    </li>
-                                                    {% endif %}
-                                                    
-                                                    {% if recapitulatif.peut_etre_paye %}
-                                                    <li>
-                                                        <a class="dropdown-item" href="#" onclick="marquerPayeRecapitulatif({{ recapitulatif.pk }}); return false;">
-                                                            <i class="bi bi-cash text-warning"></i> Marquer Payé
-                                                        </a>
-                                                    </li>
-                                                    {% endif %}
-                                                    
-                                                    <li><hr class="dropdown-divider"></li>
-                                                    
-                                                    <li>
-                                                        <a class="dropdown-item" href="{% url 'paiements:apercu_recapitulatif' recapitulatif.pk %}">
-                                                            <i class="bi bi-eye"></i> Aperçu
-                                                        </a>
-                                                    </li>
-                                                    
-                                                    <li>
-                                                        <a class="dropdown-item" href="{% url 'paiements:telecharger_pdf_recapitulatif' recapitulatif.pk %}">
-                                                            <i class="bi bi-download"></i> Télécharger PDF
-                                                        </a>
-                                                    </li>
-                                                    
-                                                    {% if recapitulatif.bailleur %}
-                                                    <li><hr class="dropdown-divider"></li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="{% url 'paiements:generer_recap_paiement_mensuel' recapitulatif.bailleur.pk %}?mois={{ recapitulatif.mois_recap|date:'Y-m' }}" 
-                                                           target="_blank">
-                                                            <i class="bi bi-cash-stack text-info"></i> État de paiement mensuel
-                                                        </a>
-                                                    </li>
-                                                    {% endif %}
-                                                </ul>
+                        {% if tri_par == 'statut' %}
+                            <!-- Affichage groupé par statut -->
+                            {% regroup page_obj by statut as recaps_grouped %}
+                            {% for groupe in recaps_grouped %}
+                                <div class="mb-4">
+                                    <h5 class="mb-3">
+                                        <i class="bi bi-tag"></i> 
+                                        {% for recap in groupe.list|slice:":1" %}
+                                            {{ recap.get_statut_display }}
+                                        {% endfor %}
+                                        <span class="badge bg-secondary">{{ groupe.list|length }}</span>
+                                    </h5>
+                                    <div class="row">
+                                        {% for recapitulatif in groupe.list %}
+                                            <div class="col-md-6 col-lg-4 mb-3">
+                                                {% include 'paiements/recapitulatifs/includes/recap_card.html' %}
                                             </div>
-                                        </div>
+                                        {% endfor %}
                                     </div>
                                 </div>
-                            </div>
                             {% endfor %}
-                        </div>
+                        {% else %}
+                            <!-- Affichage groupé par mois -->
+                            {% regroup page_obj by mois_recap|date:"F Y" as recaps_grouped %}
+                            {% for groupe in recaps_grouped %}
+                                <div class="mb-4">
+                                    <h5 class="mb-3">
+                                        <i class="bi bi-calendar-month"></i> {{ groupe.grouper }}
+                                        <span class="badge bg-primary">{{ groupe.list|length }}</span>
+                                    </h5>
+                                    <div class="row">
+                                        {% for recapitulatif in groupe.list %}
+                                            <div class="col-md-6 col-lg-4 mb-3">
+                                                {% include 'paiements/recapitulatifs/includes/recap_card.html' %}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
                         
                         <!-- Pagination -->
                         {% if page_obj.has_other_pages %}
@@ -285,12 +223,12 @@
                             <ul class="pagination justify-content-center">
                                 {% if page_obj.has_previous %}
                                     <li class="page-item">
-                                        <a class="page-link" href="?page=1{% if filtres.mois %}&mois={{ filtres.mois }}{% endif %}{% if filtres.statut %}&statut={{ filtres.statut }}{% endif %}{% if filtres.type_recap %}&type_recap={{ filtres.type_recap }}{% endif %}">
+                                        <a class="page-link" href="?page=1{% if filtres.mois %}&mois={{ filtres.mois }}{% endif %}{% if filtres.statut %}&statut={{ filtres.statut }}{% endif %}{% if tri_par %}&tri={{ tri_par }}{% endif %}">
                                             <i class="bi bi-chevron-double-left"></i>
                                         </a>
                                     </li>
                                     <li class="page-item">
-                                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if filtres.mois %}&mois={{ filtres.mois }}{% endif %}{% if filtres.statut %}&statut={{ filtres.statut }}{% endif %}{% if filtres.type_recap %}&type_recap={{ filtres.type_recap }}{% endif %}">
+                                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if filtres.mois %}&mois={{ filtres.mois }}{% endif %}{% if filtres.statut %}&statut={{ filtres.statut }}{% endif %}{% if tri_par %}&tri={{ tri_par }}{% endif %}">
                                             <i class="bi bi-chevron-left"></i>
                                         </a>
                                     </li>
@@ -303,7 +241,7 @@
                                         </li>
                                     {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
                                         <li class="page-item">
-                                            <a class="page-link" href="?page={{ num }}{% if filtres.mois %}&mois={{ filtres.mois }}{% endif %}{% if filtres.statut %}&statut={{ filtres.statut }}{% endif %}{% if filtres.type_recap %}&type_recap={{ filtres.type_recap }}{% endif %}">
+                                            <a class="page-link" href="?page={{ num }}{% if filtres.mois %}&mois={{ filtres.mois }}{% endif %}{% if filtres.statut %}&statut={{ filtres.statut }}{% endif %}{% if tri_par %}&tri={{ tri_par }}{% endif %}">
                                                 {{ num }}
                                             </a>
                                         </li>
@@ -312,12 +250,12 @@
                                 
                                 {% if page_obj.has_next %}
                                     <li class="page-item">
-                                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if filtres.mois %}&mois={{ filtres.mois }}{% endif %}{% if filtres.statut %}&statut={{ filtres.statut }}{% endif %}{% if filtres.type_recap %}&type_recap={{ filtres.type_recap }}{% endif %}">
+                                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if filtres.mois %}&mois={{ filtres.mois }}{% endif %}{% if filtres.statut %}&statut={{ filtres.statut }}{% endif %}{% if tri_par %}&tri={{ tri_par }}{% endif %}">
                                             <i class="bi bi-chevron-right"></i>
                                         </a>
                                     </li>
                                     <li class="page-item">
-                                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if filtres.mois %}&mois={{ filtres.mois }}{% endif %}{% if filtres.statut %}&statut={{ filtres.statut }}{% endif %}{% if filtres.type_recap %}&type_recap={{ filtres.type_recap }}{% endif %}">
+                                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if filtres.mois %}&mois={{ filtres.mois }}{% endif %}{% if filtres.statut %}&statut={{ filtres.statut }}{% endif %}{% if tri_par %}&tri={{ tri_par }}{% endif %}">
                                             <i class="bi bi-chevron-double-right"></i>
                                         </a>
                                     </li>

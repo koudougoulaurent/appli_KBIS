@@ -3111,7 +3111,8 @@ def supprimer_recap_mensuel(request, recap_id):
         recap = get_object_or_404(RecapMensuel, id=recap_id, is_deleted=False)
         
         # Vérifier les permissions - Seuls les superusers et le groupe PRIVILEGE peuvent supprimer
-        if not (request.user.is_superuser or request.user.groups.filter(name='PRIVILEGE').exists()):
+        is_privilege_user = hasattr(request.user, 'groupe_travail') and request.user.groupe_travail and request.user.groupe_travail.nom == 'PRIVILEGE'
+        if not (request.user.is_superuser or is_privilege_user):
             messages.error(request, "Vous n'avez pas les permissions pour supprimer un récapitulatif.")
             return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
         
@@ -3145,7 +3146,8 @@ def restaurer_recap_mensuel(request, recap_id):
         recap = get_object_or_404(RecapMensuel, id=recap_id, is_deleted=True)
         
         # Vérifier les permissions - Seuls les superusers et le groupe PRIVILEGE peuvent restaurer
-        if not (request.user.is_superuser or request.user.groups.filter(name='PRIVILEGE').exists()):
+        is_privilege_user = hasattr(request.user, 'groupe_travail') and request.user.groupe_travail and request.user.groupe_travail.nom == 'PRIVILEGE'
+        if not (request.user.is_superuser or is_privilege_user):
             messages.error(request, "Vous n'avez pas les permissions pour restaurer un récapitulatif.")
             return redirect('paiements:liste_recaps_mensuels_auto')
         
@@ -3166,7 +3168,8 @@ def restaurer_recap_mensuel(request, recap_id):
 def liste_recaps_supprimes(request):
     """Liste les récapitulatifs supprimés (superuser et PRIVILEGE uniquement)."""
     # Vérifier les permissions
-    if not (request.user.is_superuser or request.user.groups.filter(name='PRIVILEGE').exists()):
+    is_privilege_user = hasattr(request.user, 'groupe_travail') and request.user.groupe_travail and request.user.groupe_travail.nom == 'PRIVILEGE'
+    if not (request.user.is_superuser or is_privilege_user):
         messages.error(request, "Vous n'avez pas les permissions pour voir les récapitulatifs supprimés.")
         return redirect('paiements:liste_recaps_mensuels_auto')
     

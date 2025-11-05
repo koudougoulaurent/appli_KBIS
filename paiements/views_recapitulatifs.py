@@ -37,21 +37,64 @@ def liste_recapitulatifs(request):
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
     
+    # Vérifier si l'utilisateur est PRIVILEGE
+    is_privilege_user = hasattr(request.user, 'groupe_travail') and request.user.groupe_travail and request.user.groupe_travail.nom == 'PRIVILEGE'
+    
     # Filtres
     mois = request.GET.get('mois')
     statut = request.GET.get('statut')
     type_recap = request.GET.get('type')
+    tri_par = request.GET.get('tri', 'mois')  # 'mois' ou 'statut'
     
-    recapitulatifs = RecapMensuel.objects.all()
+    # Récupérer uniquement les récapitulatifs non supprimés
+    recapitulatifs = RecapMensuel.objects.filter(is_deleted=False).select_related('bailleur')
     
     # Appliquer les filtres
     if mois:
-        recapitulatifs = recapitulatifs.filter(mois_recap__icontains=mois)
+        try:
+            from datetime import datetime
+            date_mois = datetime.strptime(mois, '%Y-%m').date()
+            recapitulatifs = recapitulatifs.filter(mois_recap__year=date_mois.year, mois_recap__month=date_mois.month)
+        except (ValueError, TypeError):
+            recapitulatifs = recapitulatifs.filter(mois_recap__icontains=mois)
     if statut:
         recapitulatifs = recapitulatifs.filter(statut=statut)
-    # Note: type_recap filter removed as RecapMensuel model doesn't have type_recapitulatif field
     
-    # Pagination
+    # Trier selon le choix de l'utilisateur
+    if tri_par == 'statut':
+        # Trier par statut puis par mois (plus récent en premier)
+        recapitulatifs = recapitulatifs.order_by('statut', '-mois_recap', 'bailleur__nom')
+    else:
+        # Trier par mois (plus récent en premier) puis par statut puis par bailleur
+        recapitulatifs = recapitulatifs.order_by('-mois_recap', 'statut', 'bailleur__nom')
+    
+    # Grouper les récapitulatifs
+    recaps_par_mois = {}
+    recaps_par_statut = {}
+    
+    for recap in recapitulatifs:
+        mois_key = recap.mois_recap.strftime('%Y-%m')
+        mois_label = recap.mois_recap.strftime('%B %Y')
+        
+        # Grouper par mois
+        if mois_key not in recaps_par_mois:
+            recaps_par_mois[mois_key] = {
+                'label': mois_label,
+                'recaps': []
+            }
+        recaps_par_mois[mois_key]['recaps'].append(recap)
+        
+        # Grouper par statut
+        statut_key = recap.statut
+        statut_label = recap.get_statut_display()
+        if statut_key not in recaps_par_statut:
+            recaps_par_statut[statut_key] = {
+                'label': statut_label,
+                'recaps': []
+            }
+        recaps_par_statut[statut_key]['recaps'].append(recap)
+    
+    # Pagination - on pagine le queryset complet
     paginator = Paginator(recapitulatifs, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -59,7 +102,7 @@ def liste_recapitulatifs(request):
     # Statistiques
     stats = {
         'total': recapitulatifs.count(),
-        'en_preparation': recapitulatifs.filter(statut='en_preparation').count(),
+        'brouillon': recapitulatifs.filter(statut='brouillon').count(),
         'valides': recapitulatifs.filter(statut='valide').count(),
         'envoyes': recapitulatifs.filter(statut='envoye').count(),
         'payes': recapitulatifs.filter(statut='paye').count(),
@@ -69,7 +112,11 @@ def liste_recapitulatifs(request):
         'page_title': 'Récapitulatifs Mensuels',
         'page_icon': 'file-earmark-text',
         'page_obj': page_obj,
+        'recaps_par_mois': recaps_par_mois,
+        'recaps_par_statut': recaps_par_statut,
+        'tri_par': tri_par,
         'stats': stats,
+        'is_privilege_user': is_privilege_user,
         'filtres': {
             'mois': mois,
             'statut': statut,
