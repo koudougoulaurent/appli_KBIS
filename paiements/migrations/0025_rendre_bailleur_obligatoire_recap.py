@@ -42,8 +42,8 @@ def supprimer_recaps_sans_bailleur(apps, schema_editor):
         # Ensuite, supprimer les récapitulatifs eux-mêmes
         RecapMensuel.objects.filter(id__in=ids_sans_bailleur).delete()
         
-        print(f"⚠️  {count} récapitulatif(s) sans bailleur ont été supprimés physiquement.")
-        print("   Ces récapitulatifs ne peuvent pas être utilisés sans bailleur.")
+        print(f"[INFO] {count} recapitulatif(s) sans bailleur ont ete supprimes physiquement.")
+        print("   Ces recapitulatifs ne peuvent pas etre utilises sans bailleur.")
 
 
 def reverse_supprimer_recaps_sans_bailleur(apps, schema_editor):
