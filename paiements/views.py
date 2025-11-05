@@ -1699,8 +1699,7 @@ def detail_recap_mensuel(request, recap_id):
             'paiements_concernes__contrat__propriete',
             'paiements_concernes__contrat__locataire',
             'charges_deductibles__contrat__propriete',
-            'charges_deductibles__contrat__locataire',
-            'retraits_associes'
+            'charges_deductibles__contrat__locataire'
         ).get(id=recap_id, is_deleted=False)
     except RecapMensuel.DoesNotExist:
         messages.error(request, 'Récapitulatif introuvable.')
