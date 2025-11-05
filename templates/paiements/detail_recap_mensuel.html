@@ -41,7 +41,7 @@
     <div class="card-header bg-primary text-white">
         <h5 class="card-title mb-0">
             <i class="bi bi-info-circle"></i>
-            Récapitulatif Mensuel - {{ recap.bailleur.get_nom_complet|default:recap.bailleur.nom|default:recap.bailleur.username }}
+            Récapitulatif Mensuel - {% if recap.bailleur %}{{ recap.bailleur.get_nom_complet|default:"Bailleur inconnu" }}{% else %}Sans bailleur{% endif %}
         </h5>
     </div>
     <div class="card-body">
@@ -464,7 +464,7 @@ function supprimerRecap(recapId) {
                                     <i class="bi bi-person-circle text-primary display-6"></i>
                                 </div>
                                 <strong>Bailleur</strong><br>
-                                <span class="text-muted">{{ recap.bailleur.get_nom_complet }}</span>
+                                <span class="text-muted">{% if recap.bailleur %}{{ recap.bailleur.get_nom_complet|default:"Bailleur inconnu" }}{% else %}Sans bailleur{% endif %}</span>
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-2">
@@ -582,7 +582,7 @@ document.addEventListener('DOMContentLoaded', function() {
         function updateObservations() {
             const mode = modeSelect.value;
             const mois = '{{ recap.mois_recap|date:"F Y" }}';
-            const bailleur = '{{ recap.bailleur.get_nom_complet }}';
+            const bailleur = '{% if recap.bailleur %}{{ recap.bailleur.get_nom_complet|default:"Bailleur inconnu" }}{% else %}Sans bailleur{% endif %}';
             
             if (mode === 'virement') {
                 observationsInput.value = `${mois} - Paiement par virement bancaire pour ${bailleur}`;
