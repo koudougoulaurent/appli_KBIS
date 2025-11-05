@@ -331,10 +331,36 @@ class UtilisateurListView(PrivilegeButtonsMixin, IntelligentListView):
     
     def get_queryset(self):
         """
-        Optimisation des requêtes de base de données
+        Optimisation des requêtes de base de données avec recherche et filtres
         """
         queryset = super().get_queryset()
-        return queryset.select_related('groupe_travail').prefetch_related('groups', 'user_permissions')
+        queryset = queryset.select_related('groupe_travail').prefetch_related('groups', 'user_permissions')
+        
+        # Récupérer les paramètres de recherche et filtres
+        query = self.request.GET.get('q', '').strip()
+        actif_filter = self.request.GET.get('actif', '')
+        groupe_travail_filter = self.request.GET.get('groupe_travail', '')
+        
+        # Recherche textuelle
+        if query:
+            queryset = queryset.filter(
+                Q(username__icontains=query) |
+                Q(first_name__icontains=query) |
+                Q(last_name__icontains=query) |
+                Q(email__icontains=query) |
+                Q(telephone__icontains=query) |
+                Q(poste__icontains=query) |
+                Q(departement__icontains=query)
+            )
+        
+        # Filtres
+        if actif_filter:
+            queryset = queryset.filter(actif=actif_filter == '1')
+        
+        if groupe_travail_filter:
+            queryset = queryset.filter(groupe_travail_id=groupe_travail_filter)
+        
+        return queryset.order_by('username')
     
     def get_context_data(self, **kwargs):
         """
@@ -342,12 +368,19 @@ class UtilisateurListView(PrivilegeButtonsMixin, IntelligentListView):
         """
         context = super().get_context_data(**kwargs)
         
-        # Statistiques
-        context['total_utilisateurs'] = Utilisateur.objects.count()
-        context['utilisateurs_actifs'] = Utilisateur.objects.filter(actif=True).count()
-        context['utilisateurs_inactifs'] = Utilisateur.objects.filter(actif=False).count()
+        # Récupérer les paramètres de recherche pour les afficher dans le template
+        context['query'] = self.request.GET.get('q', '')
+        context['actif_filter'] = self.request.GET.get('actif', '')
+        context['groupe_travail_filter'] = self.request.GET.get('groupe_travail', '')
+        
+        # Statistiques (basées sur les filtres actifs)
+        queryset = self.get_queryset()
+        context['total_utilisateurs'] = queryset.count()
+        context['utilisateurs_actifs'] = queryset.filter(actif=True).count()
+        context['utilisateurs_inactifs'] = queryset.filter(actif=False).count()
         
         # Groupes pour les filtres
+        from utilisateurs.models import GroupeTravail
         context['groupes'] = GroupeTravail.objects.all()
         
         return context

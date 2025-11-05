@@ -58,10 +58,39 @@ class ContratListView(PrivilegeButtonsMixin, EnhancedSearchMixin, IntelligentLis
     
     def get_queryset(self):
         """
-        Optimisation des requêtes de base de données
+        Optimisation des requêtes de base de données avec recherche et filtres
         """
         queryset = super().get_queryset()
-        return queryset.select_related('propriete', 'locataire')
+        queryset = queryset.select_related('propriete', 'locataire')
+        
+        # Récupérer les paramètres de recherche et filtres
+        query = self.request.GET.get('q', '').strip()
+        est_actif_filter = self.request.GET.get('est_actif', '')
+        est_resilie_filter = self.request.GET.get('est_resilie', '')
+        mode_paiement_filter = self.request.GET.get('mode_paiement', '')
+        
+        # Recherche textuelle
+        if query:
+            queryset = queryset.filter(
+                Q(numero_contrat__icontains=query) |
+                Q(propriete__adresse__icontains=query) |
+                Q(propriete__ville__icontains=query) |
+                Q(locataire__nom__icontains=query) |
+                Q(locataire__prenom__icontains=query) |
+                Q(notes__icontains=query)
+            )
+        
+        # Filtres
+        if est_actif_filter:
+            queryset = queryset.filter(est_actif=est_actif_filter == '1')
+        
+        if est_resilie_filter:
+            queryset = queryset.filter(est_resilie=est_resilie_filter == '1')
+        
+        if mode_paiement_filter:
+            queryset = queryset.filter(mode_paiement=mode_paiement_filter)
+        
+        return queryset.order_by('-date_debut')
     
     def get_context_data(self, **kwargs):
         """
@@ -69,20 +98,27 @@ class ContratListView(PrivilegeButtonsMixin, EnhancedSearchMixin, IntelligentLis
         """
         context = super().get_context_data(**kwargs)
         
-        # Statistiques
-        context['total_contrats'] = Contrat.objects.count()
-        context['contrats_actifs'] = Contrat.objects.filter(est_actif=True).count()
-        context['contrats_resilies'] = Contrat.objects.filter(est_resilie=True).count()
-        context['contrats_inactifs'] = Contrat.objects.filter(est_actif=False, est_resilie=False).count()
+        # Récupérer les paramètres de recherche pour les afficher dans le template
+        context['query'] = self.request.GET.get('q', '')
+        context['est_actif_filter'] = self.request.GET.get('est_actif', '')
+        context['est_resilie_filter'] = self.request.GET.get('est_resilie', '')
+        context['mode_paiement_filter'] = self.request.GET.get('mode_paiement', '')
+        
+        # Statistiques (basées sur les filtres actifs)
+        queryset = self.get_queryset()
+        context['total_contrats'] = queryset.count()
+        context['contrats_actifs'] = queryset.filter(est_actif=True).count()
+        context['contrats_resilies'] = queryset.filter(est_resilie=True).count()
+        context['contrats_inactifs'] = queryset.filter(est_actif=False, est_resilie=False).count()
         
         # Montant total des loyers mensuels
         from django.db.models import Sum
-        context['montant_total_loyers'] = Contrat.objects.filter(est_actif=True).aggregate(
+        context['montant_total_loyers'] = queryset.filter(est_actif=True).aggregate(
             total=Sum('loyer_mensuel')
         )['total'] or 0
         
         # Statistiques par mode de paiement
-        context['stats_mode_paiement'] = Contrat.objects.values('mode_paiement').annotate(
+        context['stats_mode_paiement'] = queryset.values('mode_paiement').annotate(
             count=Sum('loyer_mensuel')
         ).order_by('-count')
         

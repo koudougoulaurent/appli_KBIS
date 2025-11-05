@@ -606,14 +606,45 @@ class BailleurListView(PrivilegeButtonsMixin, EnhancedSearchMixin, IntelligentLi
         {'value': 'date_creation', 'label': 'Date'},
     ]
     
+    def get_queryset(self):
+        """
+        Optimisation des requêtes avec recherche et filtres
+        """
+        queryset = super().get_queryset()
+        
+        # Récupérer les paramètres de recherche et filtres
+        query = self.request.GET.get('q', '').strip()
+        est_actif_filter = self.request.GET.get('est_actif', '')
+        
+        # Recherche textuelle
+        if query:
+            queryset = queryset.filter(
+                Q(nom__icontains=query) |
+                Q(prenom__icontains=query) |
+                Q(email__icontains=query) |
+                Q(telephone__icontains=query) |
+                Q(adresse__icontains=query)
+            )
+        
+        # Filtres
+        if est_actif_filter:
+            queryset = queryset.filter(est_actif=est_actif_filter == '1')
+        
+        return queryset.order_by('nom')
+    
     def get_context_data(self, **kwargs):
         """
         Ajout de statistiques et d'informations supplémentaires au contexte
         """
         context = super().get_context_data(**kwargs)
         
-        # Statistiques
-        context['total_bailleurs'] = Bailleur.objects.count()
+        # Récupérer les paramètres de recherche pour les afficher dans le template
+        context['query'] = self.request.GET.get('q', '')
+        context['est_actif_filter'] = self.request.GET.get('est_actif', '')
+        
+        # Statistiques (basées sur les filtres actifs)
+        queryset = self.get_queryset()
+        context['total_bailleurs'] = queryset.count()
         
         return context
 
