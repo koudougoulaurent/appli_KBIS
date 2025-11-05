@@ -131,6 +131,10 @@ class RecapMensuel(models.Model):
         from datetime import datetime, timedelta
         
         try:
+            # Vérifier que le bailleur existe
+            if not self.bailleur:
+                raise ValueError("Le récapitulatif doit avoir un bailleur associé")
+            
             # Initialiser les totaux
             total_loyers = Decimal('0')
             total_charges_deductibles = Decimal('0')
@@ -139,18 +143,7 @@ class RecapMensuel(models.Model):
             nombre_contrats_actifs = 0
             nombre_paiements_recus = 0
             
-            # Récupérer les propriétés du bailleur avec contrats actifs seulement
-            proprietes = self.bailleur.proprietes.filter(
-                is_deleted=False,
-                contrats__est_actif=True,
-                contrats__est_resilie=False,
-                contrats__date_debut__lte=mois_fin
-            ).filter(
-                models.Q(contrats__date_fin__gte=mois_debut) | models.Q(contrats__date_fin__isnull=True)
-            ).distinct()
-            nombre_proprietes = proprietes.count()
-            
-            # Calculer les dates de début et fin du mois
+            # Calculer les dates de début et fin du mois AVANT de les utiliser
             mois_debut = self.mois_recap.replace(day=1)
             if self.mois_recap.month == 12:
                 mois_fin = self.mois_recap.replace(year=self.mois_recap.year + 1, month=1, day=1) - timedelta(days=1)

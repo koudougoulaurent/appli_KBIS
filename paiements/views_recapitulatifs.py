@@ -670,7 +670,15 @@ def apercu_recapitulatif(request, recapitulatif_id):
     
     try:
         recapitulatif = RecapMensuel.objects.get(pk=recapitulatif_id)
+        
+        # Forcer le recalcul des totaux pour s'assurer qu'ils sont à jour
         totaux = recapitulatif.calculer_totaux_bailleur()
+        
+        # Si les totaux sont vides ou nuls, réessayer le calcul
+        if not totaux or totaux.get('total_loyers_bruts', 0) == 0:
+            # Recalculer en forçant la mise à jour
+            recapitulatif.calculer_totaux_bailleur()
+            totaux = recapitulatif.calculer_totaux_bailleur()
         
         context = {
             'recapitulatif': recapitulatif,
