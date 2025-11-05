@@ -73,7 +73,6 @@
             text-align: center;
             font-size: 8px;
             color: #000;
-            border-top: 2px solid #000;
             padding-top: 2.5mm;
             font-weight: 900;
             line-height: 1.4;
@@ -228,9 +227,6 @@
     <div class="footer">
         {% if entreprise_config %}
             <div class="footer-company">{{ entreprise_config.nom_entreprise }}</div>
-            {% if entreprise_config.slogan %}
-            <div class="footer-address">{{ entreprise_config.slogan }}</div>
-            {% endif %}
             <div class="footer-address">{{ entreprise_config.get_adresse_complete }}</div>
             <div class="footer-contact">{{ entreprise_config.get_contact_complet }}</div>
             <div class="footer-legal">{{ entreprise_config.get_informations_legales }}</div>
