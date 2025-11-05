@@ -696,11 +696,18 @@ def apercu_recapitulatif(request, recapitulatif_id):
                 'total_charges_deductibles': Decimal('0'),
                 'total_charges_bailleur': Decimal('0'),
                 'total_net_a_payer': Decimal('0'),
+                'commission_agence': Decimal('0'),
+                'montant_reellement_paye': Decimal('0'),
                 'nombre_proprietes': 0,
                 'nombre_contrats_actifs': 0,
                 'nombre_paiements_recus': 0,
                 'nombre_bailleurs': 1 if recapitulatif.bailleur else 0,
             }
+        # S'assurer que commission_agence et montant_reellement_paye sont présents
+        if 'commission_agence' not in totaux:
+            totaux['commission_agence'] = recapitulatif.commission_agence or Decimal('0')
+        if 'montant_reellement_paye' not in totaux:
+            totaux['montant_reellement_paye'] = recapitulatif.montant_reellement_paye or Decimal('0')
         
         context = {
             'recapitulatif': recapitulatif,

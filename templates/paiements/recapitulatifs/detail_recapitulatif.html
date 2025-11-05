@@ -258,10 +258,22 @@
                         <div class="text-muted">Charges déductibles</div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <div class="text-center p-3">
                         <div class="h4 text-success">{{ totaux.total_net_a_payer|floatformat:0 }} F CFA</div>
-                        <div class="text-muted">Montant net à payer</div>
+                        <div class="text-muted">Montant net</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-center p-3">
+                        <div class="h4 text-warning">-{{ totaux.commission_agence|floatformat:0 }} F CFA</div>
+                        <div class="text-muted">Commission (10%)</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-center p-3">
+                        <div class="h4 text-primary">{{ totaux.montant_reellement_paye|floatformat:0 }} F CFA</div>
+                        <div class="text-muted">Montant réellement payé</div>
                     </div>
                 </div>
             </div>

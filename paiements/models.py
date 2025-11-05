@@ -31,6 +31,20 @@ class RecapMensuel(models.Model):
     total_charges_deductibles = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total des charges déductibles"))
     total_charges_bailleur = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total des charges bailleur"), null=True, blank=True)
     total_net_a_payer = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name=_("Total net à payer"))
+    commission_agence = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=0, 
+        verbose_name=_("Commission agence (10%)"),
+        help_text=_("Commission de l'agence de gestion immobilière (10% du montant net)")
+    )
+    montant_reellement_paye = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=0, 
+        verbose_name=_("Montant réellement payé"),
+        help_text=_("Montant net - Commission agence")
+    )
     
     # Compteurs automatiques
     nombre_proprietes = models.PositiveIntegerField(default=0, verbose_name=_("Nombre de propriétés"))
@@ -155,11 +169,20 @@ class RecapMensuel(models.Model):
                 
                 self.save()
                 
+                # Calculer aussi la commission et le montant réellement payé
+                commission_agence = total_net * Decimal('0.10')
+                montant_reellement_paye = max(total_net - commission_agence, Decimal('0'))
+                
+                self.commission_agence = commission_agence
+                self.montant_reellement_paye = montant_reellement_paye
+                
                 return {
                     'total_loyers_bruts': total_loyers,
                     'total_charges_deductibles': total_charges_deductibles,
                     'total_charges_bailleur': total_charges_bailleur,
                     'total_net_a_payer': total_net,
+                    'commission_agence': commission_agence,
+                    'montant_reellement_paye': montant_reellement_paye,
                     'nombre_proprietes': nombre_proprietes,
                     'nombre_contrats_actifs': nombre_contrats_actifs,
                     'nombre_paiements_recus': nombre_paiements_recus,
@@ -268,12 +291,22 @@ class RecapMensuel(models.Model):
             
             # Calculer le total net
             total_net = total_loyers - total_charges_deductibles - total_charges_bailleur
+            total_net = max(total_net, Decimal('0'))
+            
+            # Commission agence = 10% du montant net à payer (obligatoire, comme dans les retraits)
+            commission_agence = total_net * Decimal('0.10')
+            
+            # Montant réellement payé = montant net - commission agence
+            montant_reellement_paye = total_net - commission_agence
+            montant_reellement_paye = max(montant_reellement_paye, Decimal('0'))
             
             # Mettre à jour les champs
             self.total_loyers_bruts = total_loyers
             self.total_charges_deductibles = total_charges_deductibles
             self.total_charges_bailleur = total_charges_bailleur
-            self.total_net_a_payer = max(total_net, Decimal('0'))
+            self.total_net_a_payer = total_net
+            self.commission_agence = commission_agence
+            self.montant_reellement_paye = montant_reellement_paye
             self.nombre_proprietes = nombre_proprietes
             self.nombre_contrats_actifs = nombre_contrats_actifs
             self.nombre_paiements_recus = nombre_paiements_recus
@@ -288,7 +321,9 @@ class RecapMensuel(models.Model):
                 'total_loyers_bruts': total_loyers,
                 'total_charges_deductibles': total_charges_deductibles,
                 'total_charges_bailleur': total_charges_bailleur,
-                'total_net_a_payer': max(total_net, Decimal('0')),
+                'total_net_a_payer': total_net,
+                'commission_agence': commission_agence,
+                'montant_reellement_paye': montant_reellement_paye,
                 'nombre_proprietes': nombre_proprietes,
                 'nombre_contrats_actifs': nombre_contrats_actifs,
                 'nombre_paiements_recus': nombre_paiements_recus,
@@ -311,12 +346,31 @@ class RecapMensuel(models.Model):
             logger = logging.getLogger(__name__)
             logger.error(f"Erreur lors du calcul des totaux pour le récapitulatif {self.id if self.id else 'nouveau'}: {str(e)}", exc_info=True)
         
+            # Calculer aussi la commission et le montant réellement payé même en cas d'erreur
+            total_net = max(total_net, Decimal('0'))
+            commission_agence = total_net * Decimal('0.10')
+            montant_reellement_paye = max(total_net - commission_agence, Decimal('0'))
+            
+            # Mettre à jour les champs même en cas d'erreur
+            self.total_loyers_bruts = total_loyers
+            self.total_charges_deductibles = total_charges_deductibles
+            self.total_charges_bailleur = total_charges_bailleur
+            self.total_net_a_payer = total_net
+            self.commission_agence = commission_agence
+            self.montant_reellement_paye = montant_reellement_paye
+            self.nombre_proprietes = nombre_proprietes
+            self.nombre_contrats_actifs = nombre_contrats_actifs
+            self.nombre_paiements_recus = nombre_paiements_recus
+            self.save()
+        
         # Retourner les valeurs (même en cas d'erreur)
         return {
             'total_loyers_bruts': total_loyers,
             'total_charges_deductibles': total_charges_deductibles,
             'total_charges_bailleur': total_charges_bailleur,
             'total_net_a_payer': max(total_net, Decimal('0')),
+            'commission_agence': commission_agence,
+            'montant_reellement_paye': montant_reellement_paye,
             'nombre_proprietes': nombre_proprietes,
             'nombre_contrats_actifs': nombre_contrats_actifs,
             'nombre_paiements_recus': nombre_paiements_recus,
