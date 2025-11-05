@@ -103,7 +103,8 @@
                     {% if is_privilege_user %}
                     <li><hr class="dropdown-divider"></li>
                     <li>
-                        <a class="dropdown-item text-danger" href="{% url 'paiements:supprimer_recap_mensuel' recapitulatif.pk %}">
+                        <a class="dropdown-item text-danger" href="{% url 'paiements:supprimer_recap_mensuel' recapitulatif.pk %}" 
+                           onclick="return confirm('Êtes-vous sûr de vouloir supprimer le récapitulatif de {{ recapitulatif.mois_recap|date:'F Y' }} pour {{ recapitulatif.bailleur.get_nom_complet|default:'ce bailleur' }} ?');">
                             <i class="bi bi-trash"></i> Supprimer
                         </a>
                     </li>
