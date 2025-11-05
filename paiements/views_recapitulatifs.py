@@ -704,10 +704,11 @@ def apercu_recapitulatif(request, recapitulatif_id):
                 'nombre_bailleurs': 1 if recapitulatif.bailleur else 0,
             }
         # S'assurer que commission_agence et montant_reellement_paye sont présents
+        # Utiliser getattr pour éviter les erreurs si les migrations ne sont pas encore appliquées
         if 'commission_agence' not in totaux:
-            totaux['commission_agence'] = recapitulatif.commission_agence or Decimal('0')
+            totaux['commission_agence'] = getattr(recapitulatif, 'commission_agence', None) or Decimal('0')
         if 'montant_reellement_paye' not in totaux:
-            totaux['montant_reellement_paye'] = recapitulatif.montant_reellement_paye or Decimal('0')
+            totaux['montant_reellement_paye'] = getattr(recapitulatif, 'montant_reellement_paye', None) or Decimal('0')
         
         context = {
             'recapitulatif': recapitulatif,

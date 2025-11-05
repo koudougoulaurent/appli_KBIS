@@ -173,8 +173,11 @@ class RecapMensuel(models.Model):
                 commission_agence = total_net * Decimal('0.10')
                 montant_reellement_paye = max(total_net - commission_agence, Decimal('0'))
                 
-                self.commission_agence = commission_agence
-                self.montant_reellement_paye = montant_reellement_paye
+                # Utiliser setattr pour éviter les erreurs si les migrations ne sont pas encore appliquées
+                if hasattr(self, 'commission_agence'):
+                    self.commission_agence = commission_agence
+                if hasattr(self, 'montant_reellement_paye'):
+                    self.montant_reellement_paye = montant_reellement_paye
                 
                 return {
                     'total_loyers_bruts': total_loyers,
@@ -305,8 +308,11 @@ class RecapMensuel(models.Model):
             self.total_charges_deductibles = total_charges_deductibles
             self.total_charges_bailleur = total_charges_bailleur
             self.total_net_a_payer = total_net
-            self.commission_agence = commission_agence
-            self.montant_reellement_paye = montant_reellement_paye
+            # Utiliser setattr pour éviter les erreurs si les migrations ne sont pas encore appliquées
+            if hasattr(self, 'commission_agence'):
+                self.commission_agence = commission_agence
+            if hasattr(self, 'montant_reellement_paye'):
+                self.montant_reellement_paye = montant_reellement_paye
             self.nombre_proprietes = nombre_proprietes
             self.nombre_contrats_actifs = nombre_contrats_actifs
             self.nombre_paiements_recus = nombre_paiements_recus
@@ -356,8 +362,11 @@ class RecapMensuel(models.Model):
             self.total_charges_deductibles = total_charges_deductibles
             self.total_charges_bailleur = total_charges_bailleur
             self.total_net_a_payer = total_net
-            self.commission_agence = commission_agence
-            self.montant_reellement_paye = montant_reellement_paye
+            # Utiliser setattr pour éviter les erreurs si les migrations ne sont pas encore appliquées
+            if hasattr(self, 'commission_agence'):
+                self.commission_agence = commission_agence
+            if hasattr(self, 'montant_reellement_paye'):
+                self.montant_reellement_paye = montant_reellement_paye
             self.nombre_proprietes = nombre_proprietes
             self.nombre_contrats_actifs = nombre_contrats_actifs
             self.nombre_paiements_recus = nombre_paiements_recus
@@ -502,18 +511,25 @@ class RecapMensuel(models.Model):
     def calculer_totaux_globaux(self):
         """Calcule les totaux globaux pour l'affichage."""
         from decimal import Decimal
+        # Utiliser getattr pour éviter les erreurs si les migrations ne sont pas encore appliquées
+        commission_agence = getattr(self, 'commission_agence', None)
+        montant_reellement_paye = getattr(self, 'montant_reellement_paye', None)
+        
         # S'assurer que les totaux sont à jour (recalculer si nécessaire)
-        if not self.commission_agence or self.commission_agence == 0:
+        if not commission_agence or commission_agence == 0:
             # Recalculer les totaux pour s'assurer que la commission est calculée
             self.calculer_totaux_bailleur()
+            # Récupérer à nouveau après le recalcul
+            commission_agence = getattr(self, 'commission_agence', None)
+            montant_reellement_paye = getattr(self, 'montant_reellement_paye', None)
         
         return {
             'total_loyers_bruts': self.total_loyers_bruts,
             'total_charges_deductibles': self.total_charges_deductibles,
             'total_charges_bailleur': self.total_charges_bailleur or 0,
             'total_net_a_payer': self.total_net_a_payer,
-            'commission_agence': self.commission_agence or Decimal('0'),
-            'montant_reellement_paye': self.montant_reellement_paye or Decimal('0'),
+            'commission_agence': commission_agence or Decimal('0'),
+            'montant_reellement_paye': montant_reellement_paye or Decimal('0'),
             'nombre_proprietes': self.nombre_proprietes,
             'nombre_contrats_actifs': self.nombre_contrats_actifs,
             'nombre_paiements_recus': self.nombre_paiements_recus,

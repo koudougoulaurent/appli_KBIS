@@ -1791,7 +1791,8 @@ def detail_recap_mensuel(request, recap_id):
     # Utiliser le montant réellement payé du récapitulatif (qui inclut déjà la commission)
     # Recalculer si nécessaire pour s'assurer qu'il est à jour
     recap.calculer_totaux_bailleur()
-    total_global_net_reellement_paye = recap.montant_reellement_paye or Decimal('0')
+    # Utiliser getattr pour éviter les erreurs si les migrations ne sont pas encore appliquées
+    total_global_net_reellement_paye = getattr(recap, 'montant_reellement_paye', None) or Decimal('0')
     
     # Préparer le titre avec gestion du bailleur None
     if recap.bailleur:
