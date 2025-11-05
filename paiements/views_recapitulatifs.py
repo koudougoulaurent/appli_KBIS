@@ -233,15 +233,23 @@ def detail_recapitulatif(request, recapitulatif_id):
     
     recapitulatif = get_object_or_404(RecapMensuel, pk=recapitulatif_id)
     
-    # Calculer les totaux (version simplifiée)
+    # Recalculer les totaux pour s'assurer qu'ils sont à jour (y compris commission et montant réellement payé)
+    recapitulatif.calculer_totaux_bailleur()
+    recapitulatif.refresh_from_db()
+    
+    # Calculer les totaux complets avec commission et montant réellement payé
+    from decimal import Decimal
     totaux = {
         'total_loyers_bruts': recapitulatif.total_loyers_bruts,
         'total_charges_deductibles': recapitulatif.total_charges_deductibles,
         'total_charges_bailleur': recapitulatif.total_charges_bailleur,
         'total_net_a_payer': recapitulatif.total_net_a_payer,
+        'commission_agence': getattr(recapitulatif, 'commission_agence', None) or Decimal('0'),
+        'montant_reellement_paye': getattr(recapitulatif, 'montant_reellement_paye', None) or Decimal('0'),
         'nombre_proprietes': recapitulatif.nombre_proprietes,
         'nombre_contrats_actifs': recapitulatif.nombre_contrats_actifs,
         'nombre_paiements_recus': recapitulatif.nombre_paiements_recus,
+        'bailleur': recapitulatif.bailleur,  # Ajouter le bailleur pour le template
     }
     
     context = {
