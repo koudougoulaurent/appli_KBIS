@@ -94,10 +94,34 @@ class RecapMensuel(models.Model):
         
         if dernier_recap:
             # Retourner le mois suivant le dernier récapitulatif
-            return dernier_recap.mois_recap + relativedelta(months=1)
+            mois_suggere = dernier_recap.mois_recap + relativedelta(months=1)
+            dernier_mois = dernier_recap.mois_recap
+            raison = f"Mois suivant le dernier récapitulatif ({dernier_mois.strftime('%B %Y')})"
         else:
             # Retourner le mois précédent si aucun récapitulatif n'existe
-            return date.today().replace(day=1) - relativedelta(months=1)
+            mois_suggere = date.today().replace(day=1) - relativedelta(months=1)
+            dernier_mois = None
+            raison = "Aucun récapitulatif existant - mois précédent suggéré"
+        
+        # Vérifier si un récapitulatif existe déjà pour le mois suggéré
+        recap_existant = RecapMensuel.objects.filter(
+            bailleur=bailleur,
+            mois_recap=mois_suggere,
+            is_deleted=False
+        ).exists()
+        
+        # Formater le mois en français
+        mois_fr = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+                   'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
+        mois_formate = f"{mois_fr[mois_suggere.month - 1].capitalize()} {mois_suggere.year}"
+        
+        return {
+            'mois_suggere': mois_suggere,
+            'mois_suggere_formate': mois_formate,
+            'raison': raison,
+            'dernier_mois': dernier_mois,
+            'recap_existant': recap_existant
+        }
     
     def calculer_totaux_bailleur(self):
         """Calcule les totaux pour le bailleur avec les charges dynamiques et les paiements réels."""
@@ -245,6 +269,9 @@ class RecapMensuel(models.Model):
             nombre_paiements_recus = 0
             total_net = Decimal('0')
         
+        # Ajouter nombre_bailleurs (toujours 1 car c'est pour un seul bailleur)
+        nombre_bailleurs = 1 if self.bailleur else 0
+        
         return {
             'total_loyers_bruts': total_loyers,
             'total_charges_deductibles': total_charges_deductibles,
@@ -253,6 +280,7 @@ class RecapMensuel(models.Model):
             'nombre_proprietes': nombre_proprietes,
             'nombre_contrats_actifs': nombre_contrats_actifs,
             'nombre_paiements_recus': nombre_paiements_recus,
+            'nombre_bailleurs': nombre_bailleurs,
         }
     
     def calculer_charges_bailleur_disponibles(self):
