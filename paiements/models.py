@@ -268,6 +268,10 @@ class RecapMensuel(models.Model):
             nombre_contrats_actifs = 0
             nombre_paiements_recus = 0
             total_net = Decimal('0')
+            # Logger l'erreur pour le débogage
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Erreur lors du calcul des totaux pour le récapitulatif {self.id}: {str(e)}")
         
         # Ajouter nombre_bailleurs (toujours 1 car c'est pour un seul bailleur)
         nombre_bailleurs = 1 if self.bailleur else 0
