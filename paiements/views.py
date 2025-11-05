@@ -1567,8 +1567,11 @@ def liste_recaps_mensuels(request):
         messages.error(request, permissions['message'])
         return redirect('paiements:dashboard')
     
-    # Récupérer les récapitulatifs avec filtres
-    recaps = RecapMensuel.objects.all().select_related(
+    # Vérifier si l'utilisateur est PRIVILEGE
+    is_privilege_user = hasattr(request.user, 'groupe_travail') and request.user.groupe_travail and request.user.groupe_travail.nom == 'PRIVILEGE'
+    
+    # Récupérer les récapitulatifs avec filtres (non supprimés uniquement)
+    recaps = RecapMensuel.objects.filter(is_deleted=False).select_related(
         'bailleur', 'cree_par', 'modifie_par'
     ).prefetch_related(
         'paiements_concernes', 'charges_deductibles'
@@ -1608,6 +1611,7 @@ def liste_recaps_mensuels(request):
         'title': 'Récapitulatifs Mensuels',
         'is_paginated': page_obj.has_other_pages(),
         'page_obj': page_obj,
+        'is_privilege_user': is_privilege_user,
     })
     
     return render(request, 'paiements/liste_recaps_mensuels.html', context)
