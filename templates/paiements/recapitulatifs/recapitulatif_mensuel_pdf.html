@@ -265,6 +265,7 @@
                     <th>Locataire</th>
                     <th>Loyer Mensuel</th>
                     <th>Charges Déductibles</th>
+                    <th>Charges Bailleur</th>
                     <th>Net à Payer</th>
                 </tr>
             </thead>
@@ -293,12 +294,13 @@
                         </td>
                         <td class="text-right">{{ detail.loyer_mensuel|floatformat:0 }} F CFA</td>
                         <td class="text-right">{{ detail.charges_deductibles|floatformat:0 }} F CFA</td>
+                        <td class="text-right">{{ detail.charges_bailleur|default:0|floatformat:0 }} F CFA</td>
                         <td class="text-right">{{ detail.net_a_payer|floatformat:0 }} F CFA</td>
                     </tr>
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="6" class="text-center">Aucune propriété active trouvée pour ce mois</td>
+                        <td colspan="7" class="text-center">Aucune propriété active trouvée pour ce mois</td>
                     </tr>
                 {% endif %}
             </tbody>

@@ -601,7 +601,22 @@ class RecapMensuel(models.Model):
             models.Q(contrats__date_fin__gte=mois_debut) | models.Q(contrats__date_fin__isnull=True)
         ).distinct()
         
+        # CRITIQUE : Importer ChargesBailleur pour calculer les charges bailleur par propriété
+        from proprietes.models import ChargesBailleur
+        
         for propriete in proprietes:
+            # CRITIQUE : Calculer les charges bailleur pour cette propriété pour le mois
+            # Les charges bailleur sont liées à la propriété, pas au contrat
+            charges_bailleur_propriete = ChargesBailleur.objects.filter(
+                propriete=propriete,
+                date_charge__year=self.mois_recap.year,
+                date_charge__month=self.mois_recap.month,
+                statut__in=['en_attente', 'valide']  # Seules les charges non encore utilisées
+            )
+            total_charges_bailleur_propriete = sum(
+                charge.montant_restant or charge.montant for charge in charges_bailleur_propriete
+            ) or Decimal('0')
+            
             # Récupérer les contrats actifs pour cette propriété au moment du récapitulatif
             contrats_actifs = propriete.contrats.filter(
                 est_actif=True,
@@ -635,16 +650,22 @@ class RecapMensuel(models.Model):
                 else:
                     charges_mensuelles = Decimal(str(charges_mensuelles))
                 
-                # Calculer le net à payer
-                net_a_payer = loyer_mensuel - charges_mensuelles
+                # CRITIQUE : Calculer le net à payer en incluant les charges bailleur
+                # Net à payer = Loyer mensuel - Charges déductibles - Charges bailleur
+                net_a_payer = loyer_mensuel - charges_mensuelles - total_charges_bailleur_propriete
+                net_a_payer = max(net_a_payer, Decimal('0'))  # Ne peut pas être négatif
                 
+                # CRITIQUE : Ajouter tous les champs nécessaires pour les différents templates
                 proprietes_details.append({
                     'propriete': propriete,
                     'contrat': contrat,
                     'locataire': contrat.locataire,
                     'loyer_mensuel': loyer_mensuel,
                     'charges_deductibles': charges_mensuelles,
+                    'charges_bailleur': total_charges_bailleur_propriete,  # CRITIQUE : Charges bailleur enregistrées
                     'net_a_payer': net_a_payer,
+                    'loyers_bruts': loyer_mensuel,  # Pour compatibilité avec detail_recapitulatif.html
+                    'montant_net': net_a_payer,  # Pour compatibilité avec detail_recapitulatif.html
                     'adresse_complete': f"{propriete.adresse}, {propriete.ville}" if propriete.ville else propriete.adresse,
                 })
         
