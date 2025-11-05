@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('paiements', '0024_update_existing_retraits_commission'),
-        ('proprietes', '__latest__'),
+        ('proprietes', '0036_fix_charges_bailleur_numero_unique'),
     ]
 
     operations = [
