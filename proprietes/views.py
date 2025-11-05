@@ -86,7 +86,7 @@ class ProprieteListView(PrivilegeButtonsMixin, EnhancedSearchMixin, IntelligentL
         """
         queryset = super().get_queryset()
         return queryset.filter(is_deleted=False).select_related(
-            'bailleur', 'type_bien', 'cree_par'
+            'bailleur', 'type_bien'
         ).prefetch_related(
             'unites_locatives', 'pieces'
         ).only(
