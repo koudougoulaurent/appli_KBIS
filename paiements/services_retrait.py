@@ -338,11 +338,12 @@ class ServiceGestionRetrait:
                         if not proprietes_louees.exists():
                             continue
                         
-                        # Vérifier si un récap existe déjà pour ce mois
+                        # Vérifier si un récap existe déjà pour ce mois (non supprimé)
                         recap_existant = RecapMensuel.objects.filter(
                             bailleur=bailleur,
                             mois_recap__year=mois_date.year,
-                            mois_recap__month=mois_date.month
+                            mois_recap__month=mois_date.month,
+                            is_deleted=False
                         ).first()
                         
                         if recap_existant:
@@ -351,6 +352,20 @@ class ServiceGestionRetrait:
                             recap_existant.save()
                             recaps_crees.append(recap_existant)
                         else:
+                            # Vérifier s'il existe un récapitulatif supprimé logiquement pour ce bailleur et ce mois
+                            recap_supprime = RecapMensuel.objects.filter(
+                                bailleur=bailleur,
+                                mois_recap__year=mois_date.year,
+                                mois_recap__month=mois_date.month,
+                                is_deleted=True
+                            ).first()
+                            
+                            # Si un récap supprimé existe, le supprimer physiquement avant de créer le nouveau
+                            if recap_supprime:
+                                recap_supprime.paiements_concernes.clear()
+                                recap_supprime.charges_deductibles.clear()
+                                recap_supprime.delete()
+                            
                             # Créer un nouveau récap
                             recap = RecapMensuel.objects.create(
                                 bailleur=bailleur,

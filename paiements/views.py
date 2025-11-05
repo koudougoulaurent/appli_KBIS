@@ -1639,16 +1639,31 @@ def creer_recap_mensuel(request):
                 bailleur = Bailleur.objects.get(id=bailleur_id, is_deleted=False)
                 mois_recap = datetime.strptime(mois_str, '%Y-%m').date()
                 
-                # Vérifier si un récapitulatif existe déjà pour ce bailleur et ce mois
+                # Vérifier si un récapitulatif existe déjà pour ce bailleur et ce mois (non supprimé)
                 recap_existant = RecapMensuel.objects.filter(
                     bailleur=bailleur,
                     mois_recap__year=mois_recap.year,
-                    mois_recap__month=mois_recap.month
+                    mois_recap__month=mois_recap.month,
+                    is_deleted=False
                 ).first()
                 
                 if recap_existant:
                     messages.warning(request, f'Un récapitulatif existe déjà pour {bailleur.get_nom_complet()} - {mois_recap.strftime("%B %Y")}')
                     return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_existant.id)
+                
+                # Vérifier s'il existe un récapitulatif supprimé logiquement pour ce bailleur et ce mois
+                recap_supprime = RecapMensuel.objects.filter(
+                    bailleur=bailleur,
+                    mois_recap__year=mois_recap.year,
+                    mois_recap__month=mois_recap.month,
+                    is_deleted=True
+                ).first()
+                
+                # Si un récap supprimé existe, le supprimer physiquement avant de créer le nouveau
+                if recap_supprime:
+                    recap_supprime.paiements_concernes.clear()
+                    recap_supprime.charges_deductibles.clear()
+                    recap_supprime.delete()
                 
                 # Créer le récapitulatif
                 recap = RecapMensuel.objects.create(
@@ -2795,19 +2810,25 @@ def generer_recap_mensuel_automatique(request):
                 # Génération pour tous les bailleurs
                 bailleurs = Bailleur.objects.filter(is_deleted=False)
             
-            # Vérifier s'il existe déjà des récapitulatifs pour ce mois et ces bailleurs
+            # Vérifier s'il existe déjà des récapitulatifs pour ce mois et ces bailleurs (non supprimés)
             recaps_existants = RecapMensuel.objects.filter(
                 mois_recap__year=mois_date.year,
                 mois_recap__month=mois_date.month,
-                bailleur__in=bailleurs
+                bailleur__in=bailleurs,
+                is_deleted=False
             )
             
             if recaps_existants.exists() and not forcer_regeneration:
                 messages.warning(request, _("Des récapitulatifs existent déjà pour ce mois. Cochez 'Forcer la régénération' pour les recréer."))
                 return redirect('paiements:generer_recap_mensuel_automatique')
             
-            # Supprimer les anciens récapitulatifs si régénération forcée
+            # Supprimer physiquement les anciens récapitulatifs si régénération forcée
             if forcer_regeneration and recaps_existants.exists():
+                # Supprimer d'abord les relations ManyToMany
+                for recap in recaps_existants:
+                    recap.paiements_concernes.clear()
+                    recap.charges_deductibles.clear()
+                # Supprimer physiquement les récapitulatifs
                 recaps_existants.delete()
                 messages.info(request, _("Anciens récapitulatifs supprimés. Génération en cours..."))
             
@@ -2830,6 +2851,20 @@ def generer_recap_mensuel_automatique(request):
                         
                         if not proprietes_louees.exists():
                             continue
+                        
+                        # Vérifier s'il existe un récapitulatif supprimé logiquement pour ce bailleur et ce mois
+                        recap_supprime = RecapMensuel.objects.filter(
+                            bailleur=bailleur,
+                            mois_recap__year=mois_date.year,
+                            mois_recap__month=mois_date.month,
+                            is_deleted=True
+                        ).first()
+                        
+                        # Si un récap supprimé existe, le supprimer physiquement avant de créer le nouveau
+                        if recap_supprime:
+                            recap_supprime.paiements_concernes.clear()
+                            recap_supprime.charges_deductibles.clear()
+                            recap_supprime.delete()
                         
                         # Créer le récapitulatif
                         recap = RecapMensuel.objects.create(
@@ -3298,15 +3333,29 @@ def creer_recap_mensuel_bailleur(request, bailleur_id):
         mois_info = RecapMensuel.get_mois_recap_suggere_pour_bailleur(bailleur)
         mois_recap = mois_info['mois_suggere']
         
-        # Vérifier si un récapitulatif existe déjà pour ce mois et ce bailleur
-        if mois_info['recap_existant']:
-            recap_existant = RecapMensuel.objects.filter(
-                bailleur=bailleur,
-                mois_recap=mois_recap,
-                is_deleted=False
-            ).first()
+        # Vérifier si un récapitulatif existe déjà pour ce mois et ce bailleur (non supprimé)
+        recap_existant = RecapMensuel.objects.filter(
+            bailleur=bailleur,
+            mois_recap=mois_recap,
+            is_deleted=False
+        ).first()
+        
+        if recap_existant:
             messages.info(request, f"Un récapitulatif existe déjà pour {bailleur.get_nom_complet()} - {mois_info['mois_suggere_formate']}")
             return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_existant.id)
+        
+        # Vérifier s'il existe un récapitulatif supprimé logiquement pour ce bailleur et ce mois
+        recap_supprime = RecapMensuel.objects.filter(
+            bailleur=bailleur,
+            mois_recap=mois_recap,
+            is_deleted=True
+        ).first()
+        
+        # Si un récap supprimé existe, le supprimer physiquement avant de créer le nouveau
+        if recap_supprime:
+            recap_supprime.paiements_concernes.clear()
+            recap_supprime.charges_deductibles.clear()
+            recap_supprime.delete()
         
         # Créer le nouveau récapitulatif
         recap = RecapMensuel.objects.create(

@@ -81,7 +81,14 @@ class RecapMensuel(models.Model):
         verbose_name = _("Récapitulatif mensuel")
         verbose_name_plural = _("Récapitulatifs mensuels")
         ordering = ['-mois_recap', 'bailleur__nom']
-        unique_together = ['bailleur', 'mois_recap']
+        # Contrainte unique uniquement pour les récapitulatifs non supprimés
+        constraints = [
+            models.UniqueConstraint(
+                fields=['bailleur', 'mois_recap'],
+                condition=models.Q(is_deleted=False),
+                name='unique_recap_bailleur_mois_actif'
+            )
+        ]
         indexes = [
             models.Index(fields=['mois_recap', 'bailleur']),
             models.Index(fields=['statut', 'mois_recap']),
