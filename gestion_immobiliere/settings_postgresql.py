@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
+    'db_file_storage',  # Stockage des fichiers dans PostgreSQL
     'crispy_forms',
     'crispy_bootstrap5',
     'core',
@@ -108,9 +109,12 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Media files
+# Media files - Stockage dans PostgreSQL
+# Les fichiers sont stockés directement dans la base de données PostgreSQL
+# Cela garantit la persistance même avec le plan gratuit de Render
+DEFAULT_FILE_STORAGE = 'db_file_storage.storage.DatabaseFileStorage'
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = ''  # Non utilisé avec le stockage en base de données
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
