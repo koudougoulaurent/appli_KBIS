@@ -251,17 +251,51 @@ def ajouter_propriete(request):
             # Générer automatiquement le numéro unique de propriété avec garantie d'unicité absolue
             if not propriete.numero_propriete:
                 from core.robust_id_generator import RobustIDGenerator
-                try:
-                    propriete.numero_propriete = RobustIDGenerator.generate_property_id()
-                except Exception as e:
-                    # En cas d'erreur, générer un ID de secours avec timestamp
-                    from datetime import datetime
-                    import uuid
-                    timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')[:-3]
-                    unique_id = str(uuid.uuid4())[:8]
-                    propriete.numero_propriete = f"PRO-{timestamp}-{unique_id}"
+                max_attempts = 10
+                for attempt in range(max_attempts):
+                    try:
+                        propriete.numero_propriete = RobustIDGenerator.generate_property_id()
+                        # Vérifier une dernière fois avant de sauvegarder
+                        from proprietes.models import Propriete
+                        if Propriete.objects.filter(
+                            numero_propriete=propriete.numero_propriete,
+                            is_deleted=False
+                        ).exists():
+                            # Le numéro existe déjà, générer un nouveau
+                            continue
+                        break
+                    except Exception as e:
+                        if attempt == max_attempts - 1:
+                            # Dernière tentative, utiliser UUID pour garantir l'unicité
+                            from datetime import datetime
+                            import uuid
+                            timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
+                            unique_id = str(uuid.uuid4())[:8]
+                            propriete.numero_propriete = f"PRO-{timestamp}-{unique_id}"
+                        else:
+                            continue
             
-            propriete.save()
+            # Sauvegarder avec gestion des erreurs d'unicité
+            from django.db import IntegrityError
+            max_save_attempts = 5
+            for attempt in range(max_save_attempts):
+                try:
+                    propriete.save()
+                    break
+                except IntegrityError as e:
+                    if 'numero_propriete' in str(e) and attempt < max_save_attempts - 1:
+                        # Doublon détecté, régénérer le numéro
+                        from core.robust_id_generator import RobustIDGenerator
+                        from datetime import datetime
+                        import uuid
+                        try:
+                            propriete.numero_propriete = RobustIDGenerator.generate_property_id()
+                        except:
+                            timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
+                            unique_id = str(uuid.uuid4())[:8]
+                            propriete.numero_propriete = f"PRO-{timestamp}-{unique_id}"
+                    else:
+                        raise
             
             # Utiliser la méthode save du formulaire pour gérer les documents
             form.save(user=request.user)

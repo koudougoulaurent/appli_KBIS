@@ -54,12 +54,13 @@ class RobustIDGenerator:
         """Génère un ID candidat"""
         current_year = datetime.now().year
         current_month = datetime.now().month
-        timestamp = int(time.time() * 1000)  # Timestamp en millisecondes
-        random_part = random.randint(1000, 9999)
+        timestamp = int(time.time() * 1000000)  # Timestamp en microsecondes pour plus d'unicité
+        random_part = random.randint(10000, 99999)  # Plus de bits aléatoires
         
         if entity_type == 'propriete':
-            # Format: PRO-YYYY-XXXX-XXXX (avec timestamp et random)
-            return f"PRO-{current_year}-{timestamp % 10000:04d}-{random_part:04d}"
+            # Format: PRO-YYYY-XXXXXX-XXXXX (avec timestamp et random plus longs)
+            # Utiliser les 6 derniers chiffres du timestamp et 5 chiffres aléatoires
+            return f"PRO-{current_year}-{timestamp % 1000000:06d}-{random_part:05d}"
         elif entity_type == 'locataire':
             return f"LOC-{current_year}-{timestamp % 10000:04d}-{random_part:04d}"
         elif entity_type == 'bailleur':
