@@ -757,9 +757,29 @@ def ajouter_bailleur(request):
             bailleur.cree_par = request.user
             
             # Laisser le modèle (save) attribuer le numéro séquentiel (AutoNumberSequence)
-            # Pas de génération ici pour éviter les formats incohérents
+            # Mais ajouter une gestion d'erreur d'unicité pour sécurité
             
-            bailleur.save()
+            # Sauvegarder avec gestion des erreurs d'unicité
+            from django.db import IntegrityError
+            max_save_attempts = 5
+            for attempt in range(max_save_attempts):
+                try:
+                    bailleur.save()
+                    break
+                except IntegrityError as e:
+                    if 'numero_bailleur' in str(e) and attempt < max_save_attempts - 1:
+                        # Doublon détecté, régénérer le numéro avec le générateur robuste
+                        from core.robust_id_generator import RobustIDGenerator
+                        from datetime import datetime
+                        import uuid
+                        try:
+                            bailleur.numero_bailleur = RobustIDGenerator.generate_landlord_id()
+                        except:
+                            timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
+                            unique_id = str(uuid.uuid4())[:8]
+                            bailleur.numero_bailleur = f"BAI-{timestamp}-{unique_id}"
+                    else:
+                        raise
             
             # Utiliser la méthode save du formulaire pour gérer les documents
             form.save(user=request.user)
@@ -1460,16 +1480,55 @@ def ajouter_locataire(request):
             locataire = form.save(commit=False)
             locataire.cree_par = request.user
             
-            # Générer automatiquement un numéro unique de locataire
-            from datetime import datetime
-            import uuid
+            # Générer automatiquement un numéro unique de locataire avec garantie d'unicité
+            # Le numéro sera généré dans le modèle, mais on ajoute une vérification ici aussi
+            if not locataire.numero_locataire:
+                from core.robust_id_generator import RobustIDGenerator
+                max_attempts = 10
+                for attempt in range(max_attempts):
+                    try:
+                        locataire.numero_locataire = RobustIDGenerator.generate_tenant_id()
+                        # Vérifier une dernière fois avant de sauvegarder
+                        from proprietes.models import Locataire
+                        if Locataire.objects.filter(
+                            numero_locataire=locataire.numero_locataire,
+                            is_deleted=False
+                        ).exists():
+                            # Le numéro existe déjà, générer un nouveau
+                            continue
+                        break
+                    except Exception:
+                        if attempt == max_attempts - 1:
+                            # Dernière tentative, utiliser UUID pour garantir l'unicité
+                            from datetime import datetime
+                            import uuid
+                            timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
+                            unique_id = str(uuid.uuid4())[:8]
+                            locataire.numero_locataire = f"LOC-{timestamp}-{unique_id}"
+                        else:
+                            continue
             
-            # Utiliser un timestamp + UUID court pour garantir l'unicité
-            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-            unique_id = str(uuid.uuid4())[:8].upper()
-            locataire.numero_locataire = f"LOC-{timestamp}-{unique_id}"
-            
-            locataire.save()
+            # Sauvegarder avec gestion des erreurs d'unicité
+            from django.db import IntegrityError
+            max_save_attempts = 5
+            for attempt in range(max_save_attempts):
+                try:
+                    locataire.save()
+                    break
+                except IntegrityError as e:
+                    if 'numero_locataire' in str(e) and attempt < max_save_attempts - 1:
+                        # Doublon détecté, régénérer le numéro
+                        from core.robust_id_generator import RobustIDGenerator
+                        from datetime import datetime
+                        import uuid
+                        try:
+                            locataire.numero_locataire = RobustIDGenerator.generate_tenant_id()
+                        except:
+                            timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
+                            unique_id = str(uuid.uuid4())[:8]
+                            locataire.numero_locataire = f"LOC-{timestamp}-{unique_id}"
+                    else:
+                        raise
             
             messages.success(
                 request, 

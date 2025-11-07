@@ -131,7 +131,28 @@ class Bailleur(DuplicatePreventionMixin, models.Model):
                 next_num = AutoNumberSequence.next_number(scope='BAILLEUR', year=annee)
                 candidate = f"BAI-{annee}-{next_num:04d}"
             self.numero_bailleur = candidate
-        super().save(*args, **kwargs)
+        
+        # Sauvegarder avec gestion des erreurs d'unicité
+        from django.db import IntegrityError
+        max_save_attempts = 5
+        for attempt in range(max_save_attempts):
+            try:
+                super().save(*args, **kwargs)
+                break
+            except IntegrityError as e:
+                if 'numero_bailleur' in str(e) and attempt < max_save_attempts - 1:
+                    # Doublon détecté, régénérer le numéro
+                    from core.robust_id_generator import RobustIDGenerator
+                    from datetime import datetime
+                    import uuid
+                    try:
+                        self.numero_bailleur = RobustIDGenerator.generate_landlord_id()
+                    except:
+                        timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
+                        unique_id = str(uuid.uuid4())[:8]
+                        self.numero_bailleur = f"BAI-{timestamp}-{unique_id}"
+                else:
+                    raise
     
     def get_nom_complet(self):
         return f"{self.civilite} {self.prenom} {self.nom}"
@@ -349,8 +370,34 @@ class Locataire(DuplicatePreventionMixin, models.Model):
         if not self.numero_locataire or self.numero_locataire in ("", "LT0001"):
             annee = timezone.now().year
             next_num = AutoNumberSequence.next_number(scope='LOCATAIRE', year=annee)
-            self.numero_locataire = f"LOC-{annee}-{next_num:04d}"
-        super().save(*args, **kwargs)
+            candidate = f"LOC-{annee}-{next_num:04d}"
+            # Vérifier l'unicité avant d'assigner
+            while Locataire.objects.filter(numero_locataire=candidate).exclude(pk=self.pk if self.pk else None).exists():
+                next_num = AutoNumberSequence.next_number(scope='LOCATAIRE', year=annee)
+                candidate = f"LOC-{annee}-{next_num:04d}"
+            self.numero_locataire = candidate
+        
+        # Sauvegarder avec gestion des erreurs d'unicité
+        from django.db import IntegrityError
+        max_save_attempts = 5
+        for attempt in range(max_save_attempts):
+            try:
+                super().save(*args, **kwargs)
+                break
+            except IntegrityError as e:
+                if 'numero_locataire' in str(e) and attempt < max_save_attempts - 1:
+                    # Doublon détecté, régénérer le numéro
+                    from core.robust_id_generator import RobustIDGenerator
+                    from datetime import datetime
+                    import uuid
+                    try:
+                        self.numero_locataire = RobustIDGenerator.generate_tenant_id()
+                    except:
+                        timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
+                        unique_id = str(uuid.uuid4())[:8]
+                        self.numero_locataire = f"LOC-{timestamp}-{unique_id}"
+                else:
+                    raise
     
     def get_nom_complet(self):
         """Retourne le nom complet en gérant les cas où le prénom est vide (personnes morales)"""
