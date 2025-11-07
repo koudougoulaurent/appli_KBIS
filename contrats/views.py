@@ -191,12 +191,54 @@ def ajouter_contrat(request):
             contrat = form.save(commit=False)
             contrat.cree_par = request.user
             
-            # Générer automatiquement le numéro unique de contrat
+            # Générer automatiquement le numéro unique de contrat avec garantie d'unicité absolue
             if not contrat.numero_contrat:
-                from django.utils.crypto import get_random_string
-                contrat.numero_contrat = f"CT-{get_random_string(8).upper()}"
+                from core.robust_id_generator import RobustIDGenerator
+                max_attempts = 10
+                for attempt in range(max_attempts):
+                    try:
+                        contrat.numero_contrat = RobustIDGenerator.generate_contract_id()
+                        # Vérifier une dernière fois avant de sauvegarder
+                        from contrats.models import Contrat
+                        if Contrat.objects.filter(
+                            numero_contrat=contrat.numero_contrat,
+                            is_deleted=False
+                        ).exists():
+                            # Le numéro existe déjà, générer un nouveau
+                            continue
+                        break
+                    except Exception:
+                        if attempt == max_attempts - 1:
+                            # Dernière tentative, utiliser UUID pour garantir l'unicité
+                            from datetime import datetime
+                            import uuid
+                            timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
+                            unique_id = str(uuid.uuid4())[:8]
+                            contrat.numero_contrat = f"CT-{timestamp}-{unique_id}"
+                        else:
+                            continue
             
-            contrat.save()
+            # Sauvegarder avec gestion des erreurs d'unicité
+            from django.db import IntegrityError
+            max_save_attempts = 5
+            for attempt in range(max_save_attempts):
+                try:
+                    contrat.save()
+                    break
+                except IntegrityError as e:
+                    if 'numero_contrat' in str(e) and attempt < max_save_attempts - 1:
+                        # Doublon détecté, régénérer le numéro
+                        from core.robust_id_generator import RobustIDGenerator
+                        from datetime import datetime
+                        import uuid
+                        try:
+                            contrat.numero_contrat = RobustIDGenerator.generate_contract_id()
+                        except:
+                            timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
+                            unique_id = str(uuid.uuid4())[:8]
+                            contrat.numero_contrat = f"CT-{timestamp}-{unique_id}"
+                    else:
+                        raise
             
             # Mettre à jour automatiquement la disponibilité de la propriété
             # (maintenant géré automatiquement dans le modèle)

@@ -440,9 +440,30 @@ class Contrat(models.Model):
     def save(self, *args, **kwargs):
         """Override save pour générer automatiquement le numéro de contrat et calculer les montants par défaut."""
         if not self.numero_contrat:
-            # Générer un numéro de contrat unique
-            import uuid
-            self.numero_contrat = f"CTR-{uuid.uuid4().hex[:8].upper()}"
+            # Générer un numéro de contrat unique avec le générateur robuste
+            from core.robust_id_generator import RobustIDGenerator
+            from django.db import IntegrityError
+            max_attempts = 10
+            for attempt in range(max_attempts):
+                try:
+                    self.numero_contrat = RobustIDGenerator.generate_contract_id()
+                    # Vérifier l'unicité
+                    if Contrat.objects.filter(
+                        numero_contrat=self.numero_contrat,
+                        is_deleted=False
+                    ).exclude(pk=self.pk if self.pk else None).exists():
+                        continue
+                    break
+                except Exception:
+                    if attempt == max_attempts - 1:
+                        # Dernière tentative, utiliser UUID
+                        import uuid
+                        from datetime import datetime
+                        timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
+                        unique_id = str(uuid.uuid4())[:8]
+                        self.numero_contrat = f"CT-{timestamp}-{unique_id}"
+                    else:
+                        continue
         
         # Validation : éviter unité locative ET pièces simultanément
         self._valider_coherence_unite_pieces()
@@ -466,8 +487,27 @@ class Contrat(models.Model):
         # Gérer la disponibilité de la propriété
         self._gestion_disponibilite_propriete()
         
-        # Sauvegarder d'abord le contrat
-        super().save(*args, **kwargs)
+        # Sauvegarder avec gestion des erreurs d'unicité
+        from django.db import IntegrityError
+        max_save_attempts = 5
+        for attempt in range(max_save_attempts):
+            try:
+                super().save(*args, **kwargs)
+                break
+            except IntegrityError as e:
+                if 'numero_contrat' in str(e) and attempt < max_save_attempts - 1:
+                    # Doublon détecté, régénérer le numéro
+                    from core.robust_id_generator import RobustIDGenerator
+                    from datetime import datetime
+                    import uuid
+                    try:
+                        self.numero_contrat = RobustIDGenerator.generate_contract_id()
+                    except:
+                        timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
+                        unique_id = str(uuid.uuid4())[:8]
+                        self.numero_contrat = f"CT-{timestamp}-{unique_id}"
+                else:
+                    raise
         
         # Créer automatiquement l'avance de loyer si elle est payée
         self._creer_avance_loyer_automatique()
