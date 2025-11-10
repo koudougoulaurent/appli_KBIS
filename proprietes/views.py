@@ -1217,6 +1217,22 @@ class SupprimerLocataireView(SuppressionGeneriqueView):
             )
             return redirect(self.get_redirect_url(obj))
         
+        # CORRIGÉ : Supprimer tous les contrats résiliés/supprimés avant de supprimer le locataire
+        # Cela évite l'erreur PROTECT de la ForeignKey
+        from contrats.models import Contrat
+        contrats_restants = Contrat.objects.filter(locataire=obj)
+        if contrats_restants.exists():
+            # Supprimer tous les contrats restants (résiliés ou supprimés)
+            for contrat in contrats_restants:
+                try:
+                    contrat.delete()
+                except Exception as e:
+                    print(f"Erreur lors de la suppression du contrat {contrat.pk}: {e}")
+                    messages.warning(
+                        request,
+                        f"Attention : Erreur lors de la suppression du contrat {contrat.numero_contrat}: {str(e)}"
+                    )
+        
         # Vérification 2: Confirmation multiple
         confirmation_1 = request.POST.get('confirmation_1') == 'on'
         confirmation_2 = request.POST.get('confirmation_2') == 'on'
@@ -1810,6 +1826,18 @@ def corbeille_locataires(request):
                 if locataire.a_des_contrats_actifs():
                     locataires_avec_contrats_actifs.append(locataire)
                     continue
+                
+                # CORRIGÉ : Supprimer d'abord tous les contrats (même résiliés/supprimés) pour éviter PROTECT
+                # Cela permet la suppression du locataire même si des contrats résiliés existent
+                from contrats.models import Contrat
+                contrats_restants = Contrat.objects.filter(locataire=locataire)
+                if contrats_restants.exists():
+                    # Supprimer tous les contrats restants (résiliés ou supprimés)
+                    for contrat in contrats_restants:
+                        try:
+                            contrat.delete()
+                        except Exception as e:
+                            print(f"Erreur lors de la suppression du contrat {contrat.pk}: {e}")
                 
                 # Log d'audit avant suppression
                 old_data = {f.name: getattr(locataire, f.name) for f in locataire._meta.fields}

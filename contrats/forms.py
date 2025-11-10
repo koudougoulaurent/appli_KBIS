@@ -186,22 +186,30 @@ class ContratForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         # Filtrer les propriétés disponibles
-        # Une propriété est disponible si :
-        # 1. Elle n'a pas de contrat actif qui couvre la propriété entière, ET
-        # 2. Elle a au moins une unité locative disponible OU elle est marquée comme disponible
-        
-        # Utiliser la fonction de filtrage des propriétés disponibles
+        # CORRIGÉ : Pour la modification, inclure toujours la propriété du contrat actuel
         from .utils import get_proprietes_disponibles
-        self.fields['propriete'].queryset = get_proprietes_disponibles()
+        proprietes_disponibles = get_proprietes_disponibles()
+        
+        # Si c'est une modification (instance existe), inclure la propriété actuelle même si non disponible
+        if self.instance.pk and self.instance.propriete:
+            if self.instance.propriete not in proprietes_disponibles:
+                proprietes_disponibles = proprietes_disponibles | Propriete.objects.filter(pk=self.instance.propriete.pk)
+        
+        self.fields['propriete'].queryset = proprietes_disponibles
         self.fields['locataire'].queryset = Locataire.objects.all()
         
         # Filtrer les unités locatives disponibles ou non réservées
+        # CORRIGÉ : Pour la modification, inclure toujours l'unité locative actuelle du contrat
         if self.instance.pk and self.instance.propriete:
             # Pour un contrat existant, filtrer par la propriété du contrat
-            self.fields['unite_locative'].queryset = UniteLocative.objects.filter(
+            unites_queryset = UniteLocative.objects.filter(
                 propriete=self.instance.propriete,
-                statut__in=['disponible', 'reservee']
+                statut__in=['disponible', 'reservee', 'occupee']
             )
+            # Inclure l'unité locative actuelle si elle existe
+            if self.instance.unite_locative and self.instance.unite_locative not in unites_queryset:
+                unites_queryset = unites_queryset | UniteLocative.objects.filter(pk=self.instance.unite_locative.pk)
+            self.fields['unite_locative'].queryset = unites_queryset
         elif 'propriete' in self.data:
             # Pour un nouveau contrat, filtrer par la propriété sélectionnée dans les données POST
             try:
@@ -226,12 +234,20 @@ class ContratForm(forms.ModelForm):
             self.fields['unite_locative'].queryset = UniteLocative.objects.none()
             
         # Filtrer les pièces disponibles ou non réservées
+        # CORRIGÉ : Pour la modification, inclure toujours les pièces actuelles du contrat
         if self.instance.pk and self.instance.propriete:
             # Pour un contrat existant, filtrer par la propriété du contrat
-            self.fields['piece'].queryset = Piece.objects.filter(
+            pieces_queryset = Piece.objects.filter(
                 propriete=self.instance.propriete,
-                statut__in=['disponible', 'reservee']
+                statut__in=['disponible', 'reservee', 'occupee']
             )
+            # Inclure les pièces actuelles du contrat si elles existent
+            if hasattr(self.instance, 'pieces') and self.instance.pieces.exists():
+                pieces_actuelles = self.instance.pieces.all()
+                for piece in pieces_actuelles:
+                    if piece not in pieces_queryset:
+                        pieces_queryset = pieces_queryset | Piece.objects.filter(pk=piece.pk)
+            self.fields['piece'].queryset = pieces_queryset
         elif 'propriete' in self.data:
             # Pour un nouveau contrat, filtrer par la propriété sélectionnée dans les données POST
             try:
