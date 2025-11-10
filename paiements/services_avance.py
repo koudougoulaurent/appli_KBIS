@@ -718,9 +718,14 @@ class ServiceGestionAvance:
             
             # Fonction pour convertir mois_paye (ex: "Novembre 2024") en date
             def convertir_mois_paye_en_date(mois_paye_str):
-                """Convertit 'Novembre 2024' ou 'November 2024' en date"""
+                """
+                Convertit 'Novembre 2024' ou 'November 2024' en date.
+                Gère correctement le passage d'année (décembre 2024 -> janvier 2025).
+                """
                 if not mois_paye_str:
                     return None
+                
+                from datetime import date
                 
                 mois_francais = {
                     'janvier': 1, 'février': 2, 'mars': 3, 'avril': 4,
@@ -737,11 +742,13 @@ class ServiceGestionAvance:
                 mois_paye_lower = mois_paye_str.lower().strip()
                 for mois, num in {**mois_francais, **mois_anglais}.items():
                     if mois in mois_paye_lower:
-                        # Extraire l'année
+                        # Extraire l'année (chercher un nombre à 4 chiffres)
                         annee_match = re.search(r'(\d{4})', mois_paye_str)
                         if annee_match:
                             annee = int(annee_match.group(1))
-                            return timezone.now().date().replace(year=annee, month=num, day=1)
+                            # Utiliser date() directement pour éviter les problèmes de replace()
+                            # Cela garantit que décembre 2024 reste décembre 2024, pas décembre de l'année actuelle
+                            return date(annee, num, 1)
                 return None
             
             # Déterminer le dernier mois payé
