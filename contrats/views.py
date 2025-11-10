@@ -871,18 +871,21 @@ class QuittanceListView(PrivilegeButtonsMixin, IntelligentListView):
         
         # Montant total des loyers
         from django.db.models import Sum
+        from django.db.models.functions import Cast
+        from django.db.models import DecimalField
+        # Convertir CharField en Decimal avant de faire la somme (PostgreSQL)
         context['montant_total_loyers'] = Quittance.objects.aggregate(
-            total=Sum('montant_loyer')
+            total=Sum(Cast('montant_loyer', output_field=DecimalField(max_digits=20, decimal_places=2)))
         )['total'] or 0
         
         # Montant total des charges
         context['montant_total_charges'] = Quittance.objects.aggregate(
-            total=Sum('montant_charges')
+            total=Sum(Cast('montant_charges', output_field=DecimalField(max_digits=20, decimal_places=2)))
         )['total'] or 0
         
         # Montant total toutes charges comprises
         context['montant_total_tcc'] = Quittance.objects.aggregate(
-            total=Sum('montant_total')
+            total=Sum(Cast('montant_total', output_field=DecimalField(max_digits=20, decimal_places=2)))
         )['total'] or 0
         
         # Ajouter la configuration de l'entreprise
