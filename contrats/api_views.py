@@ -114,9 +114,14 @@ class ContratViewSet(viewsets.ModelViewSet):
             )
         
         contrat.est_resilie = True
+        contrat.est_actif = False  # Désactiver le contrat
         contrat.date_resiliation = date.today()
         contrat.motif_resiliation = motif
         contrat.save()
+        
+        # Forcer la mise à jour de la disponibilité de la propriété et de l'unité locative
+        contrat._update_disponibilite_propriete()
+        contrat._update_disponibilite_unite_locative()
         
         return Response({'message': 'Contrat résilié avec succès.'})
 

@@ -1477,9 +1477,14 @@ class ResiliationContrat(models.Model):
         # Mettre à jour le contrat si la résiliation est validée
         if self.statut == 'validee':
             self.contrat.est_resilie = True
+            self.contrat.est_actif = False  # Désactiver le contrat
             self.contrat.date_resiliation = self.date_resiliation
             self.contrat.motif_resiliation = self.motif_resiliation
             self.contrat.save()
+            
+            # Forcer la mise à jour de la disponibilité de la propriété et de l'unité locative
+            self.contrat._update_disponibilite_propriete()
+            self.contrat._update_disponibilite_unite_locative()
     
     def valider_resiliation(self, utilisateur):
         """Valide la résiliation."""

@@ -82,11 +82,16 @@ class ContratAdmin(admin.ModelAdmin):
     
     def resilier_contrats(self, request, queryset):
         """Action pour résilier les contrats sélectionnés."""
-        updated = queryset.update(
-            est_resilie=True,
-            est_actif=False,
-            date_resiliation=timezone.now().date()
-        )
+        updated = 0
+        for contrat in queryset:
+            contrat.est_resilie = True
+            contrat.est_actif = False
+            contrat.date_resiliation = timezone.now().date()
+            contrat.save()
+            # Forcer la mise à jour de la disponibilité de la propriété et de l'unité locative
+            contrat._update_disponibilite_propriete()
+            contrat._update_disponibilite_unite_locative()
+            updated += 1
         self.message_user(request, f'{updated} contrat(s) résilié(s) avec succès.')
     resilier_contrats.short_description = _("Résilier les contrats sélectionnés")
 

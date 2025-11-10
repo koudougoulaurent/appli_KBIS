@@ -728,8 +728,9 @@ def resilier_contrat(request, pk):
             contrat.motif_resiliation = motif_resiliation
             contrat.save()
             
-            # La disponibilité de la propriété est maintenant gérée automatiquement dans le modèle
-            # lors de la sauvegarde du contrat résilié
+            # Forcer la mise à jour de la disponibilité de la propriété et de l'unité locative
+            contrat._update_disponibilite_propriete()
+            contrat._update_disponibilite_unite_locative()
             
             # Log d'audit pour le contrat
             AuditLog.objects.create(
@@ -2096,8 +2097,9 @@ def resiliation_professionnelle(request, pk):
                 contrat.motif_resiliation = motif_resiliation
                 contrat.save()
                 
-                # La disponibilité de la propriété est maintenant gérée automatiquement dans le modèle
-                # lors de la sauvegarde du contrat résilié
+                # Forcer la mise à jour de la disponibilité de la propriété et de l'unité locative
+                contrat._update_disponibilite_propriete()
+                contrat._update_disponibilite_unite_locative()
                 
                 # Créer l'audit log
                 AuditLog.objects.create(

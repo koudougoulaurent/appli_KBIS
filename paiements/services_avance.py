@@ -698,17 +698,62 @@ class ServiceGestionAvance:
     def calculer_prochain_mois_paiement(contrat):
         """
         Calcule le prochain mois où un paiement sera dû en tenant compte de toutes les avances
+        CORRIGÉ : Utilise le mois_paye si disponible, sinon date_paiement
         """
         try:
-            # Récupérer le dernier paiement de loyer (pas d'avance)
+            from datetime import datetime
+            import re
+            
+            # Récupérer le dernier paiement de loyer validé (pas d'avance)
             try:
                 from .models import Paiement
                 dernier_paiement = Paiement.objects.filter(
                     contrat=contrat,
-                    type_paiement='loyer'
+                    type_paiement='loyer',
+                    statut='valide',
+                    is_deleted=False
                 ).order_by('-date_paiement').first()
             except ImportError:
                 dernier_paiement = None
+            
+            # Fonction pour convertir mois_paye (ex: "Novembre 2024") en date
+            def convertir_mois_paye_en_date(mois_paye_str):
+                """Convertit 'Novembre 2024' ou 'November 2024' en date"""
+                if not mois_paye_str:
+                    return None
+                
+                mois_francais = {
+                    'janvier': 1, 'février': 2, 'mars': 3, 'avril': 4,
+                    'mai': 5, 'juin': 6, 'juillet': 7, 'août': 8,
+                    'septembre': 9, 'octobre': 10, 'novembre': 11, 'décembre': 12
+                }
+                mois_anglais = {
+                    'january': 1, 'february': 2, 'march': 3, 'april': 4,
+                    'may': 5, 'june': 6, 'july': 7, 'august': 8,
+                    'september': 9, 'october': 10, 'november': 11, 'december': 12
+                }
+                
+                # Extraire mois et année
+                mois_paye_lower = mois_paye_str.lower().strip()
+                for mois, num in {**mois_francais, **mois_anglais}.items():
+                    if mois in mois_paye_lower:
+                        # Extraire l'année
+                        annee_match = re.search(r'(\d{4})', mois_paye_str)
+                        if annee_match:
+                            annee = int(annee_match.group(1))
+                            return timezone.now().date().replace(year=annee, month=num, day=1)
+                return None
+            
+            # Déterminer le dernier mois payé
+            dernier_mois_paye = None
+            if dernier_paiement:
+                # Priorité au mois_paye si disponible
+                if dernier_paiement.mois_paye:
+                    dernier_mois_paye = convertir_mois_paye_en_date(dernier_paiement.mois_paye)
+                
+                # Sinon utiliser date_paiement
+                if not dernier_mois_paye:
+                    dernier_mois_paye = dernier_paiement.date_paiement.replace(day=1)
             
             # Récupérer seulement les avances actives qui ont encore du montant restant
             avances_actives = AvanceLoyer.objects.filter(
@@ -719,8 +764,8 @@ class ServiceGestionAvance:
             
             if not avances_actives.exists():
                 # *** PAS D'AVANCES : Prochain paiement = mois suivant le dernier paiement ***
-                if dernier_paiement:
-                    return dernier_paiement.date_paiement.replace(day=1) + relativedelta(months=1)
+                if dernier_mois_paye:
+                    return dernier_mois_paye + relativedelta(months=1)
                 else:
                     # Pas de paiement précédent, prochain paiement = mois prochain
                     return timezone.now().date().replace(day=1) + relativedelta(months=1)
@@ -731,8 +776,8 @@ class ServiceGestionAvance:
             
             if total_mois_couverts <= 0:
                 # Avances épuisées, revenir au calcul normal
-                if dernier_paiement:
-                    return dernier_paiement.date_paiement.replace(day=1) + relativedelta(months=1)
+                if dernier_mois_paye:
+                    return dernier_mois_paye + relativedelta(months=1)
                 else:
                     return timezone.now().date().replace(day=1) + relativedelta(months=1)
             
@@ -747,6 +792,8 @@ class ServiceGestionAvance:
             
         except Exception as e:
             print(f"Erreur calcul prochain mois: {str(e)}")
+            import traceback
+            traceback.print_exc()
             # En cas d'erreur, retourner le mois prochain
             return timezone.now().date().replace(day=1) + relativedelta(months=1)
 
