@@ -213,8 +213,10 @@ class QuittanceViewSet(viewsets.ModelViewSet):
     def stats(self, request):
         """Retourne les statistiques des quittances."""
         total_quittances = Quittance.objects.count()
+        from django.db.models.functions import Cast
+        from django.db.models import DecimalField
         montant_total = Quittance.objects.aggregate(
-            total=Sum('montant_total')
+            total=Sum(Cast('montant_total', output_field=DecimalField(max_digits=20, decimal_places=2)))
         )['total'] or 0
         
         # Quittances du mois en cours
