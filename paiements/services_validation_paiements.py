@@ -133,31 +133,71 @@ class ServiceValidationPaiements:
     
     @staticmethod
     def _determiner_mois_suggere(contrat, date_paiement):
-        """Détermine le mois suggéré pour le paiement."""
-        analyse = ServiceValidationPaiements._analyser_paiements_existants(contrat)
-        
-        if not analyse['dernier_paiement']:
-            # Premier paiement : mois de début du contrat
-            if hasattr(contrat, 'date_debut') and contrat.date_debut:
-                return contrat.date_debut.replace(day=1)
-            elif hasattr(contrat, 'date_entree') and contrat.date_entree:
-                return contrat.date_entree.replace(day=1)
+        """
+        Détermine le mois suggéré pour le paiement.
+        CORRIGÉ : Utilise maintenant la méthode calculer_prochain_mois_paiement() qui prend en compte mois_paye
+        """
+        try:
+            # Utiliser la méthode corrigée qui prend en compte mois_paye et les avances
+            from .services_avance import ServiceGestionAvance
+            prochain_mois = ServiceGestionAvance.calculer_prochain_mois_paiement(contrat)
+            return prochain_mois
+        except Exception as e:
+            # Fallback : utiliser l'ancienne logique si erreur
+            analyse = ServiceValidationPaiements._analyser_paiements_existants(contrat)
+            
+            if not analyse['dernier_paiement']:
+                # Premier paiement : mois de début du contrat
+                if hasattr(contrat, 'date_debut') and contrat.date_debut:
+                    return contrat.date_debut.replace(day=1)
+                elif hasattr(contrat, 'date_entree') and contrat.date_entree:
+                    return contrat.date_entree.replace(day=1)
+                else:
+                    return date_paiement.replace(day=1)
+            
+            # Dernier mois payé + 1 (utiliser mois_paye si disponible)
+            dernier_paiement = analyse['dernier_paiement']
+            if dernier_paiement.mois_paye:
+                # Convertir mois_paye en date
+                from datetime import datetime
+                import re
+                mois_francais = {
+                    'janvier': 1, 'février': 2, 'mars': 3, 'avril': 4,
+                    'mai': 5, 'juin': 6, 'juillet': 7, 'août': 8,
+                    'septembre': 9, 'octobre': 10, 'novembre': 11, 'décembre': 12
+                }
+                mois_anglais = {
+                    'january': 1, 'february': 2, 'march': 3, 'april': 4,
+                    'may': 5, 'june': 6, 'july': 7, 'august': 8,
+                    'september': 9, 'october': 10, 'november': 11, 'december': 12
+                }
+                
+                mois_paye_lower = dernier_paiement.mois_paye.lower().strip()
+                dernier_mois_paye = None
+                for mois, num in {**mois_francais, **mois_anglais}.items():
+                    if mois in mois_paye_lower:
+                        annee_match = re.search(r'(\d{4})', dernier_paiement.mois_paye)
+                        if annee_match:
+                            annee = int(annee_match.group(1))
+                            dernier_mois_paye = date(annee, num, 1)
+                            break
+                
+                if not dernier_mois_paye:
+                    dernier_mois_paye = dernier_paiement.date_paiement.replace(day=1)
             else:
-                return date_paiement.replace(day=1)
-        
-        # Dernier mois payé + 1
-        dernier_mois_paye = analyse['dernier_paiement'].date_paiement.replace(day=1)
-        mois_suggere = dernier_mois_paye + relativedelta(months=1)
-        
-        # Vérifier si le mois suggéré n'est pas déjà payé
-        if mois_suggere in analyse['mois_payes']:
-            # Trouver le prochain mois disponible
-            mois_courant = mois_suggere
-            while mois_courant in analyse['mois_payes']:
-                mois_courant += relativedelta(months=1)
-            return mois_courant
-        
-        return mois_suggere
+                dernier_mois_paye = dernier_paiement.date_paiement.replace(day=1)
+            
+            mois_suggere = dernier_mois_paye + relativedelta(months=1)
+            
+            # Vérifier si le mois suggéré n'est pas déjà payé
+            if mois_suggere in analyse['mois_payes']:
+                # Trouver le prochain mois disponible
+                mois_courant = mois_suggere
+                while mois_courant in analyse['mois_payes']:
+                    mois_courant += relativedelta(months=1)
+                return mois_courant
+            
+            return mois_suggere
     
     @staticmethod
     def _valider_contre_doublons(contrat, date_paiement, analyse_paiements):

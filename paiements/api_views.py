@@ -290,78 +290,37 @@ def api_contexte_intelligent_contrat(request, contrat_id):
                 toutes_les_avances = avances_actives.union(avances_recentes)
                 
                 # *** CALCULER LE PROCHAIN MOIS (avec ou sans avances) ***
+                # CORRIGÉ : Utiliser toujours la méthode calculer_prochain_mois_paiement() qui prend en compte mois_paye
                 prochain_mois_paiement_avec_avances = None
                 try:
+                    # Utiliser la méthode corrigée qui prend en compte mois_paye et les avances
+                    prochain_mois_paiement_avec_avances = ServiceGestionAvance.calculer_prochain_mois_paiement(contrat)
+                    prochain_mois = prochain_mois_paiement_avec_avances.month
+                    
                     if toutes_les_avances.exists():
-                        # *** AVEC AVANCES : Calculer le prochain mois en tenant compte des avances ***
-                        prochain_mois_paiement_avec_avances = ServiceGestionAvance.calculer_prochain_mois_paiement(contrat)
-                        prochain_mois = prochain_mois_paiement_avec_avances.month
                         mois_suggere = f"Prochain paiement avec avances: {prochain_mois_paiement_avec_avances.strftime('%B %Y')}"
                     else:
-                        # *** SANS AVANCES : Calculer normalement ***
-                        derniers_mois = [p.date_paiement.month for p in paiements_recents if p.date_paiement]
-                        if derniers_mois:
-                            dernier_mois = max(derniers_mois)
-                            prochain_mois = (dernier_mois % 12) + 1
-                            mois_suggere = f"Prochain paiement: {prochain_mois}"
-                        else:
-                            from datetime import datetime
-                            prochain_mois = datetime.now().month
-                            mois_suggere = "Mois actuel"
+                        mois_suggere = f"Prochain paiement: {prochain_mois_paiement_avec_avances.strftime('%B %Y')}"
                         
                 except Exception as e:
                     print(f"Erreur calcul prochain mois: {str(e)}")
-                    # Fallback : calculer normalement
-                    derniers_mois = [p.date_paiement.month for p in paiements_recents if p.date_paiement]
-                    if derniers_mois:
-                        dernier_mois = max(derniers_mois)
-                        prochain_mois = (dernier_mois % 12) + 1
-                        mois_suggere = f"Suivant le dernier paiement ({prochain_mois})"
-                    else:
-                        from datetime import datetime
-                        prochain_mois = datetime.now().month
-                        mois_suggere = "Mois actuel"
-                    prochain_mois_paiement_avec_avances = None
-                
-                if toutes_les_avances.exists():
-                    # *** AVANCES ACTIVES : Informations supplémentaires ***
-                    pass  # Les informations sont déjà calculées plus haut
-                else:
-                    # *** PAS D'AVANCES : Calculer normalement ***
-                    derniers_mois = [p.date_paiement.month for p in paiements_recents if p.date_paiement]
-                    
-                    if derniers_mois:
-                        # Si il y a des paiements, calculer le mois suivant
-                        dernier_mois = max(derniers_mois)
-                        prochain_mois = (dernier_mois % 12) + 1
-                        mois_suggere = f"Suivant le dernier paiement ({prochain_mois})"
-                    else:
-                        # Premier paiement : utiliser le mois actuel ou le mois de début de contrat
-                        from datetime import datetime
-                        mois_actuel = datetime.now().month
-                        if contrat.date_debut:
-                            mois_debut = contrat.date_debut.month
-                            if mois_debut == mois_actuel:
-                                prochain_mois = mois_actuel
-                                mois_suggere = "Mois actuel (début de contrat)"
-                            else:
-                                prochain_mois = mois_debut
-                                mois_suggere = f"Mois de début de contrat ({mois_debut})"
-                        else:
-                            prochain_mois = mois_actuel
-                            mois_suggere = "Mois actuel"
-                            
-            except Exception as e:
-                # En cas d'erreur, calculer normalement
-                derniers_mois = [p.date_paiement.month for p in paiements_recents if p.date_paiement]
-                if derniers_mois:
-                    dernier_mois = max(derniers_mois)
-                    prochain_mois = (dernier_mois % 12) + 1
-                    mois_suggere = f"Suivant le dernier paiement ({prochain_mois})"
-                else:
+                    import traceback
+                    traceback.print_exc()
+                    # Fallback : utiliser le mois actuel
                     from datetime import datetime
                     prochain_mois = datetime.now().month
                     mois_suggere = "Mois actuel"
+                    prochain_mois_paiement_avec_avances = None
+                            
+            except Exception as e:
+                # En cas d'erreur, utiliser le mois actuel
+                print(f"Erreur dans le calcul du prochain mois: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                from datetime import datetime
+                prochain_mois = datetime.now().month
+                mois_suggere = "Mois actuel"
+                prochain_mois_paiement_avec_avances = None
             
             # *** RÉCUPÉRATION DES INFORMATIONS SUR LES AVANCES ***
             try:
