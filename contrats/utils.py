@@ -183,40 +183,54 @@ def get_proprietes_disponibles():
     """
     Retourne les propriétés disponibles pour la création de contrats.
     Une propriété est disponible si :
-    1. Elle n'a pas de contrat actif qui couvre la propriété entière, ET
-    2. Elle a au moins une unité locative disponible OU elle est marquée comme disponible
-    CORRIGÉ : Utilise est_actif et est_resilie au lieu de date_fin pour déterminer les contrats actifs
+    1. Pour les propriétés avec unités locatives : elle a au moins une unité locative disponible
+    2. Pour les propriétés entières (sans unités) : elle n'a pas de contrat actif qui couvre la propriété entière ET elle est marquée comme disponible
+    CORRIGÉ : Prend en compte les unités locatives disponibles même si d'autres unités de la même propriété sont occupées
     """
     from proprietes.models import Propriete
     from proprietes.models import UniteLocative
     from .models import Contrat
-    from django.db.models import Q
+    from django.db.models import Q, Exists, OuterRef
     
-    # Utiliser une approche plus simple avec Q objects
-    # Propriétés disponibles = (avec unités disponibles OU marquées disponibles) ET pas de contrat actif
+    # 1. PROPRIÉTÉS AVEC UNITÉS LOCATIVES DISPONIBLES
+    # Une propriété avec unités locatives est disponible si elle a au moins une unité disponible
+    # (même si d'autres unités de la même propriété sont occupées)
+    proprietes_avec_unites_disponibles = Propriete.objects.filter(
+        unites_locatives__statut='disponible',
+        unites_locatives__is_deleted=False
+    ).distinct()
     
-    # Construire la requête avec Q objects pour éviter les problèmes de combinaison
-    query = Q()
-    
-    # Propriétés avec unités locatives disponibles
-    query |= Q(unites_locatives__statut='disponible')
-    
-    # Propriétés marquées comme disponibles (sans unités locatives)
-    query |= Q(disponible=True, unites_locatives__isnull=True)
-    
-    # Appliquer le filtre principal
-    proprietes_candidates = Propriete.objects.filter(query).distinct()
-    
-    # CORRIGÉ : Exclure les propriétés avec contrats actifs (utiliser est_actif et est_resilie)
-    # au lieu de date_fin
-    contrats_actifs = Contrat.all_objects.filter(
-        est_actif=True,
-        est_resilie=False
-    ).values_list('propriete_id', flat=True)
-    
-    # Filtrer les propriétés disponibles en excluant celles avec contrats actifs
-    proprietes_finales = proprietes_candidates.exclude(
-        id__in=contrats_actifs
+    # 2. PROPRIÉTÉS ENTIÈRES (SANS UNITÉS LOCATIVES) DISPONIBLES
+    # Une propriété entière est disponible si :
+    # - Elle est marquée comme disponible
+    # - Elle n'a pas de contrat actif qui couvre la propriété entière (sans unité_locative)
+    proprietes_entières = Propriete.objects.filter(
+        disponible=True,
+        unites_locatives__isnull=True
     )
     
-    return proprietes_finales.order_by('titre')
+    # Exclure les propriétés entières qui ont des contrats actifs (sans unité_locative)
+    contrats_actifs_propriete_entiere = Contrat.all_objects.filter(
+        propriete=OuterRef('pk'),
+        est_actif=True,
+        est_resilie=False,
+        unite_locative__isnull=True  # Contrat qui couvre la propriété entière
+    )
+    
+    proprietes_entières_disponibles = proprietes_entières.exclude(
+        Exists(contrats_actifs_propriete_entiere)
+    )
+    
+    # 3. COMBINER LES DEUX TYPES DE PROPRIÉTÉS
+    # Utiliser une union pour combiner les deux querysets
+    proprietes_ids_avec_unites = list(proprietes_avec_unites_disponibles.values_list('pk', flat=True))
+    proprietes_ids_entières = list(proprietes_entières_disponibles.values_list('pk', flat=True))
+    
+    # Combiner les IDs uniques
+    tous_ids = list(set(proprietes_ids_avec_unites + proprietes_ids_entières))
+    
+    # Retourner les propriétés dans l'ordre
+    if tous_ids:
+        return Propriete.objects.filter(pk__in=tous_ids).order_by('titre')
+    else:
+        return Propriete.objects.none()
