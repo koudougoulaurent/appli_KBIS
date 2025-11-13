@@ -508,6 +508,19 @@ class Locataire(DuplicatePreventionMixin, models.Model):
             est_resilie=False
         ).order_by('-date_debut')
     
+    @property
+    def est_actif(self):
+        """
+        Détermine si le locataire est actif.
+        Un locataire est actif s'il a au moins un contrat actif OU si le champ statut est 'actif'.
+        CORRIGÉ : Vérifie automatiquement les contrats actifs - priorité aux contrats actifs
+        """
+        # PRIORITÉ : Si le locataire a des contrats actifs, il est automatiquement actif
+        if self.a_des_contrats_actifs():
+            return True
+        # Sinon, utiliser le champ statut
+        return self.statut == 'actif'
+    
     def peut_etre_supprime_definitivement(self):
         """
         Vérifie si le locataire peut être supprimé définitivement.
