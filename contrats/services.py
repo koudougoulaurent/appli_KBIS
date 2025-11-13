@@ -477,7 +477,7 @@ class ContratPDFService:
         elements.append(Spacer(1, 3))
         
         # Informations de l'agence - INFORMATIONS DYNAMIQUES EN GRAS
-        agence_info = f"""L'Agence <b>KBIS IMMOBILIER</b> située au <b>secteur 26 Pissy</b> représentée, par <b>M. NIKIEMA PA MAMDOU</b> Tel <b>70-20-64-91</b>"""
+        agence_info = f"""L'Agence <b>KBIS IMMOBILIER</b> située au <b>secteur 26 Pissy</b> représentée, par <b>M. NIKIEMA P Amadou</b> Tel <b>70-20-64-91</b>"""
         elements.append(Paragraph(agence_info, self.styles['CustomBody']))
         elements.append(Spacer(1, 6))
         
