@@ -1217,17 +1217,88 @@ class SupprimerLocataireView(SuppressionGeneriqueView):
             )
             return redirect(self.get_redirect_url(obj))
         
-        # CORRIGÉ : Supprimer tous les contrats résiliés/supprimés avant de supprimer le locataire
+        # CORRIGÉ : Supprimer TOUS les objets liés aux contrats avant de supprimer le locataire
         # Cela évite l'erreur PROTECT de la ForeignKey
-        from contrats.models import Contrat
-        contrats_restants = Contrat.objects.filter(locataire=obj)
+        from contrats.models import Contrat, ResiliationContrat, DepenseResiliation, EtatLieux, DocumentContrat, RecuCaution, Quittance
+        from paiements.models import Paiement, QuittancePaiement
+        from paiements.models_avance import AvanceLoyer
+        from proprietes.models import PieceContrat
+        
+        # Utiliser all_objects pour inclure les contrats supprimés logiquement
+        contrats_restants = Contrat.all_objects.filter(locataire=obj)
+        
         if contrats_restants.exists():
-            # Supprimer tous les contrats restants (résiliés ou supprimés)
+            # Pour chaque contrat, supprimer tous les objets liés
             for contrat in contrats_restants:
                 try:
+                    # 1. Supprimer les résiliations et leurs dépenses
+                    try:
+                        resiliation = ResiliationContrat.objects.filter(contrat=contrat).first()
+                        if resiliation:
+                            DepenseResiliation.objects.filter(resiliation=resiliation).delete()
+                            resiliation.delete()
+                    except Exception as e:
+                        print(f"Erreur suppression résiliation pour contrat {contrat.pk}: {e}")
+                    
+                    # 2. Supprimer les paiements et leurs quittances
+                    try:
+                        paiements = Paiement.all_objects.filter(contrat=contrat)
+                        for paiement in paiements:
+                            QuittancePaiement.objects.filter(paiement=paiement).delete()
+                        paiements.delete()
+                    except Exception as e:
+                        print(f"Erreur suppression paiements pour contrat {contrat.pk}: {e}")
+                    
+                    # 3. Supprimer les avances de loyer
+                    try:
+                        AvanceLoyer.objects.filter(contrat=contrat).delete()
+                    except Exception as e:
+                        print(f"Erreur suppression avances pour contrat {contrat.pk}: {e}")
+                    
+                    # 4. Supprimer les quittances
+                    try:
+                        Quittance.objects.filter(contrat=contrat).delete()
+                    except Exception as e:
+                        print(f"Erreur suppression quittances pour contrat {contrat.pk}: {e}")
+                    
+                    # 5. Supprimer les états des lieux
+                    try:
+                        EtatLieux.objects.filter(contrat=contrat).delete()
+                    except Exception as e:
+                        print(f"Erreur suppression états des lieux pour contrat {contrat.pk}: {e}")
+                    
+                    # 6. Supprimer les documents de contrat
+                    try:
+                        DocumentContrat.objects.filter(contrat=contrat).delete()
+                    except Exception as e:
+                        print(f"Erreur suppression documents pour contrat {contrat.pk}: {e}")
+                    
+                    # 7. Supprimer les reçus de caution
+                    try:
+                        RecuCaution.objects.filter(contrat=contrat).delete()
+                    except Exception as e:
+                        print(f"Erreur suppression reçus caution pour contrat {contrat.pk}: {e}")
+                    
+                    # 8. Supprimer les liaisons pièces-contrat
+                    try:
+                        PieceContrat.objects.filter(contrat=contrat).delete()
+                    except Exception as e:
+                        print(f"Erreur suppression liaisons pièces pour contrat {contrat.pk}: {e}")
+                    
+                    # 9. Enfin, supprimer le contrat lui-même
                     contrat.delete()
+                    
+            # 10. Supprimer aussi les réservations d'unités liées au locataire
+            try:
+                from proprietes.models import ReservationUnite
+                ReservationUnite.objects.filter(locataire_potentiel=obj).delete()
+            except Exception as e:
+                print(f"Erreur suppression réservations pour locataire {obj.pk}: {e}")
+                    
                 except Exception as e:
-                    print(f"Erreur lors de la suppression du contrat {contrat.pk}: {e}")
+                    print(f"Erreur lors de la suppression complète du contrat {contrat.pk}: {e}")
+                    import traceback
+                    traceback.print_exc()
                     messages.warning(
                         request,
                         f"Attention : Erreur lors de la suppression du contrat {contrat.numero_contrat}: {str(e)}"
@@ -1827,17 +1898,68 @@ def corbeille_locataires(request):
                     locataires_avec_contrats_actifs.append(locataire)
                     continue
                 
-                # CORRIGÉ : Supprimer d'abord tous les contrats (même résiliés/supprimés) pour éviter PROTECT
-                # Cela permet la suppression du locataire même si des contrats résiliés existent
-                from contrats.models import Contrat
-                contrats_restants = Contrat.objects.filter(locataire=locataire)
+                # CORRIGÉ : Supprimer TOUS les objets liés aux contrats avant de supprimer le locataire
+                from contrats.models import Contrat, ResiliationContrat, DepenseResiliation, EtatLieux, DocumentContrat, RecuCaution, Quittance
+                from paiements.models import Paiement, QuittancePaiement
+                from paiements.models_avance import AvanceLoyer
+                from proprietes.models import PieceContrat
+                
+                # Utiliser all_objects pour inclure les contrats supprimés logiquement
+                contrats_restants = Contrat.all_objects.filter(locataire=locataire)
+                
                 if contrats_restants.exists():
-                    # Supprimer tous les contrats restants (résiliés ou supprimés)
+                    # Pour chaque contrat, supprimer tous les objets liés
                     for contrat in contrats_restants:
                         try:
+                            # Supprimer tous les objets liés (même logique que dans permanent_delete)
+                            try:
+                                resiliation = ResiliationContrat.objects.filter(contrat=contrat).first()
+                                if resiliation:
+                                    DepenseResiliation.objects.filter(resiliation=resiliation).delete()
+                                    resiliation.delete()
+                            except: pass
+                            
+                            try:
+                                paiements = Paiement.all_objects.filter(contrat=contrat)
+                                for paiement in paiements:
+                                    QuittancePaiement.objects.filter(paiement=paiement).delete()
+                                paiements.delete()
+                            except: pass
+                            
+                            try:
+                                AvanceLoyer.objects.filter(contrat=contrat).delete()
+                            except: pass
+                            
+                            try:
+                                Quittance.objects.filter(contrat=contrat).delete()
+                            except: pass
+                            
+                            try:
+                                EtatLieux.objects.filter(contrat=contrat).delete()
+                            except: pass
+                            
+                            try:
+                                DocumentContrat.objects.filter(contrat=contrat).delete()
+                            except: pass
+                            
+                            try:
+                                RecuCaution.objects.filter(contrat=contrat).delete()
+                            except: pass
+                            
+                            try:
+                                PieceContrat.objects.filter(contrat=contrat).delete()
+                            except: pass
+                            
+                            # Enfin, supprimer le contrat
                             contrat.delete()
                         except Exception as e:
                             print(f"Erreur lors de la suppression du contrat {contrat.pk}: {e}")
+                
+                # Supprimer aussi les réservations d'unités liées au locataire
+                try:
+                    from proprietes.models import ReservationUnite
+                    ReservationUnite.objects.filter(locataire_potentiel=locataire).delete()
+                except: pass
                 
                 # Log d'audit avant suppression
                 old_data = {f.name: getattr(locataire, f.name) for f in locataire._meta.fields}
