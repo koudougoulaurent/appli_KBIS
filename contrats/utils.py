@@ -185,12 +185,12 @@ def get_proprietes_disponibles():
     Une propriété est disponible si :
     1. Elle n'a pas de contrat actif qui couvre la propriété entière, ET
     2. Elle a au moins une unité locative disponible OU elle est marquée comme disponible
+    CORRIGÉ : Utilise est_actif et est_resilie au lieu de date_fin pour déterminer les contrats actifs
     """
     from proprietes.models import Propriete
     from proprietes.models import UniteLocative
     from .models import Contrat
     from django.db.models import Q
-    from django.utils import timezone
     
     # Utiliser une approche plus simple avec Q objects
     # Propriétés disponibles = (avec unités disponibles OU marquées disponibles) ET pas de contrat actif
@@ -207,10 +207,11 @@ def get_proprietes_disponibles():
     # Appliquer le filtre principal
     proprietes_candidates = Propriete.objects.filter(query).distinct()
     
-    # Exclure les propriétés avec contrats actifs
-    # (contrats qui ne sont pas terminés)
-    contrats_actifs = Contrat.objects.filter(
-        date_fin__gte=timezone.now().date()
+    # CORRIGÉ : Exclure les propriétés avec contrats actifs (utiliser est_actif et est_resilie)
+    # au lieu de date_fin
+    contrats_actifs = Contrat.all_objects.filter(
+        est_actif=True,
+        est_resilie=False
     ).values_list('propriete_id', flat=True)
     
     # Filtrer les propriétés disponibles en excluant celles avec contrats actifs

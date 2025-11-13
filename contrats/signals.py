@@ -10,14 +10,16 @@ def synchroniser_disponibilite_propriete_apres_sauvegarde(sender, instance, crea
     """
     Signal pour synchroniser automatiquement la disponibilité d'une propriété
     après la sauvegarde d'un contrat.
+    CORRIGÉ : Utilise all_objects pour vérifier tous les contrats, même supprimés logiquement
     """
     if not instance.propriete:
         return
     
     # Utiliser une transaction pour éviter les problèmes de concurrence
     with transaction.atomic():
+        # CORRIGÉ : Utiliser all_objects pour inclure les contrats supprimés logiquement
         # Vérifier s'il y a d'autres contrats actifs pour cette propriété
-        contrats_actifs = Contrat.objects.filter(
+        contrats_actifs = Contrat.all_objects.filter(
             propriete=instance.propriete,
             est_actif=True,
             est_resilie=False
@@ -32,19 +34,55 @@ def synchroniser_disponibilite_propriete_apres_sauvegarde(sender, instance, crea
             instance.propriete.save(update_fields=['disponible'])
 
 
+@receiver(post_save, sender=Contrat)
+def synchroniser_disponibilite_unite_locative_apres_sauvegarde(sender, instance, created, **kwargs):
+    """
+    Signal pour synchroniser automatiquement la disponibilité d'une unité locative
+    après la sauvegarde d'un contrat.
+    CORRIGÉ : Met à jour le statut de l'unité locative en fonction des contrats actifs
+    """
+    if not instance.unite_locative:
+        return
+    
+    # Utiliser une transaction pour éviter les problèmes de concurrence
+    with transaction.atomic():
+        # CORRIGÉ : Utiliser all_objects pour inclure les contrats supprimés logiquement
+        # Vérifier s'il y a d'autres contrats actifs pour cette unité locative
+        contrats_actifs_unite = Contrat.all_objects.filter(
+            unite_locative=instance.unite_locative,
+            est_actif=True,
+            est_resilie=False
+        ).exclude(pk=instance.pk)
+        
+        # Déterminer le nouveau statut
+        if instance.est_actif and not instance.est_resilie:
+            # Contrat actif = unité occupée
+            nouveau_statut = 'occupee'
+        else:
+            # Contrat inactif ou résilié = unité disponible (si pas d'autres contrats actifs)
+            nouveau_statut = 'disponible' if not contrats_actifs_unite.exists() else 'occupee'
+        
+        # Mettre à jour l'unité locative si nécessaire
+        if instance.unite_locative.statut != nouveau_statut:
+            instance.unite_locative.statut = nouveau_statut
+            instance.unite_locative.save(update_fields=['statut'])
+
+
 @receiver(post_delete, sender=Contrat)
 def synchroniser_disponibilite_propriete_apres_suppression(sender, instance, **kwargs):
     """
     Signal pour synchroniser automatiquement la disponibilité d'une propriété
     après la suppression d'un contrat.
+    CORRIGÉ : Utilise all_objects pour vérifier tous les contrats, même supprimés logiquement
     """
     if not instance.propriete:
         return
     
     # Utiliser une transaction pour éviter les problèmes de concurrence
     with transaction.atomic():
+        # CORRIGÉ : Utiliser all_objects pour inclure les contrats supprimés logiquement
         # Vérifier s'il y a d'autres contrats actifs pour cette propriété
-        contrats_actifs = Contrat.objects.filter(
+        contrats_actifs = Contrat.all_objects.filter(
             propriete=instance.propriete,
             est_actif=True,
             est_resilie=False
@@ -56,16 +94,44 @@ def synchroniser_disponibilite_propriete_apres_suppression(sender, instance, **k
             instance.propriete.save(update_fields=['disponible'])
 
 
+@receiver(post_delete, sender=Contrat)
+def synchroniser_disponibilite_unite_locative_apres_suppression(sender, instance, **kwargs):
+    """
+    Signal pour synchroniser automatiquement la disponibilité d'une unité locative
+    après la suppression d'un contrat.
+    CORRIGÉ : Met à jour le statut de l'unité locative pour qu'elle redevienne disponible
+    """
+    if not instance.unite_locative:
+        return
+    
+    # Utiliser une transaction pour éviter les problèmes de concurrence
+    with transaction.atomic():
+        # CORRIGÉ : Utiliser all_objects pour inclure les contrats supprimés logiquement
+        # Vérifier s'il y a d'autres contrats actifs pour cette unité locative
+        contrats_actifs_unite = Contrat.all_objects.filter(
+            unite_locative=instance.unite_locative,
+            est_actif=True,
+            est_resilie=False
+        )
+        
+        # Marquer l'unité locative comme disponible s'il n'y a plus de contrats actifs
+        if not contrats_actifs_unite.exists() and instance.unite_locative.statut != 'disponible':
+            instance.unite_locative.statut = 'disponible'
+            instance.unite_locative.save(update_fields=['statut'])
+
+
 @receiver(post_save, sender=Propriete)
 def valider_coherence_propriete_apres_sauvegarde(sender, instance, created, **kwargs):
     """
     Signal pour valider la cohérence d'une propriété après sa sauvegarde.
+    CORRIGÉ : Utilise all_objects pour vérifier tous les contrats, même supprimés logiquement
     """
     if created:
         return
     
+    # CORRIGÉ : Utiliser all_objects pour inclure les contrats supprimés logiquement
     # Vérifier la cohérence entre la disponibilité et les contrats actifs
-    contrats_actifs = Contrat.objects.filter(
+    contrats_actifs = Contrat.all_objects.filter(
         propriete=instance,
         est_actif=True,
         est_resilie=False

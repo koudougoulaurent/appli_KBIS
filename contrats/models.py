@@ -533,9 +533,13 @@ class Contrat(models.Model):
                 self._update_disponibilite_unite_locative()
     
     def _update_disponibilite_propriete(self):
-        """Met à jour la disponibilité de la propriété en fonction des contrats actifs."""
+        """
+        Met à jour la disponibilité de la propriété en fonction des contrats actifs.
+        CORRIGÉ : Utilise all_objects pour vérifier tous les contrats, même supprimés logiquement
+        """
+        # CORRIGÉ : Utiliser all_objects pour inclure les contrats supprimés logiquement
         # Vérifier s'il y a d'autres contrats actifs pour cette propriété
-        contrats_actifs = Contrat.objects.filter(
+        contrats_actifs = Contrat.all_objects.filter(
             propriete=self.propriete,
             est_actif=True,
             est_resilie=False
@@ -553,7 +557,10 @@ class Contrat(models.Model):
                 self.propriete.save(update_fields=['disponible'])
     
     def _update_disponibilite_unite_locative(self):
-        """Met à jour la disponibilité de l'unité locative en fonction du statut du contrat."""
+        """
+        Met à jour la disponibilité de l'unité locative en fonction du statut du contrat.
+        CORRIGÉ : Utilise all_objects pour vérifier tous les contrats, même supprimés logiquement
+        """
         if not self.unite_locative:
             return  # Pas d'unité locative associée
         
@@ -563,8 +570,9 @@ class Contrat(models.Model):
             self.unite_locative.save(update_fields=['statut'])
         else:
             # Contrat inactif ou résilié = unité locative disponible
+            # CORRIGÉ : Utiliser all_objects pour inclure les contrats supprimés logiquement
             # Vérifier s'il y a d'autres contrats actifs pour cette unité
-            contrats_actifs_unite = Contrat.objects.filter(
+            contrats_actifs_unite = Contrat.all_objects.filter(
                 unite_locative=self.unite_locative,
                 est_actif=True,
                 est_resilie=False
@@ -575,10 +583,14 @@ class Contrat(models.Model):
                 self.unite_locative.save(update_fields=['statut'])
     
     def delete(self, *args, **kwargs):
-        """Override delete pour gérer la disponibilité de la propriété et de l'unité locative."""
+        """
+        Override delete pour gérer la disponibilité de la propriété et de l'unité locative.
+        CORRIGÉ : Utilise all_objects pour vérifier tous les contrats, même supprimés logiquement
+        """
         # Marquer la propriété comme disponible si c'était le seul contrat actif
         if self.est_actif and not self.est_resilie:
-            contrats_actifs = Contrat.objects.filter(
+            # CORRIGÉ : Utiliser all_objects pour inclure les contrats supprimés logiquement
+            contrats_actifs = Contrat.all_objects.filter(
                 propriete=self.propriete,
                 est_actif=True,
                 est_resilie=False
@@ -590,7 +602,8 @@ class Contrat(models.Model):
             
             # Marquer l'unité locative comme disponible si c'était le seul contrat actif
             if self.unite_locative:
-                contrats_actifs_unite = Contrat.objects.filter(
+                # CORRIGÉ : Utiliser all_objects pour inclure les contrats supprimés logiquement
+                contrats_actifs_unite = Contrat.all_objects.filter(
                     unite_locative=self.unite_locative,
                     est_actif=True,
                     est_resilie=False
