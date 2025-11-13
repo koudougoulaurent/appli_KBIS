@@ -2,7 +2,7 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.db import transaction
 from .models import Contrat
-from proprietes.models import Propriete
+from proprietes.models import Propriete, Bailleur, Locataire
 
 
 @receiver(post_save, sender=Contrat)
@@ -103,3 +103,78 @@ def creer_avance_loyer_automatique(sender, instance, created, **kwargs):
         instance._creer_avance_loyer_automatique()
     except Exception as e:
         print(f"Erreur lors de la création automatique de l'avance: {str(e)}")
+
+
+@receiver(post_save, sender=Contrat)
+def mettre_a_jour_statuts_bailleur_locataire(sender, instance, created, **kwargs):
+    """
+    Signal pour mettre à jour automatiquement les statuts actifs du bailleur et du locataire
+    en fonction des contrats actifs.
+    CORRIGÉ : Met à jour automatiquement les statuts lors de création/modification/suppression de contrats
+    """
+    try:
+        with transaction.atomic():
+            # Mettre à jour le statut du bailleur
+            if instance.propriete and instance.propriete.bailleur:
+                bailleur = instance.propriete.bailleur
+                a_contrats_actifs = bailleur.a_des_proprietes_louees()
+                
+                # Si le bailleur a des contrats actifs, le marquer comme actif
+                if a_contrats_actifs and not bailleur.actif:
+                    bailleur.actif = True
+                    bailleur.save(update_fields=['actif'])
+            
+            # Mettre à jour le statut du locataire
+            if instance.locataire:
+                locataire = instance.locataire
+                a_contrats_actifs = locataire.a_des_contrats_actifs()
+                
+                # Si le locataire a des contrats actifs, le marquer comme actif
+                if a_contrats_actifs and locataire.statut != 'actif':
+                    locataire.statut = 'actif'
+                    locataire.save(update_fields=['statut'])
+                    
+    except Exception as e:
+        print(f"Erreur lors de la mise a jour des statuts: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+
+@receiver(post_delete, sender=Contrat)
+def mettre_a_jour_statuts_apres_suppression_contrat(sender, instance, **kwargs):
+    """
+    Signal pour mettre à jour les statuts après suppression d'un contrat.
+    """
+    try:
+        with transaction.atomic():
+            # Mettre à jour le statut du bailleur
+            if instance.propriete and instance.propriete.bailleur:
+                bailleur = instance.propriete.bailleur
+                a_contrats_actifs = bailleur.a_des_proprietes_louees()
+                
+                # Si le bailleur n'a plus de contrats actifs, on peut le passer en inactif
+                # Mais on garde le statut actif s'il est déjà actif (pas de changement automatique)
+                # Cette logique peut être ajustée selon les besoins métier
+                if not a_contrats_actifs and bailleur.actif:
+                    # Optionnel : passer en inactif si plus de contrats
+                    # bailleur.actif = False
+                    # bailleur.save(update_fields=['actif'])
+                    pass
+            
+            # Mettre à jour le statut du locataire
+            if instance.locataire:
+                locataire = instance.locataire
+                a_contrats_actifs = locataire.a_des_contrats_actifs()
+                
+                # Si le locataire n'a plus de contrats actifs, on peut le passer en inactif
+                # Mais on garde le statut actif s'il est déjà actif (pas de changement automatique)
+                if not a_contrats_actifs and locataire.statut == 'actif':
+                    # Optionnel : passer en inactif si plus de contrats
+                    # locataire.statut = 'inactif'
+                    # locataire.save(update_fields=['statut'])
+                    pass
+                    
+    except Exception as e:
+        print(f"Erreur lors de la mise a jour des statuts apres suppression: {str(e)}")
+        import traceback
+        traceback.print_exc()
