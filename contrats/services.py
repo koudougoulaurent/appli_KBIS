@@ -230,41 +230,41 @@ class ContratPDFService:
         # Stocker l'utilisateur pour l'affichage
         self.user = user
         
-        # Créer le document avec des marges optimisées pour éviter le chevauchement
+        # Créer le document avec des marges optimisées pour tenir sur 3 pages max
         doc = SimpleDocTemplate(
             buffer,
             pagesize=A4,
-            rightMargin=1.5*cm,
-            leftMargin=1.5*cm,
-            topMargin=4*cm,  # Marge supérieure augmentée pour éviter le chevauchement
-            bottomMargin=1*cm  # Marge inférieure pour le pied de page
+            rightMargin=1.2*cm,
+            leftMargin=1.2*cm,
+            topMargin=3.5*cm,  # Marge supérieure réduite
+            bottomMargin=0.8*cm  # Marge inférieure réduite
         )
         
         # Construction du contenu du PDF
         story = []
         
-        # Titre principal du contrat avec espacement pour éviter le chevauchement
+        # Titre principal du contrat avec espacement réduit
         story.append(Paragraph(
             "CONTRAT DE LOCATION",
             self.styles['CustomTitle']
         ))
-        story.append(Spacer(1, 15))  # Espacement réduit pour éviter la page vide
+        story.append(Spacer(1, 8))  # Espacement réduit
         
         # Informations de base du contrat
         story.extend(self._create_basic_info())
-        story.append(PageBreak())  # Saut de page pour le module suivant
+        story.append(Spacer(1, 8))  # Petit espacement au lieu de PageBreak
         
         # Conditions de location
         story.extend(self._create_rental_conditions())
-        story.append(PageBreak())  # Saut de page pour le module suivant
+        story.append(Spacer(1, 8))  # Petit espacement au lieu de PageBreak
         
         # Obligations et conditions
         story.extend(self._create_obligations())
-        story.append(PageBreak())  # Saut de page pour le module suivant
+        story.append(Spacer(1, 8))  # Petit espacement au lieu de PageBreak
         
         # État des lieux
         story.extend(self._create_etat_des_lieux())
-        story.append(PageBreak())  # Saut de page pour le module suivant
+        story.append(Spacer(1, 8))  # Petit espacement au lieu de PageBreak
         
         # Signatures (engagement à la fin)
         story.extend(self._create_signatures())
@@ -462,28 +462,28 @@ class ContratPDFService:
             fontSize=10
         )
         elements.append(Paragraph(f"Ouagadougou, {date_contrat}", date_style))
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 6))
         
         # Entre les parties (en bleu à la place du titre redondant) - titre en gras centré
         entre_style = ParagraphStyle(
             'EntreHeading',
             parent=self.styles['CustomHeading'],
             alignment=TA_CENTER,
-            fontSize=14,
+            fontSize=13,
             textColor=colors.darkblue,
-            spaceAfter=10
+            spaceAfter=5
         )
         elements.append(Paragraph("Entre d'une part,", entre_style))
-        elements.append(Spacer(1, 5))
+        elements.append(Spacer(1, 3))
         
         # Informations de l'agence - INFORMATIONS DYNAMIQUES EN GRAS
         agence_info = f"""L'Agence <b>KBIS IMMOBILIER</b> située au <b>secteur 26 Pissy</b> représentée, par <b>M. NIKIEMA PA MAMDOU</b> Tel <b>70-20-64-91</b>"""
         elements.append(Paragraph(agence_info, self.styles['CustomBody']))
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 6))
         
         # D'autre part
         elements.append(Paragraph("D'autre part (une copie de votre CNIB doit être jointe à la présente)", self.styles['CustomBody']))
-        elements.append(Spacer(1, 5))
+        elements.append(Spacer(1, 3))
         
         # Informations du locataire - récupération des vraies données
         locataire = self.contrat.locataire
@@ -502,7 +502,7 @@ class ContratPDFService:
         locataire_info = f"""{civilité} <b>{locataire_nom} {locataire_prenom}</b> N° CNIB <b>{locataire_cnib}</b> Dénommée(é) le locataire<br/>
 Profession <b>{locataire_profession}</b> adresse : <b>{locataire_adresse}</b> Tel : <b>{locataire_tel}</b>"""
         elements.append(Paragraph(locataire_info, self.styles['CustomBody']))
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 6))
         
         # Personne garant (avec pointillés pour champs vides)
         garant_nom = getattr(self.contrat, 'garant_nom', 'NOM DU GARANT')
@@ -522,7 +522,7 @@ Profession <b>{locataire_profession}</b> adresse : <b>{locataire_adresse}</b> Te
             
         garant_info = f"""Personne garant M, Mme, {garant_nom} profession {garant_profession} Adresse {garant_adresse} tel : {garant_tel}"""
         elements.append(Paragraph(garant_info, self.styles['CustomBody']))
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 6))
         
         # Informations de la propriété - récupération des vraies données
         propriete = self.contrat.propriete
@@ -543,19 +543,19 @@ Profession <b>{locataire_profession}</b> adresse : <b>{locataire_adresse}</b> Te
         # Informations complètes de la propriété avec ville et quartier - EN GRAS
         propriete_info = f"""pour la location de la maison n° <b>{propriete_numero}</b> Située à <b>{propriete_ville}</b>, quartier <b>{propriete_quartier}</b> Pour un loyer mensuel de : <b>{self.contrat.get_loyer_mensuel_formatted()}</b>"""
         elements.append(Paragraph(propriete_info, self.styles['CustomBody']))
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 6))
         
         # Reçu de la caution - EN GRAS
         caution_montant = self.contrat.get_depot_garantie_formatted()
         elements.append(Paragraph(f"<b>KBIS IMMOBILIER</b> reconnait avoir reçu la somme <b>{caution_montant}</b>", self.styles['CustomBody']))
         elements.append(Paragraph("Représentant <b>Trois (03) Mois de caution</b>.", self.styles['CustomBody']))
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 6))
         
         # Conditions de paiement - EN GRAS
         mois_debut = self.contrat.date_debut.strftime('%B %Y')
         elements.append(Paragraph(f"Le paiement mensuel du loyer commence à partir de la fin du mois de <b>{mois_debut.upper()}</b>", self.styles['CustomBody']))
         elements.append(Paragraph(f"<b>{civilité} {locataire_nom} {locataire_prenom}</b> s'engage à payer au plus tard le <b>03 du mois suivant</b>", self.styles['CustomBody']))
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 6))
         
         return elements
 
@@ -566,24 +566,24 @@ Profession <b>{locataire_profession}</b> adresse : <b>{locataire_adresse}</b> Te
         # Conditions de caution - CIVILITÉ CORRECTE
         civilite_locataire = self._determiner_civilite_locataire(self.contrat.locataire)
         elements.append(Paragraph(f"{civilite_locataire} {self.contrat.locataire.nom.upper()} {self.contrat.locataire.prenom.upper()} sachez que votre caution ne vous sera remboursé à la sortie qu'après avoir libéré la maison, l'avoir remis en état (peinture, plomberie etc.,) tel que décrété sur la page état de lieu résilier et payer vos factures de la SONABEL et de l'ONEA. Dans le cas contraire la caution servira à assurer ces frais et quitter les lieux.", self.styles['CustomBody']))
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 6))
         
         # Pouvoir d'expulsion
         elements.append(Paragraph("Il donne par la même occasion pouvoir à l'agence d'introduire une instance aux fins de l'expulsion du locataire sans aucune autre forme de préavis.", self.styles['CustomBody']))
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 6))
         
         # Décision et remise
         elements.append(Paragraph("Prenez librement vos décisions avant de signer le présent contrat car toute somme versée est remisée sans délai au bailleur. Encas de changement d'avis vous avez 48 heures pour annuler votre contrat auprès de votre agence. Passé ce délai, un (01) mois de loyer sera déduit de votre caution car les maisons confiées à l'agence sont à titre commerciale et ne doivent pas rester inoccupées.", self.styles['CustomBody']))
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 6))
         
         # Résiliation
         elements.append(Paragraph("Résiliation : Le locataire peut demander la résiliation de ce contrat avec un mois de preavis.la date de remise des clés est fixe au 01er du mois suivant pour permettre à votre remplaçant d'accéder à la maison, faute de quoi le mois entier sera dû.L'agence peut résilier ce contrat avec un préavis de trois mois. Le remboursement de la caution sera effectué dans les mêmes conditions.", self.styles['CustomBody']))
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 6))
         
         # Notes importantes
         elements.append(Paragraph("● NB : LES MAISONS SONT A PAYER AVANT DE CONSOMMER", self.styles['CustomBody']))
         elements.append(Paragraph("● LU ET APPROUVE BON POUR ACCORD", self.styles['CustomBody']))
-        elements.append(Spacer(1, 15))
+        elements.append(Spacer(1, 8))
         
         return elements
 
@@ -596,12 +596,12 @@ Profession <b>{locataire_profession}</b> adresse : <b>{locataire_adresse}</b> Te
             'ObligationsHeading',
             parent=self.styles['CustomHeading'],
             alignment=TA_CENTER,
-            fontSize=14,
+            fontSize=13,
             textColor=colors.darkblue,
-            spaceAfter=10
+            spaceAfter=5
         )
         elements.append(Paragraph("OBLIGATIONS ET CONDITIONS", obligations_style))
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 6))
         
         # Obligations générales
         obligations_text = """Le locataire s'engage à :
@@ -611,7 +611,7 @@ Profession <b>{locataire_profession}</b> adresse : <b>{locataire_adresse}</b> Te
 • Respecter les règles de vie en communauté"""
         
         elements.append(Paragraph(obligations_text, self.styles['CustomBody']))
-        elements.append(Spacer(1, 15))
+        elements.append(Spacer(1, 8))
         
         return elements
 
@@ -624,12 +624,12 @@ Profession <b>{locataire_profession}</b> adresse : <b>{locataire_adresse}</b> Te
             'GarantHeading',
             parent=self.styles['CustomHeading'],
             alignment=TA_CENTER,
-            fontSize=14,
+            fontSize=13,
             textColor=colors.darkblue,
-            spaceAfter=10
+            spaceAfter=5
         )
         elements.append(Paragraph("● Personne garant du paiement des loyers", garant_style))
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 6))
         
         # Engagement du garant - INFORMATIONS DYNAMIQUES EN GRAS
         garant_nom = getattr(self.contrat, 'garant_nom', 'N/A')
@@ -685,19 +685,19 @@ Une copie de la CNIB du garant doit être jointe à la présente
 Merci pour votre compréhension"""
         
         elements.append(Paragraph(garant_engagement, self.styles['CustomBody']))
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 6))
         
         # Section Engagement - EN BLEU CENTRÉ
         engagement_style = ParagraphStyle(
             'EngagementHeading',
             parent=self.styles['CustomHeading'],
             alignment=TA_CENTER,
-            fontSize=14,
+            fontSize=13,
             textColor=colors.darkblue,
-            spaceAfter=5
+            spaceAfter=3
         )
         elements.append(Paragraph("Engagement", engagement_style))
-        elements.append(Spacer(1, 5))
+        elements.append(Spacer(1, 3))
         
         # Texte d'engagement - INFORMATIONS DYNAMIQUES EN GRAS
         engagement_text = f"""Je soussigné(e) <b>{self.contrat.locataire.nom.upper()} {self.contrat.locataire.prenom.upper()}</b> reconnait avoir loué une maison, avec l'agence <b>KBIS IMMOBILIER</b> le <b>{self.contrat.date_signature.strftime('%d/%m/%Y')}</b> Et je m'engage à respecter le délai du payement de mon loyer prévu au plus tard le <b>03 du mois</b>, je reconnais que la réfection des différents points cites ci-dessus sont à ma charge au moment de libérer la maison.
@@ -705,40 +705,40 @@ Merci pour votre compréhension"""
 <b>Lu et approuvé bon pour accord</b>"""
         
         elements.append(Paragraph(engagement_text, self.styles['CustomBody']))
-        elements.append(Spacer(1, 5))
+        elements.append(Spacer(1, 3))
         
-        # Tableau des signatures final
+        # Tableau des signatures final - Taille réduite
         signature_final_data = [
             ['L\'agence', 'le locataire', 'Personne Garant'],
             ['', '', ''],
             ['', '', ''],
         ]
         
-        signature_final_table = Table(signature_final_data, colWidths=[5*cm, 5*cm, 5*cm])
+        signature_final_table = Table(signature_final_data, colWidths=[4.8*cm, 4.8*cm, 4.8*cm])
         signature_final_table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-            ('TOPPADDING', (0, 0), (-1, -1), 12),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
             # Suppression des traits (LINEBELOW) - remplacés par le pied de page dynamique
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ]))
         
         elements.append(signature_final_table)
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 6))
         
         # Date et lieu final
         date_contrat = self.contrat.date_signature.strftime('%d-%m-%Y')
         elements.append(Paragraph(f"Fait en deux exemplaires à Ouagadougou, le {date_contrat}", self.styles['CustomBody']))
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 6))
         
         # Ajouter le nom de l'utilisateur qui a généré le document
         if hasattr(self, 'user') and self.user:
             user_name = self.user.get_full_name() or self.user.username
             elements.append(Paragraph(f"<b>Document généré par :</b> {user_name}", self.styles['CustomBody']))
-            elements.append(Spacer(1, 10))
+            elements.append(Spacer(1, 6))
         
         # Le pied de page sera géré par _add_footer_only (vrai pied de page)
         
@@ -753,12 +753,12 @@ Merci pour votre compréhension"""
             'EtatHeading',
             parent=self.styles['CustomHeading'],
             alignment=TA_CENTER,
-            fontSize=14,
+            fontSize=13,
             textColor=colors.darkblue,
-            spaceAfter=15
+            spaceAfter=8
         )
         elements.append(Paragraph("Etat des lieux", etat_style))
-        elements.append(Spacer(1, 15))
+        elements.append(Spacer(1, 8))
         
         # Données du tableau état des lieux exactement comme dans les images (6 colonnes)
         etat_lieux_data = [
@@ -791,19 +791,19 @@ Merci pour votre compréhension"""
             ['26', 'CLIMATISEUR\n(entretien)', 'OK', '', 'NON', ''],
         ]
         
-        # Créer le tableau exactement comme dans les images (6 colonnes)
-        etat_table = Table(etat_lieux_data, colWidths=[1*cm, 8*cm, 1.5*cm, 1*cm, 1.5*cm, 1*cm])
+        # Créer le tableau exactement comme dans les images (6 colonnes) - Taille réduite
+        etat_table = Table(etat_lieux_data, colWidths=[0.8*cm, 7.5*cm, 1.3*cm, 0.8*cm, 1.3*cm, 0.8*cm])
         etat_table.setStyle(TableStyle([
             # Style général
             ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('FONTSIZE', (0, 0), (-1, -1), 7),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
             
             # En-tête
             ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
             ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
             
             # Bordures
@@ -826,25 +826,25 @@ Merci pour votre compréhension"""
         ]))
         
         elements.append(etat_table)
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 6))
         
         # Section Observation (rectangle simple - une seule colonne)
         elements.append(Paragraph("Observation", self.styles['CustomHeading']))
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 6))
         
-        # Zone d'observation (rectangle simple - une seule ligne)
+        # Zone d'observation (rectangle simple - une seule ligne) - Taille réduite
         observation_data = [
             [''],
         ]
         
-        observation_table = Table(observation_data, colWidths=[16*cm])
+        observation_table = Table(observation_data, colWidths=[15.5*cm])
         observation_table.setStyle(TableStyle([
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 20),
-            ('TOPPADDING', (0, 0), (-1, -1), 20),
-            ('LEFTPADDING', (0, 0), (-1, -1), 10),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
+            ('TOPPADDING', (0, 0), (-1, -1), 15),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
         ]))
         
         elements.append(observation_table)
