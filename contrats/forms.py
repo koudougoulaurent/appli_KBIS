@@ -188,16 +188,17 @@ class ContratForm(forms.ModelForm):
         # Filtrer les propriétés disponibles
         # CORRIGÉ : Pour la modification, inclure toujours la propriété du contrat actuel
         from .utils import get_proprietes_disponibles
+        from django.db.models import Q
         proprietes_disponibles = get_proprietes_disponibles()
         
         # Si c'est une modification (instance existe), inclure la propriété actuelle même si non disponible
         if self.instance.pk and self.instance.propriete:
             # Vérifier si la propriété n'est pas déjà dans le queryset
             if not proprietes_disponibles.filter(pk=self.instance.propriete.pk).exists():
-                # Utiliser distinct() pour éviter l'erreur de combinaison unique/non-unique
-                proprietes_disponibles = proprietes_disponibles.union(
-                    Propriete.objects.filter(pk=self.instance.propriete.pk)
-                ).distinct()
+                # Utiliser Q objects pour combiner les querysets sans problème
+                proprietes_ids = list(proprietes_disponibles.values_list('pk', flat=True))
+                proprietes_ids.append(self.instance.propriete.pk)
+                proprietes_disponibles = Propriete.objects.filter(pk__in=proprietes_ids)
         
         self.fields['propriete'].queryset = proprietes_disponibles
         self.fields['locataire'].queryset = Locataire.objects.all()
