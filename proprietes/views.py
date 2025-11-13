@@ -1288,13 +1288,6 @@ class SupprimerLocataireView(SuppressionGeneriqueView):
                     # 9. Enfin, supprimer le contrat lui-même
                     contrat.delete()
                     
-            # 10. Supprimer aussi les réservations d'unités liées au locataire
-            try:
-                from proprietes.models import ReservationUnite
-                ReservationUnite.objects.filter(locataire_potentiel=obj).delete()
-            except Exception as e:
-                print(f"Erreur suppression réservations pour locataire {obj.pk}: {e}")
-                    
                 except Exception as e:
                     print(f"Erreur lors de la suppression complète du contrat {contrat.pk}: {e}")
                     import traceback
@@ -1303,6 +1296,13 @@ class SupprimerLocataireView(SuppressionGeneriqueView):
                         request,
                         f"Attention : Erreur lors de la suppression du contrat {contrat.numero_contrat}: {str(e)}"
                     )
+            
+            # 10. Supprimer aussi les réservations d'unités liées au locataire
+            try:
+                from proprietes.models import ReservationUnite
+                ReservationUnite.objects.filter(locataire_potentiel=obj).delete()
+            except Exception as e:
+                print(f"Erreur suppression réservations pour locataire {obj.pk}: {e}")
         
         # Vérification 2: Confirmation multiple
         confirmation_1 = request.POST.get('confirmation_1') == 'on'
