@@ -19,3 +19,7 @@ class PaiementsConfig(AppConfig):
             from . import signals_quittance
         except ImportError:
             pass
+        try:
+            from . import signals_financiers
+        except ImportError:
+            pass

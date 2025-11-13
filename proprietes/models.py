@@ -204,11 +204,15 @@ class Bailleur(DuplicatePreventionMixin, models.Model):
         ).distinct().order_by('adresse')
     
     def get_statistiques_paiements(self):
-        """Récupère les statistiques des paiements pour ce bailleur."""
+        """
+        Récupère les statistiques des paiements pour ce bailleur.
+        CORRIGÉ : Ajout de total_mois, total_annee, nombre_paiements_mois, nombre_paiements_annee
+        """
         from paiements.models import Paiement
         from django.db.models import Sum, Count
         from django.utils import timezone
         from datetime import timedelta
+        from dateutil.relativedelta import relativedelta
         
         # Période de référence (12 derniers mois)
         date_debut = timezone.now() - timedelta(days=365)
@@ -220,6 +224,31 @@ class Bailleur(DuplicatePreventionMixin, models.Model):
             date_paiement__gte=date_debut
         )
         
+        # Calcul du mois actuel
+        maintenant = timezone.now()
+        debut_mois_actuel = maintenant.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        fin_mois_actuel = (debut_mois_actuel + relativedelta(months=1)) - timedelta(seconds=1)
+        
+        # Calcul de l'année actuelle
+        debut_annee_actuelle = maintenant.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        fin_annee_actuelle = maintenant.replace(month=12, day=31, hour=23, minute=59, second=59, microsecond=999999)
+        
+        # Paiements du mois actuel
+        paiements_mois_actuel = paiements.filter(
+            date_paiement__gte=debut_mois_actuel,
+            date_paiement__lte=fin_mois_actuel
+        )
+        total_mois = paiements_mois_actuel.aggregate(total=Sum('montant'))['total'] or 0
+        nombre_paiements_mois = paiements_mois_actuel.count()
+        
+        # Paiements de l'année actuelle
+        paiements_annee_actuelle = paiements.filter(
+            date_paiement__gte=debut_annee_actuelle,
+            date_paiement__lte=fin_annee_actuelle
+        )
+        total_annee = paiements_annee_actuelle.aggregate(total=Sum('montant'))['total'] or 0
+        nombre_paiements_annee = paiements_annee_actuelle.count()
+        
         # Statistiques
         stats = {
             'total_paiements': paiements.count(),
@@ -227,6 +256,11 @@ class Bailleur(DuplicatePreventionMixin, models.Model):
             'moyenne_mensuelle': 0,
             'derniers_mois': [],
             'proprietes_avec_paiements': paiements.values('contrat__propriete').distinct().count(),
+            # CORRIGÉ : Ajout des statistiques du mois et de l'année
+            'total_mois': total_mois,
+            'total_annee': total_annee,
+            'nombre_paiements_mois': nombre_paiements_mois,
+            'nombre_paiements_annee': nombre_paiements_annee,
         }
         
         # Calcul de la moyenne mensuelle
@@ -426,11 +460,15 @@ class Locataire(DuplicatePreventionMixin, models.Model):
         return reverse('proprietes:detail_locataire', kwargs={'pk': self.pk})
     
     def get_statistiques_paiements(self):
-        """Récupère les statistiques des paiements pour ce locataire."""
+        """
+        Récupère les statistiques des paiements pour ce locataire.
+        CORRIGÉ : Ajout de total_mois, total_annee, nombre_paiements_mois, nombre_paiements_annee
+        """
         from paiements.models import Paiement
         from django.db.models import Sum, Count
         from django.utils import timezone
         from datetime import timedelta
+        from dateutil.relativedelta import relativedelta
         
         # Période de référence (12 derniers mois)
         date_debut = timezone.now() - timedelta(days=365)
@@ -442,6 +480,31 @@ class Locataire(DuplicatePreventionMixin, models.Model):
             date_paiement__gte=date_debut
         )
         
+        # Calcul du mois actuel
+        maintenant = timezone.now()
+        debut_mois_actuel = maintenant.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        fin_mois_actuel = (debut_mois_actuel + relativedelta(months=1)) - timedelta(seconds=1)
+        
+        # Calcul de l'année actuelle
+        debut_annee_actuelle = maintenant.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        fin_annee_actuelle = maintenant.replace(month=12, day=31, hour=23, minute=59, second=59, microsecond=999999)
+        
+        # Paiements du mois actuel
+        paiements_mois_actuel = paiements.filter(
+            date_paiement__gte=debut_mois_actuel,
+            date_paiement__lte=fin_mois_actuel
+        )
+        total_mois = paiements_mois_actuel.aggregate(total=Sum('montant'))['total'] or 0
+        nombre_paiements_mois = paiements_mois_actuel.count()
+        
+        # Paiements de l'année actuelle
+        paiements_annee_actuelle = paiements.filter(
+            date_paiement__gte=debut_annee_actuelle,
+            date_paiement__lte=fin_annee_actuelle
+        )
+        total_annee = paiements_annee_actuelle.aggregate(total=Sum('montant'))['total'] or 0
+        nombre_paiements_annee = paiements_annee_actuelle.count()
+        
         # Statistiques
         stats = {
             'total_paiements': paiements.count(),
@@ -449,6 +512,11 @@ class Locataire(DuplicatePreventionMixin, models.Model):
             'moyenne_mensuelle': 0,
             'derniers_mois': [],
             'proprietes_louees': paiements.values('contrat__propriete').distinct().count(),
+            # CORRIGÉ : Ajout des statistiques du mois et de l'année
+            'total_mois': total_mois,
+            'total_annee': total_annee,
+            'nombre_paiements_mois': nombre_paiements_mois,
+            'nombre_paiements_annee': nombre_paiements_annee,
         }
         
         # Calcul de la moyenne mensuelle
