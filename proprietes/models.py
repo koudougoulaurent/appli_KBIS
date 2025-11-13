@@ -165,13 +165,13 @@ class Bailleur(DuplicatePreventionMixin, models.Model):
         """
         Détermine si le bailleur est actif.
         Un bailleur est actif s'il a au moins un contrat actif OU si le champ actif est True.
-        CORRIGÉ : Vérifie automatiquement les contrats actifs
+        CORRIGÉ : Vérifie automatiquement les contrats actifs - priorité aux contrats actifs
         """
-        # Si le champ actif est False, vérifier quand même s'il y a des contrats actifs
-        if not self.actif:
-            # Vérifier s'il a des contrats actifs malgré le statut inactif
-            return self.a_des_proprietes_louees()
-        return True
+        # PRIORITÉ : Si le bailleur a des contrats actifs, il est automatiquement actif
+        if self.a_des_proprietes_louees():
+            return True
+        # Sinon, utiliser le champ actif
+        return self.actif
     
     def a_des_proprietes_louees(self):
         """
