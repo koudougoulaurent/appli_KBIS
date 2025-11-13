@@ -160,21 +160,36 @@ class Bailleur(DuplicatePreventionMixin, models.Model):
     def get_absolute_url(self):
         return reverse('proprietes:detail_bailleur', kwargs={'pk': self.pk})
     
+    @property
+    def est_actif(self):
+        """
+        Détermine si le bailleur est actif.
+        Un bailleur est actif s'il a au moins un contrat actif OU si le champ actif est True.
+        CORRIGÉ : Vérifie automatiquement les contrats actifs
+        """
+        # Si le champ actif est False, vérifier quand même s'il y a des contrats actifs
+        if not self.actif:
+            # Vérifier s'il a des contrats actifs malgré le statut inactif
+            return self.a_des_proprietes_louees()
+        return True
+    
     def a_des_proprietes_louees(self):
         """
         Vérifie si le bailleur a des propriétés louées (avec contrats actifs).
         Retourne True si le bailleur a au moins une propriété louée, False sinon.
+        CORRIGÉ : Utilise all_objects pour inclure les contrats supprimés logiquement
         """
         from contrats.models import Contrat
         
-        # Vérifier les propriétés avec contrats actifs
-        proprietes_louees = self.proprietes.filter(
-            contrats__est_actif=True,
-            contrats__est_resilie=False,
-            contrats__is_deleted=False
-        ).distinct()
+        # CORRIGÉ : Utiliser all_objects pour vérifier même les contrats supprimés logiquement
+        # Vérifier les propriétés avec contrats actifs (non résiliés)
+        contrats_actifs = Contrat.all_objects.filter(
+            propriete__bailleur=self,
+            est_actif=True,
+            est_resilie=False
+        )
         
-        return proprietes_louees.exists()
+        return contrats_actifs.exists()
     
     def get_proprietes_louees(self):
         """
