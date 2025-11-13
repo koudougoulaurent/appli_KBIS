@@ -463,15 +463,17 @@ class Locataire(DuplicatePreventionMixin, models.Model):
         """
         Vérifie si le locataire a des contrats actifs.
         Retourne True si le locataire a des contrats actifs, False sinon.
+        CORRIGÉ : Utilise all_objects pour vérifier même les contrats supprimés logiquement
         """
         from contrats.models import Contrat
         from django.utils import timezone
         
-        # Vérifier les contrats actifs (non résiliés et non supprimés)
-        contrats_actifs = self.contrats.filter(
+        # CORRIGÉ : Utiliser all_objects pour inclure les contrats supprimés logiquement
+        # et vérifier s'il reste vraiment des contrats actifs (non résiliés)
+        contrats_actifs = Contrat.all_objects.filter(
+            locataire=self,
             est_actif=True,
-            est_resilie=False,
-            is_deleted=False
+            est_resilie=False
         )
         
         return contrats_actifs.exists()
@@ -479,14 +481,16 @@ class Locataire(DuplicatePreventionMixin, models.Model):
     def get_contrats_actifs(self):
         """
         Retourne tous les contrats actifs du locataire.
+        CORRIGÉ : Utilise all_objects pour inclure les contrats supprimés logiquement
         """
         from contrats.models import Contrat
         from django.utils import timezone
         
-        return self.contrats.filter(
+        # CORRIGÉ : Utiliser all_objects pour inclure les contrats supprimés logiquement
+        return Contrat.all_objects.filter(
+            locataire=self,
             est_actif=True,
-            est_resilie=False,
-            is_deleted=False
+            est_resilie=False
         ).order_by('-date_debut')
     
     def peut_etre_supprime_definitivement(self):
