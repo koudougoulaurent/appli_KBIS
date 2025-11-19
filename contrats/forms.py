@@ -301,7 +301,8 @@ class ContratForm(forms.ModelForm):
             
             # Récupérer toutes les unités locatives pour cette propriété
             unites = UniteLocative.objects.filter(
-                propriete=propriete
+                propriete=propriete,
+                is_deleted=False
             )
             unites_data = [
                 {
@@ -312,6 +313,21 @@ class ContratForm(forms.ModelForm):
                 }
                 for unite in unites
             ]
+            
+            # Calculer le loyer total à partir des unités locatives
+            # Somme de tous les loyers mensuels des unités
+            from decimal import Decimal
+            loyer_total = Decimal('0')
+            
+            if unites.exists():
+                # Somme des loyers de toutes les unités locatives
+                for unite in unites:
+                    unite_loyer = Decimal(str(unite.loyer_mensuel or '0'))
+                    loyer_total += unite_loyer
+            else:
+                # Si pas d'unités, utiliser la méthode de calcul ou le loyer_actuel
+                loyer_calcule = propriete.get_loyer_actuel_calcule()
+                loyer_total = loyer_calcule if loyer_calcule else Decimal(str(propriete.loyer_actuel or '0'))
             
             # Récupérer toutes les pièces pour cette propriété
             pieces = Piece.objects.filter(
@@ -328,7 +344,7 @@ class ContratForm(forms.ModelForm):
             ]
             
             self.proprietes_data[propriete.id] = {
-                'loyer': str(propriete.loyer_actuel) if propriete.loyer_actuel else "0.00",
+                'loyer': str(loyer_total),
                 'titre': propriete.titre,
                 'unites': unites_data,
                 'pieces': pieces_data
