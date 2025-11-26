@@ -70,12 +70,30 @@ TEMPLATES = [
 WSGI_APPLICATION = 'gestion_immobiliere.wsgi.application'
 
 # Configuration de base de données par défaut
+# Configuration de base de données
+# Par défaut, utiliser SQLite en local
+# En production (RENDER), utiliser DATABASE_URL si disponible
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# Si on est en production (RENDER) et DATABASE_URL est définie, utiliser PostgreSQL
+if os.environ.get('RENDER') or os.environ.get('USE_POSTGRESQL') == 'True':
+    try:
+        import dj_database_url
+        DATABASE_URL = os.environ.get('DATABASE_URL')
+        if DATABASE_URL and DATABASE_URL.strip() and not DATABASE_URL.startswith("b'") and not DATABASE_URL.startswith("b\""):
+            try:
+                DATABASES = {
+                    'default': dj_database_url.parse(DATABASE_URL)
+                }
+            except Exception as e:
+                print(f"Erreur parsing DATABASE_URL: {e}, utilisation de SQLite")
+    except ImportError:
+        pass  # Utiliser SQLite par défaut
 
 AUTH_PASSWORD_VALIDATORS = [
     {

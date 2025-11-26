@@ -432,20 +432,27 @@ document.addEventListener('click', function(event) {
 });
 
 // Animation de sortie
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideOutRight {
-        from {
-            opacity: 1;
-            transform: translateX(0);
+if (typeof window.quickNotificationsStyleAdded === 'undefined') {
+    window.quickNotificationsStyleAdded = false;
+}
+if (!window.quickNotificationsStyleAdded && !document.getElementById('quick-notifications-style')) {
+    const notificationsStyle = document.createElement('style');
+    notificationsStyle.id = 'quick-notifications-style';
+    notificationsStyle.textContent = `
+        @keyframes slideOutRight {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(20px);
+            }
         }
-        to {
-            opacity: 0;
-            transform: translateX(20px);
-        }
-    }
-`;
-document.head.appendChild(style);
+    `;
+    document.head.appendChild(notificationsStyle);
+    window.quickNotificationsStyleAdded = true;
+}
 
 // Initialiser le compteur
 updateNotificationCount();

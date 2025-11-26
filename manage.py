@@ -6,7 +6,9 @@ import sys
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings_postgresql')
+    # Utiliser settings.py par défaut (SQLite pour développement local)
+    # Pour PostgreSQL en production, utiliser: gestion_immobiliere.settings_postgresql
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestion_immobiliere.settings')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

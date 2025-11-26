@@ -116,18 +116,23 @@ class RecapMensuel(models.Model):
         if dernier_recap:
             # Retourner le mois suivant le dernier récapitulatif
             mois_suggere = dernier_recap.mois_recap + relativedelta(months=1)
+            # Normaliser au premier jour du mois
+            mois_suggere = mois_suggere.replace(day=1)
             dernier_mois = dernier_recap.mois_recap
             raison = f"Mois suivant le dernier récapitulatif ({dernier_mois.strftime('%B %Y')})"
         else:
             # Retourner le mois précédent si aucun récapitulatif n'existe
             mois_suggere = date.today().replace(day=1) - relativedelta(months=1)
+            # Normaliser au premier jour du mois
+            mois_suggere = mois_suggere.replace(day=1)
             dernier_mois = None
             raison = "Aucun récapitulatif existant - mois précédent suggéré"
         
-        # Vérifier si un récapitulatif existe déjà pour le mois suggéré
+        # Vérifier si un récapitulatif existe déjà pour le mois suggéré (comparaison par année et mois)
         recap_existant = RecapMensuel.objects.filter(
             bailleur=bailleur,
-            mois_recap=mois_suggere,
+            mois_recap__year=mois_suggere.year,
+            mois_recap__month=mois_suggere.month,
             is_deleted=False
         ).exists()
         

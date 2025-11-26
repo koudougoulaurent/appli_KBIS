@@ -6,6 +6,8 @@ from django.http import JsonResponse, FileResponse
 from django.utils import timezone
 from datetime import timedelta
 import os
+import logging
+from django.db import transaction
 from .models import Propriete, Bailleur, Locataire, TypeBien, ChargesBailleur
 from .forms import ProprieteForm, BailleurForm, LocataireForm, TypeBienForm, ChargesBailleurForm, ChargesBailleurDeductionForm
 from core.utils import convertir_montant
@@ -687,28 +689,86 @@ def detail_bailleur(request, pk):
         messages.error(request, permissions['message'])
         return redirect('proprietes:bailleurs_liste')
     
+    # Récupérer le bailleur
     bailleur = get_object_or_404(Bailleur, pk=pk)
     
-    # Récupérer les statistiques (optimisé)
+    # Récupérer les statistiques (peut être lourd, on le fait en dernier)
     stats = bailleur.get_statistiques_paiements()
     
-    # Récupérer les propriétés (optimisé)
-    proprietes = bailleur.proprietes.select_related('type_bien').prefetch_related('contrats').order_by('-date_creation')[:10]
+    # Récupérer les propriétés (optimisé - pas de prefetch_related pour les contrats qui n'est pas utilisé)
+    proprietes = bailleur.proprietes.filter(
+        is_deleted=False
+    ).select_related('type_bien').only(
+        'id', 'titre', 'adresse', 'ville', 'code_postal', 
+        'type_bien', 'disponible', 'date_creation'
+    ).order_by('-date_creation')[:10]
     
-    # Récupérer les derniers paiements (optimisé)
+    # Récupérer les derniers paiements (optimisé avec limite stricte)
     from paiements.models import Paiement
     derniers_paiements = Paiement.objects.filter(
         contrat__propriete__bailleur=bailleur,
         statut='valide'
-    ).select_related('contrat__propriete', 'contrat__locataire').order_by('-date_paiement')[:5]
+    ).select_related(
+        'contrat__propriete', 
+        'contrat__locataire'
+    ).order_by('-date_paiement')[:5]
     
-    # Récupérer les contrats actifs (optimisé)
+    # Récupérer les contrats actifs (optimisé avec limite stricte)
     from contrats.models import Contrat
     contrats_actifs = Contrat.objects.filter(
         propriete__bailleur=bailleur,
         est_actif=True,
-        est_resilie=False
+        est_resilie=False,
+        is_deleted=False
     ).select_related('propriete', 'locataire')[:5]
+    
+    # Récupérer les contrats de gestion (optimisé - une seule requête)
+    from .models import ContratGestion
+    from django.db import OperationalError
+    
+    try:
+        # Une seule requête optimisée avec prefetch
+        contrats_gestion = ContratGestion.objects.filter(
+            bailleur=bailleur,
+            is_deleted=False
+        ).prefetch_related('proprietes').order_by('-date_signature')
+        
+        # Un bailleur ne peut avoir qu'UN SEUL contrat de gestion
+        # Récupérer le contrat unique (il ne devrait y en avoir qu'un)
+        contrat_actif = contrats_gestion.first()  # Le contrat unique du bailleur
+        
+        # CORRECTION AUTOMATIQUE: Si le bailleur a des propriétés mais pas de contrat, en créer un
+        proprietes_bailleur = bailleur.proprietes.filter(is_deleted=False)
+        if proprietes_bailleur.exists() and not contrat_actif:
+            # Créer automatiquement le contrat de gestion manquant
+            try:
+                logger = logging.getLogger(__name__)
+                with transaction.atomic():
+                    contrat_actif = ContratGestion.objects.create(
+                        bailleur=bailleur,
+                        date_signature=timezone.now().date(),
+                        date_debut=timezone.now().date(),
+                        commission_percentage=10.00,
+                        est_actif=True,
+                        est_resilie=False,
+                    )
+                    contrat_actif.proprietes.set(proprietes_bailleur)
+                    logger.warning(f"Contrat de gestion créé automatiquement pour le bailleur {bailleur.id} ({bailleur.get_nom_complet()}) qui avait {proprietes_bailleur.count()} propriété(s) mais pas de contrat")
+                    messages.info(request, f"Contrat de gestion créé automatiquement pour {bailleur.get_nom_complet()}")
+                    # Recharger la liste des contrats
+                    contrats_gestion = ContratGestion.objects.filter(
+                        bailleur=bailleur,
+                        is_deleted=False
+                    ).prefetch_related('proprietes').order_by('-date_signature')
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.error(f"Erreur lors de la création automatique du contrat pour le bailleur {bailleur.id}: {str(e)}")
+                messages.warning(request, f"Erreur lors de la création automatique du contrat de gestion: {str(e)}")
+        
+    except OperationalError:
+        # Si la table n'existe pas encore (migration non appliquée)
+        contrats_gestion = ContratGestion.objects.none()
+        contrat_actif = None
     
     # Générer les actions rapides automatiquement
     context = {
@@ -717,6 +777,8 @@ def detail_bailleur(request, pk):
         'proprietes': proprietes,
         'derniers_paiements': derniers_paiements,
         'contrats_actifs': contrats_actifs,
+        'contrats_gestion': contrats_gestion,
+        'contrat_gestion_actif': contrat_actif,  # Pour le bouton de téléchargement rapide
         'breadcrumbs': [
             {'url': 'core:dashboard', 'label': 'Tableau de bord'},
             {'url': 'proprietes:bailleurs_liste', 'label': 'Bailleurs'},
@@ -3317,3 +3379,94 @@ def api_verifier_disponibilite(request):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
+
+
+# ==================== VUES POUR CONTRAT DE GESTION ====================
+
+@login_required
+def contrat_gestion_pdf(request, contrat_id):
+    """
+    Vue pour générer et télécharger le PDF du contrat de gestion.
+    """
+    from .models import ContratGestion
+    from .services_contrat_gestion_pdf import ContratGestionPDFService
+    from django.http import HttpResponse
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    contrat = get_object_or_404(ContratGestion, pk=contrat_id, is_deleted=False)
+    
+    try:
+        # Générer le PDF
+        service = ContratGestionPDFService(contrat)
+        pdf_buffer = service.generate_contrat_pdf(user=request.user)
+        
+        # Préparer la réponse
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="contrat_gestion_{contrat.numero_contrat}.pdf"'
+        
+        return response
+        
+    except Exception as e:
+        messages.error(request, f"Erreur lors de la génération du PDF: {str(e)}")
+        logger.error(f"Erreur génération PDF contrat de gestion {contrat_id}: {str(e)}")
+        return redirect('proprietes:detail_bailleur', pk=contrat.bailleur.id)
+
+
+@login_required
+def contrat_gestion_detail(request, contrat_id):
+    """
+    Vue pour afficher les détails d'un contrat de gestion.
+    """
+    from .models import ContratGestion
+    
+    contrat = get_object_or_404(ContratGestion, pk=contrat_id, is_deleted=False)
+    
+    context = {
+        'contrat': contrat,
+        'proprietes': contrat.get_proprietes_list(),
+    }
+    
+    return render(request, 'proprietes/contrat_gestion_detail.html', context)
+
+
+@login_required
+@login_required
+def contrat_gestion_liste(request, bailleur_id=None):
+    """
+    Vue pour lister les contrats de gestion.
+    Si bailleur_id est fourni, affiche uniquement les contrats de ce bailleur.
+    """
+    from .models import ContratGestion
+    from django.db import OperationalError
+    
+    try:
+        if bailleur_id:
+            bailleur = get_object_or_404(Bailleur, pk=bailleur_id, is_deleted=False)
+            contrats = ContratGestion.objects.filter(
+                bailleur=bailleur,
+                is_deleted=False
+            ).order_by('-date_signature')
+            context = {
+                'contrats': contrats,
+                'bailleur': bailleur,
+            }
+        else:
+            contrats = ContratGestion.objects.filter(
+                is_deleted=False
+            ).order_by('-date_signature')
+            context = {
+                'contrats': contrats,
+            }
+    except OperationalError as e:
+        messages.error(request, "La table des contrats de gestion n'existe pas encore. Veuillez exécuter les migrations.")
+        context = {
+            'contrats': ContratGestion.objects.none(),
+        }
+        if bailleur_id:
+            try:
+                context['bailleur'] = get_object_or_404(Bailleur, pk=bailleur_id, is_deleted=False)
+            except:
+                pass
+    
+    return render(request, 'proprietes/contrat_gestion_liste.html', context)

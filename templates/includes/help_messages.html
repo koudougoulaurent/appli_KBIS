@@ -243,18 +243,25 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Animation de sortie
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideOutRight {
-        from {
-            opacity: 1;
-            transform: translateX(0);
+if (typeof window.helpMessagesStyleAdded === 'undefined') {
+    window.helpMessagesStyleAdded = false;
+}
+if (!window.helpMessagesStyleAdded && !document.getElementById('help-messages-style')) {
+    const helpMessagesStyle = document.createElement('style');
+    helpMessagesStyle.id = 'help-messages-style';
+    helpMessagesStyle.textContent = `
+        @keyframes slideOutRight {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(100%);
+            }
         }
-        to {
-            opacity: 0;
-            transform: translateX(100%);
-        }
-    }
-`;
-document.head.appendChild(style);
+    `;
+    document.head.appendChild(helpMessagesStyle);
+    window.helpMessagesStyleAdded = true;
+}
 </script>

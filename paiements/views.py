@@ -3445,6 +3445,8 @@ def creer_recap_avec_detection_auto(request, bailleur_id):
                 return redirect('paiements:creer_recap_avec_detection_auto', bailleur_id=bailleur_id)
             
             mois_recap = datetime.strptime(mois_recap_str, '%Y-%m-%d').date()
+            # Normaliser la date au premier jour du mois pour garantir la cohérence
+            mois_recap = mois_recap.replace(day=1)
             
             # Obtenir les informations de détection automatique pour validation
             mois_info = RecapMensuel.get_mois_recap_suggere_pour_bailleur(bailleur)
@@ -3458,10 +3460,11 @@ def creer_recap_avec_detection_auto(request, bailleur_id):
                 )
                 return redirect('paiements:creer_recap_avec_detection_auto', bailleur_id=bailleur_id)
             
-            # Vérifier si un récapitulatif existe déjà pour ce mois et ce bailleur
+            # Vérifier si un récapitulatif existe déjà pour ce mois et ce bailleur (comparaison par année et mois)
             recap_existant = RecapMensuel.objects.filter(
                 bailleur=bailleur,
-                mois_recap=mois_recap,
+                mois_recap__year=mois_recap.year,
+                mois_recap__month=mois_recap.month,
                 is_deleted=False
             ).first()
             
@@ -3469,16 +3472,44 @@ def creer_recap_avec_detection_auto(request, bailleur_id):
                 messages.info(request, f"Un récapitulatif existe déjà pour {bailleur.get_nom_complet()} - {mois_recap.strftime('%B %Y')}")
                 return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_existant.id)
             
-            # Créer le nouveau récapitulatif
-            recap = RecapMensuel.objects.create(
+            # Vérifier s'il existe un récapitulatif supprimé logiquement pour ce bailleur et ce mois (comparaison par année et mois)
+            recap_supprime = RecapMensuel.objects.filter(
                 bailleur=bailleur,
-                mois_recap=mois_recap,
-                cree_par=request.user
-            )
+                mois_recap__year=mois_recap.year,
+                mois_recap__month=mois_recap.month,
+                is_deleted=True
+            ).first()
             
-            # Calculer les totaux automatiquement
-            recap.calculer_totaux()
-            recap.save()
+            # Si un récap supprimé existe, le supprimer physiquement avant de créer le nouveau
+            if recap_supprime:
+                try:
+                    recap_supprime.paiements_concernes.clear()
+                    recap_supprime.charges_deductibles.clear()
+                    recap_supprime.delete()
+                    messages.info(request, f"L'ancien récapitulatif supprimé a été définitivement supprimé pour permettre la création d'un nouveau.")
+                except Exception as e:
+                    messages.warning(request, f"Attention: Impossible de supprimer l'ancien récapitulatif: {str(e)}")
+            
+            # Créer le nouveau récapitulatif
+            try:
+                recap = RecapMensuel.objects.create(
+                    bailleur=bailleur,
+                    mois_recap=mois_recap,
+                    cree_par=request.user
+                )
+                
+                # Calculer les totaux automatiquement
+                recap.calculer_totaux_bailleur()
+                recap.save()
+            except Exception as e:
+                import traceback
+                error_details = traceback.format_exc()
+                messages.error(request, f"Erreur lors de la création du récapitulatif: {str(e)}")
+                # Log l'erreur complète pour le débogage
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Erreur création récapitulatif: {error_details}")
+                return redirect('paiements:creer_recap_avec_detection_auto', bailleur_id=bailleur_id)
             
             messages.success(request, 
                 f"Récapitulatif créé avec succès pour {bailleur.get_nom_complet()} - {mois_recap.strftime('%B %Y')}. "

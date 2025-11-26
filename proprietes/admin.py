@@ -4,7 +4,7 @@ from django.utils.html import format_html
 from .models import (
     Bailleur, Locataire, TypeBien, Propriete, Document, UniteLocative, 
     ReservationUnite, Piece, PieceContrat, ChargeCommune, RepartitionChargeCommune, 
-    AccesEspacePartage
+    AccesEspacePartage, ContratGestion
 )
 
 
@@ -463,3 +463,41 @@ class PieceContratInline(admin.TabularInline):
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('contrat', 'contrat__locataire')
+
+
+@admin.register(ContratGestion)
+class ContratGestionAdmin(admin.ModelAdmin):
+    """Interface d'administration pour les contrats de gestion."""
+    
+    list_display = ('numero_contrat', 'bailleur', 'date_signature', 'date_debut', 'commission_percentage', 'est_actif', 'est_resilie', 'nombre_proprietes')
+    list_filter = ('est_actif', 'est_resilie', 'date_signature', 'date_debut')
+    search_fields = ('numero_contrat', 'bailleur__nom', 'bailleur__prenom', 'bailleur__numero_bailleur')
+    ordering = ('-date_signature',)
+    readonly_fields = ('numero_contrat', 'date_creation', 'date_modification')
+    
+    fieldsets = (
+        (_('Informations générales'), {
+            'fields': ('numero_contrat', 'bailleur', 'date_signature', 'date_debut', 'date_fin')
+        }),
+        (_('Conditions'), {
+            'fields': ('commission_percentage', 'proprietes')
+        }),
+        (_('Statut'), {
+            'fields': ('est_actif', 'est_resilie')
+        }),
+        (_('Notes'), {
+            'fields': ('notes',),
+            'classes': ('collapse',)
+        }),
+        (_('Métadonnées'), {
+            'fields': ('cree_par', 'date_creation', 'date_modification'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    filter_horizontal = ('proprietes',)
+    
+    def nombre_proprietes(self, obj):
+        """Affiche le nombre de propriétés dans le contrat."""
+        return obj.get_nombre_proprietes()
+    nombre_proprietes.short_description = _("Nombre de propriétés")

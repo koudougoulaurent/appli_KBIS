@@ -220,13 +220,20 @@ function hideTooltip(event) {
 }
 
 // CSS pour les flèches directionnelles
-const style = document.createElement('style');
-style.textContent = `
-    .tooltip-help[style*="--arrow-direction: bottom"]::after {
-        top: -5px;
-        border-top-color: transparent;
-        border-bottom-color: #333;
-    }
-`;
-document.head.appendChild(style);
+if (typeof window.helpTooltipsStyleAdded === 'undefined') {
+    window.helpTooltipsStyleAdded = false;
+}
+if (!window.helpTooltipsStyleAdded && !document.getElementById('help-tooltips-style')) {
+    const tooltipStyle = document.createElement('style');
+    tooltipStyle.id = 'help-tooltips-style';
+    tooltipStyle.textContent = `
+        .tooltip-help[style*="--arrow-direction: bottom"]::after {
+            top: -5px;
+            border-top-color: transparent;
+            border-bottom-color: #333;
+        }
+    `;
+    document.head.appendChild(tooltipStyle);
+    window.helpTooltipsStyleAdded = true;
+}
 </script>

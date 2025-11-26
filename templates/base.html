@@ -342,6 +342,7 @@
             </a>
             
             <div class="navbar-nav ms-auto">
+                {% if user.is_authenticated %}
                 <div class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="bi bi-person-circle"></i> 
@@ -368,6 +369,12 @@
                         </li>
                     </ul>
                 </div>
+                {% else %}
+                <a class="nav-link" href="{% url 'utilisateurs:connexion_groupes' %}">
+                    <i class="bi bi-box-arrow-in-right"></i> Connexion
+                </a>
+                {% endif %}
+                {% if user.is_authenticated %}
                 <form method="post" action="{% url 'core:changer_devise' %}" class="d-flex ms-auto align-items-center">
                     {% csrf_token %}
                     <select name="devise" class="form-select form-select-sm me-2" onchange="this.form.submit()" aria-label="Changer la devise">
@@ -378,6 +385,7 @@
                         {% endfor %}
                     </select>
                 </form>
+                {% endif %}
             </div>
         </div>
     </nav>
@@ -444,6 +452,13 @@
                                 <i class="bi bi-person-badge"></i> 
                                 <span class="d-none d-lg-inline">Bailleurs</span>
                                 <span class="d-inline d-lg-none">Bailleurs</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'contrat_gestion_liste' or request.resolver_match.url_name == 'contrat_gestion_detail' %}active{% endif %}" href="{% url 'proprietes:contrat_gestion_liste' %}">
+                                <i class="bi bi-file-earmark-check"></i> 
+                                <span class="d-none d-lg-inline">Contrat de Gestion</span>
+                                <span class="d-inline d-lg-none">Contrats Gestion</span>
                             </a>
                         </li>
                         <li class="nav-item">

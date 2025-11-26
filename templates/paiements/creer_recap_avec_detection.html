@@ -456,14 +456,21 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Animation de secousse pour l'erreur
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-5px); }
-        75% { transform: translateX(5px); }
-    }
-`;
-document.head.appendChild(style);
+if (typeof window.shakeStyleAdded === 'undefined') {
+    window.shakeStyleAdded = false;
+}
+if (!window.shakeStyleAdded && !document.getElementById('shake-animation-style')) {
+    const shakeStyle = document.createElement('style');
+    shakeStyle.id = 'shake-animation-style';
+    shakeStyle.textContent = `
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+    `;
+    document.head.appendChild(shakeStyle);
+    window.shakeStyleAdded = true;
+}
 </script>
 {% endblock %}

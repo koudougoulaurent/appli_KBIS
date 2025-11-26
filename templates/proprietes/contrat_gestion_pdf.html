@@ -1,0 +1,324 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>CONTRAT DE GESTION - KBIS SARL</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 5mm 8mm;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body { 
+            font-family: 'Times New Roman', serif; 
+            margin: 0; 
+            padding: 0; 
+            background: white;
+            line-height: 1.25;
+            font-size: 8.5pt;
+            color: #000;
+        }
+        
+        .content-wrapper {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 0;
+        }
+        
+        .header { 
+            text-align: center; 
+            margin-bottom: 4px; 
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 3px;
+        }
+        
+        .header-image { 
+            max-width: 100%; 
+            height: auto; 
+            max-height: 35px;
+            margin-bottom: 2px;
+        }
+        
+        .document-title {
+            font-size: 11pt;
+            font-weight: bold;
+            text-align: center;
+            margin: 4px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #2c3e50;
+            padding: 3px 0;
+            border-bottom: 1px solid #3498db;
+            border-top: 1px solid #3498db;
+        }
+        
+        .parties-section {
+            margin: 4px 0;
+            padding: 4px;
+            background: #f8f9fa;
+        }
+        
+        .party-title {
+            font-size: 8.5pt;
+            font-weight: bold;
+            margin: 3px 0 1px 0;
+            color: #2c3e50;
+        }
+        
+        .party-info {
+            margin-bottom: 4px;
+            line-height: 1.25;
+            padding-left: 3px;
+        }
+        
+        .party-info p {
+            margin: 1px 0;
+            font-size: 8.5pt;
+        }
+        
+        .article-section {
+            margin: 3px 0;
+        }
+        
+        .article-title {
+            font-size: 8.5pt;
+            font-weight: bold;
+            margin: 3px 0 1px 0;
+            text-transform: uppercase;
+            color: #2c3e50;
+            border-left: 2px solid #3498db;
+            padding-left: 3px;
+        }
+        
+        .article-content {
+            text-align: justify;
+            line-height: 1.25;
+            margin: 1px 0;
+            padding: 0 2px;
+            font-size: 8.5pt;
+        }
+        
+        .article-content p {
+            margin: 1px 0;
+        }
+        
+        .article-content ul {
+            margin: 1px 0;
+            padding-left: 15px;
+        }
+        
+        .article-content li {
+            margin: 1px 0;
+        }
+        
+        .property-list {
+            margin: 2px 0;
+            padding: 2px;
+            background: #ffffff;
+            border: 1px solid #dee2e6;
+        }
+        
+        .property-item {
+            margin: 1px 0;
+            padding: 2px;
+            background: #f8f9fa;
+            border-left: 2px solid #3498db;
+        }
+        
+        .property-item p {
+            margin: 1px 0;
+            font-size: 8pt;
+        }
+        
+        .signature-section {
+            margin: 10px 0 4px 0;
+            display: flex;
+            justify-content: space-between;
+            gap: 30px;
+            page-break-inside: avoid;
+        }
+        
+        .signature-box {
+            width: 45%;
+            text-align: center;
+            flex: 1;
+        }
+        
+        .signature-line {
+            margin-top: 20px;
+            padding-top: 2px;
+        }
+        
+        .signature-separator {
+            width: 100%;
+            border-top: 1px solid #000;
+            margin: 8px 0;
+        }
+        
+        .signature-line p {
+            margin: 2px 0;
+            font-size: 8.5pt;
+            line-height: 1.25;
+        }
+        
+        .signature-line p:first-of-type {
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        
+        .signature-line p.signature-name {
+            font-weight: normal;
+        }
+        
+        .signature-line p.signature-email {
+            font-weight: normal;
+            font-size: 8pt;
+        }
+        
+        .location-date {
+            text-align: right;
+            margin-top: 5px;
+            font-style: italic;
+            font-size: 8pt;
+            padding-right: 8px;
+        }
+        
+        .info-box {
+            background: #e7f3ff;
+            padding: 5px;
+            margin: 5px 0;
+            border-left: 3px solid #3498db;
+        }
+        
+        strong {
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="content-wrapper">
+        <div class="header">
+            {% if image_base64 %}
+            <img src="{{ image_base64 }}" alt="En-tête KBIS" class="header-image">
+            {% else %}
+            <div class="header-text">KBIS SARL</div>
+            {% endif %}
+        </div>
+    
+    <div class="document-title">CONTRAT DE GESTION</div>
+    
+    <div class="parties-section">
+        <div class="party-title">Entre</div>
+        
+        <div class="party-title">D'une part,</div>
+        <div class="party-info">
+            <p><strong>L'agence KBIS SARL</strong> 10 BP 13871 OUAGADOUGOU 10 BURKINA FASO</p>
+            <p>Tél : {{ config.telephone|default:"+226 70206491" }} représentée par monsieur {{ config.representant_legal|default:"NIKIEMA PATINDE AMADOU" }}</p>
+        </div>
+        
+        <div class="party-title">D'autre part,</div>
+        <div class="party-info">
+            <p><strong>Le bailleur : {{ contrat.bailleur.get_civilite_display|lower }} {{ contrat.bailleur.nom }} {{ contrat.bailleur.prenom }}</strong></p>
+            <p>TEL : {{ contrat.bailleur.telephone }}{% if contrat.bailleur.telephone_mobile %} / {{ contrat.bailleur.telephone_mobile }}{% endif %}</p>
+            <p>(PJ COPIE CNIB :…… DU ……  ou PASSEPORT)</p>
+        </div>
+    </div>
+    
+    <div class="article-section">
+        <div class="article-title">OBJET</div>
+        
+        <div class="article-title">ARTICLE 1 :</div>
+        <div class="article-content">
+            <p>Le bailleur accepte de confier ses appartements à KBIS SARL, représentée par son gestionnaire.</p>
+        </div>
+        
+        <div class="article-title">ARTICLE 2 :</div>
+        <div class="article-content">
+            <p>Le gestionnaire à tout pouvoir de signer le présent contrat au nom de l'agence KBIS SARL.</p>
+        </div>
+        
+        <div class="article-title">ARTICLE 3 :</div>
+        <div class="article-content">
+            <p>Un dossier est ouvert une fois le présent contrat signé et les frais de dossiers s'élèvent à deux milles (2000) francs CFA.</p>
+        </div>
+        
+        <div class="article-title">ARTICLE 4 :</div>
+        <div class="article-content">
+            <p>Une somme forfaitaire de {{ donnees.commission_percentage }}% du montant des loyers est retenue par le gestionnaire au titre des prestations de services. Toutefois, une somme de mille (1000) francs CFA est également retenue en cas de déplacement en banque pour des opérations financières du bailleur.</p>
+        </div>
+        
+        <div class="article-title">ARTICLE 5 :</div>
+        <div class="article-content">
+            <p>Le bailleur reconnait ici avoir confié en gestion locative à l'agence des biens immobiliers tel que décrit à l'article 8 du présent contrat. A ce titre le bailleur : <strong>{{ contrat.bailleur.nom }} {{ contrat.bailleur.prenom }}</strong> engage l'agence de toutes responsabilités judiciaires et pécuniaires concernant le droit de location et reconnait l'agence comme le seul interlocuteur de tout locataire éventuel.</p>
+        </div>
+        
+        <div class="article-title">ARTICLE 6 :</div>
+        <div class="article-content">
+            <p>Le gestionnaire accepte les biens immobiliers tels que décrits à l'article 8 du présent contrat et s'engage à en assurer la gestion locative. A ce titre l'agence aura la charge de toute perception de loyer au nom et pour le compte du bailleur, versera le 05 de chaque mois dans compte bancaire N° : {{ contrat.bailleur.iban|default:"01185140008" }} à la banque {{ contrat.bailleur.banque|default:"BOA" }} une somme équivalente au montant des loyers pour les maisons occupées.</p>
+        </div>
+        
+        <div class="article-title">ARTICLE 7 :</div>
+        <div class="article-content">
+            <p>Tous travaux de modification de gros œuvres ou construction additive ne seront faits qu'après autorisation du bailleur qui en recevra la demande écrite par l'agence immobilière au préalable.</p>
+        </div>
+        
+        <div class="article-title">ARTICLE 8 :</div>
+        <div class="article-content">
+            <p>Les biens confiés en gestion à l'agence immobilière sont les suivant :</p>
+            <div class="property-list">
+                {% for propriete in donnees.liste_proprietes %}
+                <div class="property-item">
+                    <p><strong>{{ forloop.counter }}. {{ propriete.titre }}</strong> - {{ propriete.adresse }} - {{ propriete.description|default:"Maison" }} - Etat: {{ propriete.etat|default:"bon" }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="article-title">ARTICLE 9 :</div>
+        <div class="article-content">
+            <p>La fin du contrat dépendra des deux parties.</p>
+        </div>
+        
+        <div class="article-title">ARTICLE 10 :</div>
+        <div class="article-content">
+            <p>En cas de manquement au présent contrat de gestion par l'une ou toutes les deux (2) parties, le contrat sera rompu automatiquement.</p>
+        </div>
+    </div>
+    
+    <!-- Signatures -->
+    <div class="signature-section">
+        <div class="signature-box">
+            <div class="signature-line">
+                <div class="signature-separator"></div>
+                <p><strong>L'Agence Immobilière</strong></p>
+                <p class="signature-name">{{ config.nom_entreprise|default:"KBIS IMMOBILIER" }}</p>
+                <p class="signature-name">{{ config.representant_legal|default:"NIKIEMA PATINDE AMADOU" }}</p>
+            </div>
+        </div>
+        
+        <div class="signature-box">
+            <div class="signature-line">
+                <div class="signature-separator"></div>
+                <p><strong>Le bailleur</strong></p>
+                <p class="signature-name">{{ contrat.bailleur.get_civilite_display }} {{ contrat.bailleur.nom }} {{ contrat.bailleur.prenom }}</p>
+                {% if contrat.bailleur.email %}
+                <p class="signature-email">{{ contrat.bailleur.email }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Date et lieu -->
+    <div class="location-date">
+        <p>Fait à {{ config.ville|default:"Ouagadougou" }}, le {{ contrat.date_signature|date:"d/m/Y" }}</p>
+    </div>
+    </div>
+</body>
+</html>

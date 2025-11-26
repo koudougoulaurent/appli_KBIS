@@ -53,6 +53,12 @@ urlpatterns = [
     path('bailleurs/<int:pk>/proprietes/', views.proprietes_bailleur, name='proprietes_bailleur'),
     path('bailleurs/recherche-avancee/', views.recherche_avancee_bailleurs, name='recherche_avancee_bailleurs'),
     path('test-actions-rapides/', views.test_quick_actions, name='test_quick_actions'),
+    
+    # URLs pour les contrats de gestion
+    path('contrats-gestion/', views.contrat_gestion_liste, name='contrat_gestion_liste'),
+    path('contrats-gestion/bailleur/<int:bailleur_id>/', views.contrat_gestion_liste, name='contrat_gestion_liste_bailleur'),
+    path('contrats-gestion/<int:contrat_id>/', views.contrat_gestion_detail, name='contrat_gestion_detail'),
+    path('contrats-gestion/<int:contrat_id>/pdf/', views.contrat_gestion_pdf, name='contrat_gestion_pdf'),
 
     # URLs pour les locataires
     path('locataires/', views.liste_locataires, name='locataires_liste'),

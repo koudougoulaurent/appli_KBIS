@@ -17,12 +17,64 @@ class QuickActionsGenerator:
     def get_actions_for_bailleur(bailleur, request):
         """Actions rapides pour un bailleur (avec cache)"""
         cache_key = f"quick_actions_bailleur_{bailleur.pk}_{request.user.pk}"
-        cached_actions = cache.get(cache_key)
-        
+        # Désactiver temporairement le cache pour voir les changements
+        cached_actions = None  # cache.get(cache_key)
         if cached_actions is not None:
             return cached_actions
+        
+        # Vérifier si le bailleur a un contrat de gestion (peu importe le statut - on s'en fout de est_actif)
+        # Gestion d'erreur si la table n'existe pas encore
+        from proprietes.models import ContratGestion
+        from django.db import OperationalError
+        try:
+            # Récupérer n'importe quel contrat de gestion, peu importe le statut
+            contrat_gestion = ContratGestion.objects.filter(
+                bailleur=bailleur,
+                is_deleted=False
+            ).first()  # Le plus récent, peu importe est_actif ou est_resilie
+        except OperationalError:
+            # La table n'existe pas encore, pas de contrat
+            contrat_gestion = None
             
-        actions = [
+        actions = []
+        
+        # Ajouter le bouton Contrat de Gestion PDF si le bailleur a un contrat OU des propriétés
+        # Si pas de contrat mais des propriétés, créer le contrat automatiquement
+        if not contrat_gestion:
+            from proprietes.models import Propriete
+            proprietes = Propriete.objects.filter(bailleur=bailleur, is_deleted=False)
+            if proprietes.exists():
+                try:
+                    from django.utils import timezone
+                    from django.db import transaction
+                    with transaction.atomic():
+                        contrat_gestion = ContratGestion.objects.create(
+                            bailleur=bailleur,
+                            date_signature=timezone.now().date(),
+                            date_debut=timezone.now().date(),
+                            commission_percentage=10.00,
+                            est_actif=True,  # Par défaut actif, mais on s'en fout du statut pour l'affichage
+                            est_resilie=False,
+                        )
+                        contrat_gestion.proprietes.set(proprietes)
+                except OperationalError:
+                    # La table n'existe pas encore, on ne peut pas créer le contrat
+                    contrat_gestion = None
+        
+        # Afficher le bouton si le bailleur a un contrat (peu importe le statut)
+        if contrat_gestion:
+                actions.append({
+                    'url': reverse('proprietes:contrat_gestion_pdf', args=[contrat_gestion.pk]),
+                    'label': 'Contrat de Gestion PDF',
+                    'icon': 'file-earmark-pdf',
+                    'style': 'btn-info',
+                    'module': 'contrat_gestion',
+                    'tooltip': f'Télécharger le contrat de gestion de {bailleur.get_nom_complet()}',
+                    'shortcut': 'Ctrl+G'
+                })
+        
+        # Ajouter les autres actions
+        other_actions = [
             {
                 'url': reverse('proprietes:modifier_bailleur', args=[bailleur.pk]),
                 'label': 'Modifier',
@@ -77,6 +129,7 @@ class QuickActionsGenerator:
                 'tooltip': f'Ajouter une charge pour {bailleur.get_nom_complet()}'
             }
         ]
+        actions.extend(other_actions)
         
         # Mettre en cache pour 5 minutes
         cache.set(cache_key, actions, 300)

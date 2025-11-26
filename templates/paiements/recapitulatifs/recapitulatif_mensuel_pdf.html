@@ -22,7 +22,7 @@
         .header {
             width: 100%;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         
         .header img {
@@ -38,18 +38,18 @@
             color: #666;
             border-top: 1px solid #ddd;
             padding-top: 10px;
-            margin-top: 20px;
+            margin-top: 15px;
         }
         
         .main-content {
-            margin-top: 20px;
+            margin-top: 15px;
         }
         
         .document-title {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
             border-bottom: 2px solid #007bff;
-            padding-bottom: 20px;
+            padding-bottom: 15px;
         }
         
         .document-title h1 {
@@ -65,13 +65,13 @@
         }
         
         .info-section {
-            margin-bottom: 25px;
+            margin-bottom: 15px;
         }
         
         .info-section h3 {
             background-color: #f8f9fa;
             padding: 10px;
-            margin: 0 0 15px 0;
+            margin: 0 0 10px 0;
             border-left: 4px solid #007bff;
             font-size: 14px;
         }
@@ -79,7 +79,7 @@
         .info-grid {
             display: table;
             width: 100%;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
         
         .info-row {
@@ -101,7 +101,7 @@
         .table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         
         .table th,
@@ -121,14 +121,15 @@
         }
         
         .totals-section {
-            margin-top: 30px;
-            padding: 20px;
+            margin-top: 15px;
+            padding: 15px;
             background-color: #f8f9fa;
             border: 1px solid #ddd;
         }
         
         .totals-section h3 {
             margin-top: 0;
+            margin-bottom: 10px;
             color: #007bff;
         }
         
@@ -146,13 +147,13 @@
             color: #007bff;
         }
         
-        /* Pied de page - même style que documents A5 */
+        /* Pied de page - style quittance */
         .footer {
-            margin-top: 2mm;
+            margin-top: 15px;
             text-align: center;
             font-size: 8px;
             color: #000;
-            padding-top: 2.5mm;
+            padding-top: 10px;
             font-weight: 900;
             line-height: 1.4;
         }
@@ -160,13 +161,21 @@
         .footer-company {
             font-weight: 900;
             font-size: 9px;
-            margin-bottom: 1.5mm;
+            margin-bottom: 2px;
             color: #000;
             text-align: center;
         }
         
+        .footer-slogan {
+            margin-bottom: 2px;
+            color: #000;
+            font-weight: 900;
+            font-size: 8px;
+            text-align: center;
+        }
+        
         .footer-address {
-            margin-bottom: 1.5mm;
+            margin-bottom: 2px;
             color: #000;
             font-weight: 900;
             font-size: 8px;
@@ -174,7 +183,7 @@
         }
         
         .footer-contact {
-            margin-bottom: 1.5mm;
+            margin-bottom: 2px;
             color: #000;
             font-weight: 900;
             font-size: 8px;
@@ -186,11 +195,11 @@
             color: #000;
             font-weight: 900;
             text-align: center;
-            margin-bottom: 1mm;
+            margin-bottom: 3px;
         }
         
         .footer-generation {
-            margin-top: 2mm;
+            margin-top: 5px;
             font-style: italic;
             color: #000;
             font-weight: 900;
@@ -379,23 +388,33 @@
     </div>
     {% endif %}
     
-        <!-- Pied de page dynamique - même style que documents A5 -->
+        <!-- Pied de page dynamique - style quittance -->
         <div class="footer">
             {% if entreprise_config %}
                 <div class="footer-company">{{ entreprise_config.nom_entreprise }}</div>
+                {% if entreprise_config.slogan %}
+                <div class="footer-slogan">{{ entreprise_config.slogan }}</div>
+                {% endif %}
                 <div class="footer-address">{{ entreprise_config.get_adresse_complete }}</div>
                 <div class="footer-contact">{{ entreprise_config.get_contact_complet }}</div>
                 <div class="footer-legal">{{ entreprise_config.get_informations_legales }}</div>
                 <div class="footer-generation">
                     Récapitulatif mensuel généré le {{ date_generation|date:"d/m/Y à H:i" }}
+                    {% if user %}
+                    <br><strong>Généré par : {{ user.get_full_name|default:user.username }}</strong>
+                    {% endif %}
                 </div>
             {% else %}
                 <div class="footer-company">KBIS IMMOBILIER</div>
-                <div class="footer-address">pissy 10050 ouagadougou Burkina Faso, Quartier Centre-Ville, BP 440 ouagadougou, Burkina Faso</div>
-                <div class="footer-contact">Tél: +226 70 20 54 91 | Email: kbissarl2022@gmail.com</div>
+                <div class="footer-slogan">Votre Partenaire Immobilier de Confiance</div>
+                <div class="footer-address">Avenue de la République, Quartier Centre-Ville, BP 440 ouagadougou, Burkina Faso</div>
+                <div class="footer-contact">Tél: +226 70 20 54 91 | Email: kbissarl2022@gmail.com | Web: https://omnicom-bf.com/</div>
                 <div class="footer-legal">RCCM: CI-ABJ-XXXX-X-XXXXX | IFU: XXXXXXXXXX</div>
                 <div class="footer-generation">
                     Récapitulatif mensuel généré le {{ date_generation|date:"d/m/Y à H:i" }}
+                    {% if user %}
+                    <br><strong>Généré par : {{ user.get_full_name|default:user.username }}</strong>
+                    {% endif %}
                 </div>
             {% endif %}
         </div>

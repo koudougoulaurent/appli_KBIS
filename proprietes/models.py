@@ -287,6 +287,136 @@ class Bailleur(DuplicatePreventionMixin, models.Model):
         return stats
 
 
+class ContratGestion(models.Model):
+    """
+    Modèle pour les contrats de gestion immobilière entre KBIS IMMOBILIER et les bailleurs.
+    
+    IMPORTANT: Un bailleur ne peut avoir qu'UN SEUL contrat de gestion qui inclut TOUTES ses propriétés.
+    Le contrat est créé automatiquement lors de l'ajout de la première propriété.
+    """
+    
+    numero_contrat = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name=_("Numéro de contrat"),
+        help_text=_("Numéro unique du contrat de gestion")
+    )
+    
+    bailleur = models.ForeignKey(
+        Bailleur,
+        on_delete=models.PROTECT,
+        related_name='contrats_gestion',
+        verbose_name=_("Bailleur")
+    )
+    
+    # Dates importantes
+    date_signature = models.DateField(
+        verbose_name=_("Date de signature"),
+        default=timezone.now
+    )
+    date_debut = models.DateField(
+        verbose_name=_("Date de début"),
+        help_text=_("Date de début de la gestion")
+    )
+    date_fin = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name=_("Date de fin"),
+        help_text=_("Date de fin de la gestion (optionnel)")
+    )
+    
+    # Propriétés concernées
+    proprietes = models.ManyToManyField(
+        'Propriete',
+        related_name='contrats_gestion',
+        verbose_name=_("Propriétés"),
+        help_text=_("Propriétés confiées en gestion")
+    )
+    
+    # Conditions de gestion
+    commission_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=10.00,
+        verbose_name=_("Commission (%)"),
+        help_text=_("Pourcentage de commission sur les loyers")
+    )
+    
+    # Statut
+    est_actif = models.BooleanField(
+        default=True,
+        verbose_name=_("Contrat actif")
+    )
+    est_resilie = models.BooleanField(
+        default=False,
+        verbose_name=_("Contrat résilié")
+    )
+    
+    # Métadonnées
+    notes = models.TextField(
+        blank=True,
+        verbose_name=_("Notes"),
+        help_text=_("Notes additionnelles sur le contrat")
+    )
+    date_creation = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Date de création")
+    )
+    date_modification = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Date de modification")
+    )
+    cree_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("Créé par")
+    )
+    is_deleted = models.BooleanField(
+        default=False,
+        verbose_name=_("Supprimé logiquement")
+    )
+    
+    objects = NonDeletedManager()
+    all_objects = models.Manager()
+    
+    class Meta:
+        app_label = 'proprietes'
+        verbose_name = _("Contrat de gestion")
+        verbose_name_plural = _("Contrats de gestion")
+        ordering = ['-date_signature']
+    
+    def __str__(self):
+        return f"Contrat de gestion {self.numero_contrat} - {self.bailleur.get_nom_complet()}"
+    
+    def save(self, *args, **kwargs):
+        # Générer le numéro de contrat si non fourni
+        if not self.numero_contrat:
+            from django.db import IntegrityError
+            max_attempts = 10
+            annee = timezone.now().year
+            for attempt in range(max_attempts):
+                try:
+                    # Générer un ID avec le format CG-YYYY-XXXX
+                    next_num = AutoNumberSequence.next_number(scope='CONTRAT_GESTION', year=annee)
+                    self.numero_contrat = f"CG-{annee}-{next_num:04d}"
+                    break
+                except IntegrityError:
+                    if attempt == max_attempts - 1:
+                        raise
+                    continue
+        super().save(*args, **kwargs)
+    
+    def get_proprietes_list(self):
+        """Retourne la liste des propriétés du contrat."""
+        return self.proprietes.filter(is_deleted=False)
+    
+    def get_nombre_proprietes(self):
+        """Retourne le nombre de propriétés dans le contrat."""
+        return self.get_proprietes_list().count()
+
+
 class Locataire(DuplicatePreventionMixin, models.Model):
     """Modèle pour les locataires."""
     
