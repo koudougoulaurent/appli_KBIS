@@ -6,234 +6,276 @@
     <title>Récapitulatif Mensuel - {{ recapitulatif.bailleur.nom }} {{ recapitulatif.bailleur.prenom }}</title>
     <style>
         @page {
-            size: A4;
-            margin: 2cm;
+            size: A4 landscape;
+            margin: 0.7cm;
+        }
+        
+        * {
+            box-sizing: border-box;
         }
         
         body {
             font-family: Arial, sans-serif;
-            font-size: 12px;
-            line-height: 1.4;
-            color: #333;
+            font-size: 8px;
+            line-height: 1.15;
+            color: #000;
             margin: 0;
             padding: 0;
+            padding-bottom: 60px; /* Laisser de l'espace pour le footer fixe */
+            overflow: hidden;
         }
         
         .header {
             width: 100%;
             text-align: center;
-            margin-bottom: 15px;
+            margin-bottom: 3px;
         }
         
         .header img {
             max-width: 100%;
             height: auto;
-            max-height: 120px;
+            max-height: 60px;
         }
         
-        .footer {
-            width: 100%;
-            text-align: center;
-            font-size: 10px;
-            color: #666;
-            border-top: 1px solid #ddd;
-            padding-top: 10px;
-            margin-top: 15px;
-        }
-        
-        .main-content {
-            margin-top: 15px;
+        .document-header {
+            margin-bottom: 2px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 2px;
         }
         
         .document-title {
             text-align: center;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 15px;
-        }
-        
-        .document-title h1 {
-            color: #007bff;
-            font-size: 24px;
+            font-size: 12px;
+            font-weight: bold;
             margin: 0;
-        }
-        
-        .document-title h2 {
-            color: #666;
-            font-size: 18px;
-            margin: 10px 0 0 0;
-        }
-        
-        .info-section {
-            margin-bottom: 15px;
-        }
-        
-        .info-section h3 {
-            background-color: #f8f9fa;
-            padding: 10px;
-            margin: 0 0 10px 0;
-            border-left: 4px solid #007bff;
-            font-size: 14px;
-        }
-        
-        .info-grid {
-            display: table;
-            width: 100%;
-            margin-bottom: 10px;
+            text-transform: uppercase;
+            color: #000;
         }
         
         .info-row {
-            display: table-row;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 7.5px;
+            margin-top: 2px;
         }
         
-        .info-label {
-            display: table-cell;
+        .info-left {
+            width: 25%;
+        }
+        
+        .info-center {
+            width: 50%;
+            text-align: center;
             font-weight: bold;
-            padding: 5px 10px 5px 0;
-            width: 30%;
+            text-transform: uppercase;
+            font-size: 8px;
         }
         
-        .info-value {
-            display: table-cell;
-            padding: 5px 0;
-        }
-        
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 15px;
-        }
-        
-        .table th,
-        .table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        
-        .table th {
-            background-color: #f8f9fa;
-            font-weight: bold;
-        }
-        
-        .table .text-right {
+        .info-right {
+            width: 25%;
             text-align: right;
+            font-weight: bold;
+        }
+        
+        .table-wrapper {
+            display: flex;
+            margin-top: 4px;
+            gap: 4px;
+        }
+        
+        .table-section {
+            flex: 1;
+            min-width: 0;
         }
         
         .totals-section {
-            margin-top: 15px;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border: 1px solid #ddd;
+            width: 120px;
+            border: 2px solid #000;
+            font-size: 6.5px;
         }
         
-        .totals-section h3 {
-            margin-top: 0;
-            margin-bottom: 10px;
-            color: #007bff;
+        .totals-header {
+            background: #e0e0e0;
+            font-weight: bold;
+            text-align: center;
+            padding: 2px 0;
+            border-bottom: 2px solid #000;
+            font-size: 7px;
+            text-transform: uppercase;
         }
         
-        .total-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            border-bottom: 1px solid #ddd;
+        .totals-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 6.5px;
         }
         
-        .total-row:last-child {
+        .totals-table tr td {
+            border-bottom: 1px solid #bdbdbd;
+            padding: 2px 3px;
+        }
+        
+        .totals-table tr:last-child td {
             border-bottom: none;
             font-weight: bold;
-            font-size: 14px;
-            color: #007bff;
         }
         
-        /* Pied de page - style quittance */
-        .footer {
-            margin-top: 15px;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 7.5px;
+            margin-bottom: 5px;
+            table-layout: fixed;
+        }
+        
+        thead th {
+            background-color: #007bff;
+            color: #ffffff;
+            padding: 3px 2px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #000;
+            font-size: 7.5px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        thead th.code {
+            width: 12%;
             text-align: center;
-            font-size: 8px;
+        }
+        
+        thead th.nom {
+            width: 11%;
+        }
+        
+        thead th.prenom {
+            width: 11%;
+        }
+        
+        thead th.telephone {
+            width: 11%;
+        }
+        
+        thead th.loyer {
+            width: 18%;
+            text-align: right;
+        }
+        
+        thead th.prestation {
+            width: 18%;
+            text-align: right;
+        }
+        
+        thead th.revenu {
+            width: 19%;
+            text-align: right;
+        }
+        
+        tbody td {
+            padding: 2px 2px;
+            border: 1px solid #000;
+            font-size: 7.5px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            word-wrap: break-word;
+        }
+        
+        tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        tbody td.code {
+            text-align: center;
+            font-weight: bold;
+            font-size: 7px;
+        }
+        
+        tbody td.loyer,
+        tbody td.prestation,
+        tbody td.revenu {
+            text-align: right;
+            white-space: nowrap;
+        }
+        
+        tbody td.nom,
+        tbody td.prenom,
+        tbody td.telephone {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .pagination {
+            text-align: right;
+            font-size: 7px;
+            margin-top: 4px;
+            font-style: italic;
+            padding-right: 5px;
+        }
+        
+        .footer {
+            position: fixed;
+            bottom: 10px;
+            left: 20px;
+            right: 20px;
+            margin-top: 0;
+            text-align: center;
+            font-size: 6px;
             color: #000;
-            padding-top: 10px;
+            padding-top: 4px;
             font-weight: 900;
-            line-height: 1.4;
+            line-height: 1.2;
         }
         
         .footer-company {
             font-weight: 900;
-            font-size: 9px;
-            margin-bottom: 2px;
+            font-size: 6px;
+            margin-bottom: 1px;
             color: #000;
             text-align: center;
         }
         
         .footer-slogan {
-            margin-bottom: 2px;
+            margin-bottom: 1px;
             color: #000;
             font-weight: 900;
-            font-size: 8px;
+            font-size: 6px;
             text-align: center;
         }
         
         .footer-address {
-            margin-bottom: 2px;
+            margin-bottom: 1px;
             color: #000;
             font-weight: 900;
-            font-size: 8px;
+            font-size: 6px;
             text-align: center;
         }
         
         .footer-contact {
-            margin-bottom: 2px;
+            margin-bottom: 1px;
             color: #000;
             font-weight: 900;
-            font-size: 8px;
+            font-size: 6px;
             text-align: center;
         }
         
         .footer-legal {
-            font-size: 7px;
+            font-size: 5.5px;
             color: #000;
             font-weight: 900;
             text-align: center;
-            margin-bottom: 3px;
+            margin-bottom: 1px;
         }
         
         .footer-generation {
-            margin-top: 5px;
+            margin-top: 2px;
             font-style: italic;
             color: #000;
             font-weight: 900;
-            font-size: 7px;
+            font-size: 5.5px;
             text-align: center;
-        }
-        
-        .status-badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 10px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-        
-        .status-valide {
-            background-color: #d4edda;
-            color: #155724;
-        }
-        
-        .status-en_preparation {
-            background-color: #fff3cd;
-            color: #856404;
-        }
-        
-        .status-envoye {
-            background-color: #cce5ff;
-            color: #004085;
-        }
-        
-        .status-paye {
-            background-color: #d1ecf1;
-            color: #0c5460;
         }
     </style>
 </head>
@@ -244,180 +286,138 @@
     </div>
     
     <!-- Contenu principal -->
-    <div class="main-content">
-        <div class="document-title">
-            <h1>RÉCAPITULATIF MENSUEL</h1>
-            <h2>{{ recapitulatif.bailleur.get_nom_complet|default:recapitulatif.bailleur.nom }} - {{ recapitulatif.mois_recap|date:"F Y" }}</h2>
-        </div>
-    
-    <!-- Informations du bailleur -->
-    <div class="info-section">
-        <h3>Informations du Bailleur</h3>
-        <div class="info-grid">
-            <div class="info-row">
-                <div class="info-label">Nom complet :</div>
-                <div class="info-value">{{ recapitulatif.bailleur.get_nom_complet|default:recapitulatif.bailleur.nom }}</div>
+    <div class="document-header">
+        <div class="document-title">KBIS INTERNATIONAL IMMOBILIER</div>
+        <div class="info-row">
+            <div class="info-left">
+                {% load i18n %}
+                {% get_current_language as LANGUAGE_CODE %}
+                {% language 'fr' %}
+                    {{ date_generation|date:"l d F Y"|capfirst }}
+                {% endlanguage %}
             </div>
-            <div class="info-row">
-                <div class="info-label">Numéro bailleur :</div>
-                <div class="info-value">{{ recapitulatif.bailleur.numero_bailleur }}</div>
+            <div class="info-center">
+                Chez : {{ recapitulatif.bailleur.get_nom_complet|upper|default:recapitulatif.bailleur.nom|upper }}
             </div>
-            <div class="info-row">
-                <div class="info-label">Email :</div>
-                <div class="info-value">{{ recapitulatif.bailleur.email }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Téléphone :</div>
-                <div class="info-value">{{ recapitulatif.bailleur.telephone }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Adresse :</div>
-                <div class="info-value">{{ recapitulatif.bailleur.adresse }}, {{ recapitulatif.bailleur.ville }}</div>
+            <div class="info-right">
+                LOYER DU MOIS DE : {{ recapitulatif.mois_recap|date:"F Y"|capfirst }}
             </div>
         </div>
     </div>
     
-    <!-- Informations du récapitulatif -->
-    <div class="info-section">
-        <h3>Informations du Récapitulatif</h3>
-        <div class="info-grid">
-            <div class="info-row">
-                <div class="info-label">Mois de référence :</div>
-                <div class="info-value">{{ recapitulatif.mois_recap|date:"F Y" }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Statut :</div>
-                <div class="info-value">
-                    <span class="status-badge status-{{ recapitulatif.statut }}">
-                        {{ recapitulatif.get_statut_display }}
-                    </span>
-                </div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Date de création :</div>
-                <div class="info-value">{{ recapitulatif.date_creation|date:"d/m/Y H:i" }}</div>
-            </div>
-            {% if recapitulatif.date_validation %}
-            <div class="info-row">
-                <div class="info-label">Date de validation :</div>
-                <div class="info-value">{{ recapitulatif.date_validation|date:"d/m/Y H:i" }}</div>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-    
-    <!-- Détails des propriétés et loyers -->
-    <div class="info-section">
-        <h3>Détails des Propriétés et Loyers</h3>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Propriété</th>
-                    <th>Locataire</th>
-                    <th>Loyer Mensuel</th>
-                    <th>Charges Bailleur</th>
-                    <th>Net à Payer</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if proprietes_details %}
-                    {% for detail in proprietes_details %}
+    <!-- Contenu avec tableau et totaux -->
+    <div class="table-wrapper">
+        <div class="table-section">
+            <table>
+                <thead>
                     <tr>
-                        <td>
-                            {% if detail.propriete.titre %}
-                                {{ detail.propriete.titre }}
-                            {% elif detail.propriete.numero_propriete %}
-                                Propriété #{{ detail.propriete.numero_propriete }}
-                            {% elif detail.adresse_complete %}
-                                {{ detail.adresse_complete }}
-                            {% else %}
-                                Propriété ID: {{ detail.propriete.id }}
-                            {% endif %}
-                        </td>
-                        <td>
+                        <th class="code">Code</th>
+                        <th class="nom">Nom</th>
+                        <th class="prenom">Prénom</th>
+                        <th class="telephone">Numero téléphone</th>
+                        <th class="loyer">Loyer</th>
+                        <th class="prestation">Prestation de l'agence</th>
+                        <th class="revenu">Revenu du bailleur</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if proprietes_details %}
+                        {% for detail in proprietes_details %}
                             {% if detail.locataire %}
-                                {{ detail.locataire.get_nom_complet|default:detail.locataire.nom|default:"N/A" }}
-                            {% else %}
-                                N/A
+                                {% with locataire=detail.locataire contrat=detail.contrat %}
+                                <tr>
+                                    <td class="code">
+                                        {% if locataire.numero_locataire %}
+                                            {{ locataire.numero_locataire }}
+                                        {% elif contrat.numero_contrat %}
+                                            {{ contrat.numero_contrat|slice:"-4:" }}
+                                        {% else %}
+                                            {{ locataire.id|stringformat:"04d" }}
+                                        {% endif %}
+                                    </td>
+                                    <td class="nom">{% if locataire.nom %}{{ locataire.nom|upper }}{% else %}N/A{% endif %}</td>
+                                    <td class="prenom">{% if locataire.prenom %}{{ locataire.prenom|upper }}{% else %}-{% endif %}</td>
+                                    <td class="telephone">
+                                        {% if detail.locataire_telephone and detail.locataire_telephone|length > 0 %}
+                                            {{ detail.locataire_telephone }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td class="loyer">{{ detail.loyer_mensuel|floatformat:0|default:0 }} F</td>
+                                    <td class="prestation">{{ detail.prestation_agence|floatformat:0|default:0 }} F</td>
+                                    <td class="revenu">{{ detail.revenu_bailleur|floatformat:0|default:0 }} F</td>
+                                </tr>
+                                {% endwith %}
                             {% endif %}
-                        </td>
-                        <td class="text-right">{{ detail.loyer_mensuel|floatformat:0 }} F CFA</td>
-                        <td class="text-right">{{ detail.charges_bailleur|default:0|floatformat:0 }} F CFA</td>
-                        <td class="text-right">{{ detail.net_a_payer|floatformat:0 }} F CFA</td>
-                    </tr>
-                    {% endfor %}
-                {% else %}
-                    <tr>
-                        <td colspan="5" class="text-center">Aucune propriété active trouvée pour ce mois</td>
-                    </tr>
-                {% endif %}
-            </tbody>
-        </table>
-    </div>
-    
-    <!-- Totaux -->
-    <div class="totals-section">
-        <h3>Récapitulatif Financier</h3>
-        <div class="total-row">
-            <span>Total des loyers bruts :</span>
-            <span>{{ totaux.total_loyers_bruts|floatformat:0 }} F CFA</span>
-        </div>
-        <div class="total-row">
-            <span>Total des charges déductibles :</span>
-            <span>{{ totaux.total_charges_deductibles|floatformat:0 }} F CFA</span>
-        </div>
-        <div class="total-row">
-            <span>Montant net à payer :</span>
-            <span>{{ totaux.montant_net_a_payer|floatformat:0 }} F CFA</span>
-        </div>
-        <div class="total-row">
-            <span>Commission agence (10%) :</span>
-            <span>-{{ totaux.commission_agence|floatformat:0 }} F CFA</span>
-        </div>
-        <div class="total-row total-row-highlight">
-            <span><strong>Montant réellement payé :</strong></span>
-            <span><strong>{{ totaux.montant_reellement_paye|floatformat:0 }} F CFA</strong></span>
-        </div>
-    </div>
-    
-    <!-- Notes -->
-    {% if recapitulatif.notes %}
-    <div class="info-section">
-        <h3>Notes et Observations</h3>
-        <p>{{ recapitulatif.notes }}</p>
-    </div>
-    {% endif %}
-    
-        <!-- Pied de page dynamique - style quittance -->
-        <div class="footer">
-            {% if entreprise_config %}
-                <div class="footer-company">{{ entreprise_config.nom_entreprise }}</div>
-                {% if entreprise_config.slogan %}
-                <div class="footer-slogan">{{ entreprise_config.slogan }}</div>
-                {% endif %}
-                <div class="footer-address">{{ entreprise_config.get_adresse_complete }}</div>
-                <div class="footer-contact">{{ entreprise_config.get_contact_complet }}</div>
-                <div class="footer-legal">{{ entreprise_config.get_informations_legales }}</div>
-                <div class="footer-generation">
-                    Récapitulatif mensuel généré le {{ date_generation|date:"d/m/Y à H:i" }}
-                    {% if user %}
-                    <br><strong>Généré par : {{ user.get_full_name|default:user.username }}</strong>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 20px;">
+                                Aucune propriété active trouvée pour ce mois
+                            </td>
+                        </tr>
                     {% endif %}
-                </div>
-            {% else %}
-                <div class="footer-company">KBIS IMMOBILIER</div>
-                <div class="footer-slogan">Votre Partenaire Immobilier de Confiance</div>
-                <div class="footer-address">Avenue de la République, Quartier Centre-Ville, BP 440 ouagadougou, Burkina Faso</div>
-                <div class="footer-contact">Tél: +226 70 20 54 91 | Email: kbissarl2022@gmail.com | Web: https://omnicom-bf.com/</div>
-                <div class="footer-legal">RCCM: CI-ABJ-XXXX-X-XXXXX | IFU: XXXXXXXXXX</div>
-                <div class="footer-generation">
-                    Récapitulatif mensuel généré le {{ date_generation|date:"d/m/Y à H:i" }}
-                    {% if user %}
-                    <br><strong>Généré par : {{ user.get_full_name|default:user.username }}</strong>
-                    {% endif %}
-                </div>
+                </tbody>
+            </table>
+        </div>
+        <div class="totals-section">
+            <div class="totals-header">TOTAUX</div>
+            <table class="totals-table">
+                <tr>
+                    <td>total prestation :</td>
+                    <td style="text-align:right;">{{ totaux.total_prestation_tableau|floatformat:0|default:0 }} F</td>
+                </tr>
+                <tr>
+                    <td>Total revenu :</td>
+                    <td style="text-align:right;">{{ totaux.total_revenu_tableau|floatformat:0|default:0 }} F</td>
+                </tr>
+                <tr>
+                    <td>Total dépense<br>(Charges bailleur) :</td>
+                    <td style="text-align:right;">{{ totaux.total_charges_bailleur|floatformat:0|default:0 }} F</td>
+                </tr>
+                <tr>
+                    <td>Net à payer :</td>
+                    <td style="text-align:right;">{{ totaux.net_a_payer_recap|floatformat:0|default:0 }} F</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    <div class="pagination">
+        Page 1 sur 1
+    </div>
+    
+    <!-- Pied de page dynamique - style quittance -->
+    <div class="footer">
+        {% if entreprise_config %}
+            <div class="footer-company">{{ entreprise_config.nom_entreprise }}</div>
+            {% if entreprise_config.slogan %}
+            <div class="footer-slogan">{{ entreprise_config.slogan }}</div>
             {% endif %}
-        </div>
+            <div class="footer-address">{{ entreprise_config.get_adresse_complete }}</div>
+            <div class="footer-contact">{{ entreprise_config.get_contact_complet }}</div>
+            <div class="footer-legal">{{ entreprise_config.get_informations_legales }}</div>
+            <div class="footer-generation">
+                Récapitulatif mensuel généré le {{ date_generation|date:"d/m/Y à H:i" }}
+                {% if user %}
+                <br><strong>Généré par : {{ user.get_full_name|default:user.username }}</strong>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="footer-company">KBIS IMMOBILIER</div>
+            <div class="footer-slogan">Votre Partenaire Immobilier de Confiance</div>
+            <div class="footer-address">Avenue de la République, Quartier Centre-Ville, BP 440 ouagadougou, Burkina Faso</div>
+            <div class="footer-contact">Tél: +226 70 20 54 91 | Email: kbissarl2022@gmail.com | Web: https://omnicom-bf.com/</div>
+            <div class="footer-legal">RCCM: CI-ABJ-XXXX-X-XXXXX | IFU: XXXXXXXXXX</div>
+            <div class="footer-generation">
+                Récapitulatif mensuel généré le {{ date_generation|date:"d/m/Y à H:i" }}
+                {% if user %}
+                <br><strong>Généré par : {{ user.get_full_name|default:user.username }}</strong>
+                {% endif %}
+            </div>
+        {% endif %}
     </div>
 </body>
 </html>

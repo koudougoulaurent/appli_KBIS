@@ -10,13 +10,13 @@
         <i class="bi bi-file-earmark-text text-primary"></i>
         {{ title }}
     </h1>
-    <div class="btn-group" role="group">
+    <div class="d-flex flex-wrap gap-2">
         <a href="{% url 'paiements:liste_recaps_mensuels' %}" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> Retour
         </a>
         <button type="button" class="btn btn-success" onclick="window.print()">
             <i class="bi bi-printer"></i> Imprimer
-        </a>
+        </button>
         <a href="{% url 'paiements:generer_pdf_recap_mensuel' recap_id=recap.id %}" class="btn btn-primary">
             <i class="bi bi-file-pdf"></i> PDF Standard
         </a>

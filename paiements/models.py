@@ -523,10 +523,14 @@ class RecapMensuel(models.Model):
             
             # Créer le PDF avec xhtml2pdf
             pdf_buffer = BytesIO()
-            pisa_status = pisa.CreatePDF(html_content, dest=pdf_buffer)
+            pisa_status = pisa.CreatePDF(html_content, dest=pdf_buffer, encoding='UTF-8')
             
             if pisa_status.err:
-                raise Exception(f"Erreur lors de la génération du PDF: {pisa_status.err}")
+                error_msg = f"Erreur lors de la génération du PDF: {pisa_status.err}"
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(error_msg)
+                raise Exception(error_msg)
             
             pdf_content = pdf_buffer.getvalue()
             pdf_buffer.close()
@@ -581,13 +585,33 @@ class RecapMensuel(models.Model):
             commission_agence = getattr(self, 'commission_agence', None)
             montant_reellement_paye = getattr(self, 'montant_reellement_paye', None)
         
+        # Calculer les totaux basés sur les détails des propriétés (pour correspondre au tableau)
+        proprietes_details = self.get_proprietes_details()
+        total_prestation_tableau = Decimal('0')
+        total_revenu_tableau = Decimal('0')
+        
+        for detail in proprietes_details:
+            if detail.get('locataire'):
+                # Somme des prestations (10% de chaque loyer)
+                total_prestation_tableau += detail.get('prestation_agence') or Decimal('0')
+                # Somme des revenus du bailleur (loyer - prestation)
+                total_revenu_tableau += detail.get('revenu_bailleur') or Decimal('0')
+        
+        # Calculer le net à payer pour le récapitulatif (revenu - dépenses)
+        total_charges_bailleur = self.total_charges_bailleur or Decimal('0')
+        net_a_payer_recap = total_revenu_tableau - total_charges_bailleur
+        net_a_payer_recap = max(net_a_payer_recap, Decimal('0'))
+        
         return {
             'total_loyers_bruts': self.total_loyers_bruts,
             'total_charges_deductibles': self.total_charges_deductibles,
-            'total_charges_bailleur': self.total_charges_bailleur or 0,
+            'total_charges_bailleur': total_charges_bailleur,
             'total_net_a_payer': self.total_net_a_payer,
             'commission_agence': commission_agence or Decimal('0'),
             'montant_reellement_paye': montant_reellement_paye or Decimal('0'),
+            'total_prestation_tableau': total_prestation_tableau,  # Somme des prestations du tableau
+            'total_revenu_tableau': total_revenu_tableau,  # Somme des revenus du tableau
+            'net_a_payer_recap': net_a_payer_recap,  # Net à payer pour l'affichage (revenu - dépenses)
             'nombre_proprietes': self.nombre_proprietes,
             'nombre_contrats_actifs': self.nombre_contrats_actifs,
             'nombre_paiements_recus': self.nombre_paiements_recus,
@@ -646,13 +670,14 @@ class RecapMensuel(models.Model):
             ) or Decimal('0')
             
             # Récupérer les contrats actifs pour cette propriété au moment du récapitulatif
+            # Utiliser select_related pour charger le locataire et ses informations de contact
             contrats_actifs = propriete.contrats.filter(
                 est_actif=True,
                 est_resilie=False,
                 date_debut__lte=mois_fin
             ).filter(
                 models.Q(date_fin__gte=mois_debut) | models.Q(date_fin__isnull=True)
-            )
+            ).select_related('locataire')
             
             for contrat in contrats_actifs:
                 # Conversion sécurisée des montants
@@ -683,15 +708,44 @@ class RecapMensuel(models.Model):
                 net_a_payer = loyer_mensuel - charges_mensuelles - total_charges_bailleur_propriete
                 net_a_payer = max(net_a_payer, Decimal('0'))  # Ne peut pas être négatif
                 
+                # Calculer la prestation de l'agence (10% du loyer mensuel)
+                prestation_agence = (loyer_mensuel * Decimal('0.10')).quantize(Decimal('0.01'))
+                
+                # Calculer le revenu du bailleur (loyer - prestation agence)
+                revenu_bailleur = loyer_mensuel - prestation_agence
+                revenu_bailleur = max(revenu_bailleur, Decimal('0'))  # Ne peut pas être négatif
+                
+                # Récupérer le téléphone du locataire depuis la base de données
+                locataire_telephone = ""
+                if contrat.locataire:
+                    # Récupérer directement depuis la base de données
+                    from proprietes.models import Locataire
+                    try:
+                        # Recharger le locataire avec ses champs téléphone
+                        locataire_db = Locataire.objects.only('telephone', 'telephone_mobile').get(pk=contrat.locataire.pk)
+                        if locataire_db.telephone:
+                            locataire_telephone = str(locataire_db.telephone).strip()
+                        elif locataire_db.telephone_mobile:
+                            locataire_telephone = str(locataire_db.telephone_mobile).strip()
+                    except Exception as e:
+                        # Fallback : utiliser l'objet déjà chargé
+                        if contrat.locataire.telephone:
+                            locataire_telephone = str(contrat.locataire.telephone).strip()
+                        elif contrat.locataire.telephone_mobile:
+                            locataire_telephone = str(contrat.locataire.telephone_mobile).strip()
+                
                 # CRITIQUE : Ajouter tous les champs nécessaires pour les différents templates
                 proprietes_details.append({
                     'propriete': propriete,
                     'contrat': contrat,
                     'locataire': contrat.locataire,
+                    'locataire_telephone': locataire_telephone,  # Téléphone du locataire (pour faciliter l'accès dans le template)
                     'loyer_mensuel': loyer_mensuel,
                     'charges_deductibles': charges_mensuelles,
                     'charges_bailleur': total_charges_bailleur_propriete,  # CRITIQUE : Charges bailleur enregistrées
                     'net_a_payer': net_a_payer,
+                    'prestation_agence': prestation_agence,  # Prestation de l'agence (10% du loyer)
+                    'revenu_bailleur': revenu_bailleur,  # Revenu du bailleur (loyer - prestation)
                     'loyers_bruts': loyer_mensuel,  # Pour compatibilité avec detail_recapitulatif.html
                     'montant_net': net_a_payer,  # Pour compatibilité avec detail_recapitulatif.html
                     'adresse_complete': f"{propriete.adresse}, {propriete.ville}" if propriete.ville else propriete.adresse,

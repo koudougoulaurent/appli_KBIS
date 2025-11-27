@@ -3153,21 +3153,52 @@ def tableau_bord_recaps_mensuels(request):
 @login_required
 def generer_pdf_recap_mensuel(request, recap_id):
     """Génère un PDF pour un récapitulatif mensuel spécifique."""
+    from django.http import HttpResponse
+    from core.utils import check_group_permissions_with_fallback
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
     try:
         recap = get_object_or_404(RecapMensuel, id=recap_id)
         
         # Vérifier les permissions
-        if not request.user.has_perm('paiements.view_recapmensuel'):
-            messages.error(request, "Vous n'avez pas les permissions pour voir ce récapitulatif.")
-            return redirect('paiements:tableau_bord_recaps_mensuels')
+        permissions = check_group_permissions_with_fallback(
+            request.user, 
+            ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 
+            'view'
+        )
+        if not permissions['allowed']:
+            messages.error(request, permissions['message'])
+            return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
         
-        # Générer le PDF avec ReportLab (seule option disponible sur Windows)
-        # pdf_response = generate_recap_pdf(recap, method='reportlab')  # Fonction non disponible
+        # Vérifier que le bailleur existe
+        if not recap.bailleur:
+            messages.error(request, 'Ce récapitulatif n\'a pas de bailleur associé. Impossible de générer le PDF.')
+            return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
         
-        messages.error(request, "Génération PDF temporairement désactivée - Fonction en cours de développement")
-        return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
+        # Générer le PDF en utilisant la méthode du modèle
+        try:
+            pdf_content = recap.generer_pdf_recapitulatif(user=request.user)
+            
+            # Créer la réponse HTTP
+            response = HttpResponse(pdf_content, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{recap.get_nom_fichier_pdf()}"'
+            
+            # Log de l'action
+            logger.info(
+                f"PDF du récapitulatif {recap.pk} téléchargé par {request.user.username}"
+            )
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la génération du PDF du récapitulatif {recap.pk}: {e}", exc_info=True)
+            messages.error(request, f'Erreur lors de la génération du PDF: {str(e)}')
+            return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
         
     except Exception as e:
+        logger.error(f"Erreur lors de la génération du PDF: {str(e)}", exc_info=True)
         messages.error(request, f"Erreur lors de la génération du PDF: {str(e)}")
         return redirect('paiements:detail_recap_mensuel_auto', recap_id=recap_id)
 
