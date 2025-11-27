@@ -147,8 +147,15 @@
         
         .signature-box {
             width: 45%;
-            text-align: center;
             flex: 1;
+        }
+        
+        .signature-box.left {
+            text-align: left;
+        }
+        
+        .signature-box.right {
+            text-align: right;
         }
         
         .signature-line {
@@ -182,12 +189,17 @@
             font-size: 8pt;
         }
         
-        .location-date {
+        .location-date,
+        .location-date-top {
             text-align: right;
-            margin-top: 5px;
             font-style: italic;
             font-size: 8pt;
             padding-right: 8px;
+        }
+        
+        .location-date-top {
+            margin-top: 4px;
+            margin-bottom: 6px;
         }
         
         .info-box {
@@ -213,6 +225,9 @@
         </div>
     
     <div class="document-title">CONTRAT DE GESTION</div>
+    <div class="location-date-top">
+        Fait à {{ config.ville|default:"Ouagadougou" }}, le {{ contrat.date_signature|date:"d/m/Y" }}
+    </div>
     
     <div class="parties-section">
         <div class="party-title">Entre</div>
@@ -294,7 +309,7 @@
     
     <!-- Signatures -->
     <div class="signature-section">
-        <div class="signature-box">
+        <div class="signature-box left">
             <div class="signature-line">
                 <div class="signature-separator"></div>
                 <p><strong>L'Agence Immobilière</strong></p>
@@ -303,7 +318,7 @@
             </div>
         </div>
         
-        <div class="signature-box">
+        <div class="signature-box right">
             <div class="signature-line">
                 <div class="signature-separator"></div>
                 <p><strong>Le bailleur</strong></p>
@@ -315,10 +330,6 @@
         </div>
     </div>
     
-    <!-- Date et lieu -->
-    <div class="location-date">
-        <p>Fait à {{ config.ville|default:"Ouagadougou" }}, le {{ contrat.date_signature|date:"d/m/Y" }}</p>
-    </div>
     </div>
 </body>
 </html>

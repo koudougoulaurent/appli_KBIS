@@ -16,8 +16,8 @@
         
         body {
             font-family: Arial, sans-serif;
-            font-size: 8px;
-            line-height: 1.15;
+            font-size: 9.5px;
+            line-height: 1.22;
             color: #000;
             margin: 0;
             padding: 0;
@@ -34,7 +34,7 @@
         .header img {
             max-width: 100%;
             height: auto;
-            max-height: 60px;
+            max-height: 70px;
         }
         
         .document-header {
@@ -45,18 +45,19 @@
         
         .document-title {
             text-align: center;
-            font-size: 12px;
+            font-size: 14px;
             font-weight: bold;
             margin: 0;
             text-transform: uppercase;
             color: #000;
+            letter-spacing: 0.5px;
         }
         
         .info-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 7.5px;
+            font-size: 8px;
             margin-top: 2px;
         }
         
@@ -69,7 +70,7 @@
             text-align: center;
             font-weight: bold;
             text-transform: uppercase;
-            font-size: 8px;
+            font-size: 9px;
         }
         
         .info-right {
@@ -90,30 +91,30 @@
         }
         
         .totals-section {
-            width: 120px;
+            width: 130px;
             border: 2px solid #000;
-            font-size: 6.5px;
+            font-size: 7px;
         }
         
         .totals-header {
             background: #e0e0e0;
             font-weight: bold;
             text-align: center;
-            padding: 2px 0;
+            padding: 3px 0;
             border-bottom: 2px solid #000;
-            font-size: 7px;
+            font-size: 8px;
             text-transform: uppercase;
         }
         
         .totals-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 6.5px;
+            font-size: 7px;
         }
         
         .totals-table tr td {
             border-bottom: 1px solid #bdbdbd;
-            padding: 2px 3px;
+            padding: 3px 3px;
         }
         
         .totals-table tr:last-child td {
@@ -124,7 +125,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 7.5px;
+            font-size: 9.5px;
             margin-bottom: 5px;
             table-layout: fixed;
         }
@@ -132,11 +133,11 @@
         thead th {
             background-color: #007bff;
             color: #ffffff;
-            padding: 3px 2px;
+            padding: 5px 3px;
             text-align: left;
             font-weight: bold;
             border: 1px solid #000;
-            font-size: 7.5px;
+            font-size: 9.5px;
             overflow: hidden;
             text-overflow: ellipsis;
         }
@@ -174,9 +175,9 @@
         }
         
         tbody td {
-            padding: 2px 2px;
+            padding: 4px 3px;
             border: 1px solid #000;
-            font-size: 7.5px;
+            font-size: 9.5px;
             overflow: hidden;
             text-overflow: ellipsis;
             word-wrap: break-word;
@@ -217,65 +218,17 @@
         
         .footer {
             position: fixed;
-            bottom: 10px;
-            left: 20px;
-            right: 20px;
-            margin-top: 0;
-            text-align: center;
-            font-size: 6px;
-            color: #000;
-            padding-top: 4px;
-            font-weight: 900;
-            line-height: 1.2;
+            bottom: 12px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
         
-        .footer-company {
-            font-weight: 900;
-            font-size: 6px;
-            margin-bottom: 1px;
-            color: #000;
-            text-align: center;
-        }
-        
-        .footer-slogan {
-            margin-bottom: 1px;
-            color: #000;
-            font-weight: 900;
-            font-size: 6px;
-            text-align: center;
-        }
-        
-        .footer-address {
-            margin-bottom: 1px;
-            color: #000;
-            font-weight: 900;
-            font-size: 6px;
-            text-align: center;
-        }
-        
-        .footer-contact {
-            margin-bottom: 1px;
-            color: #000;
-            font-weight: 900;
-            font-size: 6px;
-            text-align: center;
-        }
-        
-        .footer-legal {
-            font-size: 5.5px;
-            color: #000;
-            font-weight: 900;
-            text-align: center;
-            margin-bottom: 1px;
-        }
-        
-        .footer-generation {
-            margin-top: 2px;
-            font-style: italic;
-            color: #000;
-            font-weight: 900;
-            font-size: 5.5px;
-            text-align: center;
+        .footer-line {
+            border-top: 1px solid #000;
+            height: 0;
         }
     </style>
 </head>
@@ -287,7 +240,7 @@
     
     <!-- Contenu principal -->
     <div class="document-header">
-        <div class="document-title">KBIS INTERNATIONAL IMMOBILIER</div>
+        <div class="document-title">KBIS IMMOBILIER</div>
         <div class="info-row">
             <div class="info-left">
                 {% load i18n %}
@@ -389,35 +342,11 @@
         Page 1 sur 1
     </div>
     
-    <!-- Pied de page dynamique - style quittance -->
+    <!-- Pied de page simplifié -->
     <div class="footer">
-        {% if entreprise_config %}
-            <div class="footer-company">{{ entreprise_config.nom_entreprise }}</div>
-            {% if entreprise_config.slogan %}
-            <div class="footer-slogan">{{ entreprise_config.slogan }}</div>
-            {% endif %}
-            <div class="footer-address">{{ entreprise_config.get_adresse_complete }}</div>
-            <div class="footer-contact">{{ entreprise_config.get_contact_complet }}</div>
-            <div class="footer-legal">{{ entreprise_config.get_informations_legales }}</div>
-            <div class="footer-generation">
-                Récapitulatif mensuel généré le {{ date_generation|date:"d/m/Y à H:i" }}
-                {% if user %}
-                <br><strong>Généré par : {{ user.get_full_name|default:user.username }}</strong>
-                {% endif %}
-            </div>
-        {% else %}
-            <div class="footer-company">KBIS IMMOBILIER</div>
-            <div class="footer-slogan">Votre Partenaire Immobilier de Confiance</div>
-            <div class="footer-address">Avenue de la République, Quartier Centre-Ville, BP 440 ouagadougou, Burkina Faso</div>
-            <div class="footer-contact">Tél: +226 70 20 54 91 | Email: kbissarl2022@gmail.com | Web: https://omnicom-bf.com/</div>
-            <div class="footer-legal">RCCM: CI-ABJ-XXXX-X-XXXXX | IFU: XXXXXXXXXX</div>
-            <div class="footer-generation">
-                Récapitulatif mensuel généré le {{ date_generation|date:"d/m/Y à H:i" }}
-                {% if user %}
-                <br><strong>Généré par : {{ user.get_full_name|default:user.username }}</strong>
-                {% endif %}
-            </div>
-        {% endif %}
+        <div class="footer-line"></div>
+        <div class="footer-line"></div>
+        <div class="footer-line"></div>
     </div>
 </body>
 </html>
