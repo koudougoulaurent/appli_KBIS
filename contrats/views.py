@@ -23,6 +23,7 @@ from proprietes.models import Bailleur
 from .models import RecuCaution, DocumentContrat, ResiliationContrat
 from .forms import ResiliationContratForm, ContratForm
 from django.db.models import Count, Q
+from paiements.models import Paiement
 
 
 class ContratListView(PrivilegeButtonsMixin, EnhancedSearchMixin, IntelligentListView):
@@ -1407,27 +1408,12 @@ def liste_contrats_caution(request):
         )
     ).order_by('-date_creation')
     
-    # CORRECTION CRITIQUE : Mettre à jour les annotations avec les vrais statuts des contrats
-    # Car les annotations ne reflètent pas les changements en temps réel
+    # Mettre à jour les annotations avec les vrais montants calculés
+    # Les annotations Sum() sont déjà calculées, on les utilise directement
     for contrat in contrats:
-        # Recalculer les montants payés en temps réel
-        paiements_caution = Paiement.objects.filter(
-            contrat=contrat,
-            type_paiement__in=['caution', 'depot_garantie'],
-            statut='valide'
-        )
-        montant_caution_paye = sum(p.montant for p in paiements_caution)
-        
-        paiements_avance = Paiement.objects.filter(
-            contrat=contrat,
-            type_paiement='avance',
-            statut='valide'
-        )
-        montant_avance_paye = sum(p.montant for p in paiements_avance)
-        
-        # Mettre à jour les annotations avec les vrais montants
-        contrat.montant_caution_paye = montant_caution_paye
-        contrat.montant_avance_paye = montant_avance_paye
+        # Utiliser les annotations déjà calculées (plus performant)
+        contrat.montant_caution_paye = contrat.montant_caution_paye or 0
+        contrat.montant_avance_paye = contrat.montant_avance_paye or 0
     
     # Appliquer les filtres par bailleur en premier (plus efficace)
     if bailleur_id:
