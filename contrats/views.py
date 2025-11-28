@@ -953,6 +953,93 @@ def ajouter_quittance(request):
     return render(request, 'contrats/quittance_ajouter.html', context)
 
 
+@login_required
+def corriger_toutes_quittances_dates(request):
+    """Vue secrète pour corriger toutes les dates de quittances existantes."""
+    from core.utils import check_group_permissions
+    from django.db import transaction
+    from dateutil.relativedelta import relativedelta
+    from datetime import date
+    
+    # Vérification des permissions : Seuls PRIVILEGE peuvent exécuter cette action
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, 'Accès refusé.')
+        return redirect('core:dashboard')
+    
+    try:
+        corrections = []
+        
+        # Récupérer toutes les quittances
+        quittances = Quittance.objects.all().select_related('contrat').order_by('contrat', 'mois')
+        
+        # Grouper par contrat
+        quittances_par_contrat = {}
+        for quittance in quittances:
+            contrat_id = quittance.contrat.id
+            if contrat_id not in quittances_par_contrat:
+                quittances_par_contrat[contrat_id] = []
+            quittances_par_contrat[contrat_id].append(quittance)
+        
+        with transaction.atomic():
+            for contrat_id, quittances_contrat in quittances_par_contrat.items():
+                quittances_contrat.sort(key=lambda q: q.mois)
+                
+                for i, quittance in enumerate(quittances_contrat):
+                    mois_quittance = quittance.mois
+                    
+                    # Vérifier si c'est janvier et si la quittance précédente était décembre
+                    if mois_quittance.month == 1 and i > 0:
+                        quittance_precedente = quittances_contrat[i - 1]
+                        mois_precedent = quittance_precedente.mois
+                        
+                        if mois_precedent.month == 12:
+                            annee_attendue = mois_precedent.year + 1
+                            annee_actuelle = mois_quittance.year
+                            
+                            if annee_actuelle < annee_attendue:
+                                nouvelle_date = date(annee_attendue, 1, 1)
+                                corrections.append({
+                                    'quittance': quittance,
+                                    'ancienne_date': mois_quittance,
+                                    'nouvelle_date': nouvelle_date,
+                                })
+                                quittance.mois = nouvelle_date
+                                quittance.save(update_fields=['mois'])
+                    
+                    # Vérifier les incohérences générales
+                    if i > 0:
+                        quittance_precedente = quittances_contrat[i - 1]
+                        mois_precedent = quittance_precedente.mois
+                        mois_attendu = mois_precedent + relativedelta(months=1)
+                        mois_attendu = mois_attendu.replace(day=1)
+                        mois_quittance_normalise = mois_quittance.replace(day=1)
+                        
+                        if mois_quittance_normalise != mois_attendu:
+                            if (mois_quittance_normalise.month == mois_attendu.month and 
+                                mois_quittance_normalise.year < mois_attendu.year):
+                                corrections.append({
+                                    'quittance': quittance,
+                                    'ancienne_date': mois_quittance,
+                                    'nouvelle_date': mois_attendu,
+                                })
+                                quittance.mois = mois_attendu
+                                quittance.save(update_fields=['mois'])
+        
+        if corrections:
+            messages.success(
+                request,
+                f'{len(corrections)} quittance(s) corrigée(s) avec succès!'
+            )
+        else:
+            messages.info(request, 'Aucune correction nécessaire.')
+            
+    except Exception as e:
+        messages.error(request, f'Erreur lors de la correction : {str(e)}')
+    
+    return redirect('contrats:quittances_liste')
+
+
 # Vues pour les états des lieux
 class EtatLieuxListView(PrivilegeButtonsMixin, IntelligentListView):
     model = EtatLieux
