@@ -21,6 +21,7 @@ urlpatterns = [
     path('liste-enhanced/', views.paiement_enhanced_list, name='liste_enhanced'),  # Liste améliorée
     path('detail/<int:pk>/', views.paiement_detail, name='detail'),  # Alias principal pour compatibilité
     path('ajouter/', views.ajouter_paiement, name='ajouter'),  # Alias principal pour compatibilité
+    path('corriger-annees-mois-paye/', views.corriger_annees_mois_paye, name='corriger_annees_mois_paye'),
     
     # URLs pour les quittances de paiement bailleur (fonctions non disponibles)
     # path('quittances-bailleur/', views.liste_quittances_bailleur, name='liste_quittances_bailleur'),
