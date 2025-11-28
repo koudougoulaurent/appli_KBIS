@@ -2409,6 +2409,119 @@ def quittance_detail(request, pk):
 
 
 @login_required
+def corriger_annees_mois_paye(request):
+    """Vue secrète pour corriger les années incorrectes dans mois_paye des paiements existants."""
+    from core.utils import check_group_permissions
+    from django.db import transaction
+    from datetime import datetime
+    from dateutil.relativedelta import relativedelta
+    import re
+    
+    # Vérification des permissions : Seuls PRIVILEGE peuvent exécuter cette action
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, 'Accès refusé.')
+        return redirect('paiements:liste')
+    
+    try:
+        # Mapping des mois français
+        mois_francais = {
+            'janvier': 1, 'février': 2, 'mars': 3, 'avril': 4,
+            'mai': 5, 'juin': 6, 'juillet': 7, 'août': 8,
+            'septembre': 9, 'octobre': 10, 'novembre': 11, 'décembre': 12
+        }
+        
+        # Récupérer tous les paiements avec mois_paye
+        paiements = Paiement.objects.filter(
+            Q(mois_paye__isnull=False) & ~Q(mois_paye='')
+        ).select_related('contrat').order_by('date_paiement')
+        
+        mois_actuel = datetime.now().month
+        annee_actuelle = datetime.now().year
+        
+        corrections = []
+        
+        for paiement in paiements:
+            if not paiement.mois_paye:
+                continue
+                
+            # Extraire le mois et l'année de mois_paye
+            mois_paye_str = paiement.mois_paye.strip()
+            
+            # Trouver le mois dans la chaîne
+            mois_num = None
+            mois_nom = None
+            for nom_mois, num in mois_francais.items():
+                if nom_mois.lower() in mois_paye_str.lower():
+                    mois_num = num
+                    mois_nom = nom_mois
+                    break
+            
+            if not mois_num:
+                continue
+            
+            # Extraire l'année
+            annee_match = re.search(r'(\d{4})', mois_paye_str)
+            if not annee_match:
+                continue
+            
+            annee_actuelle_paye = int(annee_match.group(1))
+            
+            # Vérifier si l'année est incorrecte
+            correction_necessaire = False
+            nouvelle_annee = annee_actuelle_paye
+            
+            # Cas 1: On est en décembre et le mois payé est janvier de la même année
+            # (devrait être l'année suivante)
+            if mois_actuel == 12 and mois_num == 1 and annee_actuelle_paye == annee_actuelle:
+                nouvelle_annee = annee_actuelle + 1
+                correction_necessaire = True
+            
+            # Cas 2: On est en novembre/décembre 2025 et le mois payé est janvier 2025
+            # mais la date de paiement est en 2025 (devrait être janvier 2026)
+            elif mois_actuel >= 11 and mois_num == 1:
+                # Vérifier si c'est un paiement récent (créé en novembre/décembre 2025)
+                if paiement.date_paiement.year == annee_actuelle and paiement.date_paiement.month >= 11:
+                    if annee_actuelle_paye == annee_actuelle:
+                        nouvelle_annee = annee_actuelle + 1
+                        correction_necessaire = True
+            
+            # Cas 3: Le mois payé est avant le mois actuel de la même année
+            # et on est en fin d'année (novembre/décembre), c'est probablement l'année suivante
+            elif mois_actuel >= 11 and mois_num < mois_actuel and annee_actuelle_paye == annee_actuelle:
+                # Vérifier si le paiement a été fait récemment
+                if paiement.date_paiement.year == annee_actuelle:
+                    nouvelle_annee = annee_actuelle + 1
+                    correction_necessaire = True
+            
+            if correction_necessaire:
+                nouveau_mois_paye = f"{mois_nom} {nouvelle_annee}"
+                corrections.append({
+                    'paiement': paiement,
+                    'ancien': paiement.mois_paye,
+                    'nouveau': nouveau_mois_paye,
+                })
+        
+        if corrections:
+            with transaction.atomic():
+                for corr in corrections:
+                    corr['paiement'].mois_paye = corr['nouveau']
+                    corr['paiement'].save(update_fields=['mois_paye'])
+            
+            messages.success(
+                request,
+                f'{len(corrections)} paiement(s) corrigé(s) avec succès!'
+            )
+        else:
+            messages.info(request, 'Aucune correction nécessaire.')
+            
+    except Exception as e:
+        messages.error(request, f'Erreur lors de la correction : {str(e)}')
+    
+    return redirect('paiements:liste')
+
+
+@login_required
 def quittance_list(request):
     """Liste des récépissés de paiement."""
     # Vérification des permissions
