@@ -248,7 +248,8 @@ class PaiementListView(LoginRequiredMixin, ListView):
                 Q(contrat__locataire__prenom__icontains=query) |
                 Q(contrat__propriete__adresse__icontains=query) |
                 Q(contrat__propriete__ville__icontains=query) |
-                Q(nom_payeur__icontains=query)
+                Q(contrat__propriete__titre__icontains=query) |
+                Q(libelle__icontains=query)
             )
         
         # Filtre par statut
@@ -701,7 +702,8 @@ def liste_paiements(request):
                 Q(contrat__locataire__prenom__icontains=query) |
                 Q(contrat__propriete__adresse__icontains=query) |
                 Q(contrat__propriete__ville__icontains=query) |
-                Q(nom_payeur__icontains=query)
+                Q(contrat__propriete__titre__icontains=query) |
+                Q(libelle__icontains=query)
             )
         
         # Filtres optimisés
