@@ -912,20 +912,36 @@ quittance_list = QuittanceListView.as_view()
 @login_required
 def detail_quittance(request, pk):
     """
-    Vue de détail d'une quittance
+    Vue de détail d'une quittance - Génère un récépissé au format KBIS (comme les paiements)
     """
     # Vérification des permissions : PRIVILEGE, ADMINISTRATION, CONTROLES peuvent voir les détails
     from core.utils import check_group_permissions
+    from django.http import HttpResponse
+    
     permissions = check_group_permissions(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'CONTROLES', 'CAISSE'], 'view')
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
         return redirect('contrats:quittances_liste')
     
     quittance = get_object_or_404(Quittance, pk=pk)
-    context = get_context_with_entreprise_config({
-        'quittance': quittance
-    })
-    return render(request, 'contrats/quittance_detail.html', context)
+    
+    try:
+        # Générer le récépissé au format KBIS (comme les paiements)
+        html_recu = quittance._generer_recu_kbis_dynamique(user=request.user)
+        
+        if html_recu:
+            # Retourner directement le HTML (format A5 prêt pour impression)
+            return HttpResponse(html_recu, content_type='text/html')
+        else:
+            messages.error(request, 'Erreur lors de la génération du récépissé KBIS')
+            return redirect('contrats:quittances_liste')
+            
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Erreur détaillée génération récépissé quittance: {error_details}")
+        messages.error(request, f'Erreur lors de la génération du récépissé: {str(e)}')
+        return redirect('contrats:quittances_liste')
 
 
 @login_required
