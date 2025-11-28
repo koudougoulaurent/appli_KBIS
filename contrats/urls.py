@@ -31,6 +31,7 @@ urlpatterns = [
     path('quittances/', quittance_list, name='quittances_liste'),
     path('quittances/detail/<int:pk>/', views.detail_quittance, name='quittance_detail'),
     path('quittances/ajouter/', views.ajouter_quittance, name='quittance_ajouter'),
+    path('quittances/corriger-dates/', views.corriger_dates_quittances, name='corriger_dates_quittances'),
     
     # URLs pour les états des lieux
     path('etats-lieux/', etat_lieux_list, name='etats_lieux_liste'),

@@ -827,6 +827,104 @@ def resilier_contrat(request, pk):
     return render(request, 'contrats/resilier.html', context)
 
 
+# Vue pour corriger les dates de quittances
+@login_required
+def corriger_dates_quittances(request):
+    """Vue web pour corriger automatiquement les dates des quittances."""
+    from core.utils import check_group_permissions
+    from django.db import transaction
+    from dateutil.relativedelta import relativedelta
+    from datetime import date
+    
+    # Vérification des permissions : Seuls PRIVILEGE peuvent exécuter cette action
+    permissions = check_group_permissions(request.user, ['PRIVILEGE'], 'view')
+    if not permissions['allowed']:
+        messages.error(request, permissions['message'])
+        return redirect('core:dashboard')
+    
+    if request.method == 'POST':
+        try:
+            corrections = []
+            
+            # Récupérer toutes les quittances
+            quittances = Quittance.objects.all().select_related('contrat').order_by('contrat', 'mois')
+            
+            # Grouper par contrat
+            quittances_par_contrat = {}
+            for quittance in quittances:
+                contrat_id = quittance.contrat.id
+                if contrat_id not in quittances_par_contrat:
+                    quittances_par_contrat[contrat_id] = []
+                quittances_par_contrat[contrat_id].append(quittance)
+            
+            with transaction.atomic():
+                for contrat_id, quittances_contrat in quittances_par_contrat.items():
+                    quittances_contrat.sort(key=lambda q: q.mois)
+                    
+                    for i, quittance in enumerate(quittances_contrat):
+                        mois_quittance = quittance.mois
+                        
+                        # Vérifier si c'est janvier et si la quittance précédente était décembre
+                        if mois_quittance.month == 1 and i > 0:
+                            quittance_precedente = quittances_contrat[i - 1]
+                            mois_precedent = quittance_precedente.mois
+                            
+                            if mois_precedent.month == 12:
+                                annee_attendue = mois_precedent.year + 1
+                                annee_actuelle = mois_quittance.year
+                                
+                                if annee_actuelle < annee_attendue:
+                                    nouvelle_date = date(annee_attendue, 1, 1)
+                                    corrections.append({
+                                        'quittance': quittance,
+                                        'ancienne_date': mois_quittance,
+                                        'nouvelle_date': nouvelle_date,
+                                        'raison': f'Janvier après décembre {mois_precedent.year}'
+                                    })
+                                    quittance.mois = nouvelle_date
+                                    quittance.save()
+                        
+                        # Vérifier les incohérences générales
+                        if i > 0:
+                            quittance_precedente = quittances_contrat[i - 1]
+                            mois_precedent = quittance_precedente.mois
+                            mois_attendu = mois_precedent + relativedelta(months=1)
+                            mois_attendu = mois_attendu.replace(day=1)
+                            mois_quittance_normalise = mois_quittance.replace(day=1)
+                            
+                            if mois_quittance_normalise != mois_attendu:
+                                if (mois_quittance_normalise.month == mois_attendu.month and 
+                                    mois_quittance_normalise.year < mois_attendu.year):
+                                    corrections.append({
+                                        'quittance': quittance,
+                                        'ancienne_date': mois_quittance,
+                                        'nouvelle_date': mois_attendu,
+                                        'raison': f'Mois ne suit pas logiquement après {mois_precedent.strftime("%B %Y")}'
+                                    })
+                                    quittance.mois = mois_attendu
+                                    quittance.save()
+            
+            if corrections:
+                messages.success(
+                    request,
+                    f'{len(corrections)} quittance(s) corrigée(s) avec succès!'
+                )
+            else:
+                messages.info(request, 'Aucune correction nécessaire.')
+                
+        except Exception as e:
+            messages.error(request, f'Erreur lors de la correction : {str(e)}')
+        
+        return redirect('contrats:quittances_liste')
+    
+    # GET : Afficher la page de confirmation
+    total_quittances = Quittance.objects.count()
+    context = {
+        'total_quittances': total_quittances,
+    }
+    return render(request, 'contrats/corriger_dates_quittances.html', context)
+
+
 # Vues pour les quittances
 class QuittanceListView(PrivilegeButtonsMixin, IntelligentListView):
     model = Quittance
