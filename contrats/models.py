@@ -901,8 +901,43 @@ class Quittance(models.Model):
         return f"Quittance {self.numero_quittance} - {self.contrat.numero_contrat}"
     
     def save(self, *args, **kwargs):
-        """Override save pour calculer le montant total et générer le numéro."""
+        """Override save pour calculer le montant total, générer le numéro et corriger automatiquement la date."""
         from decimal import Decimal
+        from dateutil.relativedelta import relativedelta
+        from datetime import date
+        
+        # CORRECTION AUTOMATIQUE DE LA DATE
+        # Vérifier et corriger la date si nécessaire (gestion du passage décembre -> janvier)
+        if self.contrat_id and self.mois:
+            # Récupérer la dernière quittance pour ce contrat (exclure la quittance actuelle si elle existe)
+            queryset = Quittance.objects.filter(
+                contrat=self.contrat,
+                mois__lt=self.mois
+            )
+            if self.pk:
+                queryset = queryset.exclude(pk=self.pk)
+            
+            derniere_quittance = queryset.order_by('-mois').first()
+            
+            if derniere_quittance:
+                mois_precedent = derniere_quittance.mois
+                mois_attendu = mois_precedent + relativedelta(months=1)
+                mois_attendu = mois_attendu.replace(day=1)
+                mois_actuel_normalise = self.mois.replace(day=1)
+                
+                # Si le mois ne suit pas logiquement (ex: janvier 2025 après décembre 2025)
+                if mois_actuel_normalise != mois_attendu:
+                    # Vérifier si c'est juste une différence d'année
+                    if (mois_actuel_normalise.month == mois_attendu.month and 
+                        mois_actuel_normalise.year < mois_attendu.year):
+                        # Corriger l'année
+                        self.mois = mois_attendu
+                    elif mois_precedent.month == 12 and self.mois.month == 1:
+                        # Cas spécial : décembre -> janvier (doit être année suivante)
+                        annee_attendue = mois_precedent.year + 1
+                        if self.mois.year < annee_attendue:
+                            self.mois = date(annee_attendue, 1, 1)
+        
         # S'assurer que montant_total est calculé
         if not self.montant_total:
             try:
