@@ -416,10 +416,30 @@ def ajouter_paiement(request):
                 mois_paye_nom = request.POST.get('mois_paye', '')
                 if mois_paye_nom:
                     # Le mois est maintenant directement un nom de mois (ex: "janvier", "février", etc.)
-                    # Ajouter l'année actuelle
+                    # Déterminer l'année correcte en fonction du mois sélectionné et du mois actuel
                     from datetime import datetime
+                    from dateutil.relativedelta import relativedelta
+                    
+                    mois_actuel = datetime.now().month
                     annee_actuelle = datetime.now().year
-                    paiement.mois_paye = f"{mois_paye_nom} {annee_actuelle}"
+                    
+                    # Mapping des mois français vers numéro
+                    mois_francais = {
+                        'janvier': 1, 'février': 2, 'mars': 3, 'avril': 4,
+                        'mai': 5, 'juin': 6, 'juillet': 7, 'août': 8,
+                        'septembre': 9, 'octobre': 10, 'novembre': 11, 'décembre': 12
+                    }
+                    
+                    mois_selectionne_num = mois_francais.get(mois_paye_nom.lower(), mois_actuel)
+                    
+                    # Si le mois sélectionné est avant le mois actuel (ex: janvier alors qu'on est en décembre),
+                    # c'est probablement le mois de l'année suivante
+                    if mois_selectionne_num < mois_actuel:
+                        annee = annee_actuelle + 1
+                    else:
+                        annee = annee_actuelle
+                    
+                    paiement.mois_paye = f"{mois_paye_nom} {annee}"
                 elif paiement.type_paiement == 'loyer':
                     # IMPORTANT: Remplir automatiquement le mois payé UNIQUEMENT pour les paiements de LOYER
                     # Les avances et cautions ont leur propre logique d'affichage

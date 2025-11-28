@@ -265,10 +265,11 @@ class ContratPDFServiceUpdated:
         if self.contrat.mois_debut_paiement:
             return self.contrat.mois_debut_paiement.upper()
         
-        # Utiliser le mois suivant la date de signature
-        mois_suivant = self.contrat.date_signature.month + 1
-        if mois_suivant > 12:
-            mois_suivant = 1
+        # Utiliser le mois suivant la date de signature (gère correctement le passage d'année)
+        from dateutil.relativedelta import relativedelta
+        date_signature = self.contrat.date_signature
+        mois_suivant_date = date_signature + relativedelta(months=1)
+        mois_suivant = mois_suivant_date.month
         
         mois_noms = {
             1: "JANVIER", 2: "FÉVRIER", 3: "MARS", 4: "AVRIL",
