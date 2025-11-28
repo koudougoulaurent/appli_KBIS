@@ -433,9 +433,13 @@ def ajouter_paiement(request):
                     
                     mois_selectionne_num = mois_francais.get(mois_paye_nom.lower(), mois_actuel)
                     
-                    # Si le mois sélectionné est avant le mois actuel (ex: janvier alors qu'on est en décembre),
+                    # CORRECTION : Gestion explicite du passage décembre -> janvier
+                    # Si on est en décembre (12) et qu'on sélectionne janvier (1), c'est l'année suivante
+                    if mois_actuel == 12 and mois_selectionne_num == 1:
+                        annee = annee_actuelle + 1
+                    # Si le mois sélectionné est avant le mois actuel (ex: janvier alors qu'on est en février),
                     # c'est probablement le mois de l'année suivante
-                    if mois_selectionne_num < mois_actuel:
+                    elif mois_selectionne_num < mois_actuel:
                         annee = annee_actuelle + 1
                     else:
                         annee = annee_actuelle
