@@ -1216,7 +1216,12 @@ class Paiement(models.Model):
         return mapping.get(self.type_paiement, 'quittance')
     
     def _obtenir_mois_regle(self):
-        """Obtient le mois réglé formaté"""
+        """Obtient le mois réglé formaté - Utilise mois_paye si disponible, sinon date_paiement"""
+        # PRIORITÉ : Utiliser mois_paye si disponible (contient l'année correcte)
+        if self.mois_paye:
+            return self.mois_paye
+        
+        # Sinon, utiliser date_paiement
         if self.date_paiement:
             mois_francais = [
                 'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
