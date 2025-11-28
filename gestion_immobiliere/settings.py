@@ -29,23 +29,39 @@ INSTALLED_APPS = [
     'notifications',
 ]
 
-MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # Middlewares d'optimisation des performances
-    'core.performance_middleware.PerformanceMiddleware',
-    'core.performance_middleware.CacheOptimizationMiddleware',
-    'core.performance_middleware.DatabaseOptimizationMiddleware',
-    'core.performance_middleware.StaticFilesOptimizationMiddleware',
-    'core.performance_middleware.AntiRefreshLoopMiddleware',
-    # Middleware anti-boucle
-    'core.anti_loop_middleware.AntiLoopMiddleware',
-]
+# Configuration des middlewares selon l'environnement
+if DEBUG:
+    # En développement local : middlewares minimaux pour meilleures performances
+    MIDDLEWARE = [
+        'django.middleware.security.SecurityMiddleware',
+        'django.contrib.sessions.middleware.SessionMiddleware',
+        'django.middleware.common.CommonMiddleware',
+        'django.middleware.csrf.CsrfViewMiddleware',
+        'django.contrib.auth.middleware.AuthenticationMiddleware',
+        'django.contrib.messages.middleware.MessageMiddleware',
+        'django.middleware.clickjacking.XFrameOptionsMiddleware',
+        # Middleware anti-boucle uniquement (léger)
+        'core.anti_loop_middleware.AntiLoopMiddleware',
+    ]
+else:
+    # En production : tous les middlewares d'optimisation
+    MIDDLEWARE = [
+        'django.middleware.security.SecurityMiddleware',
+        'django.contrib.sessions.middleware.SessionMiddleware',
+        'django.middleware.common.CommonMiddleware',
+        'django.middleware.csrf.CsrfViewMiddleware',
+        'django.contrib.auth.middleware.AuthenticationMiddleware',
+        'django.contrib.messages.middleware.MessageMiddleware',
+        'django.middleware.clickjacking.XFrameOptionsMiddleware',
+        # Middlewares d'optimisation des performances (production uniquement)
+        'core.performance_middleware.PerformanceMiddleware',
+        'core.performance_middleware.CacheOptimizationMiddleware',
+        'core.performance_middleware.DatabaseOptimizationMiddleware',
+        'core.performance_middleware.StaticFilesOptimizationMiddleware',
+        'core.performance_middleware.AntiRefreshLoopMiddleware',
+        # Middleware anti-boucle
+        'core.anti_loop_middleware.AntiLoopMiddleware',
+    ]
 
 ROOT_URLCONF = 'gestion_immobiliere.urls'
 
@@ -71,12 +87,15 @@ WSGI_APPLICATION = 'gestion_immobiliere.wsgi.application'
 
 # Configuration de base de données par défaut
 # Configuration de base de données
-# Par défaut, utiliser SQLite en local
+# Par défaut, utiliser SQLite en local avec optimisations
 # En production (RENDER), utiliser DATABASE_URL si disponible
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'OPTIONS': {
+            'timeout': 20,  # Timeout pour éviter les blocages
+        }
     }
 }
 
@@ -127,23 +146,34 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 # Configuration du cache pour les performances
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
-        'TIMEOUT': 300,  # 5 minutes
-        'OPTIONS': {
-            'MAX_ENTRIES': 1000,
-            'CULL_FREQUENCY': 3,
+if DEBUG:
+    # En développement : cache simple en mémoire
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
         }
     }
-}
+    # Sessions simples en développement
+    SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+    SESSION_SAVE_EVERY_REQUEST = False
+else:
+    # En production : cache optimisé
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'unique-snowflake',
+            'TIMEOUT': 300,  # 5 minutes
+            'OPTIONS': {
+                'MAX_ENTRIES': 1000,
+                'CULL_FREQUENCY': 3,
+            }
+        }
+    }
+    # Sessions avec cache en production
+    SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+    SESSION_CACHE_ALIAS = 'default'
 
-# Configuration des sessions pour les performances
-SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
-SESSION_CACHE_ALIAS = 'default'
 SESSION_COOKIE_AGE = 3600  # 1 heure
-SESSION_SAVE_EVERY_REQUEST = False
 
 # Configuration de sécurité pour le développement
 if DEBUG:

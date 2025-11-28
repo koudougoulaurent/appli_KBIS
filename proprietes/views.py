@@ -1627,7 +1627,8 @@ def ajouter_locataire(request):
         form = LocataireForm(post_data, request.FILES)
         if form.is_valid():
             locataire = form.save(commit=False)
-            locataire.cree_par = request.user
+            # Note: Le modèle Locataire n'a pas d'attribut cree_par
+            # Si nécessaire, ajouter ce champ au modèle via une migration
             
             # Générer automatiquement un numéro unique de locataire avec garantie d'unicité
             # Le numéro sera généré dans le modèle, mais on ajoute une vérification ici aussi

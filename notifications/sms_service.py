@@ -304,9 +304,9 @@ class PaymentOverdueService:
         
         # Déterminer le destinataire
         recipient = None
-        if contrat.locataire and contrat.locataire.cree_par:
+        if contrat.locataire and hasattr(contrat.locataire, 'cree_par') and contrat.locataire.cree_par:
             recipient = contrat.locataire.cree_par
-        elif contrat.propriete and contrat.propriete.bailleur and contrat.propriete.bailleur.cree_par:
+        elif contrat.propriete and contrat.propriete.bailleur and hasattr(contrat.propriete.bailleur, 'cree_par') and contrat.propriete.bailleur.cree_par:
             recipient = contrat.propriete.bailleur.cree_par
         else:
             # Utiliser le premier utilisateur administrateur disponible

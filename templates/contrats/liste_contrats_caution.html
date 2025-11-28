@@ -53,14 +53,6 @@
                     <a href="{% url 'contrats:liste_contrats_caution' %}" class="btn btn-outline-secondary">
                         <i class="bi bi-x-circle"></i> Reset
                     </a>
-                    {% if user.groupe_travail.nom|upper == 'PRIVILEGE' %}
-                    <form method="post" action="{% url 'contrats:forcer_correction_statuts' %}" style="display: inline;">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-warning" onclick="return confirm('Êtes-vous sûr de vouloir forcer la correction des statuts ? Cette action va recalculer tous les statuts de paiement.');">
-                            <i class="bi bi-arrow-clockwise"></i> Corriger Statuts
-                        </button>
-                    </form>
-                    {% endif %}
                 </div>
             </div>
         </form>

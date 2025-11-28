@@ -21,13 +21,13 @@ def creer_notification_paiement(sender, instance, created, **kwargs):
         try:
             # Déterminer le destinataire
             recipient = None
-            if instance.contrat and instance.contrat.locataire and instance.contrat.locataire.cree_par:
+            if instance.contrat and instance.contrat.locataire and hasattr(instance.contrat.locataire, 'cree_par') and instance.contrat.locataire.cree_par:
                 recipient = instance.contrat.locataire.cree_par
-            elif instance.contrat and instance.contrat.propriete and instance.contrat.propriete.bailleur and instance.contrat.propriete.bailleur.cree_par:
+            elif instance.contrat and instance.contrat.propriete and instance.contrat.propriete.bailleur and hasattr(instance.contrat.propriete.bailleur, 'cree_par') and instance.contrat.propriete.bailleur.cree_par:
                 recipient = instance.contrat.propriete.bailleur.cree_par
             else:
                 # Utiliser l'utilisateur qui a créé le paiement
-                recipient = instance.cree_par
+                recipient = getattr(instance, 'cree_par', None)
             
             if recipient:
                 # Vérifier les préférences de notification
@@ -57,7 +57,7 @@ def creer_notification_contrat(sender, instance, created, **kwargs):
     if created:
         try:
             # Notification pour le locataire
-            if instance.locataire and instance.locataire.cree_par:
+            if instance.locataire and hasattr(instance.locataire, 'cree_par') and instance.locataire.cree_par:
                 recipient = instance.locataire.cree_par
                 preferences, created = NotificationPreference.objects.get_or_create(
                     user=recipient
@@ -113,9 +113,9 @@ def verifier_expiration_contrat(sender, instance, **kwargs):
                     # Créer une notification d'expiration
                     recipients = []
                     
-                    if instance.locataire and instance.locataire.cree_par:
+                    if instance.locataire and hasattr(instance.locataire, 'cree_par') and instance.locataire.cree_par:
                         recipients.append(instance.locataire.cree_par)
-                    if instance.propriete and instance.propriete.bailleur and instance.propriete.bailleur.cree_par:
+                    if instance.propriete and instance.propriete.bailleur and hasattr(instance.propriete.bailleur, 'cree_par') and instance.propriete.bailleur.cree_par:
                         recipients.append(instance.propriete.bailleur.cree_par)
                     
                     for recipient in recipients:
@@ -187,9 +187,9 @@ def creer_notification_echeance_paiement():
         for contrat in contrats_echeance:
             recipients = []
             
-            if contrat.locataire and contrat.locataire.cree_par:
+            if contrat.locataire and hasattr(contrat.locataire, 'cree_par') and contrat.locataire.cree_par:
                 recipients.append(contrat.locataire.cree_par)
-            if contrat.propriete and contrat.propriete.bailleur and contrat.propriete.bailleur.cree_par:
+            if contrat.propriete and contrat.propriete.bailleur and hasattr(contrat.propriete.bailleur, 'cree_par') and contrat.propriete.bailleur.cree_par:
                 recipients.append(contrat.propriete.bailleur.cree_par)
             
             for recipient in recipients:

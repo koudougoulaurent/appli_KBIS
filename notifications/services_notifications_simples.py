@@ -333,9 +333,9 @@ class ServiceNotificationsSimples:
     def _determiner_destinataire_paiement(cls, contrat):
         """Détermine le destinataire pour les notifications de paiement"""
         # Priorité: utilisateur qui a créé le locataire > utilisateur qui a créé le bailleur > admin
-        if contrat.locataire and contrat.locataire.cree_par:
+        if contrat.locataire and hasattr(contrat.locataire, 'cree_par') and contrat.locataire.cree_par:
             return contrat.locataire.cree_par
-        elif contrat.propriete and contrat.propriete.bailleur and contrat.propriete.bailleur.cree_par:
+        elif contrat.propriete and contrat.propriete.bailleur and hasattr(contrat.propriete.bailleur, 'cree_par') and contrat.propriete.bailleur.cree_par:
             return contrat.propriete.bailleur.cree_par
         else:
             # Retourner le premier admin disponible
