@@ -1126,22 +1126,35 @@ def generer_recap_paiement_mensuel(request, bailleur_id):
                 logger.error(f"Premier élément de locataires: {type(recap_data['locataires'][0]) if len(recap_data['locataires']) > 0 else 'vide'}")
             raise
         
-        # Générer le PDF
+        # Générer le PDF avec gestion mémoire optimisée
         pdf_buffer = BytesIO()
-        pisa_status = pisa.CreatePDF(
-            html_content,
-            dest=pdf_buffer,
-            encoding='UTF-8'
-        )
-        
-        if pisa_status.err:
-            logger.error(f"Erreur lors de la génération PDF locataires: {pisa_status.err}")
-            messages.error(request, f"Erreur lors de la génération du PDF: {pisa_status.err}")
+        try:
+            pisa_status = pisa.CreatePDF(
+                html_content,
+                dest=pdf_buffer,
+                encoding='UTF-8',
+                link_callback=None
+            )
+            
+            if pisa_status.err:
+                logger.error(f"Erreur lors de la génération PDF locataires: {pisa_status.err}")
+                messages.error(request, f"Erreur lors de la génération du PDF: {pisa_status.err}")
+                pdf_buffer.close()
+                return redirect('paiements:dashboard')
+            
+            # Préparer la réponse
+            pdf_content = pdf_buffer.getvalue()
+            pdf_buffer.close()
+        except MemoryError:
+            logger.error("Erreur de mémoire lors de la génération du PDF")
+            pdf_buffer.close()
+            messages.error(request, "Erreur de mémoire lors de la génération du PDF. Veuillez réessayer avec moins de données.")
             return redirect('paiements:dashboard')
-        
-        # Préparer la réponse
-        pdf_content = pdf_buffer.getvalue()
-        pdf_buffer.close()
+        except Exception as pdf_error:
+            logger.error(f"Erreur inattendue lors de la génération PDF: {pdf_error}", exc_info=True)
+            pdf_buffer.close()
+            messages.error(request, f"Erreur lors de la génération du PDF: {str(pdf_error)}")
+            return redirect('paiements:dashboard')
         
         response = HttpResponse(pdf_content, content_type='application/pdf')
         filename = (
@@ -1384,22 +1397,35 @@ def generer_pdf_recap_locataires_paysage(request, bailleur_id):
                 logger.error(f"Premier élément de locataires: {type(recap_data['locataires'][0]) if len(recap_data['locataires']) > 0 else 'vide'}")
             raise
         
-        # Générer le PDF
+        # Générer le PDF avec gestion mémoire optimisée
         pdf_buffer = BytesIO()
-        pisa_status = pisa.CreatePDF(
-            html_content,
-            dest=pdf_buffer,
-            encoding='UTF-8'
-        )
-        
-        if pisa_status.err:
-            logger.error(f"Erreur lors de la génération PDF locataires: {pisa_status.err}")
-            messages.error(request, f"Erreur lors de la génération du PDF: {pisa_status.err}")
+        try:
+            pisa_status = pisa.CreatePDF(
+                html_content,
+                dest=pdf_buffer,
+                encoding='UTF-8',
+                link_callback=None
+            )
+            
+            if pisa_status.err:
+                logger.error(f"Erreur lors de la génération PDF locataires: {pisa_status.err}")
+                messages.error(request, f"Erreur lors de la génération du PDF: {pisa_status.err}")
+                pdf_buffer.close()
+                return redirect('paiements:dashboard')
+            
+            # Préparer la réponse
+            pdf_content = pdf_buffer.getvalue()
+            pdf_buffer.close()
+        except MemoryError:
+            logger.error("Erreur de mémoire lors de la génération du PDF")
+            pdf_buffer.close()
+            messages.error(request, "Erreur de mémoire lors de la génération du PDF. Veuillez réessayer avec moins de données.")
             return redirect('paiements:dashboard')
-        
-        # Préparer la réponse
-        pdf_content = pdf_buffer.getvalue()
-        pdf_buffer.close()
+        except Exception as pdf_error:
+            logger.error(f"Erreur inattendue lors de la génération PDF: {pdf_error}", exc_info=True)
+            pdf_buffer.close()
+            messages.error(request, f"Erreur lors de la génération du PDF: {str(pdf_error)}")
+            return redirect('paiements:dashboard')
         
         response = HttpResponse(pdf_content, content_type='application/pdf')
         filename = (

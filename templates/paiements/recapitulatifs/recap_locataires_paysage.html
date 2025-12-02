@@ -114,6 +114,7 @@
             font-size: 7pt;
             margin-bottom: 0.3cm;
             table-layout: fixed;
+            word-wrap: break-word;
         }
         
         .tenants-table th {
@@ -130,6 +131,8 @@
             border: 1px solid #bdc3c7;
             text-align: center;
             vertical-align: top;
+            word-wrap: break-word;
+            overflow: hidden;
         }
         
         .tenants-table tr:nth-child(even) {
@@ -240,23 +243,14 @@
         }
         
         .tenants-table td.code-locataire {
-            width: 12% !important;
-            max-width: 12% !important;
-            word-break: break-all !important;
-            white-space: normal !important;
-            overflow-wrap: break-word !important;
-            overflow: hidden !important;
-            text-align: left !important;
-            padding: 0.06cm 0.04cm !important;
-            vertical-align: middle !important;
-        }
-        
-        .tenants-table td.code-locataire div {
-            word-break: break-all !important;
-            white-space: normal !important;
-            overflow-wrap: break-word !important;
-            max-width: 100% !important;
-            display: block !important;
+            width: 12%;
+            word-break: break-word;
+            white-space: normal;
+            overflow-wrap: break-word;
+            text-align: left;
+            padding: 0.06cm 0.04cm;
+            vertical-align: middle;
+            font-size: 5pt;
         }
     </style>
 </head>
@@ -339,11 +333,15 @@
                                     <td rowspan="{{ locataire_data.contrats|length }}">{{ forloop.parentloop.counter }}</td>
                                     <td rowspan="{{ locataire_data.contrats|length }}" class="code-locataire">
                                         {% if locataire_data.locataire.numero_locataire %}
-                                            <div style="font-size: 5pt; word-break: break-all !important; white-space: normal !important; overflow-wrap: break-word !important; line-height: 1.2; max-width: 100%; display: block;">
-                                                {{ locataire_data.locataire.numero_locataire }}
-                                            </div>
+                                            {% with code=locataire_data.locataire.numero_locataire %}
+                                                {% if code|length > 30 %}
+                                                    {{ code|slice:":15 }}<br>{{ code|slice:"15:" }}
+                                                {% else %}
+                                                    {{ code }}
+                                                {% endif %}
+                                            {% endwith %}
                                         {% else %}
-                                            <div style="font-size: 5.5pt;">{{ locataire_data.locataire.id|stringformat:"04d" }}</div>
+                                            {{ locataire_data.locataire.id|stringformat:"04d" }}
                                         {% endif %}
                                     </td>
                                     <td rowspan="{{ locataire_data.contrats|length }}" class="tenant-info">
