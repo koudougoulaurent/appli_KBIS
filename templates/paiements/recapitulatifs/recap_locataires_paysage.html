@@ -244,13 +244,12 @@
         
         .tenants-table td.code-locataire {
             width: 12%;
-            word-break: break-word;
-            white-space: normal;
-            overflow-wrap: break-word;
             text-align: left;
             padding: 0.06cm 0.04cm;
             vertical-align: middle;
             font-size: 5pt;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
     </style>
 </head>
@@ -333,13 +332,7 @@
                                     <td rowspan="{{ locataire_data.contrats|length }}">{{ forloop.parentloop.counter }}</td>
                                     <td rowspan="{{ locataire_data.contrats|length }}" class="code-locataire">
                                         {% if locataire_data.locataire.numero_locataire %}
-                                            {% with code=locataire_data.locataire.numero_locataire %}
-                                                {% if code|length > 30 %}
-                                                    {{ code|slice:":15 }}<br>{{ code|slice:"15:" }}
-                                                {% else %}
-                                                    {{ code }}
-                                                {% endif %}
-                                            {% endwith %}
+                                            {{ locataire_data.locataire.numero_locataire|truncatechars:30 }}
                                         {% else %}
                                             {{ locataire_data.locataire.id|stringformat:"04d" }}
                                         {% endif %}
@@ -356,12 +349,12 @@
                                     </td>
                                 {% endif %}
                                 <td class="property-info">
-                                    {{ contrat_data.propriete.titre|default:"Sans titre" }}<br>
+                                    {{ contrat_data.propriete_titre_truncated|default:contrat_data.propriete.titre|default:"Sans titre" }}<br>
                                     <small style="color: #7f8c8d;">ID: {{ contrat_data.propriete.id }}</small>
                                 </td>
                                 <td class="property-info">
-                                    {{ contrat_data.propriete.adresse|default:"Non renseignée" }}<br>
-                                    <small style="color: #7f8c8d;">{{ contrat_data.propriete.ville|default:"" }}</small>
+                                    {{ contrat_data.propriete_adresse_truncated|default:contrat_data.propriete.adresse|default:"Non renseignée" }}<br>
+                                    <small style="color: #7f8c8d;">{{ contrat_data.propriete.ville|default:""|truncatechars:20 }}</small>
                                 </td>
                                 <td class="contrat-info">
                                     <strong>{{ contrat_data.numero_contrat|default:"N/A" }}</strong><br>

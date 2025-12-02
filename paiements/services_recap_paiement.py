@@ -534,12 +534,30 @@ class ServiceRecapPaiementMensuel:
                 }
             
             # Ajouter le contrat - S'assurer que tous les attributs sont des valeurs Python simples
+            # Tronquer les chaînes longues pour éviter les problèmes de mémoire lors de la génération PDF
             try:
                 numero_contrat = str(contrat.numero_contrat) if contrat.numero_contrat else "N/A"
+                if len(numero_contrat) > 20:
+                    numero_contrat = numero_contrat[:20] + "..."
+                
                 date_debut_contrat = contrat.date_debut if contrat.date_debut else None
                 date_fin_contrat = contrat.date_fin if contrat.date_fin else None
                 loyer_mensuel = Decimal(str(contrat.loyer_mensuel)) if contrat.loyer_mensuel else Decimal('0')
                 charges_mensuelles = Decimal(str(contrat.charges_mensuelles)) if contrat.charges_mensuelles else Decimal('0')
+                
+                # Tronquer les détails de paiement pour éviter les problèmes de mémoire
+                details_paiement = str(statut_paiement.get('details', ''))
+                if len(details_paiement) > 100:
+                    details_paiement = details_paiement[:100] + "..."
+                
+                # Tronquer les adresses et titres de propriété
+                propriete_titre = contrat.propriete.titre if contrat.propriete and contrat.propriete.titre else "Sans titre"
+                if len(propriete_titre) > 50:
+                    propriete_titre = propriete_titre[:50] + "..."
+                
+                propriete_adresse = contrat.propriete.adresse if contrat.propriete and contrat.propriete.adresse else "Non renseignée"
+                if len(propriete_adresse) > 60:
+                    propriete_adresse = propriete_adresse[:60] + "..."
                 
                 # Créer un dictionnaire avec les valeurs nécessaires
                 # Garder les objets Django pour le template mais s'assurer qu'ils sont accessibles
@@ -556,9 +574,11 @@ class ServiceRecapPaiementMensuel:
                     'montant_paye': Decimal(str(statut_paiement['montant_paye'])),
                     'montant_attendu': Decimal(str(statut_paiement['montant_attendu'])),
                     'date_paiement': statut_paiement.get('date_paiement'),
-                    'details_paiement': str(statut_paiement.get('details', '')),
+                    'details_paiement': details_paiement,
                     'loyer_mensuel': loyer_mensuel,
                     'charges_mensuelles': charges_mensuelles,
+                    'propriete_titre_truncated': propriete_titre,
+                    'propriete_adresse_truncated': propriete_adresse,
                 }
                 locataires_dict[locataire.id]['contrats'].append(contrat_dict)
             except Exception as e:
@@ -606,6 +626,17 @@ class ServiceRecapPaiementMensuel:
                     total_reglees += 1
                 elif locataire_data['statut_global'] == 'en_retard':
                     total_en_retard += 1
+        
+        # Tronquer les codes locataires pour éviter les problèmes de mémoire
+        for locataire_data in locataires_avec_statut:
+            locataire = locataire_data.get('locataire')
+            if locataire:
+                # Tronquer le numéro locataire si trop long
+                if hasattr(locataire, 'numero_locataire') and locataire.numero_locataire:
+                    numero_loc = str(locataire.numero_locataire)
+                    if len(numero_loc) > 30:
+                        # Garder les 15 premiers et 15 derniers caractères
+                        locataire.numero_locataire = numero_loc[:15] + "..." + numero_loc[-12:]
         
         # Trier par statut (en retard en premier, puis réglés), puis par nom
         # S'assurer que tous les champs existent avant de trier
