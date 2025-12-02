@@ -338,6 +338,11 @@
                                     </td>
                                     <td rowspan="{{ locataire_data.contrats|length }}" class="tenant-info">
                                         <div class="tenant-name">{{ locataire_data.locataire.get_nom_complet }}</div>
+                                        {% if locataire_data.statut_global == 'en_retard' and locataire_data.mois_retard_global and locataire_data.mois_retard_global > 0 %}
+                                            <small style="color: #e74c3c; font-size: 4.5pt; display: block; margin-top: 2px;">
+                                                ⚠ Retard: {{ locataire_data.mois_retard_global }} mois
+                                            </small>
+                                        {% endif %}
                                     </td>
                                     <td rowspan="{{ locataire_data.contrats|length }}" class="tenant-info">
                                         {% if locataire_data.locataire.telephone %}
@@ -373,7 +378,12 @@
                                     {% if contrat_data.statut == 'regle' %}
                                         <span class="status-regle">{{ contrat_data.statut_display }}</span>
                                     {% elif contrat_data.statut == 'en_retard' %}
-                                        <span class="status-retard">{{ contrat_data.statut_display }}</span>
+                                        <span class="status-retard">
+                                            {{ contrat_data.statut_display }}
+                                            {% if contrat_data.mois_retard and contrat_data.mois_retard > 0 %}
+                                                <br><small style="font-size: 4pt;">({{ contrat_data.mois_retard }} mois)</small>
+                                            {% endif %}
+                                        </span>
                                     {% else %}
                                         <span class="status-non-applicable">{{ contrat_data.statut_display }}</span>
                                     {% endif %}

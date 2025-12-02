@@ -440,6 +440,96 @@ class ServiceRecapPaiementMensuel:
         return None
     
     @staticmethod
+    def _calculer_mois_retard(contrat, mois_reference):
+        """
+        Calcule le nombre de mois de retard pour un contrat donné.
+        Remonte depuis le mois de référence pour compter les mois consécutifs non payés.
+        
+        Args:
+            contrat: Instance de Contrat
+            mois_reference: Date du mois de référence (premier jour du mois)
+        
+        Returns:
+            int: Nombre de mois de retard (0 si à jour)
+        """
+        loyer_mensuel = contrat.loyer_mensuel or Decimal('0')
+        if loyer_mensuel <= 0:
+            return 0
+        
+        # Calculer les dates du mois de référence
+        if mois_reference.month == 12:
+            mois_fin_ref = mois_reference.replace(year=mois_reference.year + 1, month=1, day=1) - relativedelta(days=1)
+        else:
+            mois_fin_ref = mois_reference.replace(month=mois_reference.month + 1, day=1) - relativedelta(days=1)
+        
+        # Récupérer tous les paiements validés
+        tous_paiements = Paiement.objects.filter(
+            contrat=contrat,
+            statut='valide'
+        ).filter(
+            Q(type_paiement='loyer') | 
+            Q(type_paiement='paiement_partiel') |
+            Q(type_paiement='avance')
+        ).order_by('date_paiement')
+        
+        # Simuler l'application des paiements pour déterminer quels mois sont payés
+        mois_debut_contrat = contrat.date_debut.replace(day=1)
+        mois_courant = mois_debut_contrat
+        montant_restant = Decimal('0')
+        mois_payes = set()  # Ensemble des mois payés (format: (année, mois))
+        
+        for paiement in tous_paiements:
+            montant_paiement = paiement.montant_net_paye or paiement.montant or Decimal('0')
+            montant_total = montant_restant + montant_paiement
+            
+            # Appliquer les paiements mois par mois
+            while montant_total >= loyer_mensuel and mois_courant <= mois_fin_ref:
+                # Ce mois est payé
+                mois_payes.add((mois_courant.year, mois_courant.month))
+                montant_total -= loyer_mensuel
+                
+                # Passer au mois suivant
+                if mois_courant.month == 12:
+                    mois_courant = mois_courant.replace(year=mois_courant.year + 1, month=1, day=1)
+                else:
+                    mois_courant = mois_courant.replace(month=mois_courant.month + 1, day=1)
+            
+            montant_restant = montant_total
+        
+        # Compter les mois de retard depuis le mois de référence
+        mois_retard = 0
+        mois_verifie = mois_reference
+        
+        # Ne pas remonter avant le début du contrat
+        while mois_verifie >= mois_debut_contrat:
+            # Vérifier si ce mois est payé
+            mois_key = (mois_verifie.year, mois_verifie.month)
+            
+            # Vérifier si le contrat couvre ce mois
+            if mois_verifie < mois_debut_contrat:
+                break
+            
+            if contrat.date_fin:
+                mois_fin_contrat = contrat.date_fin.replace(day=1)
+                if mois_verifie > mois_fin_contrat:
+                    break
+            
+            # Si le mois n'est pas payé, c'est un mois de retard
+            if mois_key not in mois_payes:
+                mois_retard += 1
+            else:
+                # Si on trouve un mois payé, on arrête (les mois précédents sont réglés)
+                break
+            
+            # Remonter au mois précédent
+            if mois_verifie.month == 1:
+                mois_verifie = mois_verifie.replace(year=mois_verifie.year - 1, month=12, day=1)
+            else:
+                mois_verifie = mois_verifie.replace(month=mois_verifie.month - 1, day=1)
+        
+        return mois_retard
+    
+    @staticmethod
     def preparer_donnees_recap_locataires(bailleur, mois_recap):
         """
         Prépare les données pour le récapitulatif de paiement mensuel par locataire.
@@ -524,6 +614,15 @@ class ServiceRecapPaiementMensuel:
             
             # Créer ou mettre à jour l'entrée du locataire
             if locataire.id not in locataires_dict:
+                # Calculer le nombre de mois de retard global pour ce locataire
+                mois_retard_global = 0
+                if statut_paiement['statut'] == 'en_retard' and contrat_couvre_mois:
+                    try:
+                        mois_retard_global = ServiceRecapPaiementMensuel._calculer_mois_retard(contrat, mois_recap)
+                    except Exception as e:
+                        logger.warning(f"Erreur lors du calcul des mois de retard global pour le locataire {locataire.id}: {e}")
+                        mois_retard_global = 0
+                
                 locataires_dict[locataire.id] = {
                     'locataire': locataire,
                     'contrats': [],
@@ -531,7 +630,17 @@ class ServiceRecapPaiementMensuel:
                     'statut_global_display': statut_paiement['statut_display'],
                     'total_montant_paye': Decimal('0'),
                     'total_montant_attendu': Decimal('0'),
+                    'mois_retard_global': mois_retard_global,
                 }
+            else:
+                # Mettre à jour le mois de retard global si ce contrat a plus de retard
+                if statut_paiement['statut'] == 'en_retard' and contrat_couvre_mois:
+                    try:
+                        mois_retard_contrat = ServiceRecapPaiementMensuel._calculer_mois_retard(contrat, mois_recap)
+                        if mois_retard_contrat > locataires_dict[locataire.id].get('mois_retard_global', 0):
+                            locataires_dict[locataire.id]['mois_retard_global'] = mois_retard_contrat
+                    except Exception as e:
+                        logger.warning(f"Erreur lors de la mise à jour des mois de retard global: {e}")
             
             # Ajouter le contrat - S'assurer que tous les attributs sont des valeurs Python simples
             # Tronquer les chaînes longues pour éviter les problèmes de mémoire lors de la génération PDF
@@ -559,6 +668,15 @@ class ServiceRecapPaiementMensuel:
                 if len(propriete_adresse) > 60:
                     propriete_adresse = propriete_adresse[:60] + "..."
                 
+                # Calculer le nombre de mois de retard si le statut est en retard
+                mois_retard = 0
+                if statut_paiement['statut'] == 'en_retard' and contrat_couvre_mois:
+                    try:
+                        mois_retard = ServiceRecapPaiementMensuel._calculer_mois_retard(contrat, mois_recap)
+                    except Exception as e:
+                        logger.warning(f"Erreur lors du calcul des mois de retard pour le contrat {contrat.id}: {e}")
+                        mois_retard = 0
+                
                 # Créer un dictionnaire avec les valeurs nécessaires
                 # Garder les objets Django pour le template mais s'assurer qu'ils sont accessibles
                 contrat_dict = {
@@ -579,6 +697,7 @@ class ServiceRecapPaiementMensuel:
                     'charges_mensuelles': charges_mensuelles,
                     'propriete_titre_truncated': propriete_titre,
                     'propriete_adresse_truncated': propriete_adresse,
+                    'mois_retard': mois_retard,
                 }
                 locataires_dict[locataire.id]['contrats'].append(contrat_dict)
             except Exception as e:
