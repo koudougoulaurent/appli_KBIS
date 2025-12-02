@@ -64,6 +64,8 @@ urlpatterns = [
     
     # Récapitulatif d'état de paiement mensuel (nouveau)
     path('recap-paiement-mensuel/<int:bailleur_id>/', views_recapitulatifs.generer_recap_paiement_mensuel, name='generer_recap_paiement_mensuel'),
+    path('recap-paiement-mensuel-paysage/<int:bailleur_id>/', views_recapitulatifs.generer_pdf_recap_paiement_mensuel_paysage, name='generer_pdf_recap_paiement_mensuel_paysage'),
+    path('recap-locataires-paysage/<int:bailleur_id>/', views_recapitulatifs.generer_pdf_recap_locataires_paysage, name='generer_pdf_recap_locataires_paysage'),
     
     # NOUVELLES URLs pour le système automatisé
     path('recaps-mensuels-automatiques/', views.liste_recaps_mensuels, name='liste_recaps_mensuels_auto'),

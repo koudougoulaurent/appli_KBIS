@@ -1,0 +1,425 @@
+{% load humanize %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>État des Paiements Locataires - {{ recap.bailleur.get_nom_complet }} - {{ recap.mois_display }}</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 1.5cm;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 8pt;
+            line-height: 1.2;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 1cm;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 0.5cm;
+        }
+        
+        .entreprise-logo {
+            max-width: 120px;
+            max-height: 60px;
+            margin-bottom: 0.3cm;
+        }
+        
+        .entreprise-name {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 0.2cm;
+        }
+        
+        .document-info {
+            font-size: 7pt;
+            color: #666;
+        }
+        
+        .title {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #2c3e50;
+            text-align: center;
+            margin: 0.5cm 0;
+            text-transform: uppercase;
+        }
+        
+        .bailleur-info {
+            background-color: #f8f9fa;
+            padding: 0.3cm;
+            margin-bottom: 0.5cm;
+            border-radius: 3px;
+            border-left: 3px solid #3498db;
+        }
+        
+        .bailleur-info h3 {
+            margin: 0 0 0.2cm 0;
+            font-size: 10pt;
+            color: #2c3e50;
+        }
+        
+        .info-grid {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+            font-size: 7pt;
+        }
+        
+        .info-item {
+            display: table-cell;
+            width: 25%;
+            padding: 0.1cm;
+            vertical-align: middle;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #555;
+            display: inline-block;
+            min-width: 80px;
+        }
+        
+        .info-value {
+            color: #333;
+        }
+        
+        .tenants-section {
+            margin-bottom: 0.5cm;
+        }
+        
+        .section-title {
+            font-size: 10pt;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 0.3cm;
+            padding: 0.2cm;
+            background-color: #ecf0f1;
+            border-left: 3px solid #3498db;
+        }
+        
+        .tenants-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 7pt;
+            margin-bottom: 0.3cm;
+            table-layout: fixed;
+        }
+        
+        .tenants-table th {
+            background-color: #34495e;
+            color: white;
+            padding: 0.15cm;
+            text-align: center;
+            font-weight: bold;
+            border: 1px solid #2c3e50;
+        }
+        
+        .tenants-table td {
+            padding: 0.1cm;
+            border: 1px solid #bdc3c7;
+            text-align: center;
+            vertical-align: top;
+        }
+        
+        .tenants-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .tenants-table tr:hover {
+            background-color: #e3f2fd;
+        }
+        
+        .tenant-info {
+            text-align: left;
+            font-size: 6pt;
+        }
+        
+        .tenant-name {
+            font-weight: bold;
+            color: #2980b9;
+        }
+        
+        .tenant-contact {
+            color: #7f8c8d;
+            font-size: 5pt;
+        }
+        
+        .property-info {
+            text-align: left;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .amount {
+            font-weight: bold;
+            color: #27ae60;
+        }
+        
+        .amount-negative {
+            color: #e74c3c;
+        }
+        
+        .status-regle {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 0.05cm 0.1cm;
+            border-radius: 2px;
+            font-size: 6pt;
+            font-weight: bold;
+        }
+        
+        .status-retard {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 0.05cm 0.1cm;
+            border-radius: 2px;
+            font-size: 6pt;
+            font-weight: bold;
+        }
+        
+        .status-non-applicable {
+            background-color: #e9ecef;
+            color: #666;
+            padding: 0.05cm 0.1cm;
+            border-radius: 2px;
+            font-size: 6pt;
+        }
+        
+        .details-retard {
+            font-size: 5pt;
+            color: #e74c3c;
+            font-style: italic;
+            text-align: left;
+            padding-left: 0.2cm;
+        }
+        
+        .footer {
+            margin-top: 0.5cm;
+            padding-top: 0.3cm;
+            border-top: 1px solid #bdc3c7;
+            font-size: 6pt;
+            color: #7f8c8d;
+            text-align: center;
+        }
+        
+        .page-break {
+            page-break-before: always;
+        }
+        
+        .no-data {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 0.5cm;
+        }
+        
+        .contrat-info {
+            font-size: 5pt;
+            color: #7f8c8d;
+            text-align: left;
+        }
+        
+        .code-locataire {
+            font-size: 5pt;
+            word-break: break-all !important;
+            white-space: normal !important;
+            line-height: 1.2;
+            overflow: hidden !important;
+            overflow-wrap: break-word !important;
+        }
+        
+        .tenants-table td.code-locataire {
+            width: 12% !important;
+            max-width: 12% !important;
+            word-break: break-all !important;
+            white-space: normal !important;
+            overflow-wrap: break-word !important;
+            overflow: hidden !important;
+            text-align: left !important;
+            padding: 0.06cm 0.04cm !important;
+            vertical-align: middle !important;
+        }
+        
+        .tenants-table td.code-locataire div {
+            word-break: break-all !important;
+            white-space: normal !important;
+            overflow-wrap: break-word !important;
+            max-width: 100% !important;
+            display: block !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- En-tête avec image personnalisée -->
+    <div class="header">
+        {% if entete_base64 %}
+            <img src="data:image/png;base64,{{ entete_base64 }}" 
+                 alt="KBIS IMMOBILIER" 
+                 style="width: 100%; max-width: 100%; height: auto; display: block; margin-bottom: 10px;">
+        {% else %}
+            <img src="{% static 'images/enteteEnImage.png' %}" 
+                 alt="KBIS IMMOBILIER" 
+                 style="width: 100%; max-width: 100%; height: auto; display: block; margin-bottom: 10px;">
+        {% endif %}
+        
+        <div class="document-info">
+            État des Paiements Locataires - {{ recap.mois_display|upper }} | 
+            Généré le {{ date_generation|date:"d/m/Y à H:i" }}
+        </div>
+    </div>
+
+    <!-- Titre principal -->
+    <div class="title">
+        ÉTAT DES PAIEMENTS DES LOCATAIRES<br>
+        {{ recap.mois_display|upper }}
+    </div>
+
+    <!-- Informations du bailleur -->
+    <div class="bailleur-info">
+        <h3>INFORMATIONS DU BAILLEUR</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">Nom complet:</span>
+                <span class="info-value">{{ recap.bailleur.get_nom_complet }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Téléphone:</span>
+                <span class="info-value">{{ recap.bailleur.telephone|default:"Non renseigné" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Email:</span>
+                <span class="info-value">{{ recap.bailleur.email|default:"Non renseigné" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Adresse:</span>
+                <span class="info-value">{{ recap.bailleur.adresse|default:"Non renseignée" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Détail des locataires avec statut de paiement -->
+    <div class="tenants-section">
+        <div class="section-title">DÉTAIL DES LOCATAIRES ET STATUT DE PAIEMENT</div>
+        
+        {% if recap.locataires and recap.locataires|length > 0 %}
+            <table class="tenants-table">
+                <thead>
+                    <tr>
+                        <th style="width: 3%;">N°</th>
+                        <th style="width: 12%;">Code</th>
+                        <th style="width: 10%;">Locataire</th>
+                        <th style="width: 8%;">Contact</th>
+                        <th style="width: 8%;">Propriété</th>
+                        <th style="width: 8%;">Adresse</th>
+                        <th style="width: 7%;">Contrat</th>
+                        <th style="width: 6%;">Loyer Mensuel</th>
+                        <th style="width: 6%;">Montant Payé</th>
+                        <th style="width: 6%;">Montant Attendu</th>
+                        <th style="width: 6%;">Statut</th>
+                        <th style="width: 8%;">Date Paiement</th>
+                        <th style="width: 18%;">Détails</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for locataire_data in recap.locataires %}
+                        {% for contrat_data in locataire_data.contrats %}
+                            <tr>
+                                {% if forloop.first %}
+                                    <td rowspan="{{ locataire_data.contrats|length }}">{{ forloop.parentloop.counter }}</td>
+                                    <td rowspan="{{ locataire_data.contrats|length }}" class="code-locataire">
+                                        {% if locataire_data.locataire.numero_locataire %}
+                                            <div style="font-size: 5pt; word-break: break-all !important; white-space: normal !important; overflow-wrap: break-word !important; line-height: 1.2; max-width: 100%; display: block;">
+                                                {{ locataire_data.locataire.numero_locataire }}
+                                            </div>
+                                        {% else %}
+                                            <div style="font-size: 5.5pt;">{{ locataire_data.locataire.id|stringformat:"04d" }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td rowspan="{{ locataire_data.contrats|length }}" class="tenant-info">
+                                        <div class="tenant-name">{{ locataire_data.locataire.get_nom_complet }}</div>
+                                    </td>
+                                    <td rowspan="{{ locataire_data.contrats|length }}" class="tenant-info">
+                                        {% if locataire_data.locataire.telephone %}
+                                            {{ locataire_data.locataire.telephone }}
+                                        {% else %}
+                                            <span style="color: #999;">-</span>
+                                        {% endif %}
+                                    </td>
+                                {% endif %}
+                                <td class="property-info">
+                                    {{ contrat_data.propriete.titre|default:"Sans titre" }}<br>
+                                    <small style="color: #7f8c8d;">ID: {{ contrat_data.propriete.id }}</small>
+                                </td>
+                                <td class="property-info">
+                                    {{ contrat_data.propriete.adresse|default:"Non renseignée" }}<br>
+                                    <small style="color: #7f8c8d;">{{ contrat_data.propriete.ville|default:"" }}</small>
+                                </td>
+                                <td class="contrat-info">
+                                    <strong>{{ contrat_data.numero_contrat|default:"N/A" }}</strong><br>
+                                    <small>
+                                        Début: {{ contrat_data.date_debut_contrat|date:"d/m/Y" }}<br>
+                                        {% if contrat_data.date_fin_contrat %}
+                                            Fin: {{ contrat_data.date_fin_contrat|date:"d/m/Y" }}
+                                        {% else %}
+                                            Fin: Indéfini
+                                        {% endif %}
+                                    </small>
+                                </td>
+                                <td class="amount">{{ contrat_data.loyer_mensuel|floatformat:0|intcomma }} F CFA</td>
+                                <td class="amount">{{ contrat_data.montant_paye|floatformat:0|intcomma }} F CFA</td>
+                                <td class="amount">{{ contrat_data.montant_attendu|floatformat:0|intcomma }} F CFA</td>
+                                <td>
+                                    {% if contrat_data.statut == 'regle' %}
+                                        <span class="status-regle">{{ contrat_data.statut_display }}</span>
+                                    {% elif contrat_data.statut == 'en_retard' %}
+                                        <span class="status-retard">{{ contrat_data.statut_display }}</span>
+                                    {% else %}
+                                        <span class="status-non-applicable">{{ contrat_data.statut_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if contrat_data.date_paiement %}
+                                        {{ contrat_data.date_paiement|date:"d/m/Y" }}
+                                    {% else %}
+                                        <span style="color: #999;">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="details-retard">
+                                    {% if contrat_data.details_paiement %}
+                                        {{ contrat_data.details_paiement }}
+                                    {% else %}
+                                        <span style="color: #999;">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="no-data">
+                Aucun locataire trouvé avec des contrats actifs pour ce bailleur ce mois-ci.
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Pied de page -->
+    <div class="footer">
+        <p>
+            <strong>Document généré le:</strong> {{ date_generation|date:"d/m/Y à H:i" }} | 
+            <strong>Mois de référence:</strong> {{ recap.mois_display }}
+        </p>
+    </div>
+</body>
+</html>
