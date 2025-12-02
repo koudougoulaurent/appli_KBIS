@@ -71,7 +71,7 @@
         
         .info-grid {
             display: table;
-            width: 100%;
+            width: 25cm;
             table-layout: fixed;
             font-size: 7pt;
         }
@@ -109,7 +109,7 @@
         }
         
         .tenants-table {
-            width: 100%;
+            width: 25cm;
             border-collapse: collapse;
             font-size: 7pt;
             margin-bottom: 0.3cm;
@@ -131,8 +131,8 @@
             border: 1px solid #bdc3c7;
             text-align: center;
             vertical-align: top;
-            word-wrap: break-word;
             overflow: hidden;
+            text-overflow: ellipsis;
         }
         
         .tenants-table tr:nth-child(even) {
@@ -235,21 +235,20 @@
         
         .code-locataire {
             font-size: 5pt;
-            word-break: break-all !important;
-            white-space: normal !important;
             line-height: 1.2;
-            overflow: hidden !important;
-            overflow-wrap: break-word !important;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         
         .tenants-table td.code-locataire {
-            width: 12%;
+            width: 3cm;
             text-align: left;
             padding: 0.06cm 0.04cm;
             vertical-align: middle;
             font-size: 5pt;
             overflow: hidden;
             text-overflow: ellipsis;
+            white-space: nowrap;
         }
     </style>
 </head>
@@ -259,11 +258,11 @@
         {% if entete_base64 %}
             <img src="data:image/png;base64,{{ entete_base64 }}" 
                  alt="KBIS IMMOBILIER" 
-                 style="width: 100%; max-width: 100%; height: auto; display: block; margin-bottom: 10px;">
+                 style="width: 25cm; max-width: 25cm; height: auto; display: block; margin-bottom: 10px;">
         {% else %}
             <img src="{% static 'images/enteteEnImage.png' %}" 
                  alt="KBIS IMMOBILIER" 
-                 style="width: 100%; max-width: 100%; height: auto; display: block; margin-bottom: 10px;">
+                 style="width: 25cm; max-width: 25cm; height: auto; display: block; margin-bottom: 10px;">
         {% endif %}
         
         <div class="document-info">
