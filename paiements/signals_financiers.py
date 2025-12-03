@@ -130,3 +130,5 @@ def invalider_cache_statistiques_apres_suppression_contrat(sender, instance, **k
 
 
 
+
+

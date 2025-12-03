@@ -1,1 +1,0 @@
-# Les modèles de retraits sont disponibles via models_retraits
