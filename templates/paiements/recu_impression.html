@@ -226,7 +226,8 @@
                 {% endif %}
                 {{ config_entreprise.get_adresse_complete }}<br>
                 {{ config_entreprise.get_contact_complet }}<br>
-                {{ config_entreprise.get_informations_legales }}
+                {{ config_entreprise.get_informations_legales }}<br>
+                Code pour paiement ultérieur : *144*3*5541519*MONTANT#
             </div>
         </div>
         
@@ -417,6 +418,7 @@
                 <strong>{{ config_entreprise.nom_entreprise }}</strong>{% if config_entreprise.slogan %} - {{ config_entreprise.slogan }}{% endif %}<br>
                 {{ config_entreprise.get_adresse_complete }} | {{ config_entreprise.get_contact_complet }}<br>
                 {{ config_entreprise.get_informations_legales }}<br>
+                Code pour paiement ultérieur : *144*3*5541519*MONTANT#<br>
                 {% if user %}
                 <strong>Généré par : {{ user.get_full_name|default:user.username }}</strong><br>
                 {% endif %}
