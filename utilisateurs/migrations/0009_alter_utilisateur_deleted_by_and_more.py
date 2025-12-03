@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('auth', '0012_alter_user_first_name_max_length'),
-        ('utilisateurs', '0008_fix_test_users'),
+        ('utilisateurs', '0005_alter_utilisateur_telephone'),
     ]
 
     operations = [
