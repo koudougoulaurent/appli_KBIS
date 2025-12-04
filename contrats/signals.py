@@ -69,6 +69,8 @@ def synchroniser_disponibilite_unite_locative_apres_sauvegarde(sender, instance,
         if instance.unite_locative.statut != nouveau_statut:
             instance.unite_locative.statut = nouveau_statut
             instance.unite_locative.save(update_fields=['statut'])
+            # Invalider le cache des statistiques
+            cache.delete('proprietes_statistiques')
 
 
 @receiver(post_delete, sender=Contrat)
