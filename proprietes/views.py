@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.db.models import Count, Q, Sum, ProtectedError
 from django.http import JsonResponse, FileResponse
 from django.utils import timezone
+from django.core.cache import cache
 from datetime import timedelta
 import os
 import logging
@@ -96,32 +97,47 @@ class ProprieteListView(PrivilegeButtonsMixin, EnhancedSearchMixin, IntelligentL
     def get_context_data(self, **kwargs):
         """
         Ajout de statistiques et d'informations supplémentaires au contexte
+        OPTIMISÉ avec cache et aggregate pour réduire les requêtes
         """
         context = super().get_context_data(**kwargs)
         
-        # Statistiques
-        context['total_proprietes'] = Propriete.objects.count()
-        context['proprietes_louees'] = Propriete.objects.filter(disponible=False).count()
+        # OPTIMISATION : Utiliser le cache pour les statistiques (5 minutes)
+        from django.core.cache import cache
+        from django.db.models import Count, Q, Case, When, IntegerField
+        cache_key = 'proprietes_statistiques'
+        stats = cache.get(cache_key)
         
-        # Utiliser la nouvelle logique de disponibilité
-        from core.property_utils import get_proprietes_disponibles_global
-        proprietes_disponibles_pour_location = get_proprietes_disponibles_global()
-        context['proprietes_disponibles'] = proprietes_disponibles_pour_location.count()
+        if stats is None:
+            # OPTIMISATION : Une seule requête avec aggregate au lieu de 6 requêtes séparées
+            queryset = Propriete.objects.filter(is_deleted=False)
+            
+            stats = queryset.aggregate(
+                total=Count('id'),
+                louees=Count('id', filter=Q(disponible=False)),
+                en_travaux=Count('id', filter=Q(etat='mauvais')),
+                avec_documents=Count('id', filter=Q(documents__isnull=False))
+            )
+            
+            # Propriétés actives (avec contrat actif) - requête séparée mais optimisée
+            stats['actives'] = queryset.filter(
+                disponible=False,
+                contrats__est_actif=True
+            ).distinct().count()
+            
+            # Utiliser la nouvelle logique de disponibilité (mise en cache aussi)
+            from core.property_utils import get_proprietes_disponibles_global
+            proprietes_disponibles_pour_location = get_proprietes_disponibles_global()
+            stats['disponibles'] = proprietes_disponibles_pour_location.count()
+            
+            # Mettre en cache (5 minutes)
+            cache.set(cache_key, stats, 300)
         
-        context['proprietes_en_travaux'] = Propriete.objects.filter(etat='mauvais').count()
-        
-        # SUPPRIMER: Calculs financiers pour la confidentialité
-        # NE PAS afficher de revenus ou valeurs de patrimoine
-        
-        # Indicateurs d'activité non confidentiels
-        context['proprietes_actives'] = Propriete.objects.filter(
-            disponible=False,
-            contrats__est_actif=True
-        ).distinct().count()
-        
-        context['proprietes_avec_documents'] = Propriete.objects.filter(
-            documents__isnull=False
-        ).distinct().count()
+        context['total_proprietes'] = stats.get('total', 0)
+        context['proprietes_louees'] = stats.get('louees', 0)
+        context['proprietes_disponibles'] = stats.get('disponibles', 0)
+        context['proprietes_en_travaux'] = stats.get('en_travaux', 0)
+        context['proprietes_actives'] = stats.get('actives', 0)
+        context['proprietes_avec_documents'] = stats.get('avec_documents', 0)
         
         return context
 

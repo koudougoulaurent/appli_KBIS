@@ -1,6 +1,7 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.db import transaction
+from django.core.cache import cache
 from .models import Contrat
 from proprietes.models import Propriete, Bailleur, Locataire
 
@@ -32,6 +33,8 @@ def synchroniser_disponibilite_propriete_apres_sauvegarde(sender, instance, crea
         if instance.propriete.disponible != nouvelle_disponibilite:
             instance.propriete.disponible = nouvelle_disponibilite
             instance.propriete.save(update_fields=['disponible'])
+            # Invalider le cache des statistiques
+            cache.delete('proprietes_statistiques')
 
 
 @receiver(post_save, sender=Contrat)

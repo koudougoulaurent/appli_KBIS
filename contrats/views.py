@@ -105,21 +105,27 @@ class ContratListView(PrivilegeButtonsMixin, EnhancedSearchMixin, IntelligentLis
         context['est_resilie_filter'] = self.request.GET.get('est_resilie', '')
         context['mode_paiement_filter'] = self.request.GET.get('mode_paiement', '')
         
-        # Statistiques (basées sur les filtres actifs)
+        # OPTIMISATION : Statistiques avec aggregate au lieu de multiples requêtes
         queryset = self.get_queryset()
-        context['total_contrats'] = queryset.count()
-        context['contrats_actifs'] = queryset.filter(est_actif=True).count()
-        context['contrats_resilies'] = queryset.filter(est_resilie=True).count()
-        context['contrats_inactifs'] = queryset.filter(est_actif=False, est_resilie=False).count()
+        from django.db.models import Sum, Count, Q
         
-        # Montant total des loyers mensuels
-        from django.db.models import Sum
-        context['montant_total_loyers'] = queryset.filter(est_actif=True).aggregate(
-            total=Sum('loyer_mensuel')
-        )['total'] or 0
+        # Une seule requête pour toutes les statistiques
+        stats = queryset.aggregate(
+            total=Count('id'),
+            actifs=Count('id', filter=Q(est_actif=True)),
+            resilies=Count('id', filter=Q(est_resilie=True)),
+            inactifs=Count('id', filter=Q(est_actif=False, est_resilie=False)),
+            montant_total_loyers=Sum('loyer_mensuel', filter=Q(est_actif=True))
+        )
         
-        # Statistiques par mode de paiement
-        context['stats_mode_paiement'] = queryset.values('mode_paiement').annotate(
+        context['total_contrats'] = stats.get('total', 0)
+        context['contrats_actifs'] = stats.get('actifs', 0)
+        context['contrats_resilies'] = stats.get('resilies', 0)
+        context['contrats_inactifs'] = stats.get('inactifs', 0)
+        context['montant_total_loyers'] = stats.get('montant_total_loyers', 0) or 0
+        
+        # Statistiques par mode de paiement (optimisé avec only)
+        context['stats_mode_paiement'] = queryset.only('mode_paiement', 'loyer_mensuel').values('mode_paiement').annotate(
             count=Sum('loyer_mensuel')
         ).order_by('-count')
         

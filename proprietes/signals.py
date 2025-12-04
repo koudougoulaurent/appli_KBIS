@@ -2,8 +2,9 @@
 Signals pour la gestion automatique des contrats de gestion immobilière
 """
 
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
 from .models import Bailleur, Propriete, ContratGestion
@@ -44,6 +45,9 @@ def creer_contrat_gestion_automatique(sender, instance, created, **kwargs):
                 )
                 contrat_gestion.proprietes.set(proprietes_bailleur)
                 logger.info(f"Propriété {instance.id} ajoutée au contrat de gestion unique {contrat_gestion.numero_contrat}")
+                
+                # Invalider le cache des statistiques propriétés
+                cache.delete('proprietes_statistiques')
             else:
                 # Créer un nouveau contrat de gestion UNIQUE pour ce bailleur
                 proprietes_bailleur = Propriete.objects.filter(
@@ -68,6 +72,9 @@ def creer_contrat_gestion_automatique(sender, instance, created, **kwargs):
                 
                 logger.info(f"Contrat de gestion UNIQUE {contrat_gestion.numero_contrat} créé automatiquement pour le bailleur {bailleur.id}")
                 logger.info(f"Contrat de gestion {contrat_gestion.numero_contrat} prêt pour génération PDF automatique")
+            
+            # Invalider le cache des statistiques propriétés
+            cache.delete('proprietes_statistiques')
             
     except Exception as e:
         logger.error(f"Erreur lors de la création automatique du contrat de gestion: {str(e)}")
@@ -116,6 +123,9 @@ def creer_contrat_gestion_apres_bailleur(sender, instance, created, **kwargs):
                     
                     logger.info(f"Contrat de gestion UNIQUE {contrat_gestion.numero_contrat} créé automatiquement pour le bailleur {instance.id}")
                     logger.info(f"Contrat de gestion {contrat_gestion.numero_contrat} prêt pour génération PDF automatique")
+                    
+                    # Invalider le cache des statistiques propriétés
+                    cache.delete('proprietes_statistiques')
             else:
                 # Le contrat existe déjà, s'assurer que toutes les propriétés sont incluses
                 contrat_existant.proprietes.set(proprietes_bailleur)

@@ -157,19 +157,25 @@ def intelligent_search(request):
     results = []
     
     if query:
-        # Recherche dans les paiements (SANS les montants pour la confidentialité)
+        # OPTIMISATION : Recherche avec select_related et only() pour limiter les champs
         paiements = Paiement.objects.filter(
             Q(contrat__numero_contrat__icontains=query) |
             Q(contrat__locataire__nom__icontains=query) |
             Q(contrat__locataire__prenom__icontains=query)
             # SUPPRIMER: Q(montant__icontains=query) - Information confidentielle
-        ).select_related('contrat__locataire')[:10]
+        ).select_related('contrat', 'contrat__locataire').only(
+            'id', 'reference_paiement', 'date_paiement', 'statut',
+            'contrat__id', 'contrat__numero_contrat',
+            'contrat__locataire__id', 'contrat__locataire__nom', 'contrat__locataire__prenom'
+        )[:10]
         
-        # Recherche dans les propriétés
+        # OPTIMISATION : Recherche avec select_related et only()
         proprietes = Propriete.objects.filter(
             Q(adresse__icontains=query) |
             Q(bailleur__nom__icontains=query)
-        ).select_related('bailleur')[:10]
+        ).select_related('bailleur').only(
+            'id', 'titre', 'adresse', 'ville', 'bailleur__id', 'bailleur__nom', 'bailleur__prenom'
+        )[:10]
         
         results = {
             'paiements': paiements,
