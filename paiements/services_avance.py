@@ -361,13 +361,13 @@ class ServiceGestionAvance:
                 # D'abord, synchroniser toutes les consommations manquantes
                 ServiceGestionAvance.synchroniser_consommations_manquantes(contrat)
                 
-                # Trouver les avances actives pour ce contrat
-                avances_actives = AvanceLoyer.objects.filter(
+                # Trouver les avances actives pour ce contrat (évaluer immédiatement)
+                avances_actives = list(AvanceLoyer.objects.filter(
                     contrat=contrat,
                     statut='active',
                     mois_debut_couverture__lte=mois,
                     mois_fin_couverture__gte=mois
-                ).order_by('date_avance')
+                ).order_by('date_avance'))
                 
                 if not avances_actives.exists():
                     return False, Decimal('0')
@@ -385,8 +385,8 @@ class ServiceGestionAvance:
                     # Le mois a déjà été consommé, retourner le montant
                     return True, avance.loyer_mensuel
                 
-                # Consommer un mois
-                if avance.consommer_mois(mois):
+                # Consommer un mois (avec update_fields pour éviter les signaux inutiles)
+                if avance.consommer_mois(mois, update_fields=['montant_restant', 'statut']):
                     # Créer l'enregistrement de consommation
                     ConsommationAvance.objects.create(
                         avance=avance,
@@ -408,16 +408,21 @@ class ServiceGestionAvance:
         """
         Synchronise automatiquement les consommations d'avances basées sur les mois écoulés
         """
+        # PROTECTION CONTRE LA RÉCURSION
+        if hasattr(contrat, '_en_synchronisation_avances'):
+            return
+        contrat._en_synchronisation_avances = True
+        
         try:
             from django.utils import timezone
             from dateutil.relativedelta import relativedelta
             
-            # Récupérer toutes les avances actives du contrat
-            avances_actives = AvanceLoyer.objects.filter(
+            # Récupérer toutes les avances actives du contrat (évaluer immédiatement pour éviter les requêtes récursives)
+            avances_actives = list(AvanceLoyer.objects.filter(
                 contrat=contrat,
                 statut='active',
                 montant_restant__gt=0
-            )
+            ))
             
             for avance in avances_actives:
                 # Calculer les mois écoulés depuis le début de couverture
@@ -455,8 +460,8 @@ class ServiceGestionAvance:
                     
                     # Vérifier si ce mois est dans la période de couverture
                     if (avance.mois_debut_couverture <= mois_a_consommer_date <= avance.mois_fin_couverture):
-                        # Consommer ce mois
-                        if avance.consommer_mois(mois_a_consommer_date):
+                        # Consommer ce mois (avec update_fields pour éviter les signaux inutiles)
+                        if avance.consommer_mois(mois_a_consommer_date, update_fields=['montant_restant', 'statut']):
                             # Créer l'enregistrement de consommation
                             ConsommationAvance.objects.create(
                                 avance=avance,
@@ -465,15 +470,14 @@ class ServiceGestionAvance:
                                 montant_consomme=avance.loyer_mensuel,
                                 montant_restant_apres=avance.montant_restant
                             )
-                            
-                            # Mettre à jour le statut si l'avance est épuisée
-                            if avance.montant_restant <= 0:
-                                avance.statut = 'epuisee'
-                                avance.save()
                 
         except Exception as e:
             print(f"Erreur lors de la synchronisation des consommations: {str(e)}")
             # Ne pas lever l'exception pour ne pas bloquer le processus principal
+        finally:
+            # Retirer le flag de protection
+            if hasattr(contrat, '_en_synchronisation_avances'):
+                delattr(contrat, '_en_synchronisation_avances')
     
     @staticmethod
     def calculer_montant_du_mois(contrat, mois):

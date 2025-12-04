@@ -430,7 +430,7 @@ class AvanceLoyer(models.Model):
         
         return resultat
 
-    def consommer_mois(self, mois_consomme):
+    def consommer_mois(self, mois_consomme, update_fields=None):
         """Consomme un mois d'avance"""
         if self.statut != 'active':
             return False
@@ -449,7 +449,11 @@ class AvanceLoyer(models.Model):
             self.statut = 'epuisee'
             self.montant_restant = Decimal('0')
         
-        self.save()
+        # Utiliser update_fields pour éviter les signaux inutiles si spécifié
+        if update_fields is not None:
+            self.save(update_fields=update_fields)
+        else:
+            self.save()
         return True
     
     def est_mois_couvert(self, mois):

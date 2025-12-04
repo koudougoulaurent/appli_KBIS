@@ -181,8 +181,8 @@ class ServiceMonitoringAvance:
                     # Trouver l'avance
                     avance = AvanceLoyer.objects.get(id=avance_info['avance_id'])
                     
-                    # Consommer le mois
-                    if avance.consommer_mois(avance_info['mois_a_consommer']):
+                    # Consommer le mois (avec update_fields pour éviter les signaux inutiles)
+                    if avance.consommer_mois(avance_info['mois_a_consommer'], update_fields=['montant_restant', 'statut']):
                         # Créer l'enregistrement de consommation
                         ConsommationAvance.objects.create(
                             avance=avance,
