@@ -146,6 +146,46 @@ class DocumentUnifieA5ServiceComplet:
                 print(f"[DEBUG] Erreur lors du calcul des mois couverts: {e}")
                 pass
         
+        # Calculer les informations de paiement partiel si applicable
+        info_paiement_partiel = None
+        if paiement.est_paiement_partiel or (hasattr(paiement, 'montant_du_mois') and paiement.montant_du_mois and paiement.montant < paiement.montant_du_mois):
+            from .services_paiement_partiel import ServicePaiementPartiel
+            
+            # Synchroniser d'abord le paiement partiel pour avoir les bonnes données
+            ServicePaiementPartiel.synchroniser_paiement_partiel(paiement)
+            
+            # Recharger le paiement pour avoir les données à jour
+            paiement.refresh_from_db()
+            
+            # Calculer le montant restant
+            mois_paye_str = paiement.mois_paye or ''
+            calcul_restant = ServicePaiementPartiel.calculer_montant_restant(
+                paiement.contrat, mois_paye_str
+            )
+            
+            # Récupérer tous les paiements partiels pour ce mois
+            paiements_partiels_mois = Paiement.objects.filter(
+                contrat=paiement.contrat,
+                mois_paye__icontains=mois_paye_str if mois_paye_str else '',
+                is_deleted=False,
+                statut__in=['valide', 'en_attente']
+            ).order_by('date_paiement')
+            
+            montant_du_mois = getattr(paiement, 'montant_du_mois', calcul_restant.get('montant_du_mois', 0))
+            total_paye = calcul_restant.get('total_paye', 0)
+            montant_restant = calcul_restant.get('montant_restant', 0)
+            
+            info_paiement_partiel = {
+                'est_partiel': True,
+                'montant_du_mois': float(montant_du_mois),
+                'total_paye': float(total_paye),
+                'montant_restant': float(montant_restant),
+                'est_complet': calcul_restant.get('est_complet', False),
+                'nombre_paiements': calcul_restant.get('nombre_paiements', 0),
+                'paiements_partiels': paiements_partiels_mois,
+                'pourcentage_paye': (float(total_paye) / float(montant_du_mois) * 100) if montant_du_mois > 0 else 0,
+            }
+        
         return {
             'document_number': paiement.numero_paiement or f"PAI-{paiement.id}",
             'type_paiement': paiement.get_type_paiement_display(),
@@ -168,6 +208,11 @@ class DocumentUnifieA5ServiceComplet:
             'paiement': paiement,
             'avance_loyer': avance_loyer,  # NOUVEAU : Ajouter l'avance au contexte
             'charges_deduites': getattr(paiement, 'charges_deduites', []),
+            # Informations de paiement partiel
+            'est_paiement_partiel': paiement.est_paiement_partiel,
+            'montant_du_mois': getattr(paiement, 'montant_du_mois', None),
+            'montant_restant_du': getattr(paiement, 'montant_restant_du', 0),
+            'info_paiement_partiel': info_paiement_partiel,
         }
     
     def _prepare_retrait_context(self, retrait_id, user=None):

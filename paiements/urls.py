@@ -257,6 +257,11 @@ urlpatterns = [
     # Redirection pour compatibilité avec les anciens liens
     path('historique/contrat/<int:contrat_id>/', views_avance.historique_paiements_contrat, name='historique_contrat_old'),
     
+    # 💰 PAIEMENTS PARTIELS AMÉLIORÉS - NOUVEAU !
+    path('paiements-partiels/ajouter/', views.ajouter_paiement_partiel, name='ajouter_paiement_partiel'),
+    path('paiements-partiels/contrats/', views.liste_contrats_paiements_partiels, name='liste_contrats_paiements_partiels'),
+    path('historique-partiel/<int:contrat_id>/<int:mois>/<int:annee>/', views.historique_paiements_partiels, name='historique_paiements_partiels'),
+    
     # 📄 GÉNÉRATION PDF DES RETRAITS AVEC TEMPLATES
     path('retraits/<int:retrait_id>/pdf/', views_retrait_ameliore.generer_pdf_retrait, name='generer_pdf_retrait'),
     path('retraits/pdf-multiple/', views_retrait_ameliore.generer_pdf_retraits_multiple, name='generer_pdf_retraits_multiple'),

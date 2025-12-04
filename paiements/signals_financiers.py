@@ -16,23 +16,37 @@ def invalider_cache_statistiques_apres_paiement(sender, instance, created, **kwa
     """
     Invalide le cache des statistiques financières après création/modification d'un paiement.
     CORRIGÉ : Met à jour dynamiquement les statistiques financières
+    ÉVITE LA RÉCURSION : Ne traite pas si on est déjà en synchronisation
     """
     try:
+        # ÉVITER LA RÉCURSION : Ne pas traiter si on est déjà en train de synchroniser
+        if hasattr(instance, '_en_synchronisation') or hasattr(instance, '_en_verification_completion'):
+            return
+        
         with transaction.atomic():
             # Invalider le cache du dashboard pour tous les utilisateurs
             DashboardOptimizer.clear_cache()
             
             # Invalider aussi les caches spécifiques si on a le locataire/bailleur
-            if instance.contrat:
-                if instance.contrat.locataire:
-                    # Invalider le cache des statistiques du locataire
-                    cache_key_locataire = f"stats_locataire_{instance.contrat.locataire.pk}"
-                    cache.delete(cache_key_locataire)
-                
-                if instance.contrat.propriete and instance.contrat.propriete.bailleur:
-                    # Invalider le cache des statistiques du bailleur
-                    cache_key_bailleur = f"stats_bailleur_{instance.contrat.propriete.bailleur.pk}"
-                    cache.delete(cache_key_bailleur)
+            # Utiliser getattr pour éviter les erreurs si contrat n'est pas chargé
+            contrat_id = getattr(instance, 'contrat_id', None)
+            if contrat_id:
+                try:
+                    from contrats.models import Contrat
+                    contrat = Contrat.objects.select_related('locataire', 'propriete', 'propriete__bailleur').get(pk=contrat_id)
+                    
+                    if contrat.locataire:
+                        # Invalider le cache des statistiques du locataire
+                        cache_key_locataire = f"stats_locataire_{contrat.locataire.pk}"
+                        cache.delete(cache_key_locataire)
+                    
+                    if contrat.propriete and contrat.propriete.bailleur:
+                        # Invalider le cache des statistiques du bailleur
+                        cache_key_bailleur = f"stats_bailleur_{contrat.propriete.bailleur.pk}"
+                        cache.delete(cache_key_bailleur)
+                except Exception:
+                    # Si erreur, continuer sans invalider les caches spécifiques
+                    pass
                     
     except Exception as e:
         print(f"Erreur lors de l'invalidation du cache après paiement: {str(e)}")
@@ -119,6 +133,9 @@ def invalider_cache_statistiques_apres_suppression_contrat(sender, instance, **k
         print(f"Erreur lors de l'invalidation du cache après suppression contrat: {str(e)}")
         import traceback
         traceback.print_exc()
+
+
+
 
 
 

@@ -1,0 +1,471 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load humanize %}
+{% load crispy_forms_tags %}
+
+{% block title %}Ajouter un Paiement Partiel{% endblock %}
+
+{% block extra_css %}
+<style>
+    .paiement-partiel-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px 15px 0 0;
+        margin-bottom: 0;
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+        border-left: 5px solid #28a745;
+    }
+    
+    .info-card.warning {
+        border-left-color: #ffc107;
+    }
+    
+    .info-card.danger {
+        border-left-color: #dc3545;
+    }
+    
+    .info-card.info {
+        border-left-color: #17a2b8;
+    }
+    
+    .info-card h5 {
+        color: #495057;
+        margin-bottom: 0.5rem;
+        font-size: 1rem;
+    }
+    
+    .info-card .value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #28a745;
+    }
+    
+    .info-card.warning .value {
+        color: #ffc107;
+    }
+    
+    .info-card.danger .value {
+        color: #dc3545;
+    }
+    
+    .info-card.info .value {
+        color: #17a2b8;
+    }
+    
+    .contrat-selector {
+        background: #e3f2fd;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .contrat-info-box {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-left: 5px solid #007bff;
+    }
+    
+    .badge-partiel {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    .progress-bar-custom {
+        height: 25px;
+        border-radius: 10px;
+        background: #e9ecef;
+        overflow: hidden;
+        margin: 1rem 0;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #28a745, #20c997);
+        transition: width 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .suggestion-box {
+        background: #e8f5e8;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-top: 1rem;
+        border-left: 4px solid #28a745;
+    }
+    
+    .btn-paiement-partiel {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border: none;
+        color: white;
+        padding: 0.75rem 2rem;
+        border-radius: 25px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-paiement-partiel:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="paiement-partiel-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-2">
+                    <i class="bi bi-pie-chart me-2"></i>Ajouter un Paiement Partiel
+                </h1>
+                <p class="mb-0 opacity-90">Gestion intelligente des paiements partiels avec détection automatique</p>
+            </div>
+            <div>
+                <a href="{% url 'paiements:liste_contrats_paiements_partiels' %}" class="btn btn-light">
+                    <i class="bi bi-list-ul me-2"></i>Voir les contrats avec paiements partiels
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistiques globales -->
+    {% if stats %}
+    <div class="row mt-3">
+        <div class="col-md-4">
+            <div class="info-card">
+                <h5>Total Paiements Partiels</h5>
+                <div class="value">{{ stats.total_paiements_partiels }}</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="info-card warning">
+                <h5>Montant Total Restant</h5>
+                <div class="value">{{ stats.montant_total_restant|floatformat:0|intcomma }} F CFA</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="info-card info">
+                <h5>Contrats Concernés</h5>
+                <div class="value">{{ stats.contrats_concernes }}</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Sélecteur de contrat -->
+    <div class="contrat-selector">
+        <h5><i class="bi bi-building me-2"></i>Sélection du Contrat</h5>
+        <form method="GET" id="contratForm">
+            <div class="row">
+                <div class="col-md-10">
+                    <label for="contrat_id" class="form-label">Contrat</label>
+                    <select name="contrat_id" id="contrat_id" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Sélectionner un contrat --</option>
+                        {% for contrat in contrats_actifs %}
+                        <option value="{{ contrat.id }}" {% if contrat.id|stringformat:"s" == contrat_id %}selected{% endif %}>
+                            {{ contrat.numero_contrat }} - {{ contrat.locataire.get_nom_complet }} - {{ contrat.propriete.titre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search me-1"></i>Analyser
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Informations du contrat sélectionné -->
+    {% if contrat_obj and calcul_restant %}
+    <div class="contrat-info-box">
+        <h5><i class="bi bi-info-circle me-2"></i>Informations du Contrat</h5>
+        
+        <!-- NOUVEAU : Affichage du mois attendu calculé avec la logique des paiements globaux -->
+        {% if mois_a_regler %}
+        <div class="alert alert-info mb-3">
+            <h6 class="mb-2"><i class="bi bi-calendar-check me-2"></i>Mois à régler (calculé automatiquement)</h6>
+            <p class="mb-1"><strong>Mois attendu:</strong> 
+                <span class="badge bg-primary fs-6">{{ mois_a_regler.mois_paye }}</span>
+            </p>
+            <p class="mb-0 text-muted small">
+                <i class="bi bi-info-circle me-1"></i>
+                Ce mois est calculé en tenant compte du dernier paiement de loyer et des avances actives
+            </p>
+        </div>
+        {% endif %}
+        
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Locataire:</strong> {{ contrat_obj.locataire.get_nom_complet }}</p>
+                <p><strong>Propriété:</strong> {{ contrat_obj.propriete.titre }}</p>
+                <p><strong>Loyer Mensuel:</strong> {{ contrat_obj.loyer_mensuel|floatformat:0|intcomma }} F CFA</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Mois concerné:</strong> 
+                    {% if mois_a_regler %}
+                        <span class="badge bg-info">{{ mois_a_regler.mois_paye }}</span>
+                    {% else %}
+                        <span class="text-muted">Non déterminé</span>
+                    {% endif %}
+                </p>
+                <p><strong>Montant dû pour le mois:</strong> {{ calcul_restant.montant_du_mois|floatformat:0|intcomma }} F CFA</p>
+                <p><strong>Total payé:</strong> {{ calcul_restant.total_paye|floatformat:0|intcomma }} F CFA</p>
+                <p><strong>Montant restant:</strong> 
+                    <span class="badge bg-warning text-dark fs-6">
+                        {{ calcul_restant.montant_restant|floatformat:0|intcomma }} F CFA
+                    </span>
+                </p>
+                {% if calcul_restant.nombre_paiements > 0 %}
+                <p><strong>Nombre de paiements:</strong> {{ calcul_restant.nombre_paiements }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Barre de progression -->
+        {% if calcul_restant.montant_du_mois > 0 %}
+        <div class="progress-bar-custom">
+            {% widthratio calcul_restant.total_paye calcul_restant.montant_du_mois 100 as pourcentage %}
+            <div class="progress-fill" style="width: {{ pourcentage }}%;">
+                {{ pourcentage }}% payé
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if calcul_restant.est_complet %}
+        <div class="alert alert-success mt-3">
+            <i class="bi bi-check-circle me-2"></i>Ce mois est complètement payé !
+        </div>
+        {% else %}
+        <div class="alert alert-warning mt-3">
+            <i class="bi bi-exclamation-triangle me-2"></i>Paiement partiel en cours - Montant restant: {{ calcul_restant.montant_restant|floatformat:0|intcomma }} F CFA
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <!-- Formulaire de paiement partiel -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-plus-circle me-2"></i>Nouveau Paiement Partiel
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if contrat_obj %}
+            <form method="POST" id="paiementForm">
+                {% csrf_token %}
+                
+                <!-- NOUVEAU : ALERTE DE RELIQUAT EN COURS -->
+                {% if afficher_alerte_reliquat and reliquats %}
+                <div class="alert alert-warning alert-dismissible fade show" role="alert" style="border-left: 5px solid #ffc107; background-color: #fff3cd; margin-bottom: 1.5rem;">
+                    <h5 class="alert-heading">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        ⚠️ Reliquat(s) en cours détecté(s) !
+                    </h5>
+                    <p class="mb-3">
+                        <strong>Il y a {{ reliquats|length }} paiement(s) partiel(s) non complété(s) pour ce contrat.</strong>
+                        <br>
+                        <strong>Montant total restant à compléter : <span class="badge bg-danger fs-6">{{ total_reliquat|floatformat:0|intcomma }} F CFA</span></strong>
+                    </p>
+                    
+                    <hr>
+                    
+                    <h6 class="mb-3"><i class="bi bi-list-ul me-2"></i>Détails des reliquats :</h6>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-warning">
+                                <tr>
+                                    <th>Mois concerné</th>
+                                    <th>Montant payé</th>
+                                    <th>Montant dû</th>
+                                    <th>Restant</th>
+                                    <th>Progression</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for reliquat in reliquats %}
+                                <tr>
+                                    <td><strong>{{ reliquat.mois_paye|default:"Non spécifié" }}</strong></td>
+                                    <td>{{ reliquat.total_paye|floatformat:0|intcomma }} F CFA</td>
+                                    <td>{{ reliquat.montant_du_mois|floatformat:0|intcomma }} F CFA</td>
+                                    <td>
+                                        <span class="badge bg-danger">
+                                            {{ reliquat.montant_restant|floatformat:0|intcomma }} F CFA
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% widthratio reliquat.total_paye reliquat.montant_du_mois 100 as pourcentage %}
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-warning" role="progressbar" 
+                                                 style="width: {{ pourcentage }}%">
+                                                {{ pourcentage|floatformat:1 }}%
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">{{ reliquat.nombre_paiements }} paiement(s)</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="d-flex gap-2 flex-wrap mb-3">
+                        <a href="{% url 'paiements:ajouter_paiement_partiel' %}?contrat_id={{ contrat_obj.id }}" 
+                           class="btn btn-primary">
+                            <i class="bi bi-arrow-right-circle me-2"></i>
+                            Compléter le reliquat maintenant
+                        </a>
+                        <button type="submit" name="ignorer_reliquat" value="oui" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-right me-2"></i>
+                            Continuer quand même (ignorer)
+                        </button>
+                    </div>
+                    
+                    <!-- Champ caché pour préserver les données du formulaire -->
+                    {% for field in form %}
+                        {% if field.name != 'csrfmiddlewaretoken' %}
+                            {% if field.value %}
+                                <input type="hidden" name="{{ field.name }}" value="{{ field.value }}" id="preserve-{{ field.name }}">
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                    
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            <strong>Recommandation :</strong> Il est recommandé de compléter d'abord le(s) reliquat(s) avant d'ajouter un nouveau paiement pour un autre mois.
+                        </small>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {{ form|crispy }}
+                
+                <!-- NOUVEAU : Information sur le mois calculé automatiquement -->
+                {% if mois_a_regler %}
+                <div class="alert alert-success mb-3">
+                    <h6 class="mb-2"><i class="bi bi-check-circle me-2"></i>Mois calculé automatiquement</h6>
+                    <p class="mb-1">
+                        <strong>Le mois à régler a été calculé automatiquement:</strong> 
+                        <span class="badge bg-primary fs-6">{{ mois_a_regler.mois_paye }}</span>
+                    </p>
+                    <p class="mb-0 text-muted small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Ce calcul prend en compte le dernier paiement de loyer validé et les avances actives.
+                        Le formulaire est pré-rempli avec ce mois.
+                    </p>
+                </div>
+                {% endif %}
+                
+                <!-- RÈGLE IMPORTANTE : Validation des paiements partiels -->
+                <div class="alert alert-info mb-3" style="border-left: 4px solid #17a2b8;">
+                    <h6 class="mb-2"><i class="bi bi-info-circle me-2"></i>Règle importante - Paiements partiels</h6>
+                    <p class="mb-1">
+                        <strong>📋 Règles de validation :</strong>
+                    </p>
+                    <ul class="mb-0 small">
+                        <li>✅ <strong>Paiements en retard autorisés</strong> - Vous pouvez compléter des paiements partiels pour des mois en retard jusqu'au mois courant</li>
+                        <li>❌ <strong>Impossible de payer en avance (futur)</strong> - Si vous voulez payer pour un mois futur, utilisez le type "AVANCE DE LOYER"</li>
+                        <li>✅ <strong>Mois courant et mois passés avec paiements partiels sont autorisés</strong></li>
+                        <li>❌ <strong>Mois déjà complètement payés sont refusés</strong></li>
+                    </ul>
+                </div>
+                
+                <!-- Suggestions intelligentes -->
+                {% if calcul_restant and calcul_restant.montant_restant > 0 %}
+                <div class="suggestion-box">
+                    <h6><i class="bi bi-lightbulb me-2"></i>Suggestions Intelligentes</h6>
+                    <p class="mb-1">
+                        <strong>Montant suggéré:</strong> 
+                        <span class="badge bg-success">{{ calcul_restant.montant_restant|floatformat:0|intcomma }} F CFA</span>
+                        (montant restant à payer)
+                    </p>
+                    {% if calcul_restant.montant_restant > 50000 %}
+                    <p class="mb-0">
+                        <strong>Paiement partiel recommandé:</strong> 
+                        <span class="badge bg-info">
+                            {{ calcul_restant.montant_restant|add:"-10000"|floatformat:0|intcomma }} F CFA
+                        </span>
+                        (laisser 10,000 F CFA pour le prochain paiement)
+                    </p>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <!-- Information importante -->
+                <div class="alert alert-info mt-3">
+                    <h6><i class="bi bi-info-circle me-2"></i>Important - Paiements Partiels</h6>
+                    <ul class="mb-0">
+                        <li><strong>Détection automatique:</strong> Le système détecte automatiquement si le paiement est partiel</li>
+                        <li><strong>Synchronisation:</strong> Les paiements partiels sont synchronisés dynamiquement dans le système</li>
+                        <li><strong>Suivi:</strong> Vous pouvez suivre tous les paiements partiels depuis la liste des contrats</li>
+                        <li><strong>Complétion:</strong> Un reçu sera généré automatiquement lorsque le paiement sera complet</li>
+                    </ul>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <button type="submit" class="btn btn-paiement-partiel me-3">
+                        <i class="bi bi-check-circle me-2"></i>Enregistrer le Paiement Partiel
+                    </button>
+                    <a href="{% url 'paiements:dashboard' %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Retour au Dashboard
+                    </a>
+                </div>
+            </form>
+            {% else %}
+            <div class="alert alert-info text-center">
+                <i class="bi bi-info-circle me-2"></i>
+                Veuillez sélectionner un contrat pour commencer l'enregistrement d'un paiement partiel.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-remplissage du montant suggéré
+    {% if calcul_restant and calcul_restant.montant_restant > 0 %}
+    const montantInput = document.querySelector('input[name="montant"]');
+    if (montantInput && !montantInput.value) {
+        montantInput.value = {{ calcul_restant.montant_restant }};
+        montantInput.focus();
+    }
+    {% endif %}
+    
+    // Pré-remplir le contrat si sélectionné
+    {% if contrat_obj %}
+    const contratSelect = document.querySelector('select[name="contrat"]');
+    if (contratSelect) {
+        contratSelect.value = {{ contrat_obj.id }};
+    }
+    {% endif %}
+});
+</script>
+{% endblock %}
+
+
+
+

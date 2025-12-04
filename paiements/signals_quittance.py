@@ -9,10 +9,16 @@ from .models import Paiement, QuittancePaiement
 def generer_quittance_automatique(sender, instance, created, **kwargs):
     """
     Génère automatiquement une quittance quand un paiement est validé
+    Pour les paiements partiels, génère une quittance adaptée
     """
     # Seulement pour les nouveaux paiements validés
     if created and instance.statut == 'valide':
         try:
+            # Synchroniser le paiement partiel avant de générer la quittance
+            if instance.est_paiement_partiel or instance.type_paiement == 'paiement_partiel':
+                from .services_paiement_partiel import ServicePaiementPartiel
+                ServicePaiementPartiel.synchroniser_paiement_partiel(instance)
+            
             # Vérifier si une quittance existe déjà
             if not hasattr(instance, 'quittance'):
                 # Créer la quittance automatiquement
@@ -29,10 +35,22 @@ def generer_quittance_automatique(sender, instance, created, **kwargs):
 def generer_quittance_validation(sender, instance, created, **kwargs):
     """
     Génère une quittance quand un paiement passe de 'en_attente' à 'valide'
+    Pour les paiements partiels, synchronise et génère une quittance adaptée
+    VÉRIFIE AUTOMATIQUEMENT si un reliquat est complété
     """
     # Si le paiement vient d'être validé (pas créé)
     if not created and instance.statut == 'valide':
         try:
+            # ÉVITER LA RÉCURSION : Ne pas traiter si on est déjà en train de synchroniser
+            if hasattr(instance, '_en_synchronisation') or hasattr(instance, '_en_verification_completion'):
+                return
+            
+            from .services_paiement_partiel import ServicePaiementPartiel
+            
+            # TOUJOURS synchroniser et vérifier la complétion pour tous les paiements
+            # skip_verification=True pour éviter la double vérification (déjà fait dans synchroniser)
+            ServicePaiementPartiel.synchroniser_paiement_partiel(instance, skip_verification=False)
+            
             # Vérifier si une quittance existe déjà
             if not hasattr(instance, 'quittance'):
                 # Créer la quittance automatiquement

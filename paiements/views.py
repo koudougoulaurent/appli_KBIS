@@ -73,6 +73,271 @@ def historique_paiements_partiels(request, contrat_id, mois, annee):
         'statut': statut,
     }
     return render(request, 'paiements/historique_partiel.html', context)
+
+
+# -- VUE AMÉLIORÉE POUR LES PAIEMENTS PARTIELS --
+@login_required
+def ajouter_paiement_partiel(request):
+    """
+    Vue améliorée pour ajouter un paiement partiel avec interface moderne
+    et détection automatique
+    """
+    from .services_paiement_partiel import ServicePaiementPartiel
+    from .forms import PaiementForm
+    
+    contrat_id = request.GET.get('contrat_id')
+    contrat_obj = None
+    calcul_restant = None
+    
+    if contrat_id:
+        try:
+            contrat_obj = Contrat.objects.get(pk=contrat_id, est_actif=True, is_deleted=False)
+            # DÉTERMINER LE MOIS À RÉGLER EN UTILISANT LA MÊME LOGIQUE QUE LES PAIEMENTS GLOBAUX
+            mois_a_regler = ServicePaiementPartiel.determiner_mois_a_regler(contrat_obj)
+            calcul_restant = ServicePaiementPartiel.calculer_montant_restant(
+                contrat_obj, mois_a_regler['mois_paye']
+            )
+            
+            # NOUVEAU : Détecter les reliquats en cours pour ce contrat
+            reliquats = ServicePaiementPartiel.detecter_reliquats_en_cours(contrat_obj)
+        except Contrat.DoesNotExist:
+            messages.error(request, "Contrat introuvable ou inactif.")
+            reliquats = []
+    
+    if request.method == 'POST':
+        form = PaiementForm(request.POST)
+        if form.is_valid():
+            paiement = form.save(commit=False)
+            paiement.cree_par = request.user
+            
+            # *** NOUVEAU : VÉRIFICATION DES RELIQUATS EN COURS ***
+            # Vérifier s'il y a des paiements partiels non complétés pour ce contrat
+            ignorer_reliquat = request.POST.get('ignorer_reliquat', '') == 'oui'
+            
+            if not ignorer_reliquat and paiement.contrat:
+                reliquats_post = ServicePaiementPartiel.detecter_reliquats_en_cours(paiement.contrat)
+                
+                if reliquats_post:
+                    # Il y a des reliquats - afficher une alerte et demander confirmation
+                    total_reliquat_post = sum(r['montant_restant'] for r in reliquats_post)
+                    
+                    # Préparer le contexte avec les reliquats
+                    context_post = {
+                        'form': form,
+                        'contrat_obj': paiement.contrat,
+                        'contrats_actifs': Contrat.objects.filter(est_actif=True, is_deleted=False).select_related('locataire', 'propriete', 'propriete__bailleur'),
+                        'reliquats': reliquats_post,
+                        'total_reliquat': total_reliquat_post,
+                        'afficher_alerte_reliquat': True,
+                        'calcul_restant': calcul_restant,
+                        'mois_a_regler': mois_a_regler if 'mois_a_regler' in locals() else None,
+                    }
+                    
+                    return render(request, 'paiements/ajouter_paiement_partiel.html', context_post)
+            
+            # *** VALIDATION STRICTE : Vérifier que le mois est le mois suivant le dernier paiement ***
+            mois_paye_nom = request.POST.get('mois_paye', '')
+            if mois_paye_nom:
+                # Si le mois n'a pas d'année, construire le format complet
+                import re
+                if not re.search(r'\d{4}', mois_paye_nom):
+                    # Pas d'année dans le mois - déterminer l'année intelligemment
+                    from datetime import datetime
+                    mois_francais = {
+                        'janvier': 1, 'février': 2, 'mars': 3, 'avril': 4,
+                        'mai': 5, 'juin': 6, 'juillet': 7, 'août': 8,
+                        'septembre': 9, 'octobre': 10, 'novembre': 11, 'décembre': 12
+                    }
+                    annee_actuelle = datetime.now().year
+                    
+                    # Utiliser TOUJOURS l'année courante réelle
+                    mois_paye_nom = f"{mois_paye_nom} {annee_actuelle}"
+                
+                # VALIDATION STRICTE pour les paiements partiels (toujours de type loyer)
+                validation = ServicePaiementPartiel.valider_mois_a_regler(
+                    paiement.contrat, mois_paye_nom, paiement.type_paiement or 'loyer'
+                )
+                
+                if not validation['valide']:
+                    type_erreur = validation.get('type_erreur', '')
+                    
+                    if type_erreur == 'mois_avance':
+                        # Mois en avance (futur) - proposer d'enregistrer comme avance
+                        messages.warning(
+                            request,
+                            f"{validation['message']} "
+                            f"Les paiements partiels ne peuvent être enregistrés que pour le mois courant ou les mois passés. "
+                            f"Pour payer en avance, utilisez le type 'AVANCE DE LOYER'."
+                        )
+                        form = PaiementForm(request.POST)
+                        return render(request, 'paiements/ajouter_paiement_partiel.html', {
+                            'form': form,
+                            'contrat_obj': paiement.contrat,
+                            'contrats_actifs': Contrat.objects.filter(est_actif=True, is_deleted=False).select_related('locataire', 'propriete', 'propriete__bailleur'),
+                            'mois_attendu': validation.get('mois_attendu', ''),
+                            'error': validation.get('message', ''),
+                            'validation_avance': validation
+                        })
+                    elif type_erreur == 'mois_deja_paye':
+                        # Mois déjà complètement payé - REFUSER
+                        messages.error(request, validation.get('message', 'Mois invalide'))
+                        form = PaiementForm(request.POST)
+                        return render(request, 'paiements/ajouter_paiement_partiel.html', {
+                            'form': form,
+                            'contrat_obj': paiement.contrat,
+                            'contrats_actifs': Contrat.objects.filter(est_actif=True, is_deleted=False).select_related('locataire', 'propriete', 'propriete__bailleur'),
+                            'mois_attendu': validation.get('mois_attendu', ''),
+                            'error': validation.get('message', '')
+                        })
+                    else:
+                        # Autre erreur (format invalide, etc.) - REFUSER
+                        messages.error(request, validation.get('message', 'Mois invalide'))
+                        form = PaiementForm(request.POST)
+                        return render(request, 'paiements/ajouter_paiement_partiel.html', {
+                            'form': form,
+                            'contrat_obj': paiement.contrat,
+                            'contrats_actifs': Contrat.objects.filter(est_actif=True, is_deleted=False).select_related('locataire', 'propriete', 'propriete__bailleur'),
+                            'mois_attendu': validation.get('mois_attendu', ''),
+                            'error': validation.get('message', '')
+                        })
+                
+                paiement.mois_paye = validation['mois_attendu']
+                
+                # Afficher un message informatif si c'est un paiement en retard
+                if validation.get('est_retard'):
+                    messages.info(request, validation.get('message_info', 'Paiement en retard autorisé pour se rattraper.'))
+            else:
+                # Si pas de mois spécifié, utiliser le mois attendu
+                mois_a_regler = ServicePaiementPartiel.determiner_mois_a_regler(paiement.contrat)
+                paiement.mois_paye = mois_a_regler['mois_paye']
+            
+            # Synchroniser automatiquement le paiement partiel
+            est_partiel = ServicePaiementPartiel.synchroniser_paiement_partiel(paiement)
+            paiement.save()
+            
+            # Générer la référence
+            if not paiement.reference_paiement:
+                paiement.reference_paiement = paiement.generate_reference_paiement()
+                paiement.save()
+            
+            # VÉRIFIER SI CE PAIEMENT COMPLÈTE UN RELIQUAT
+            if paiement.mois_paye:
+                calcul_restant = ServicePaiementPartiel.calculer_montant_restant(
+                    paiement.contrat, paiement.mois_paye
+                )
+                if calcul_restant.get('est_complet', False):
+                    messages.success(
+                        request,
+                        f'✅ Reliquat complété ! Le mois {paiement.mois_paye} est maintenant entièrement payé. '
+                        f'Tous les paiements partiels concernés ont été marqués comme complétés automatiquement.'
+                    )
+                elif est_partiel:
+                    messages.success(
+                        request,
+                        f'Paiement partiel enregistré: {paiement.reference_paiement} - '
+                        f'Montant payé: {paiement.montant} F CFA, '
+                        f'Montant restant: {paiement.montant_restant_du} F CFA'
+                    )
+                else:
+                    messages.success(
+                        request,
+                        f'Paiement enregistré: {paiement.reference_paiement}'
+                    )
+            else:
+                if est_partiel:
+                    messages.success(
+                        request,
+                        f'Paiement partiel enregistré: {paiement.reference_paiement} - '
+                        f'Montant payé: {paiement.montant} F CFA, '
+                        f'Montant restant: {paiement.montant_restant_du} F CFA'
+                    )
+                else:
+                    messages.success(
+                        request,
+                        f'Paiement enregistré: {paiement.reference_paiement}'
+                    )
+            
+            return redirect('paiements:liste_contrats_paiements_partiels')
+    else:
+        # Pré-remplir le formulaire avec le mois attendu si un contrat est sélectionné
+        initial_data = {'contrat': contrat_id} if contrat_id else {}
+        if contrat_obj:
+            mois_a_regler = ServicePaiementPartiel.determiner_mois_a_regler(contrat_obj)
+            initial_data['mois_paye'] = mois_a_regler['mois_paye']
+        form = PaiementForm(initial=initial_data)
+    
+    # Obtenir les contrats avec paiements partiels pour le contexte
+    contrats_avec_partiels = ServicePaiementPartiel.detecter_contrats_avec_paiements_partiels()
+    stats = ServicePaiementPartiel.obtenir_statistiques_paiements_partiels()
+    
+    # Obtenir tous les contrats actifs pour le formulaire
+    contrats_actifs = Contrat.objects.filter(
+        est_actif=True,
+        est_resilie=False,
+        is_deleted=False
+    ).select_related('locataire', 'propriete', 'propriete__bailleur')
+    
+    # DÉTERMINER LE MOIS À RÉGLER (même logique que paiements globaux)
+    mois_a_regler = None
+    if contrat_obj:
+        mois_a_regler = ServicePaiementPartiel.determiner_mois_a_regler(contrat_obj)
+    elif contrat_id:
+        try:
+            contrat_temp = Contrat.objects.get(pk=contrat_id, est_actif=True, is_deleted=False)
+            mois_a_regler = ServicePaiementPartiel.determiner_mois_a_regler(contrat_temp)
+        except:
+            pass
+    
+    # NOUVEAU : Calculer les reliquats si contrat sélectionné
+    reliquats = []
+    total_reliquat = 0
+    if contrat_obj:
+        reliquats = ServicePaiementPartiel.detecter_reliquats_en_cours(contrat_obj)
+        total_reliquat = sum(r['montant_restant'] for r in reliquats)
+    
+    context = {
+        'form': form,
+        'contrat_obj': contrat_obj,
+        'calcul_restant': calcul_restant,
+        'contrats_actifs': contrats_actifs,
+        'contrats_avec_partiels': contrats_avec_partiels,
+        'stats': stats,
+        'mois_a_regler': mois_a_regler,  # NOUVEAU : Mois attendu pour le paiement
+        'reliquats': reliquats,  # NOUVEAU : Reliquats détectés
+        'total_reliquat': total_reliquat,  # NOUVEAU : Total des reliquats
+        'afficher_alerte_reliquat': len(reliquats) > 0,  # NOUVEAU : Afficher l'alerte si reliquats
+    }
+    
+    return render(request, 'paiements/ajouter_paiement_partiel.html', context)
+
+
+# -- VUE POUR LISTER LES CONTRATS AVEC PAIEMENTS PARTIELS --
+@login_required
+def liste_contrats_paiements_partiels(request):
+    """
+    Liste tous les contrats ayant des paiements partiels en cours
+    avec synchronisation dynamique
+    Affiche TOUS les paiements partiels (actifs et complétés)
+    """
+    from .services_paiement_partiel import ServicePaiementPartiel
+    
+    # Détecter les contrats avec paiements partiels (inclut tous les paiements partiels)
+    contrats_avec_partiels = ServicePaiementPartiel.detecter_contrats_avec_paiements_partiels()
+    
+    # Obtenir les statistiques DYNAMIQUEMENT à partir des contrats détectés
+    # pour garantir la cohérence entre les stats et les détails affichés
+    stats = ServicePaiementPartiel.obtenir_statistiques_paiements_partiels(contrats_avec_partiels)
+    
+    # Utiliser get_context_with_entreprise_config pour le contexte complet
+    from core.utils import get_context_with_entreprise_config
+    
+    context = get_context_with_entreprise_config({
+        'contrats_avec_partiels': contrats_avec_partiels,
+        'stats': stats,
+        'title': 'Contrats avec Paiements Partiels'
+    })
+    
+    return render(request, 'paiements/contrats_paiements_partiels.html', context)
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -401,74 +666,229 @@ def ajouter_paiement(request):
         messages.error(request, permissions['message'])
         return redirect('paiements:liste')
     
+    # Initialiser les variables pour le contexte (utilisées dans GET et POST)
+    contrat_obj_get = None
+    reliquats = []
+    total_reliquat = 0
+    
     if request.method == 'POST':
         form = PaiementForm(request.POST)
         print(f"Données POST: {request.POST}")
         print(f"Formulaire valide: {form.is_valid()}")
         if not form.is_valid():
             print(f"Erreurs du formulaire: {form.errors}")
+            # Si le formulaire n'est pas valide, récupérer le contrat depuis les données POST
+            try:
+                contrat_id_from_form = request.POST.get('contrat')
+                if contrat_id_from_form:
+                    contrat_obj_get = Contrat.objects.get(pk=contrat_id_from_form, is_deleted=False)
+                    from .services_paiement_partiel import ServicePaiementPartiel
+                    reliquats = ServicePaiementPartiel.detecter_reliquats_en_cours(contrat_obj_get)
+                    total_reliquat = sum(r['montant_restant'] for r in reliquats)
+            except (Contrat.DoesNotExist, ValueError):
+                pass
+            # Re-rendre le formulaire avec les erreurs
+            contrats = Contrat.objects.filter(is_deleted=False).select_related('locataire', 'propriete')
+            try:
+                devise_base = Devise.objects.filter(is_devise_base=True).first()
+            except:
+                devise_base = None
+            current_year = timezone.now().year
+            annees_disponibles = list(range(current_year - 2, current_year + 3))
+            
+            context = {
+                'form': form,
+                'contrats': contrats,
+                'contrat_obj': contrat_obj_get,
+                'reliquats': reliquats,
+                'total_reliquat': total_reliquat,
+                'afficher_alerte_reliquat': len(reliquats) > 0,
+                'total_charges_bailleur': 0,
+                'net_a_payer': 0,
+                'charges_bailleur': [],
+                'devise_base': devise_base,
+                'annees_disponibles': annees_disponibles,
+                'title': 'Ajouter un Paiement - Contexte Intelligent',
+            }
+            return render(request, 'paiements/ajouter.html', context)
         if form.is_valid():
             try:
                 paiement = form.save(commit=False)
                 paiement.cree_par = request.user
+                
+                # *** NOUVEAU : VÉRIFICATION DES RELIQUATS EN COURS ***
+                # Vérifier s'il y a des paiements partiels non complétés pour ce contrat
+                ignorer_reliquat = request.POST.get('ignorer_reliquat', '') == 'oui'
+                
+                if not ignorer_reliquat and paiement.contrat:
+                    from .services_paiement_partiel import ServicePaiementPartiel
+                    reliquats = ServicePaiementPartiel.detecter_reliquats_en_cours(paiement.contrat)
+                    
+                    if reliquats:
+                        # Il y a des reliquats - afficher une alerte et demander confirmation
+                        total_reliquat = sum(r['montant_restant'] for r in reliquats)
+                        
+                        # Préparer le contexte avec les reliquats
+                        context = {
+                            'form': form,
+                            'contrats': Contrat.objects.filter(is_deleted=False).select_related('locataire', 'propriete'),
+                            'contrat_obj': paiement.contrat,
+                            'reliquats': reliquats,
+                            'total_reliquat': total_reliquat,
+                            'afficher_alerte_reliquat': True,
+                        }
+                        
+                        # Récupérer la devise de base
+                        try:
+                            from core.models import Devise
+                            devise_base = Devise.objects.filter(is_devise_base=True).first()
+                            context['devise_base'] = devise_base
+                        except:
+                            context['devise_base'] = None
+                        
+                        # Générer les années disponibles
+                        current_year = timezone.now().year
+                        context['annees_disponibles'] = list(range(current_year - 2, current_year + 3))
+                        
+                        return render(request, 'paiements/ajouter.html', context)
+                
                 # Le champ date_creation sera automatiquement défini par auto_now_add=True
                 
-                # Gérer le champ mois_paye comme un nom de mois
-                mois_paye_nom = request.POST.get('mois_paye', '')
-                if mois_paye_nom:
-                    # Le mois est maintenant directement un nom de mois (ex: "janvier", "février", etc.)
-                    # Déterminer l'année correcte en fonction du mois sélectionné et du mois actuel
-                    from datetime import datetime
-                    from dateutil.relativedelta import relativedelta
+                # *** VALIDATION STRICTE : Vérifier que le mois est le mois suivant le dernier paiement ***
+                # Cette validation s'applique UNIQUEMENT pour les paiements de LOYER
+                if paiement.type_paiement == 'loyer':
+                    mois_paye_nom = request.POST.get('mois_paye', '')
                     
-                    mois_actuel = datetime.now().month
-                    annee_actuelle = datetime.now().year
-                    
-                    # Mapping des mois français vers numéro
-                    mois_francais = {
-                        'janvier': 1, 'février': 2, 'mars': 3, 'avril': 4,
-                        'mai': 5, 'juin': 6, 'juillet': 7, 'août': 8,
-                        'septembre': 9, 'octobre': 10, 'novembre': 11, 'décembre': 12
-                    }
-                    
-                    mois_selectionne_num = mois_francais.get(mois_paye_nom.lower(), mois_actuel)
-                    
-                    # CORRECTION : Gestion explicite du passage décembre -> janvier
-                    # Si on est en décembre (12) et qu'on sélectionne janvier (1), c'est l'année suivante
-                    if mois_actuel == 12 and mois_selectionne_num == 1:
-                        annee = annee_actuelle + 1
-                    # Si le mois sélectionné est avant le mois actuel (ex: janvier alors qu'on est en février),
-                    # c'est probablement le mois de l'année suivante
-                    elif mois_selectionne_num < mois_actuel:
-                        annee = annee_actuelle + 1
+                    # Si pas de mois spécifié, utiliser le mois attendu
+                    if not mois_paye_nom:
+                        from .services_paiement_partiel import ServicePaiementPartiel
+                        mois_attendu = ServicePaiementPartiel.determiner_mois_a_regler(paiement.contrat)
+                        mois_paye_nom = mois_attendu['mois_paye']
                     else:
-                        annee = annee_actuelle
+                        # Si le mois n'a pas d'année, construire le format complet
+                        import re
+                        if not re.search(r'\d{4}', mois_paye_nom):
+                            # Pas d'année dans le mois - déterminer l'année intelligemment
+                            from datetime import datetime
+                            mois_francais = {
+                                'janvier': 1, 'février': 2, 'mars': 3, 'avril': 4,
+                                'mai': 5, 'juin': 6, 'juillet': 7, 'août': 8,
+                                'septembre': 9, 'octobre': 10, 'novembre': 11, 'décembre': 12
+                            }
+                            annee_actuelle = datetime.now().year
+                            
+                            # Utiliser TOUJOURS l'année courante réelle
+                            mois_paye_nom = f"{mois_paye_nom} {annee_actuelle}"
                     
-                    paiement.mois_paye = f"{mois_paye_nom} {annee}"
-                elif paiement.type_paiement == 'loyer':
-                    # IMPORTANT: Remplir automatiquement le mois payé UNIQUEMENT pour les paiements de LOYER
-                    # Les avances et cautions ont leur propre logique d'affichage
+                    # VALIDATION STRICTE pour les paiements de loyer
+                    from .services_paiement_partiel import ServicePaiementPartiel
+                    validation_mois = ServicePaiementPartiel.valider_mois_a_regler(
+                        paiement.contrat, mois_paye_nom, paiement.type_paiement
+                    )
+                    
+                    if not validation_mois['valide']:
+                        # Il y a une erreur de validation
+                        type_erreur = validation_mois.get('type_erreur', '')
+                        
+                        if type_erreur == 'mois_avance':
+                            # Mois en avance (futur) - proposer d'enregistrer comme avance
+                            messages.warning(
+                                request,
+                                f"{validation_mois['message']} "
+                                f"Veuillez changer le type de paiement en 'AVANCE DE LOYER' pour enregistrer ce paiement."
+                            )
+                            # Recharger le formulaire avec le type changé en avance
+                            form = PaiementForm(request.POST)
+                            form.data = form.data.copy()
+                            form.data['type_paiement'] = 'avance'
+                            
+                            # Préparer le contexte
+                            from core.utils import get_context_with_entreprise_config
+                            contrats = Contrat.objects.filter(is_deleted=False).select_related('locataire', 'propriete')
+                            try:
+                                from core.models import Devise
+                                devise_base = Devise.objects.filter(is_devise_base=True).first()
+                            except:
+                                devise_base = None
+                            current_year = timezone.now().year
+                            annees_disponibles = list(range(current_year - 2, current_year + 3))
+                            
+                            context = get_context_with_entreprise_config({
+                                'form': form,
+                                'contrats': contrats,
+                                'contrat_obj': paiement.contrat,
+                                'validation_avance': validation_mois,
+                                'mois_attendu': validation_mois.get('mois_attendu', ''),
+                                'devise_base': devise_base,
+                                'annees_disponibles': annees_disponibles,
+                                'total_charges_bailleur': 0,
+                                'net_a_payer': 0,
+                                'charges_bailleur': [],
+                            })
+                            return render(request, 'paiements/ajouter.html', context)
+                        elif type_erreur == 'mois_deja_paye':
+                            # Mois déjà complètement payé - REFUSER
+                            messages.error(request, validation_mois['message'])
+                            return redirect('paiements:ajouter')
+                        else:
+                            # Autre erreur (format invalide, etc.) - REFUSER
+                            messages.error(request, validation_mois.get('message', 'Erreur de validation'))
+                            return redirect('paiements:ajouter')
+                    
+                    # Validation OK - utiliser le mois validé
+                    paiement.mois_paye = validation_mois['mois_attendu']
+                    
+                    # Afficher un message informatif si c'est un paiement en retard
+                    if validation_mois.get('est_retard'):
+                        messages.info(request, validation_mois.get('message_info', 'Paiement en retard autorisé pour se rattraper.'))
+                elif request.POST.get('mois_paye', ''):
+                    # Pour les autres types de paiement (avance, caution), utiliser le mois tel quel
+                    mois_paye_nom = request.POST.get('mois_paye', '')
                     from datetime import datetime
-                    import locale
-                    try:
-                        # Essayer de définir la locale française
-                        locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
-                    except:
-                        try:
-                            locale.setlocale(locale.LC_TIME, 'French_France.1252')
-                        except:
-                            pass  # Utiliser la locale par défaut
+                    import re
                     
-                    mois_nom = paiement.date_paiement.strftime('%B').capitalize()
-                    annee = paiement.date_paiement.year
-                    paiement.mois_paye = f"{mois_nom} {annee}"
+                    # Si le mois n'a pas d'année, construire le format complet avec l'année courante réelle
+                    if not re.search(r'\d{4}', mois_paye_nom):
+                        annee_actuelle = datetime.now().year
+                        paiement.mois_paye = f"{mois_paye_nom} {annee_actuelle}"
+                    else:
+                        paiement.mois_paye = mois_paye_nom
+                # NOTE: Pour les paiements de loyer, le mois_paye est déjà défini par la validation stricte ci-dessus
                 
+                # *** DÉTECTION ET SYNCHRONISATION AUTOMATIQUE DES PAIEMENTS PARTIELS ***
+                from .services_paiement_partiel import ServicePaiementPartiel
+                
+                # Détecter si c'est un paiement partiel
+                est_partiel = ServicePaiementPartiel.synchroniser_paiement_partiel(paiement)
+                
+                # Sauvegarder le paiement avec les informations de paiement partiel
                 paiement.save()
                 
                 # Générer la référence si elle n'existe pas
                 if not paiement.reference_paiement:
                     paiement.reference_paiement = paiement.generate_reference_paiement()
                     paiement.save()
+                
+                # VÉRIFIER SI CE PAIEMENT COMPLÈTE UN RELIQUAT
+                # Cette vérification est faite automatiquement dans synchroniser_paiement_partiel
+                # mais on la refait ici pour s'assurer que tout est à jour
+                if paiement.mois_paye:
+                    calcul_restant = ServicePaiementPartiel.calculer_montant_restant(
+                        paiement.contrat, paiement.mois_paye
+                    )
+                    if calcul_restant.get('est_complet', False):
+                        messages.success(
+                            request,
+                            f'✅ Reliquat complété ! Le mois {paiement.mois_paye} est maintenant entièrement payé. '
+                            f'Tous les paiements partiels concernés ont été marqués comme complétés.'
+                        )
+                    elif est_partiel:
+                        messages.info(
+                            request,
+                            f'Paiement partiel détecté: {paiement.reference_paiement} - '
+                            f'Montant payé: {paiement.montant} F CFA, '
+                            f'Montant restant: {paiement.montant_restant_du} F CFA'
+                        )
                 
                 # *** SYNCHRONISATION AUTOMATIQUE DES AVANCES ***
                 # Si c'est un paiement d'avance, synchroniser automatiquement l'avance
@@ -533,31 +953,8 @@ def ajouter_paiement(request):
                             else:
                                 messages.success(request, f'Paiement {paiement.reference_paiement} créé avec succès!')
                         else:
-                            # Pas d'avances - vérifier la continuité des paiements
-                            derniers_paiements_loyer = Paiement.objects.filter(
-                                contrat=paiement.contrat,
-                                type_paiement='loyer',
-                                statut='valide'
-                            ).order_by('-date_paiement')
-                            
-                            if derniers_paiements_loyer.exists():
-                                dernier_paiement = derniers_paiements_loyer.first()
-                                mois_dernier_paiement = dernier_paiement.date_paiement.replace(day=1)
-                                
-                                # Vérifier si le mois sélectionné est derrière le dernier paiement
-                                if mois_paiement <= mois_dernier_paiement:
-                                    messages.error(request, f'Impossible de payer pour un mois déjà payé ou derrière le dernier paiement '
-                                                          f'({mois_dernier_paiement.strftime("%B %Y")}).')
-                                    return redirect('paiements:ajouter')
-                                
-                                # Vérifier si c'est le mois suivant le dernier paiement
-                                mois_suivant_attendu = mois_dernier_paiement + relativedelta(months=1)
-                                
-                                if mois_paiement < mois_suivant_attendu:
-                                    messages.error(request, f'Vous devez payer pour le mois suivant le dernier paiement '
-                                                          f'({mois_suivant_attendu.strftime("%B %Y")}).')
-                                    return redirect('paiements:ajouter')
-                            
+                            # Pas d'avances - la validation stricte a déjà été faite plus haut
+                            # Le mois_paye a été validé et est garanti d'être le mois suivant le dernier paiement
                             messages.success(request, f'Paiement {paiement.reference_paiement} créé avec succès!')
                             
                     except Exception as e:
@@ -611,6 +1008,18 @@ def ajouter_paiement(request):
                 messages.error(request, f'Erreur lors de la validation du paiement: {str(e)}')
     else:
         form = PaiementForm()
+        
+        # Vérifier s'il y a un contrat sélectionné dans le GET pour afficher les reliquats
+        contrat_id_get = request.GET.get('contrat_id')
+        
+        if contrat_id_get:
+            try:
+                contrat_obj_get = Contrat.objects.get(pk=contrat_id_get, is_deleted=False)
+                from .services_paiement_partiel import ServicePaiementPartiel
+                reliquats = ServicePaiementPartiel.detecter_reliquats_en_cours(contrat_obj_get)
+                total_reliquat = sum(r['montant_restant'] for r in reliquats)
+            except Contrat.DoesNotExist:
+                pass
     
     # Récupérer tous les contrats pour la sélection
     contrats = Contrat.objects.filter(is_deleted=False).select_related('locataire', 'propriete')
@@ -628,11 +1037,17 @@ def ajouter_paiement(request):
     context = {
         'form': form,
         'contrats': contrats,
-        'contrat_obj': None,
+        'contrat_obj': contrat_obj_get,
+        'reliquats': reliquats,  # NOUVEAU : Reliquats détectés
+        'total_reliquat': total_reliquat,  # NOUVEAU : Total des reliquats
+        'afficher_alerte_reliquat': len(reliquats) > 0,  # NOUVEAU : Afficher l'alerte si reliquats
         'total_charges_bailleur': 0,
         'net_a_payer': 0,
         'charges_bailleur': [],
         'devise_base': devise_base,
+        'reliquats': reliquats,
+        'total_reliquat': total_reliquat,
+        'afficher_alerte_reliquat': len(reliquats) > 0,
         'annees_disponibles': annees_disponibles,
         'title': 'Ajouter un Paiement - Contexte Intelligent',
     }
