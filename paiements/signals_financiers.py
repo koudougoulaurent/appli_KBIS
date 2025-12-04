@@ -47,6 +47,10 @@ def invalider_cache_statistiques_apres_paiement(sender, instance, created, **kwa
                 except Exception:
                     # Si erreur, continuer sans invalider les caches spécifiques
                     pass
+            
+            # Invalider le cache des paiements partiels
+            cache.delete('contrats_avec_paiements_partiels')
+            cache.delete('statistiques_paiements_partiels')
                     
     except Exception as e:
         print(f"Erreur lors de l'invalidation du cache après paiement: {str(e)}")
@@ -76,6 +80,10 @@ def invalider_cache_statistiques_apres_suppression_paiement(sender, instance, **
                     # Invalider le cache des statistiques du bailleur
                     cache_key_bailleur = f"stats_bailleur_{instance.contrat.propriete.bailleur.pk}"
                     cache.delete(cache_key_bailleur)
+            
+            # Invalider le cache des paiements partiels
+            cache.delete('contrats_avec_paiements_partiels')
+            cache.delete('statistiques_paiements_partiels')
                     
     except Exception as e:
         print(f"Erreur lors de l'invalidation du cache après suppression paiement: {str(e)}")
@@ -102,6 +110,10 @@ def invalider_cache_statistiques_apres_contrat(sender, instance, created, **kwar
             if instance.propriete and instance.propriete.bailleur:
                 cache_key_bailleur = f"stats_bailleur_{instance.propriete.bailleur.pk}"
                 cache.delete(cache_key_bailleur)
+            
+            # Invalider le cache des paiements partiels
+            cache.delete('contrats_avec_paiements_partiels')
+            cache.delete('statistiques_paiements_partiels')
                     
     except Exception as e:
         print(f"Erreur lors de l'invalidation du cache après contrat: {str(e)}")
@@ -128,6 +140,10 @@ def invalider_cache_statistiques_apres_suppression_contrat(sender, instance, **k
             if instance.propriete and instance.propriete.bailleur:
                 cache_key_bailleur = f"stats_bailleur_{instance.propriete.bailleur.pk}"
                 cache.delete(cache_key_bailleur)
+            
+            # Invalider le cache des paiements partiels
+            cache.delete('contrats_avec_paiements_partiels')
+            cache.delete('statistiques_paiements_partiels')
                     
     except Exception as e:
         print(f"Erreur lors de l'invalidation du cache après suppression contrat: {str(e)}")

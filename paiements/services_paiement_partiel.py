@@ -5,6 +5,7 @@ RESPECTE À LA LETTRE TOUTES LES LOGIQUES DU PAIEMENT GLOBAL
 from decimal import Decimal
 from django.db.models import Sum, Q
 from django.utils import timezone
+from django.core.cache import cache
 from datetime import datetime, timedelta, date
 from dateutil.relativedelta import relativedelta
 from .models import Paiement, Contrat
@@ -528,64 +529,54 @@ class ServicePaiementPartiel:
                 delattr(paiement, '_en_verification_completion')
     
     @staticmethod
-    def detecter_contrats_avec_paiements_partiels():
+    def detecter_contrats_avec_paiements_partiels(force_refresh=False):
         """
         Détecte tous les contrats ayant des paiements partiels en cours
         Inclut TOUS les paiements partiels, même ceux complétés
-        Détecte aussi les paiements partiels non synchronisés
+        OPTIMISÉ avec cache pour améliorer les performances
         """
+        # Utiliser le cache pour éviter les requêtes répétées (cache 5 minutes)
+        cache_key = 'contrats_avec_paiements_partiels'
+        if not force_refresh:
+            cached_result = cache.get(cache_key)
+            if cached_result is not None:
+                return cached_result
+        
         try:
-            # Trouver tous les paiements partiels actifs (avec montant restant > 0)
-            paiements_partiels_actifs = Paiement.objects.filter(
-                est_paiement_partiel=True,
-                montant_restant_du__gt=0,
-                is_deleted=False,
-                statut__in=['valide', 'en_attente']
-            ).select_related('contrat', 'contrat__locataire', 'contrat__propriete').order_by('date_paiement')
-            
-            # AUSSI : Trouver tous les paiements partiels (même complétés) pour l'historique complet
-            paiements_partiels_tous = Paiement.objects.filter(
+            # OPTIMISATION : Une seule requête pour récupérer tous les paiements partiels
+            # Utiliser only() pour limiter les champs récupérés
+            paiements_partiels_all = Paiement.objects.filter(
                 est_paiement_partiel=True,
                 is_deleted=False,
                 statut__in=['valide', 'en_attente']
-            ).select_related('contrat', 'contrat__locataire', 'contrat__propriete').order_by('date_paiement')
+            ).select_related('contrat', 'contrat__locataire', 'contrat__propriete').only(
+                'id', 'montant', 'montant_restant_du', 'montant_du_mois', 'mois_paye',
+                'date_paiement', 'est_paiement_partiel', 'statut',
+                'contrat__id', 'contrat__numero_contrat', 'contrat__loyer_mensuel',
+                'contrat__locataire__id', 'contrat__locataire__nom', 'contrat__locataire__prenom',
+                'contrat__propriete__id', 'contrat__propriete__titre', 'contrat__propriete__ville'
+            ).order_by('date_paiement')
             
-            # DÉTECTION DYNAMIQUE : Vérifier aussi les paiements qui pourraient être partiels mais non synchronisés
-            # LIMITER à 50 paiements récents pour éviter les timeouts
-            paiements_a_verifier = Paiement.objects.filter(
-                is_deleted=False,
-                statut__in=['valide', 'en_attente'],
-                mois_paye__isnull=False
-            ).exclude(
-                est_paiement_partiel=True
-            ).select_related('contrat', 'contrat__locataire', 'contrat__propriete').order_by('-date_paiement')[:50]
+            # Séparer actifs et tous en Python (plus rapide que 2 requêtes)
+            paiements_partiels_actifs = [p for p in paiements_partiels_all if p.montant_restant_du and p.montant_restant_du > 0]
+            paiements_partiels_tous = list(paiements_partiels_all)
             
-            # Précharger toutes les avances pour tous les contrats concernés pour éviter N+1
-            contrat_ids = set(p.contrat_id for p in paiements_a_verifier)
-            if contrat_ids:
-                from .services_avance import ServiceGestionAvance
-                # Synchroniser les consommations pour tous les contrats en une fois
-                from contrats.models import Contrat
-                contrats_a_synchroniser = Contrat.objects.filter(id__in=contrat_ids)
-                for contrat in contrats_a_synchroniser:
-                    try:
-                        ServiceGestionAvance.synchroniser_consommations_manquantes(contrat)
-                    except Exception as e:
-                        logger.error(f"Erreur synchronisation contrat {contrat.id}: {str(e)}")
+            # DÉSACTIVER la vérification dynamique par défaut pour améliorer les performances
+            # Elle peut être réactivée si nécessaire avec un paramètre
+            # LIMITER drastiquement : seulement les 10 derniers paiements récents
+            paiements_a_verifier = []
+            # Désactivé par défaut pour améliorer les performances
+            # paiements_a_verifier = Paiement.objects.filter(
+            #     is_deleted=False,
+            #     statut__in=['valide', 'en_attente'],
+            #     mois_paye__isnull=False
+            # ).exclude(
+            #     est_paiement_partiel=True
+            # ).select_related('contrat', 'contrat__locataire', 'contrat__propriete').order_by('-date_paiement')[:10]
             
-            # Vérifier dynamiquement si ces paiements sont partiels
+            # DÉSACTIVÉ : Vérification dynamique désactivée pour améliorer les performances
+            # Elle peut être réactivée si nécessaire mais ralentit considérablement l'application
             paiements_partiels_non_synchronises = []
-            for paiement in paiements_a_verifier:
-                try:
-                    if ServicePaiementPartiel.detecter_paiement_partiel(paiement):
-                        # Si c'est un paiement partiel, l'ajouter à la liste
-                        paiements_partiels_non_synchronises.append(paiement)
-                        # Synchroniser le paiement pour mettre à jour les champs
-                        ServicePaiementPartiel.synchroniser_paiement_partiel(paiement)
-                        paiement.save(update_fields=['est_paiement_partiel', 'montant_du_mois', 'montant_restant_du'])
-                except Exception as e:
-                    logger.error(f"Erreur détection paiement partiel {paiement.id}: {str(e)}")
-                    continue
             
             # Grouper par contrat
             contrats_avec_partiels = {}
@@ -634,93 +625,25 @@ class ServicePaiementPartiel:
                     if paiement not in contrats_avec_partiels[contrat_id]['paiements_partiels_tous']:
                         contrats_avec_partiels[contrat_id]['paiements_partiels_tous'].append(paiement)
             
-            # RECALCULER DYNAMIQUEMENT le montant restant pour chaque contrat
-            # OPTIMISATION : Précharger toutes les données nécessaires avant la boucle
-            # pour garantir que les données sont à jour et cohérentes
+            # OPTIMISATION : Simplifier le recalcul - utiliser les valeurs déjà en base
+            # Le recalcul dynamique est très coûteux, on utilise les valeurs existantes
             for contrat_id in contrats_avec_partiels:
                 data = contrats_avec_partiels[contrat_id]
-                contrat = data['contrat']
                 
-                # Recalculer le montant total restant à partir des paiements actifs
-                montant_total_restant_recalcule = Decimal('0')
-                paiements_actifs_recalcules = []
+                # Utiliser directement les paiements actifs filtrés
+                paiements_actifs = [p for p in data['paiements_partiels'] if p.montant_restant_du and p.montant_restant_du > 0]
+                montant_total = sum(p.montant_restant_du for p in paiements_actifs)
                 
-                # Grouper les paiements par mois pour recalculer correctement
-                paiements_par_mois = {}
-                for paiement in data['paiements_partiels_tous']:
-                    mois_cle = paiement.mois_paye or 'non_specifie'
-                    if mois_cle not in paiements_par_mois:
-                        paiements_par_mois[mois_cle] = []
-                    paiements_par_mois[mois_cle].append(paiement)
-                
-                # OPTIMISATION : Calculer tous les montants en une seule fois pour éviter les requêtes répétées
-                # Recalculer pour chaque mois (limiter à 12 mois max pour éviter timeout)
-                mois_uniques = list(paiements_par_mois.keys())[:12]
-                for mois_cle in mois_uniques:
-                    if mois_cle == 'non_specifie':
-                        # Pour les paiements sans mois spécifié, utiliser le montant restant existant
-                        paiements_mois = paiements_par_mois[mois_cle]
-                        for paiement in paiements_mois:
-                            if paiement.montant_restant_du and paiement.montant_restant_du > 0:
-                                paiements_actifs_recalcules.append(paiement)
-                                montant_total_restant_recalcule += paiement.montant_restant_du
-                        continue
-                    
-                    paiements_mois = paiements_par_mois[mois_cle]
-                    try:
-                        # Calculer le montant restant TOTAL pour ce mois
-                        calcul_restant = ServicePaiementPartiel.calculer_montant_restant(
-                            contrat, mois_cle
-                        )
-                        montant_du_mois = calcul_restant.get('montant_du_mois', Decimal('0'))
-                        montant_restant_mois = calcul_restant.get('montant_restant', Decimal('0'))
-                        est_complet = calcul_restant.get('est_complet', False)
-                        
-                        # Mettre à jour chaque paiement de ce mois
-                        for paiement in paiements_mois:
-                            try:
-                                paiement.montant_du_mois = montant_du_mois
-                                
-                                if est_complet or montant_restant_mois == 0:
-                                    # Le mois est complété, donc ce paiement n'a plus de montant restant
-                                    paiement.montant_restant_du = Decimal('0')
-                                    paiement.est_paiement_partiel = False
-                                else:
-                                    # Le mois n'est pas complété
-                                    # Le montant restant du paiement individuel = montant_du_mois - montant_paye
-                                    # Mais seulement si le paiement est vraiment partiel
-                                    montant_restant_paiement = max(
-                                        montant_du_mois - paiement.montant,
-                                        Decimal('0')
-                                    )
-                                    
-                                    # Si le paiement individuel a un montant restant, l'utiliser
-                                    # Sinon, utiliser le montant restant du mois divisé par le nombre de paiements
-                                    if montant_restant_paiement > 0:
-                                        paiement.montant_restant_du = montant_restant_paiement
-                                    else:
-                                        # Le paiement individuel est complet, mais le mois ne l'est pas
-                                        # Donc le montant restant est 0 pour ce paiement
-                                        paiement.montant_restant_du = Decimal('0')
-                                
-                                # Si le paiement a encore un montant restant, l'ajouter aux actifs
-                                if paiement.montant_restant_du > 0:
-                                    paiements_actifs_recalcules.append(paiement)
-                                    montant_total_restant_recalcule += paiement.montant_restant_du
-                            except Exception as e:
-                                logger.error(f"Erreur mise à jour paiement {paiement.id}: {str(e)}")
-                                continue
-                    except Exception as e:
-                        logger.error(f"Erreur calcul montant restant mois {mois_cle} contrat {contrat_id}: {str(e)}")
-                        continue
-                
-                # Mettre à jour les données avec les valeurs recalculées
-                data['paiements_partiels'] = paiements_actifs_recalcules
-                data['montant_total_restant'] = montant_total_restant_recalcule
+                # Mettre à jour les données
+                data['paiements_partiels'] = paiements_actifs
+                data['montant_total_restant'] = montant_total
                 
                 # Trier tous les paiements partiels par date
                 data['paiements_partiels'].sort(key=lambda x: x.date_paiement, reverse=True)
                 data['paiements_partiels_tous'].sort(key=lambda x: x.date_paiement, reverse=True)
+            
+            # Mettre en cache le résultat (5 minutes)
+            cache.set(cache_key, contrats_avec_partiels, 300)
             
             return contrats_avec_partiels
             
@@ -732,8 +655,15 @@ class ServicePaiementPartiel:
     def obtenir_statistiques_paiements_partiels(contrats_avec_partiels=None):
         """
         Obtient des statistiques sur les paiements partiels
-        CALCULE DYNAMIQUEMENT à partir des contrats détectés pour garantir la cohérence
+        OPTIMISÉ avec cache pour améliorer les performances
         """
+        # Utiliser le cache pour éviter les requêtes répétées
+        cache_key = 'statistiques_paiements_partiels'
+        if contrats_avec_partiels is None:
+            cached_stats = cache.get(cache_key)
+            if cached_stats is not None:
+                return cached_stats
+        
         try:
             # Si les contrats sont fournis, calculer les stats à partir de ces données
             if contrats_avec_partiels is not None:
@@ -747,35 +677,38 @@ class ServicePaiementPartiel:
                     total_paiements_partiels_actifs += len(paiements_actifs)
                     montant_total_restant += data['montant_total_restant']
                 
-                return {
+                stats = {
                     'total_paiements_partiels': total_paiements_partiels_actifs,
                     'montant_total_restant': montant_total_restant,
                     'contrats_concernes': contrats_concernes
                 }
+                # Mettre en cache (5 minutes)
+                cache.set(cache_key, stats, 300)
+                return stats
             
-            # Sinon, calculer depuis la base de données (méthode de fallback)
-            paiements_partiels_actifs = Paiement.objects.filter(
+            # Sinon, calculer depuis la base de données (méthode de fallback optimisée)
+            # OPTIMISATION : Une seule requête avec aggregate
+            from django.db.models import Count
+            stats = Paiement.objects.filter(
                 est_paiement_partiel=True,
                 montant_restant_du__gt=0,
                 is_deleted=False,
                 statut__in=['valide', 'en_attente']
+            ).aggregate(
+                total_partiels=Count('id'),
+                montant_total=Sum('montant_restant_du'),
+                contrats_concernes=Count('contrat', distinct=True)
             )
             
-            total_partiels = paiements_partiels_actifs.count()
-            montant_total_restant = paiements_partiels_actifs.aggregate(
-                total=Sum('montant_restant_du')
-            )['total'] or Decimal('0')
-            
-            # Contrats avec paiements partiels actifs
-            contrats_avec_partiels_count = paiements_partiels_actifs.values(
-                'contrat'
-            ).distinct().count()
-            
-            return {
-                'total_paiements_partiels': total_partiels,
-                'montant_total_restant': montant_total_restant,
-                'contrats_concernes': contrats_avec_partiels_count
+            result = {
+                'total_paiements_partiels': stats['total_partiels'] or 0,
+                'montant_total_restant': stats['montant_total'] or Decimal('0'),
+                'contrats_concernes': stats['contrats_concernes'] or 0
             }
+            
+            # Mettre en cache (5 minutes)
+            cache.set(cache_key, result, 300)
+            return result
             
         except Exception as e:
             logger.error(f"Erreur lors du calcul des statistiques: {str(e)}")
