@@ -551,24 +551,41 @@ class ServicePaiementPartiel:
             ).select_related('contrat', 'contrat__locataire', 'contrat__propriete').order_by('date_paiement')
             
             # DÉTECTION DYNAMIQUE : Vérifier aussi les paiements qui pourraient être partiels mais non synchronisés
-            # Pour chaque paiement avec un mois_paye, vérifier s'il est partiel
+            # LIMITER à 50 paiements récents pour éviter les timeouts
             paiements_a_verifier = Paiement.objects.filter(
                 is_deleted=False,
                 statut__in=['valide', 'en_attente'],
                 mois_paye__isnull=False
             ).exclude(
                 est_paiement_partiel=True
-            ).select_related('contrat', 'contrat__locataire', 'contrat__propriete')
+            ).select_related('contrat', 'contrat__locataire', 'contrat__propriete').order_by('-date_paiement')[:50]
+            
+            # Précharger toutes les avances pour tous les contrats concernés pour éviter N+1
+            contrat_ids = set(p.contrat_id for p in paiements_a_verifier)
+            if contrat_ids:
+                from .services_avance import ServiceGestionAvance
+                # Synchroniser les consommations pour tous les contrats en une fois
+                from contrats.models import Contrat
+                contrats_a_synchroniser = Contrat.objects.filter(id__in=contrat_ids)
+                for contrat in contrats_a_synchroniser:
+                    try:
+                        ServiceGestionAvance.synchroniser_consommations_manquantes(contrat)
+                    except Exception as e:
+                        logger.error(f"Erreur synchronisation contrat {contrat.id}: {str(e)}")
             
             # Vérifier dynamiquement si ces paiements sont partiels
             paiements_partiels_non_synchronises = []
             for paiement in paiements_a_verifier:
-                if ServicePaiementPartiel.detecter_paiement_partiel(paiement):
-                    # Si c'est un paiement partiel, l'ajouter à la liste
-                    paiements_partiels_non_synchronises.append(paiement)
-                    # Synchroniser le paiement pour mettre à jour les champs
-                    ServicePaiementPartiel.synchroniser_paiement_partiel(paiement)
-                    paiement.save()
+                try:
+                    if ServicePaiementPartiel.detecter_paiement_partiel(paiement):
+                        # Si c'est un paiement partiel, l'ajouter à la liste
+                        paiements_partiels_non_synchronises.append(paiement)
+                        # Synchroniser le paiement pour mettre à jour les champs
+                        ServicePaiementPartiel.synchroniser_paiement_partiel(paiement)
+                        paiement.save(update_fields=['est_paiement_partiel', 'montant_du_mois', 'montant_restant_du'])
+                except Exception as e:
+                    logger.error(f"Erreur détection paiement partiel {paiement.id}: {str(e)}")
+                    continue
             
             # Grouper par contrat
             contrats_avec_partiels = {}
@@ -618,6 +635,7 @@ class ServicePaiementPartiel:
                         contrats_avec_partiels[contrat_id]['paiements_partiels_tous'].append(paiement)
             
             # RECALCULER DYNAMIQUEMENT le montant restant pour chaque contrat
+            # OPTIMISATION : Précharger toutes les données nécessaires avant la boucle
             # pour garantir que les données sont à jour et cohérentes
             for contrat_id in contrats_avec_partiels:
                 data = contrats_avec_partiels[contrat_id]
@@ -635,9 +653,15 @@ class ServicePaiementPartiel:
                         paiements_par_mois[mois_cle] = []
                     paiements_par_mois[mois_cle].append(paiement)
                 
-                # Recalculer pour chaque mois
-                for mois_cle, paiements_mois in paiements_par_mois.items():
-                    if mois_cle != 'non_specifie':
+                # OPTIMISATION : Calculer tous les montants en une seule fois pour éviter les requêtes répétées
+                # Recalculer pour chaque mois (limiter à 12 mois max pour éviter timeout)
+                mois_uniques = list(paiements_par_mois.keys())[:12]
+                for mois_cle in mois_uniques:
+                    if mois_cle == 'non_specifie':
+                        continue
+                    
+                    paiements_mois = paiements_par_mois[mois_cle]
+                    try:
                         # Calculer le montant restant TOTAL pour ce mois
                         calcul_restant = ServicePaiementPartiel.calculer_montant_restant(
                             contrat, mois_cle
@@ -648,25 +672,32 @@ class ServicePaiementPartiel:
                         
                         # Mettre à jour chaque paiement de ce mois
                         for paiement in paiements_mois:
-                            paiement.montant_du_mois = montant_du_mois
-                            
-                            if est_complet or montant_restant_mois == 0:
-                                # Le mois est complété, donc ce paiement n'a plus de montant restant
-                                paiement.montant_restant_du = Decimal('0')
-                                paiement.est_paiement_partiel = False
-                            else:
-                                # Le mois n'est pas complété
-                                # Le montant restant du paiement individuel = montant_du_mois - montant_paye
-                                # Mais seulement si le paiement est vraiment partiel
-                                montant_restant_paiement = max(
-                                    montant_du_mois - paiement.montant,
-                                    Decimal('0')
-                                )
+                            try:
+                                paiement.montant_du_mois = montant_du_mois
                                 
-                                # Si le paiement individuel a un montant restant, l'utiliser
-                                # Sinon, utiliser le montant restant du mois divisé par le nombre de paiements
-                                if montant_restant_paiement > 0:
-                                    paiement.montant_restant_du = montant_restant_paiement
+                                if est_complet or montant_restant_mois == 0:
+                                    # Le mois est complété, donc ce paiement n'a plus de montant restant
+                                    paiement.montant_restant_du = Decimal('0')
+                                    paiement.est_paiement_partiel = False
+                                else:
+                                    # Le mois n'est pas complété
+                                    # Le montant restant du paiement individuel = montant_du_mois - montant_paye
+                                    # Mais seulement si le paiement est vraiment partiel
+                                    montant_restant_paiement = max(
+                                        montant_du_mois - paiement.montant,
+                                        Decimal('0')
+                                    )
+                                    
+                                    # Si le paiement individuel a un montant restant, l'utiliser
+                                    # Sinon, utiliser le montant restant du mois divisé par le nombre de paiements
+                                    if montant_restant_paiement > 0:
+                                        paiement.montant_restant_du = montant_restant_paiement
+                            except Exception as e:
+                                logger.error(f"Erreur mise à jour paiement {paiement.id}: {str(e)}")
+                                continue
+                    except Exception as e:
+                        logger.error(f"Erreur calcul montant restant mois {mois_cle} contrat {contrat_id}: {str(e)}")
+                        continue
                                 else:
                                     # Le paiement individuel est complet, mais le mois ne l'est pas
                                     # Donc le montant restant est 0 pour ce paiement

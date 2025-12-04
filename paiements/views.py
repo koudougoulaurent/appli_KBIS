@@ -385,10 +385,18 @@ def paiements_dashboard(request):
     Dashboard principal des paiements SÉCURISÉ - SANS informations financières confidentielles
     """
     # Statistiques générales (NON confidentielles)
-    total_paiements = Paiement.objects.filter(is_deleted=False).count()
-    paiements_valides = Paiement.objects.filter(is_deleted=False, statut='valide').count()
-    paiements_en_attente = Paiement.objects.filter(is_deleted=False, statut='en_attente').count()
-    paiements_refuses = Paiement.objects.filter(is_deleted=False, statut='refuse').count()
+    # Optimisation : utiliser une seule requête avec annotate au lieu de 4 requêtes séparées
+    from django.db.models import Count, Q
+    stats_paiements = Paiement.objects.filter(is_deleted=False).aggregate(
+        total=Count('id'),
+        valides=Count('id', filter=Q(statut='valide')),
+        en_attente=Count('id', filter=Q(statut='en_attente')),
+        refuses=Count('id', filter=Q(statut='refuse'))
+    )
+    total_paiements = stats_paiements['total'] or 0
+    paiements_valides = stats_paiements['valides'] or 0
+    paiements_en_attente = stats_paiements['en_attente'] or 0
+    paiements_refuses = stats_paiements['refuses'] or 0
     
     # SUPPRIMER: Tous les montants financiers pour la confidentialité
     # NE PAS calculer ou afficher de montants

@@ -369,11 +369,11 @@ class ServiceGestionAvance:
                     mois_fin_couverture__gte=mois
                 ).order_by('date_avance'))
                 
-                if not avances_actives.exists():
+                if not avances_actives:
                     return False, Decimal('0')
                 
                 # Prendre la première avance disponible
-                avance = avances_actives.first()
+                avance = avances_actives[0]
                 
                 # Vérifier si ce mois a déjà été consommé
                 consommation_existante = ConsommationAvance.objects.filter(
