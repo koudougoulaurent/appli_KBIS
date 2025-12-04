@@ -658,6 +658,12 @@ class ServicePaiementPartiel:
                 mois_uniques = list(paiements_par_mois.keys())[:12]
                 for mois_cle in mois_uniques:
                     if mois_cle == 'non_specifie':
+                        # Pour les paiements sans mois spécifié, utiliser le montant restant existant
+                        paiements_mois = paiements_par_mois[mois_cle]
+                        for paiement in paiements_mois:
+                            if paiement.montant_restant_du and paiement.montant_restant_du > 0:
+                                paiements_actifs_recalcules.append(paiement)
+                                montant_total_restant_recalcule += paiement.montant_restant_du
                         continue
                     
                     paiements_mois = paiements_par_mois[mois_cle]
@@ -692,28 +698,21 @@ class ServicePaiementPartiel:
                                     # Sinon, utiliser le montant restant du mois divisé par le nombre de paiements
                                     if montant_restant_paiement > 0:
                                         paiement.montant_restant_du = montant_restant_paiement
+                                    else:
+                                        # Le paiement individuel est complet, mais le mois ne l'est pas
+                                        # Donc le montant restant est 0 pour ce paiement
+                                        paiement.montant_restant_du = Decimal('0')
+                                
+                                # Si le paiement a encore un montant restant, l'ajouter aux actifs
+                                if paiement.montant_restant_du > 0:
+                                    paiements_actifs_recalcules.append(paiement)
+                                    montant_total_restant_recalcule += paiement.montant_restant_du
                             except Exception as e:
                                 logger.error(f"Erreur mise à jour paiement {paiement.id}: {str(e)}")
                                 continue
                     except Exception as e:
                         logger.error(f"Erreur calcul montant restant mois {mois_cle} contrat {contrat_id}: {str(e)}")
                         continue
-                                else:
-                                    # Le paiement individuel est complet, mais le mois ne l'est pas
-                                    # Donc le montant restant est 0 pour ce paiement
-                                    paiement.montant_restant_du = Decimal('0')
-                                
-                                # Si le paiement a encore un montant restant, l'ajouter aux actifs
-                                if paiement.montant_restant_du > 0:
-                                    paiements_actifs_recalcules.append(paiement)
-                                    montant_total_restant_recalcule += paiement.montant_restant_du
-                    
-                    else:
-                        # Pour les paiements sans mois spécifié, utiliser le montant restant existant
-                        for paiement in paiements_mois:
-                            if paiement.montant_restant_du and paiement.montant_restant_du > 0:
-                                paiements_actifs_recalcules.append(paiement)
-                                montant_total_restant_recalcule += paiement.montant_restant_du
                 
                 # Mettre à jour les données avec les valeurs recalculées
                 data['paiements_partiels'] = paiements_actifs_recalcules
