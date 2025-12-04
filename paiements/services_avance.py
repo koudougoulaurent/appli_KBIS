@@ -408,21 +408,46 @@ class ServiceGestionAvance:
         """
         Synchronise automatiquement les consommations d'avances basées sur les mois écoulés
         """
-        # PROTECTION CONTRE LA RÉCURSION
-        if hasattr(contrat, '_en_synchronisation_avances'):
+        # PROTECTION CONTRE LA RÉCURSION - Utiliser l'ID du contrat pour éviter les problèmes d'objets
+        contrat_id = contrat.id if hasattr(contrat, 'id') else contrat
+        
+        # Utiliser un cache global pour éviter la récursion
+        import threading
+        if not hasattr(threading.current_thread(), '_synchronisation_avances'):
+            threading.current_thread()._synchronisation_avances = set()
+        
+        if contrat_id in threading.current_thread()._synchronisation_avances:
             return
-        contrat._en_synchronisation_avances = True
+        
+        threading.current_thread()._synchronisation_avances.add(contrat_id)
         
         try:
             from django.utils import timezone
             from dateutil.relativedelta import relativedelta
+            from django.db.models import Count
             
-            # Récupérer toutes les avances actives du contrat (évaluer immédiatement pour éviter les requêtes récursives)
+            # Récupérer toutes les avances actives du contrat avec leurs consommations préchargées
+            # Utiliser l'ID du contrat pour éviter les requêtes récursives
+            if isinstance(contrat, int):
+                contrat_obj = Contrat.objects.get(id=contrat)
+            else:
+                contrat_obj = contrat
+                contrat_id = contrat_obj.id
+            
             avances_actives = list(AvanceLoyer.objects.filter(
-                contrat=contrat,
+                contrat_id=contrat_id,
                 statut='active',
                 montant_restant__gt=0
-            ))
+            ).select_related('contrat'))
+            
+            # Précharger les comptes de consommations pour toutes les avances en une seule requête
+            avance_ids = [avance.id for avance in avances_actives]
+            consommations_counts = dict(
+                ConsommationAvance.objects.filter(avance_id__in=avance_ids)
+                .values('avance_id')
+                .annotate(count=Count('id'))
+                .values_list('avance_id', 'count')
+            )
             
             for avance in avances_actives:
                 # Calculer les mois écoulés depuis le début de couverture
@@ -449,8 +474,8 @@ class ServiceGestionAvance:
                         mois_devraient_etre_consommes = min(mois_ecoules - 1, avance.nombre_mois_couverts)
                         mois_devraient_etre_consommes = max(0, mois_devraient_etre_consommes)
                 
-                # Calculer combien de mois ont déjà été consommés
-                mois_deja_consommes = ConsommationAvance.objects.filter(avance=avance).count()
+                # Utiliser le compte préchargé au lieu d'une requête
+                mois_deja_consommes = consommations_counts.get(avance.id, 0)
                 
                 # Consommer les mois manquants
                 mois_a_consommer = mois_devraient_etre_consommes - mois_deja_consommes
@@ -462,22 +487,27 @@ class ServiceGestionAvance:
                     if (avance.mois_debut_couverture <= mois_a_consommer_date <= avance.mois_fin_couverture):
                         # Consommer ce mois (avec update_fields pour éviter les signaux inutiles)
                         if avance.consommer_mois(mois_a_consommer_date, update_fields=['montant_restant', 'statut']):
-                            # Créer l'enregistrement de consommation
+                            # Créer l'enregistrement de consommation avec l'ID au lieu de l'objet
                             ConsommationAvance.objects.create(
-                                avance=avance,
+                                avance_id=avance.id,
                                 paiement=None,  # Consommation automatique
                                 mois_consomme=mois_a_consommer_date,
                                 montant_consomme=avance.loyer_mensuel,
                                 montant_restant_apres=avance.montant_restant
                             )
+                            # Mettre à jour le compte local
+                            mois_deja_consommes += 1
+                            consommations_counts[avance.id] = mois_deja_consommes
                 
         except Exception as e:
             print(f"Erreur lors de la synchronisation des consommations: {str(e)}")
+            import traceback
+            traceback.print_exc()
             # Ne pas lever l'exception pour ne pas bloquer le processus principal
         finally:
             # Retirer le flag de protection
-            if hasattr(contrat, '_en_synchronisation_avances'):
-                delattr(contrat, '_en_synchronisation_avances')
+            if hasattr(threading.current_thread(), '_synchronisation_avances'):
+                threading.current_thread()._synchronisation_avances.discard(contrat_id)
     
     @staticmethod
     def calculer_montant_du_mois(contrat, mois):
