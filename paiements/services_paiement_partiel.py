@@ -69,8 +69,36 @@ class ServicePaiementPartiel:
                     'proposer_avance': True
                 }
             
-            # 2. VALIDATION STRICTE : Si le mois proposé est en RETARD, vérifier qu'il est réellement non payé
+            # 2. VALIDATION CRITIQUE : Si le mois proposé est AVANT le mois attendu, il est DÉJÀ COUVERT
+            # Si le mois attendu est janvier 2026, alors décembre 2025 est déjà couvert (payé ou avance)
             if date_mois_propose < date_mois_attendu:
+                # VÉRIFIER si le mois proposé est couvert par une avance active
+                from .models_avance import AvanceLoyer
+                avances_actives = AvanceLoyer.objects.filter(
+                    contrat=contrat,
+                    statut='active',
+                    montant_restant__gt=0
+                )
+                
+                mois_couvert_par_avance = False
+                for avance in avances_actives:
+                    if avance.mois_debut_couverture and avance.mois_fin_couverture:
+                        if avance.mois_debut_couverture <= date_mois_propose <= avance.mois_fin_couverture:
+                            mois_couvert_par_avance = True
+                            break
+                
+                if mois_couvert_par_avance:
+                    # Le mois est couvert par une avance - REFUSER
+                    return {
+                        'valide': False,
+                        'message': f"❌ IMPOSSIBLE : Le mois {mois_paye_str} est déjà couvert par une avance active. "
+                                  f"Le prochain mois à payer est {mois_attendu['mois_paye']} (mois suivant le dernier paiement).",
+                        'mois_attendu': mois_attendu['mois_paye'],
+                        'mois_propose': mois_paye_str,
+                        'type_erreur': 'mois_couvert_avance',
+                        'suggestion': f"Ce mois est déjà couvert par une avance. Le prochain mois à payer est {mois_attendu['mois_paye']}."
+                    }
+                
                 # Récupérer le dernier paiement validé pour ce contrat
                 from .models import Paiement
                 dernier_paiement = Paiement.objects.filter(
@@ -107,60 +135,36 @@ class ServicePaiementPartiel:
                                      f"Vous ne pouvez payer que les mois non payés entre le dernier paiement et ce mois."
                     }
                 
-                # Vérifier si le mois proposé est déjà complètement payé
-                paiements_mois = Paiement.objects.filter(
-                    contrat=contrat,
-                    mois_paye=mois_paye_str,
-                    type_paiement='loyer',
-                    is_deleted=False,
-                    statut='valide'
-                )
+                # Si le mois proposé est entre le dernier paiement et le mois attendu, il est DÉJÀ COUVERT
+                # Car le mois attendu = mois suivant le dernier paiement (ou après avances)
+                # Donc tout mois < mois attendu est déjà couvert
+                return {
+                    'valide': False,
+                    'message': f"❌ IMPOSSIBLE : Le mois {mois_paye_str} est déjà couvert. "
+                              f"Le prochain mois à payer est {mois_attendu['mois_paye']} (mois suivant le dernier paiement). "
+                              f"Si le mois attendu est {mois_attendu['mois_paye']}, alors tous les mois précédents sont déjà payés ou couverts par des avances.",
+                    'mois_attendu': mois_attendu['mois_paye'],
+                    'mois_propose': mois_paye_str,
+                    'type_erreur': 'mois_deja_couvert',
+                    'suggestion': f"Le prochain mois à payer est {mois_attendu['mois_paye']}. "
+                                 f"Vous ne pouvez pas payer un mois qui est déjà couvert."
+                }
                 
-                if paiements_mois.exists():
-                    # Ce mois est déjà payé - vérifier s'il est complètement payé
-                    total_paye = sum(p.montant for p in paiements_mois)
-                    montant_du_mois = ServicePaiementPartiel.calculer_montant_du_mois(contrat, mois_paye_str)
-                    
-                    if total_paye >= montant_du_mois:
-                        return {
-                            'valide': False,
-                            'message': f"❌ IMPOSSIBLE : Le mois {mois_paye_str} est déjà complètement payé.",
-                            'mois_attendu': mois_attendu['mois_paye'],
-                            'mois_propose': mois_paye_str,
-                            'type_erreur': 'mois_deja_paye',
-                            'suggestion': f"Ce mois est déjà payé. Le prochain mois à payer est {mois_attendu['mois_paye']}"
-                        }
-                    else:
-                        # C'est un paiement partiel - AUTORISER pour compléter
-                        return {
-                            'valide': True,
-                            'mois_attendu': mois_paye_str,
-                            'date_mois': date_mois_propose,
-                            'est_retard': True,
-                            'message_info': f"Paiement partiel en retard autorisé pour compléter. Mois proposé: {mois_paye_str}, Prochain mois attendu: {mois_attendu['mois_paye']}"
-                        }
-                else:
-                    # Mois en retard non payé - VÉRIFIER qu'il est bien entre le dernier paiement et le mois attendu
-                    if dernier_mois_paye_date and date_mois_propose >= dernier_mois_paye_date and date_mois_propose < date_mois_attendu:
-                        # Mois valide en retard - AUTORISER pour se rattraper
-                        return {
-                            'valide': True,
-                            'mois_attendu': mois_paye_str,
-                            'date_mois': date_mois_propose,
-                            'est_retard': True,
-                            'message_info': f"Paiement en retard autorisé pour se rattraper. Mois proposé: {mois_paye_str}, Prochain mois attendu: {mois_attendu['mois_paye']}"
-                        }
-                    else:
-                        # Le mois n'est pas dans la plage valide
-                        return {
-                            'valide': False,
-                            'message': f"❌ MOIS INCORRECT : Le mois {mois_paye_str} n'est pas dans la plage des mois à payer. "
-                                      f"Vous devez payer le mois {mois_attendu['mois_paye']} (mois suivant le dernier paiement).",
-                            'mois_attendu': mois_attendu['mois_paye'],
-                            'mois_propose': mois_paye_str,
-                            'type_erreur': 'mois_hors_plage',
-                            'suggestion': f"Le prochain mois à payer est {mois_attendu['mois_paye']}"
-                        }
+                # RÈGLE ABSOLUE : Si le mois proposé est < mois attendu, il est DÉJÀ COUVERT
+                # Le mois attendu = mois suivant le dernier paiement (ou après avances)
+                # Donc tout mois < mois attendu est déjà payé ou couvert par une avance
+                # AUCUNE EXCEPTION : on ne peut pas payer un mois qui est avant le mois attendu
+                return {
+                    'valide': False,
+                    'message': f"❌ IMPOSSIBLE : Le mois {mois_paye_str} est déjà couvert. "
+                              f"Le prochain mois à payer est {mois_attendu['mois_paye']}. "
+                              f"Si le mois attendu est {mois_attendu['mois_paye']}, alors tous les mois précédents (y compris {mois_paye_str}) sont déjà payés ou couverts par des avances.",
+                    'mois_attendu': mois_attendu['mois_paye'],
+                    'mois_propose': mois_paye_str,
+                    'type_erreur': 'mois_deja_couvert',
+                    'suggestion': f"Le prochain mois à payer est {mois_attendu['mois_paye']}. "
+                                 f"Vous ne pouvez pas payer un mois qui est avant le mois attendu."
+                }
             
             # 3. VALIDATION STRICTE : Le mois proposé doit être EXACTEMENT le mois attendu
             # Après un paiement de décembre, seul janvier doit être accepté, pas n'importe quel mois
