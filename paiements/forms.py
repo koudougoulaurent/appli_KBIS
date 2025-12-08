@@ -29,6 +29,18 @@ class PaiementForm(forms.ModelForm):
         help_text=_('Sélectionner les charges déductibles à appliquer à ce paiement')
     )
     
+    # Champ année pour le mois payé (séparé du mois pour éviter les confusions)
+    annee_paiement = forms.ChoiceField(
+        required=False,
+        label=_('Année'),
+        help_text=_('Année du paiement (utilisée avec le mois)'),
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'id_annee_paiement'
+        }),
+        choices=[]  # Sera rempli dans __init__
+    )
+    
     # Note: Les quittances sont générées automatiquement après validation du paiement
     # Aucun document n'est requis lors de la création du paiement
     
@@ -88,6 +100,8 @@ class PaiementForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         contrat_id = kwargs.pop('contrat_id', None)
         mois_suggere = kwargs.pop('mois_suggere', None)
+        mois_autorises = kwargs.pop('mois_autorises', None)  # Liste des mois autorisés pour les paiements de loyer
+        type_paiement_initial = kwargs.pop('type_paiement_initial', 'loyer')
         super().__init__(*args, **kwargs)
         
         # Filtrer les contrats actifs seulement
@@ -111,12 +125,62 @@ class PaiementForm(forms.ModelForm):
             'id': 'id_contrat'
         })
         
+        # Limiter les choix de mois pour les paiements de loyer
+        # Si mois_autorises est fourni, limiter les choix à ces mois uniquement
+        if mois_autorises and isinstance(mois_autorises, list) and len(mois_autorises) > 0:
+            # Construire les choix avec les mois autorisés uniquement
+            mois_choices = [('', '-- Sélectionner un mois --')]
+            mois_francais = {
+                'janvier': 'Janvier', 'février': 'Février', 'mars': 'Mars', 'avril': 'Avril',
+                'mai': 'Mai', 'juin': 'Juin', 'juillet': 'Juillet', 'août': 'Août',
+                'septembre': 'Septembre', 'octobre': 'Octobre', 'novembre': 'Novembre', 'décembre': 'Décembre'
+            }
+            
+            # Ajouter les mois autorisés avec leur année si présente
+            for mois_autorise in mois_autorises:
+                if isinstance(mois_autorise, dict):
+                    mois_nom = mois_autorise.get('mois_paye', '')
+                    mois_label = mois_autorise.get('mois_label', mois_nom)
+                else:
+                    mois_nom = str(mois_autorise)
+                    mois_label = mois_nom
+                
+                # Extraire le nom du mois (sans l'année)
+                mois_sans_annee = mois_nom.split()[0].lower() if mois_nom else ''
+                if mois_sans_annee in mois_francais:
+                    mois_choices.append((mois_nom, mois_label))
+            
+            self.fields['mois_paye'].widget.choices = mois_choices
+        # Sinon, si c'est un paiement de loyer et qu'un contrat est sélectionné, limiter aux mois attendus
+        elif type_paiement_initial == 'loyer' and contrat_id:
+            # Pour les paiements de loyer, on limitera via JavaScript après sélection du contrat
+            # Ici on garde tous les mois mais on ajoutera une validation stricte côté serveur
+            pass
+        
+        # Générer les choix d'années (année courante ± 100 ans)
+        annee_courante = timezone.now().year
+        annees_choices = [('', '-- Année --')]
+        for annee in range(annee_courante - 50, annee_courante + 51):  # 100 ans au total
+            annees_choices.append((str(annee), str(annee)))
+        self.fields['annee_paiement'].choices = annees_choices
+        
         # Valeur par défaut pour la date
         if not self.instance.pk:
             self.fields['date_paiement'].initial = timezone.now().date()
             # Pré-remplir le mois suggéré si fourni
             if mois_suggere:
                 self.fields['mois_paye'].initial = mois_suggere
+                # Extraire l'année du mois suggéré si présent
+                import re
+                annee_match = re.search(r'\d{4}', str(mois_suggere))
+                if annee_match:
+                    self.fields['annee_paiement'].initial = annee_match.group()
+                else:
+                    # Utiliser l'année courante par défaut
+                    self.fields['annee_paiement'].initial = str(annee_courante)
+            else:
+                # Pré-remplir avec l'année courante
+                self.fields['annee_paiement'].initial = str(annee_courante)
         
         # Si un contrat est spécifié, le pré-sélectionner et charger ses charges
         if contrat_id:
@@ -165,6 +229,27 @@ class PaiementForm(forms.ModelForm):
         mode_paiement = cleaned_data.get('mode_paiement')
         numero_cheque = cleaned_data.get('numero_cheque')
         reference_virement = cleaned_data.get('reference_virement')
+        mois_paye = cleaned_data.get('mois_paye')
+        annee_paiement = cleaned_data.get('annee_paiement')
+        
+        # Combiner mois et année pour créer le mois_paye complet
+        if mois_paye and annee_paiement:
+            # Si le mois_paye contient déjà une année, la remplacer par celle sélectionnée
+            import re
+            mois_sans_annee = re.sub(r'\s+\d{4}$', '', str(mois_paye)).strip()
+            mois_paye_complet = f"{mois_sans_annee} {annee_paiement}"
+            cleaned_data['mois_paye'] = mois_paye_complet
+        elif mois_paye and not annee_paiement:
+            # Si pas d'année fournie, utiliser l'année courante
+            import re
+            if not re.search(r'\d{4}', str(mois_paye)):
+                mois_sans_annee = str(mois_paye).strip()
+                cleaned_data['mois_paye'] = f"{mois_sans_annee} {timezone.now().year}"
+        elif not mois_paye and annee_paiement:
+            # Si seulement l'année est fournie, erreur
+            self.add_error('mois_paye', _('Veuillez sélectionner un mois.'))
+        
+        # Mettre à jour mois_paye dans cleaned_data
         mois_paye = cleaned_data.get('mois_paye')
         
         # Validation des montants - DÉSACTIVÉE pour permettre tous les paiements

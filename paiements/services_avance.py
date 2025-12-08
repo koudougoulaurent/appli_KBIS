@@ -788,7 +788,7 @@ class ServiceGestionAvance:
             # Déterminer le dernier mois payé
             dernier_mois_paye = None
             if dernier_paiement:
-                # Priorité au mois_paye si disponible
+                # Priorité au mois_paye si disponible (plus précis)
                 if dernier_paiement.mois_paye:
                     dernier_mois_paye = convertir_mois_paye_en_date(dernier_paiement.mois_paye)
                 
@@ -796,40 +796,47 @@ class ServiceGestionAvance:
                 if not dernier_mois_paye:
                     dernier_mois_paye = dernier_paiement.date_paiement.replace(day=1)
             
-            # Récupérer seulement les avances actives qui ont encore du montant restant
+            # RÈGLE DE BASE : Prochain mois = dernier mois payé + 1 mois
+            if dernier_mois_paye:
+                prochain_mois_base = dernier_mois_paye + relativedelta(months=1)
+            else:
+                # Pas de paiement précédent, prochain paiement = mois suivant le mois actuel
+                prochain_mois_base = timezone.now().date().replace(day=1) + relativedelta(months=1)
+            
+            # Récupérer les avances actives qui ont encore du montant restant
             avances_actives = AvanceLoyer.objects.filter(
                 contrat=contrat,
                 statut='active',
-                montant_restant__gt=0  # Seulement les avances qui ont encore de l'argent
+                montant_restant__gt=0
             )
             
+            # Si pas d'avances actives, retourner le mois de base
             if not avances_actives.exists():
-                # *** PAS D'AVANCES : Prochain paiement = mois suivant le dernier paiement ***
-                if dernier_mois_paye:
-                    return dernier_mois_paye + relativedelta(months=1)
-                else:
-                    # Pas de paiement précédent, prochain paiement = mois prochain
-                    return timezone.now().date().replace(day=1) + relativedelta(months=1)
+                return prochain_mois_base
             
-            # *** AVEC AVANCES : Calculer le prochain mois en tenant compte des avances ***
-            # Calculer le nombre total de mois couverts par les avances
-            total_mois_couverts = sum(avance.nombre_mois_couverts for avance in avances_actives)
+            # Vérifier si le mois de base est couvert par une avance
+            # Si oui, trouver le premier mois non couvert
+            mois_courant = prochain_mois_base
+            mois_max = prochain_mois_base + relativedelta(months=24)  # Limite de sécurité (2 ans)
             
-            if total_mois_couverts <= 0:
-                # Avances épuisées, revenir au calcul normal
-                if dernier_mois_paye:
-                    return dernier_mois_paye + relativedelta(months=1)
-                else:
-                    return timezone.now().date().replace(day=1) + relativedelta(months=1)
+            while mois_courant <= mois_max:
+                # Vérifier si ce mois est couvert par une avance active
+                mois_couvert = False
+                for avance in avances_actives:
+                    if avance.mois_debut_couverture and avance.mois_fin_couverture:
+                        if avance.mois_debut_couverture <= mois_courant <= avance.mois_fin_couverture:
+                            mois_couvert = True
+                            break
+                
+                # Si le mois n'est pas couvert, c'est le mois attendu
+                if not mois_couvert:
+                    return mois_courant
+                
+                # Sinon, passer au mois suivant
+                mois_courant = mois_courant + relativedelta(months=1)
             
-            # *** LOGIQUE CORRIGÉE : Calculer le prochain mois après consommation des avances ***
-            # Trouver le mois de début de couverture le plus récent
-            mois_debut_couverture = max(avance.mois_debut_couverture for avance in avances_actives)
-            
-            # Le prochain paiement = mois de début + nombre de mois couverts
-            prochain_mois = mois_debut_couverture + relativedelta(months=total_mois_couverts)
-            
-            return prochain_mois
+            # Si tous les mois sont couverts (cas exceptionnel), retourner le mois après le dernier couvert
+            return mois_courant
             
         except Exception as e:
             print(f"Erreur calcul prochain mois: {str(e)}")

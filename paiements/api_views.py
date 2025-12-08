@@ -1221,25 +1221,39 @@ def api_verifier_doublon_paiement(request):
             })
         
         try:
+            # Convertir les paramètres en entiers
+            mois_int = int(mois)
+            annee_int = int(annee)
+            
+            # Valider que le mois est entre 1 et 12
+            if mois_int < 1 or mois_int > 12:
+                return JsonResponse({
+                    'doublon_existe': False,
+                    'erreur': 'Mois invalide (doit être entre 1 et 12)'
+                })
+            
+            # Formater le nom du mois pour construire la chaîne de recherche
+            mois_noms = [
+                'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+            ]
+            mois_nom = mois_noms[mois_int - 1]
+            
+            # Construire la chaîne attendue au format "Mois Année"
+            mois_paye_attendu = f"{mois_nom} {annee_int}"
+            
             # Vérifier s'il existe un paiement pour ce contrat dans ce mois
+            # Le champ mois_paye est un CharField, donc on fait une recherche exacte
             existing_payment = Paiement.objects.filter(
                 contrat_id=contrat_id,
-                mois_paye__year=int(annee),
-                mois_paye__month=int(mois),
+                mois_paye=mois_paye_attendu,
                 is_deleted=False
             ).first()
             
             if existing_payment:
-                # Formater le nom du mois
-                mois_noms = [
-                    'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-                    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
-                ]
-                mois_nom = mois_noms[int(mois) - 1]
-                
                 return JsonResponse({
                     'doublon_existe': True,
-                    'mois_nom': f"{mois_nom} {annee}",
+                    'mois_nom': f"{mois_nom} {annee_int}",
                     'paiement_existant': {
                         'reference': existing_payment.reference_paiement,
                         'date': existing_payment.date_paiement.strftime('%d/%m/%Y'),
@@ -1252,10 +1266,20 @@ def api_verifier_doublon_paiement(request):
                     'doublon_existe': False
                 })
                 
-        except (ValueError, Contrat.DoesNotExist):
+        except (ValueError, TypeError) as e:
+            return JsonResponse({
+                'doublon_existe': False,
+                'erreur': f'Paramètres invalides: {str(e)}'
+            })
+        except Contrat.DoesNotExist:
             return JsonResponse({
                 'doublon_existe': False,
                 'erreur': 'Contrat introuvable'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'doublon_existe': False,
+                'erreur': f'Erreur lors de la vérification: {str(e)}'
             })
     
     return JsonResponse({

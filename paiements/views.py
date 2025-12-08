@@ -42,14 +42,35 @@ except ImportError:
 @login_required
 def historique_paiements_partiels(request, contrat_id, mois, annee):
     """Affiche l'historique des paiements partiels pour un contrat et un mois donné."""
-    paiements = Paiement.objects.filter(
-        contrat_id=contrat_id,
-        mois_paye__year=annee,
-        mois_paye__month=mois,
-        is_deleted=False
-    ).order_by('date_paiement')
     try:
+        # Convertir les paramètres en entiers
+        mois_int = int(mois)
+        annee_int = int(annee)
+        
+        # Valider que le mois est entre 1 et 12
+        if mois_int < 1 or mois_int > 12:
+            messages.error(request, f"Mois invalide: {mois}. Le mois doit être entre 1 et 12.")
+            return redirect('paiements:liste')
+        
+        # Construire la chaîne attendue au format "Mois Année"
+        mois_noms = [
+            'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+            'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+        ]
+        mois_nom = mois_noms[mois_int - 1]
+        mois_paye_attendu = f"{mois_nom} {annee_int}"
+        
+        # Le champ mois_paye est un CharField, donc on fait une recherche exacte
+        paiements = Paiement.objects.filter(
+            contrat_id=contrat_id,
+            mois_paye=mois_paye_attendu,
+            is_deleted=False
+        ).order_by('date_paiement')
+        
         contrat = Contrat.objects.get(pk=contrat_id)
+    except (ValueError, TypeError):
+        messages.error(request, f"Paramètres invalides: mois={mois}, année={annee}")
+        return redirect('paiements:liste')
     except Contrat.DoesNotExist:
         messages.error(
             request,
@@ -177,6 +198,21 @@ def ajouter_paiement_partiel(request):
                             'mois_attendu': validation.get('mois_attendu', ''),
                             'error': validation.get('message', ''),
                             'validation_avance': validation
+                        })
+                    elif type_erreur == 'mois_incorrect':
+                        # Mois incorrect (pas le mois attendu) - REFUSER avec suggestion
+                        messages.error(
+                            request,
+                            f"{validation.get('message', 'Mois invalide')} "
+                            f"Les paiements partiels doivent être pour le mois attendu ({validation.get('mois_attendu', '')}) ou un mois en retard."
+                        )
+                        form = PaiementForm(request.POST)
+                        return render(request, 'paiements/ajouter_paiement_partiel.html', {
+                            'form': form,
+                            'contrat_obj': paiement.contrat,
+                            'contrats_actifs': Contrat.objects.filter(est_actif=True, is_deleted=False).select_related('locataire', 'propriete', 'propriete__bailleur'),
+                            'mois_attendu': validation.get('mois_attendu', ''),
+                            'error': validation.get('message', '')
                         })
                     elif type_erreur == 'mois_deja_paye':
                         # Mois déjà complètement payé - REFUSER
@@ -766,6 +802,7 @@ def ajouter_paiement(request):
                 # Cette validation s'applique UNIQUEMENT pour les paiements de LOYER
                 if paiement.type_paiement == 'loyer':
                     mois_paye_nom = request.POST.get('mois_paye', '')
+                    annee_paiement = request.POST.get('annee_paiement', '')
                     
                     # Si pas de mois spécifié, utiliser le mois attendu
                     if not mois_paye_nom:
@@ -773,20 +810,34 @@ def ajouter_paiement(request):
                         mois_attendu = ServicePaiementPartiel.determiner_mois_a_regler(paiement.contrat)
                         mois_paye_nom = mois_attendu['mois_paye']
                     else:
-                        # Si le mois n'a pas d'année, construire le format complet
+                        # Si le mois n'a pas d'année, utiliser l'année du champ annee_paiement ou l'année courante
                         import re
                         if not re.search(r'\d{4}', mois_paye_nom):
-                            # Pas d'année dans le mois - déterminer l'année intelligemment
-                            from datetime import datetime
-                            mois_francais = {
-                                'janvier': 1, 'février': 2, 'mars': 3, 'avril': 4,
-                                'mai': 5, 'juin': 6, 'juillet': 7, 'août': 8,
-                                'septembre': 9, 'octobre': 10, 'novembre': 11, 'décembre': 12
-                            }
-                            annee_actuelle = datetime.now().year
-                            
-                            # Utiliser TOUJOURS l'année courante réelle
-                            mois_paye_nom = f"{mois_paye_nom} {annee_actuelle}"
+                            # Pas d'année dans le mois - utiliser l'année du champ annee_paiement
+                            if annee_paiement:
+                                try:
+                                    annee = int(annee_paiement)
+                                    mois_paye_nom = f"{mois_paye_nom} {annee}"
+                                except ValueError:
+                                    # Si l'année n'est pas valide, utiliser l'année courante
+                                    from datetime import datetime
+                                    annee_actuelle = datetime.now().year
+                                    mois_paye_nom = f"{mois_paye_nom} {annee_actuelle}"
+                            else:
+                                # Pas d'année fournie - utiliser l'année courante
+                                from datetime import datetime
+                                annee_actuelle = datetime.now().year
+                                mois_paye_nom = f"{mois_paye_nom} {annee_actuelle}"
+                        else:
+                            # Le mois contient déjà une année, mais on peut la remplacer par celle du champ annee_paiement si fournie
+                            if annee_paiement:
+                                try:
+                                    annee = int(annee_paiement)
+                                    # Remplacer l'année existante par celle du champ
+                                    mois_sans_annee = re.sub(r'\s+\d{4}$', '', mois_paye_nom).strip()
+                                    mois_paye_nom = f"{mois_sans_annee} {annee}"
+                                except ValueError:
+                                    pass  # Garder l'année existante si l'année fournie n'est pas valide
                     
                     # VALIDATION STRICTE pour les paiements de loyer
                     from .services_paiement_partiel import ServicePaiementPartiel
@@ -834,6 +885,14 @@ def ajouter_paiement(request):
                                 'charges_bailleur': [],
                             })
                             return render(request, 'paiements/ajouter.html', context)
+                        elif type_erreur == 'mois_incorrect':
+                            # Mois incorrect (pas le mois attendu) - REFUSER avec suggestion
+                            messages.error(
+                                request,
+                                f"{validation_mois['message']} "
+                                f"Si vous souhaitez payer plusieurs mois à l'avance, changez le type de paiement en 'AVANCE DE LOYER'."
+                            )
+                            return redirect('paiements:ajouter')
                         elif type_erreur == 'mois_deja_paye':
                             # Mois déjà complètement payé - REFUSER
                             messages.error(request, validation_mois['message'])
@@ -1015,10 +1074,10 @@ def ajouter_paiement(request):
                 print(f"Erreur détaillée: {error_details}")
                 messages.error(request, f'Erreur lors de la validation du paiement: {str(e)}')
     else:
-        form = PaiementForm()
-        
         # Vérifier s'il y a un contrat sélectionné dans le GET pour afficher les reliquats
         contrat_id_get = request.GET.get('contrat_id')
+        mois_autorises = None
+        mois_attendu = None
         
         if contrat_id_get:
             try:
@@ -1026,8 +1085,85 @@ def ajouter_paiement(request):
                 from .services_paiement_partiel import ServicePaiementPartiel
                 reliquats = ServicePaiementPartiel.detecter_reliquats_en_cours(contrat_obj_get)
                 total_reliquat = sum(r['montant_restant'] for r in reliquats)
+                
+                # Calculer les mois autorisés pour les paiements de loyer
+                # Mois attendu + mois en retard (pour rattrapage)
+                mois_attendu_data = ServicePaiementPartiel.determiner_mois_a_regler(contrat_obj_get)
+                mois_attendu = mois_attendu_data['mois_paye']
+                date_mois_attendu = mois_attendu_data['date_mois']
+                
+                # Construire la liste des mois autorisés
+                mois_autorises = [{
+                    'mois_paye': mois_attendu,
+                    'mois_label': f"{mois_attendu} (Mois attendu)"
+                }]
+                
+                # Ajouter les mois en retard (mois entre le début du contrat et le mois attendu)
+                from datetime import date
+                from dateutil.relativedelta import relativedelta
+                mois_courant = timezone.now().date().replace(day=1)
+                mois_francais = [
+                    'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+                    'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+                ]
+                
+                # CRITIQUE : Récupérer le dernier paiement validé pour déterminer le point de départ
+                from .models import Paiement
+                dernier_paiement = Paiement.objects.filter(
+                    contrat=contrat_obj_get,
+                    type_paiement='loyer',
+                    statut='valide',
+                    is_deleted=False
+                ).order_by('-date_paiement').first()
+                
+                # Déterminer le dernier mois payé (basé sur mois_paye si disponible)
+                dernier_mois_paye_date = None
+                if dernier_paiement:
+                    if dernier_paiement.mois_paye:
+                        dernier_mois_paye_date = ServicePaiementPartiel.convertir_mois_paye_en_date(dernier_paiement.mois_paye)
+                    if not dernier_mois_paye_date:
+                        dernier_mois_paye_date = dernier_paiement.date_paiement.replace(day=1)
+                else:
+                    # Pas de paiement précédent - utiliser le début du contrat
+                    dernier_mois_paye_date = contrat_obj_get.date_debut.replace(day=1) if contrat_obj_get.date_debut else None
+                
+                # Calculer UNIQUEMENT les mois en retard entre le dernier paiement et le mois attendu
+                if dernier_mois_paye_date:
+                    mois_en_retard = dernier_mois_paye_date + relativedelta(months=1)  # Commencer au mois suivant le dernier paiement
+                    
+                    # Parcourir uniquement les mois entre le dernier paiement et le mois attendu
+                    while mois_en_retard < date_mois_attendu:
+                        # Vérifier si ce mois est déjà complètement payé
+                        mois_str = f"{mois_francais[mois_en_retard.month - 1]} {mois_en_retard.year}"
+                        paiements_mois = Paiement.objects.filter(
+                            contrat=contrat_obj_get,
+                            mois_paye=mois_str,
+                            type_paiement='loyer',
+                            is_deleted=False,
+                            statut='valide'
+                        )
+                        
+                        if paiements_mois.exists():
+                            total_paye = sum(p.montant for p in paiements_mois)
+                            montant_du_mois = ServicePaiementPartiel.calculer_montant_du_mois(contrat_obj_get, mois_str)
+                            # Si le mois est complètement payé, ne pas l'ajouter
+                            if total_paye >= montant_du_mois:
+                                mois_en_retard = mois_en_retard + relativedelta(months=1)
+                                continue
+                        
+                        # Ajouter ce mois en retard à la liste (seulement s'il est non payé ou partiellement payé)
+                        mois_autorises.append({
+                            'mois_paye': mois_str,
+                            'mois_label': f"{mois_str} (Rattrapage)"
+                        })
+                        
+                        mois_en_retard = mois_en_retard + relativedelta(months=1)
+                
             except Contrat.DoesNotExist:
                 pass
+        
+        # Initialiser le formulaire avec les mois autorisés pour les paiements de loyer
+        form = PaiementForm(contrat_id=contrat_id_get, mois_autorises=mois_autorises, type_paiement_initial='loyer')
     
     # Récupérer tous les contrats pour la sélection
     contrats = Contrat.objects.filter(is_deleted=False).select_related('locataire', 'propriete')
@@ -1049,13 +1185,12 @@ def ajouter_paiement(request):
         'reliquats': reliquats,  # NOUVEAU : Reliquats détectés
         'total_reliquat': total_reliquat,  # NOUVEAU : Total des reliquats
         'afficher_alerte_reliquat': len(reliquats) > 0,  # NOUVEAU : Afficher l'alerte si reliquats
+        'mois_attendu': mois_attendu,  # Mois attendu pour affichage
+        'mois_autorises': mois_autorises,  # Liste des mois autorisés
         'total_charges_bailleur': 0,
         'net_a_payer': 0,
         'charges_bailleur': [],
         'devise_base': devise_base,
-        'reliquats': reliquats,
-        'total_reliquat': total_reliquat,
-        'afficher_alerte_reliquat': len(reliquats) > 0,
         'annees_disponibles': annees_disponibles,
         'title': 'Ajouter un Paiement - Contexte Intelligent',
     }

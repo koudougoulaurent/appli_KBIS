@@ -340,14 +340,27 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="{{ form.mois_paye.id_for_label }}" class="form-label">{{ form.mois_paye.label }}</label>
-                                    {{ form.mois_paye }}
-                                    {% if form.mois_paye.errors %}
-                                        <div class="text-danger">{{ form.mois_paye.errors }}</div>
-                                    {% endif %}
-                                    <div class="form-text">
+                                    <div class="row g-2">
+                                        <div class="col-7">
+                                            {{ form.mois_paye }}
+                                            {% if form.mois_paye.errors %}
+                                                <div class="text-danger small">{{ form.mois_paye.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-5">
+                                            {{ form.annee_paiement }}
+                                            {% if form.annee_paiement.errors %}
+                                                <div class="text-danger small">{{ form.annee_paiement.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="form-text mt-2">
                                         <button type="button" class="btn btn-outline-primary btn-sm" id="auto-detect-month">
                                             <i class="bi bi-magic"></i> Détecter automatiquement
                                         </button>
+                                        {% if mois_attendu %}
+                                            <small class="text-muted ms-2">Mois attendu: <strong>{{ mois_attendu }}</strong></small>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -1210,49 +1223,99 @@ function updateMoisPaye() {
         function detectMonthFromDate() {
             console.log('DEBUG: detectMonthFromDate() appelée');
             
+            const anneePaiementInput = document.getElementById('id_annee_paiement');
+            
             // Priorité 1: Utiliser le prochain mois calculé avec les avances
             const contratId = $('#id_contrat').val();
             if (contratId && window.contexteContrat && window.contexteContrat.prochain_mois_paiement_avec_avances) {
                 const prochainMois = window.contexteContrat.prochain_mois_paiement_avec_avances;
                 console.log('Avances actives détectées - Prochain mois suggéré:', prochainMois);
                 
-                // Extraire le nom du mois du string "Mois Année"
+                // Extraire le nom du mois et l'année du string "Mois Année"
                 const moisAnnee = prochainMois.split(' ');
                 const mois = moisAnnee[0].toLowerCase();
+                const annee = parseInt(moisAnnee[1]) || new Date().getFullYear();
                 
                 // Trouver l'option correspondante dans le select
                 const options = moisPayeInput.options;
                 for (let i = 0; i < options.length; i++) {
-                    if (options[i].value === mois) {
+                    if (options[i].value === mois || options[i].value.includes(mois)) {
                         moisPayeInput.selectedIndex = i;
                         updateMoisPaye();
                         
-                        selectedMonthDisplay.innerHTML = `
-                            <span class="text-success">
-                                <i class="bi bi-check-circle"></i> 
-                                Suggéré par les avances: ${prochainMois}
-                            </span>
-                        `;
+                        // Remplir le champ année
+                        if (anneePaiementInput) {
+                            anneePaiementInput.value = annee;
+                        }
+                        
+                        if (selectedMonthDisplay) {
+                            selectedMonthDisplay.innerHTML = `
+                                <span class="text-success">
+                                    <i class="bi bi-check-circle"></i> 
+                                    Suggéré par les avances: ${prochainMois}
+                                </span>
+                            `;
+                        }
                         return;
                     }
                 }
             }
             
-            // Priorité 2: Utiliser la date de paiement si disponible
+            // Priorité 2: Utiliser l'API de contexte intelligent pour obtenir le mois attendu
+            if (contratId) {
+                fetch(`/paiements/api/contexte-intelligent/contrat/${contratId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.prochain_mois_paiement_avec_avances) {
+                            const prochainMois = data.prochain_mois_paiement_avec_avances;
+                            const moisAnnee = prochainMois.split(' ');
+                            const mois = moisAnnee[0].toLowerCase();
+                            const annee = parseInt(moisAnnee[1]) || new Date().getFullYear();
+                            
+                            // Trouver l'option correspondante
+                            const options = moisPayeInput.options;
+                            for (let i = 0; i < options.length; i++) {
+                                if (options[i].value === mois || options[i].value.includes(mois)) {
+                                    moisPayeInput.selectedIndex = i;
+                                    if (anneePaiementInput) {
+                                        anneePaiementInput.value = annee;
+                                    }
+                                    updateMoisPaye();
+                                    return;
+                                }
+                            }
+                        }
+                    })
+                    .catch(error => console.error('Erreur lors de la récupération du contexte:', error));
+            }
+            
+            // Priorité 3: Utiliser la date de paiement si disponible
             if (datePaiementInput && datePaiementInput.value) {
                 const date = new Date(datePaiementInput.value);
                 const mois = date.toLocaleDateString('fr-FR', { month: 'long' }).toLowerCase();
+                const annee = date.getFullYear();
                 
                 // Trouver l'option correspondante dans le select
                 const options = moisPayeInput.options;
                 for (let i = 0; i < options.length; i++) {
-                    if (options[i].value === mois) {
+                    if (options[i].value === mois || options[i].value.includes(mois)) {
                         moisPayeInput.selectedIndex = i;
                         updateMoisPaye();
-                        console.log('Mois détecté automatiquement depuis la date de paiement:', mois);
+                        
+                        // Remplir le champ année avec l'année de la date de paiement
+                        if (anneePaiementInput) {
+                            anneePaiementInput.value = annee;
+                        }
+                        
+                        console.log('Mois détecté automatiquement depuis la date de paiement:', mois, annee);
                         return;
                     }
                 }
+            }
+            
+            // Fallback: Utiliser l'année courante
+            if (anneePaiementInput && !anneePaiementInput.value) {
+                anneePaiementInput.value = new Date().getFullYear();
             }
             
             // Fallback

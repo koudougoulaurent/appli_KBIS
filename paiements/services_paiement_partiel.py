@@ -69,10 +69,45 @@ class ServicePaiementPartiel:
                     'proposer_avance': True
                 }
             
-            # 2. Si le mois proposé est en RETARD mais <= mois courant - AUTORISER (rattrapage)
+            # 2. VALIDATION STRICTE : Si le mois proposé est en RETARD, vérifier qu'il est réellement non payé
             if date_mois_propose < date_mois_attendu:
-                # Vérifier si le mois proposé est déjà payé
+                # Récupérer le dernier paiement validé pour ce contrat
                 from .models import Paiement
+                dernier_paiement = Paiement.objects.filter(
+                    contrat=contrat,
+                    type_paiement='loyer',
+                    statut='valide',
+                    is_deleted=False
+                ).order_by('-date_paiement').first()
+                
+                # Déterminer le dernier mois payé (basé sur mois_paye si disponible, sinon date_paiement)
+                dernier_mois_paye_date = None
+                if dernier_paiement:
+                    if dernier_paiement.mois_paye:
+                        # Utiliser le mois_paye du dernier paiement
+                        dernier_mois_paye_date = ServicePaiementPartiel.convertir_mois_paye_en_date(dernier_paiement.mois_paye)
+                    else:
+                        # Fallback sur date_paiement
+                        dernier_mois_paye_date = dernier_paiement.date_paiement.replace(day=1)
+                else:
+                    # Pas de paiement précédent - utiliser le début du contrat
+                    dernier_mois_paye_date = contrat.date_debut.replace(day=1) if contrat.date_debut else None
+                
+                # VALIDATION CRITIQUE : Le mois proposé doit être entre le dernier mois payé et le mois attendu
+                if dernier_mois_paye_date and date_mois_propose < dernier_mois_paye_date:
+                    # Le mois proposé est AVANT le dernier paiement - REFUSER
+                    return {
+                        'valide': False,
+                        'message': f"❌ IMPOSSIBLE : Le mois {mois_paye_str} est antérieur au dernier paiement validé. "
+                                  f"Vous devez payer les mois non payés entre le dernier paiement et le mois attendu ({mois_attendu['mois_paye']}).",
+                        'mois_attendu': mois_attendu['mois_paye'],
+                        'mois_propose': mois_paye_str,
+                        'type_erreur': 'mois_trop_ancien',
+                        'suggestion': f"Le prochain mois à payer est {mois_attendu['mois_paye']}. "
+                                     f"Vous ne pouvez payer que les mois non payés entre le dernier paiement et ce mois."
+                    }
+                
+                # Vérifier si le mois proposé est déjà complètement payé
                 paiements_mois = Paiement.objects.filter(
                     contrat=contrat,
                     mois_paye=mois_paye_str,
@@ -102,24 +137,54 @@ class ServicePaiementPartiel:
                             'mois_attendu': mois_paye_str,
                             'date_mois': date_mois_propose,
                             'est_retard': True,
-                            'message_info': f"Paiement en retard autorisé pour se rattraper. Mois proposé: {mois_paye_str}, Prochain mois attendu: {mois_attendu['mois_paye']}"
+                            'message_info': f"Paiement partiel en retard autorisé pour compléter. Mois proposé: {mois_paye_str}, Prochain mois attendu: {mois_attendu['mois_paye']}"
                         }
                 else:
-                    # Mois en retard non payé - AUTORISER pour se rattraper
-                    return {
-                        'valide': True,
-                        'mois_attendu': mois_paye_str,
-                        'date_mois': date_mois_propose,
-                        'est_retard': True,
-                        'message_info': f"Paiement en retard autorisé pour se rattraper. Mois proposé: {mois_paye_str}, Prochain mois attendu: {mois_attendu['mois_paye']}"
-                    }
+                    # Mois en retard non payé - VÉRIFIER qu'il est bien entre le dernier paiement et le mois attendu
+                    if dernier_mois_paye_date and date_mois_propose >= dernier_mois_paye_date and date_mois_propose < date_mois_attendu:
+                        # Mois valide en retard - AUTORISER pour se rattraper
+                        return {
+                            'valide': True,
+                            'mois_attendu': mois_paye_str,
+                            'date_mois': date_mois_propose,
+                            'est_retard': True,
+                            'message_info': f"Paiement en retard autorisé pour se rattraper. Mois proposé: {mois_paye_str}, Prochain mois attendu: {mois_attendu['mois_paye']}"
+                        }
+                    else:
+                        # Le mois n'est pas dans la plage valide
+                        return {
+                            'valide': False,
+                            'message': f"❌ MOIS INCORRECT : Le mois {mois_paye_str} n'est pas dans la plage des mois à payer. "
+                                      f"Vous devez payer le mois {mois_attendu['mois_paye']} (mois suivant le dernier paiement).",
+                            'mois_attendu': mois_attendu['mois_paye'],
+                            'mois_propose': mois_paye_str,
+                            'type_erreur': 'mois_hors_plage',
+                            'suggestion': f"Le prochain mois à payer est {mois_attendu['mois_paye']}"
+                        }
             
-            # 3. Le mois est exactement le mois attendu ou entre le mois attendu et le mois courant - VALIDER
-            return {
-                'valide': True,
-                'mois_attendu': mois_attendu['mois_paye'],
-                'date_mois': date_mois_attendu
-            }
+            # 3. VALIDATION STRICTE : Le mois proposé doit être EXACTEMENT le mois attendu
+            # Après un paiement de décembre, seul janvier doit être accepté, pas n'importe quel mois
+            if date_mois_propose == date_mois_attendu:
+                # Le mois proposé est exactement le mois attendu - VALIDER
+                return {
+                    'valide': True,
+                    'mois_attendu': mois_attendu['mois_paye'],
+                    'date_mois': date_mois_attendu
+                }
+            else:
+                # Le mois proposé n'est ni en retard ni exactement le mois attendu - REFUSER
+                # C'est probablement un mois futur entre le mois attendu et le mois courant
+                return {
+                    'valide': False,
+                    'message': f"❌ MOIS INCORRECT : Vous devez payer le mois {mois_attendu['mois_paye']} (mois suivant le dernier paiement), "
+                              f"pas {mois_paye_str}. "
+                              f"Si vous souhaitez payer plusieurs mois à l'avance, utilisez le type de paiement 'AVANCE DE LOYER'.",
+                    'mois_attendu': mois_attendu['mois_paye'],
+                    'mois_propose': mois_paye_str,
+                    'type_erreur': 'mois_incorrect',
+                    'suggestion': f"Le prochain mois à payer est {mois_attendu['mois_paye']}. "
+                                 f"Pour payer plusieurs mois à l'avance, changez le type de paiement en 'AVANCE DE LOYER'."
+                }
             
         except Exception as e:
             logger.error(f"Erreur lors de la validation du mois à régler: {str(e)}")
@@ -184,14 +249,12 @@ class ServicePaiementPartiel:
     @staticmethod
     def determiner_mois_a_regler(contrat):
         """
-        Détermine le mois à régler en utilisant EXACTEMENT la même logique que les paiements globaux.
-        Prend en compte :
-        - Le dernier paiement de loyer validé (avec mois_paye si disponible)
-        - Les avances actives
-        - Le prochain mois attendu
+        Détermine le mois à régler.
+        RÈGLE ABSOLUE : Le mois attendu est TOUJOURS le mois suivant le dernier paiement validé.
+        Si aucun paiement n'existe, retourne le mois suivant le mois actuel.
         """
         try:
-            # Utiliser la même méthode que les paiements globaux
+            # Utiliser la méthode qui calcule le prochain mois (toujours = dernier paiement + 1 mois)
             from .services_avance import ServiceGestionAvance
             prochain_mois = ServiceGestionAvance.calculer_prochain_mois_paiement(contrat)
             
@@ -212,18 +275,20 @@ class ServicePaiementPartiel:
             
         except Exception as e:
             logger.error(f"Erreur lors de la détermination du mois à régler: {str(e)}")
-            # Fallback : mois actuel
-            now = timezone.now()
+            # Fallback : mois suivant le mois actuel
+            from dateutil.relativedelta import relativedelta
+            now = timezone.now().date().replace(day=1)
+            prochain_mois = now + relativedelta(months=1)
             mois_francais = [
                 'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
                 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
             ]
-            mois_str = f"{mois_francais[now.month - 1]} {now.year}"
+            mois_str = f"{mois_francais[prochain_mois.month - 1]} {prochain_mois.year}"
             return {
                 'mois_paye': mois_str,
-                'date_mois': now.date().replace(day=1),
-                'mois': now.month,
-                'annee': now.year
+                'date_mois': prochain_mois,
+                'mois': prochain_mois.month,
+                'annee': prochain_mois.year
             }
     
     @staticmethod
