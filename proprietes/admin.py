@@ -4,7 +4,7 @@ from django.utils.html import format_html
 from .models import (
     Bailleur, Locataire, TypeBien, Propriete, Document, UniteLocative, 
     ReservationUnite, Piece, PieceContrat, ChargeCommune, RepartitionChargeCommune, 
-    AccesEspacePartage, ContratGestion
+    AccesEspacePartage, ContratGestion, Photo, ChargesBailleur, ChargesBailleurRetrait
 )
 
 
@@ -501,3 +501,201 @@ class ContratGestionAdmin(admin.ModelAdmin):
         """Affiche le nombre de propriétés dans le contrat."""
         return obj.get_nombre_proprietes()
     nombre_proprietes.short_description = _("Nombre de propriétés")
+
+
+@admin.register(Photo)
+class PhotoAdmin(admin.ModelAdmin):
+    """Interface d'administration pour les photos des propriétés."""
+    
+    list_display = (
+        'titre', 'propriete', 'est_principale', 'ordre', 'date_creation'
+    )
+    list_filter = (
+        'est_principale', 'date_creation', 'propriete'
+    )
+    search_fields = (
+        'titre', 'description', 'propriete__titre', 'propriete__adresse'
+    )
+    ordering = ('propriete', 'ordre', 'date_creation')
+    
+    fieldsets = (
+        (_('Informations de base'), {
+            'fields': ('propriete', 'titre', 'description', 'image')
+        }),
+        (_('Affichage'), {
+            'fields': ('ordre', 'est_principale')
+        }),
+        (_('Métadonnées'), {
+            'fields': ('date_creation', 'date_modification'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('date_creation', 'date_modification')
+    
+    def get_queryset(self, request):
+        """Optimiser les requêtes."""
+        return super().get_queryset(request).select_related('propriete')
+
+
+@admin.register(ChargesBailleur)
+class ChargesBailleurAdmin(admin.ModelAdmin):
+    """Interface d'administration pour les charges du bailleur."""
+    
+    list_display = (
+        'numero_charge', 'titre', 'propriete', 'type_charge', 'montant',
+        'statut_colore', 'date_charge', 'date_echeance', 'priorite'
+    )
+    list_filter = (
+        'statut', 'type_charge', 'priorite', 'date_charge', 'propriete'
+    )
+    search_fields = (
+        'numero_charge', 'titre', 'description', 'propriete__titre',
+        'propriete__adresse'
+    )
+    ordering = ('-date_charge',)
+    
+    fieldsets = (
+        (_('Informations de base'), {
+            'fields': ('numero_charge', 'titre', 'description', 'type_charge', 'priorite')
+        }),
+        (_('Montants'), {
+            'fields': ('montant', 'montant_deja_deduit', 'montant_restant')
+        }),
+        (_('Dates'), {
+            'fields': ('date_charge', 'date_echeance', 'date_paiement')
+        }),
+        (_('Relations'), {
+            'fields': ('propriete',)
+        }),
+        (_('Statut'), {
+            'fields': ('statut',)
+        }),
+        (_('Déduction'), {
+            'fields': ('motif_deduction', 'retrait_utilise', 'notes_deduction'),
+            'classes': ('collapse',)
+        }),
+        (_('Métadonnées'), {
+            'fields': ('cree_par', 'date_creation', 'date_modification'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('date_creation', 'date_modification', 'numero_charge')
+    
+    actions = ['marquer_payees', 'marquer_remboursees', 'annuler_charges']
+    
+    def statut_colore(self, obj):
+        """Affiche le statut avec une couleur."""
+        colors = {
+            'en_attente': 'orange',
+            'payee': 'green',
+            'remboursee': 'blue',
+            'deduite_retrait': 'purple',
+            'annulee': 'red',
+        }
+        color = colors.get(obj.statut, 'black')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color, obj.get_statut_display()
+        )
+    statut_colore.short_description = _("Statut")
+    
+    def marquer_payees(self, request, queryset):
+        """Action pour marquer les charges comme payées."""
+        updated = queryset.update(statut='payee')
+        self.message_user(request, f'{updated} charge(s) marquée(s) comme payée(s).')
+    marquer_payees.short_description = _("Marquer comme payées")
+    
+    def marquer_remboursees(self, request, queryset):
+        """Action pour marquer les charges comme remboursées."""
+        updated = queryset.update(statut='remboursee')
+        self.message_user(request, f'{updated} charge(s) marquée(s) comme remboursée(s).')
+    marquer_remboursees.short_description = _("Marquer comme remboursées")
+    
+    def annuler_charges(self, request, queryset):
+        """Action pour annuler les charges sélectionnées."""
+        updated = queryset.update(statut='annulee')
+        self.message_user(request, f'{updated} charge(s) annulée(s).')
+    annuler_charges.short_description = _("Annuler les charges")
+    
+    def get_queryset(self, request):
+        """Optimiser les requêtes."""
+        return super().get_queryset(request).select_related('propriete', 'retrait_utilise')
+
+
+@admin.register(ChargesBailleurRetrait)
+class ChargesBailleurRetraitAdmin(admin.ModelAdmin):
+    """Interface d'administration pour les liaisons charges-retraits."""
+    
+    list_display = (
+        'id', 'charge_bailleur', 'retrait_bailleur', 'montant_deduit', 'date_deduction'
+    )
+    list_filter = (
+        'date_deduction', 'charge_bailleur__type_charge', 'retrait_bailleur__bailleur'
+    )
+    search_fields = (
+        'charge_bailleur__titre', 'charge_bailleur__numero_charge',
+        'retrait_bailleur__bailleur__nom', 'retrait_bailleur__bailleur__prenom'
+    )
+    ordering = ('-date_deduction',)
+    
+    fieldsets = (
+        (_('Informations de base'), {
+            'fields': ('charge_bailleur', 'retrait_bailleur', 'montant_deduit', 'notes')
+        }),
+        (_('Dates'), {
+            'fields': ('date_deduction',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('date_deduction',)
+    
+    def get_queryset(self, request):
+        """Optimiser les requêtes."""
+        return super().get_queryset(request).select_related(
+            'charge_bailleur', 'charge_bailleur__propriete', 'retrait_bailleur', 'retrait_bailleur__bailleur'
+        )
+
+
+@admin.register(PieceContrat)
+class PieceContratAdmin(admin.ModelAdmin):
+    """Interface d'administration pour les contrats de pièces."""
+    
+    list_display = (
+        'id', 'piece', 'contrat', 'loyer_piece', 'charges_piece',
+        'date_debut_occupation', 'actif'
+    )
+    list_filter = (
+        'actif', 'date_debut_occupation', 'piece__propriete'
+    )
+    search_fields = (
+        'piece__nom', 'contrat__numero_contrat',
+        'contrat__locataire__nom', 'contrat__locataire__prenom'
+    )
+    ordering = ('contrat', 'piece')
+    
+    fieldsets = (
+        (_('Informations de base'), {
+            'fields': ('piece', 'contrat', 'loyer_piece', 'charges_piece')
+        }),
+        (_('Dates'), {
+            'fields': ('date_debut_occupation',)
+        }),
+        (_('Statut'), {
+            'fields': ('actif',)
+        }),
+        (_('Métadonnées'), {
+            'fields': ('date_creation',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('date_creation',)
+    
+    def get_queryset(self, request):
+        """Optimiser les requêtes."""
+        return super().get_queryset(request).select_related(
+            'piece', 'piece__propriete', 'contrat', 'contrat__locataire'
+        )

@@ -5,8 +5,9 @@ from django.utils import timezone
 from core.admin_actions import suppression_definitive_conditionnelle
 from .models import (
     Paiement, ChargeDeductible, ChargeBailleur,
-    RetraitBailleur, RetraitQuittance, QuittancePaiement
+    RetraitBailleur, RetraitQuittance, QuittancePaiement, RecapMensuel
 )
+from .models_avance import AvanceLoyer, ConsommationAvance, HistoriquePaiement
 
 
 @admin.register(Paiement)
@@ -336,6 +337,399 @@ class RetraitBailleurAdmin(admin.ModelAdmin):
         )
 
 
+@admin.register(RetraitQuittance)
+class RetraitQuittanceAdmin(admin.ModelAdmin):
+    """Interface d'administration pour les quittances de retrait."""
+    
+    list_display = (
+        'numero_quittance', 'retrait', 'get_bailleur', 'date_emission', 'cree_par'
+    )
+    list_filter = ('date_emission', 'cree_par')
+    search_fields = (
+        'numero_quittance', 'retrait__bailleur__nom', 
+        'retrait__bailleur__prenom', 'retrait__bailleur__code_bailleur'
+    )
+    ordering = ('-date_emission',)
+    
+    fieldsets = (
+        (_('Informations de base'), {
+            'fields': ('retrait', 'numero_quittance', 'date_emission')
+        }),
+        (_('Métadonnées'), {
+            'fields': ('cree_par', 'created_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('numero_quittance', 'date_emission', 'created_at')
+    
+    def get_bailleur(self, obj):
+        """Affiche le nom du bailleur."""
+        return obj.retrait.bailleur.get_nom_complet() if obj.retrait else '-'
+    get_bailleur.short_description = _("Bailleur")
+    
+    def get_queryset(self, request):
+        """Optimiser les requêtes."""
+        return super().get_queryset(request).select_related(
+            'retrait', 'retrait__bailleur', 'cree_par'
+        )
+
+
+@admin.register(RecapMensuel)
+class RecapMensuelAdmin(admin.ModelAdmin):
+    """Interface d'administration pour les récapitulatifs mensuels."""
+    
+    list_display = (
+        'id', 'bailleur', 'mois_recap', 'total_loyers_bruts', 
+        'total_charges_deductibles', 'total_net_a_payer', 'statut_colore',
+        'nombre_proprietes', 'nombre_contrats_actifs', 'date_creation'
+    )
+    list_filter = (
+        'statut', 'mois_recap', 'date_creation', 'bailleur'
+    )
+    search_fields = (
+        'bailleur__nom', 'bailleur__prenom', 'bailleur__code_bailleur'
+    )
+    ordering = ('-mois_recap', '-date_creation')
+    
+    fieldsets = (
+        (_('Informations de base'), {
+            'fields': ('bailleur', 'mois_recap', 'statut')
+        }),
+        (_('Montants'), {
+            'fields': ('total_loyers_bruts', 'total_charges_deductibles', 'total_net_a_payer')
+        }),
+        (_('Compteurs'), {
+            'fields': ('nombre_proprietes', 'nombre_contrats_actifs', 'nombre_paiements_recus')
+        }),
+        (_('Dates'), {
+            'fields': ('date_creation', 'date_validation', 'date_envoi', 'date_paiement')
+        }),
+        (_('Utilisateurs'), {
+            'fields': ('cree_par', 'valide_par'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('date_creation', 'total_net_a_payer')
+    
+    actions = ['valider_recaps', 'marquer_envoyes', 'marquer_payes', 'recalculer_totaux', suppression_definitive_conditionnelle]
+    
+    def has_module_permission(self, request):
+        """Permet l'accès au module."""
+        return True
+    
+    def has_view_permission(self, request, obj=None):
+        """Permet la visualisation."""
+        return True
+    
+    def has_add_permission(self, request):
+        """Permet l'ajout."""
+        return True
+    
+    def has_change_permission(self, request, obj=None):
+        """Permet la modification."""
+        return True
+    
+    def has_delete_permission(self, request, obj=None):
+        """Permet la suppression."""
+        return True
+    
+    def statut_colore(self, obj):
+        """Affiche le statut avec une couleur."""
+        colors = {
+            'brouillon': '#6c757d',
+            'valide': '#28a745',
+            'envoye': '#17a2b8',
+            'paye': '#007bff'
+        }
+        color = colors.get(obj.statut, '#6c757d')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color, obj.get_statut_display()
+        )
+    statut_colore.short_description = _("Statut")
+    
+    def valider_recaps(self, request, queryset):
+        """Action pour valider les récapitulatifs sélectionnés."""
+        updated = 0
+        for recap in queryset.filter(statut='brouillon'):
+            recap.valider_recap(request.user)
+            updated += 1
+        self.message_user(request, f'{updated} récapitulatif(s) validé(s) avec succès.')
+    valider_recaps.short_description = _("Valider les récapitulatifs sélectionnés")
+    
+    def marquer_envoyes(self, request, queryset):
+        """Action pour marquer les récapitulatifs comme envoyés."""
+        updated = 0
+        for recap in queryset.filter(statut='valide'):
+            recap.marquer_envoye(request.user)
+            updated += 1
+        self.message_user(request, f'{updated} récapitulatif(s) marqué(s) comme envoyé(s).')
+    marquer_envoyes.short_description = _("Marquer comme envoyés")
+    
+    def marquer_payes(self, request, queryset):
+        """Action pour marquer les récapitulatifs comme payés."""
+        updated = 0
+        for recap in queryset.filter(statut='envoye'):
+            recap.marquer_paye(request.user)
+            updated += 1
+        self.message_user(request, f'{updated} récapitulatif(s) marqué(s) comme payé(s).')
+    marquer_payes.short_description = _("Marquer comme payés")
+    
+    def recalculer_totaux(self, request, queryset):
+        """Action pour recalculer les totaux des récapitulatifs."""
+        updated = 0
+        for recap in queryset:
+            recap.calculer_totaux_bailleur()
+            updated += 1
+        self.message_user(request, f'{updated} récapitulatif(s) recalculé(s) avec succès.')
+    recalculer_totaux.short_description = _("Recalculer les totaux")
+    
+    def get_queryset(self, request):
+        """Optimise les requêtes avec select_related et prefetch_related."""
+        return super().get_queryset(request).select_related(
+            'bailleur', 'cree_par', 'valide_par'
+        )
+    
+    def save_model(self, request, obj, form, change):
+        """Sauvegarde le modèle avec l'utilisateur créateur."""
+        if not change:  # Nouvelle création
+            obj.cree_par = request.user
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(AvanceLoyer)
+class AvanceLoyerAdmin(admin.ModelAdmin):
+    """Interface d'administration pour les avances de loyer."""
+    
+    list_display = (
+        'id', 'contrat', 'montant_avance', 'loyer_mensuel', 'nombre_mois_couverts',
+        'montant_restant', 'statut_colore', 'date_avance', 'mois_debut_couverture', 'mois_fin_couverture'
+    )
+    list_filter = (
+        'statut', 'mode_selection_mois', 'date_avance', 'mois_debut_couverture',
+        'contrat__propriete__ville'
+    )
+    search_fields = (
+        'contrat__numero_contrat', 'contrat__locataire__nom', 
+        'contrat__locataire__prenom', 'contrat__propriete__titre'
+    )
+    ordering = ('-date_avance',)
+    
+    fieldsets = (
+        (_('Informations de base'), {
+            'fields': ('contrat', 'montant_avance', 'loyer_mensuel', 'date_avance')
+        }),
+        (_('Calculs automatiques'), {
+            'fields': ('nombre_mois_couverts', 'montant_restant', 'montant_reste')
+        }),
+        (_('Mode de sélection des mois'), {
+            'fields': ('mode_selection_mois', 'mois_effet_personnalise', 'mois_couverts_manuels')
+        }),
+        (_('Période de couverture'), {
+            'fields': ('mois_debut_couverture', 'mois_fin_couverture')
+        }),
+        (_('Statut'), {
+            'fields': ('statut',)
+        }),
+        (_('Paiement associé'), {
+            'fields': ('paiement',),
+            'classes': ('collapse',)
+        }),
+        (_('Métadonnées'), {
+            'fields': ('notes', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('created_at', 'updated_at', 'nombre_mois_couverts', 'montant_restant', 'montant_reste')
+    
+    actions = ['activer_avances', 'marquer_epuisees', 'annuler_avances', suppression_definitive_conditionnelle]
+    
+    def has_module_permission(self, request):
+        """Permet l'accès au module."""
+        return True
+    
+    def has_view_permission(self, request, obj=None):
+        """Permet la visualisation."""
+        return True
+    
+    def has_add_permission(self, request):
+        """Permet l'ajout."""
+        return True
+    
+    def has_change_permission(self, request, obj=None):
+        """Permet la modification."""
+        return True
+    
+    def has_delete_permission(self, request, obj=None):
+        """Permet la suppression."""
+        return True
+    
+    def statut_colore(self, obj):
+        """Affiche le statut avec une couleur."""
+        colors = {
+            'active': 'green',
+            'epuisee': 'orange',
+            'annulee': 'red',
+        }
+        color = colors.get(obj.statut, 'black')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color, obj.get_statut_display()
+        )
+    statut_colore.short_description = _("Statut")
+    
+    def activer_avances(self, request, queryset):
+        """Action pour activer les avances sélectionnées."""
+        updated = queryset.update(statut='active')
+        self.message_user(request, f'{updated} avance(s) activée(s) avec succès.')
+    activer_avances.short_description = _("Activer les avances sélectionnées")
+    
+    def marquer_epuisees(self, request, queryset):
+        """Action pour marquer les avances comme épuisées."""
+        updated = queryset.update(statut='epuisee')
+        self.message_user(request, f'{updated} avance(s) marquée(s) comme épuisée(s).')
+    marquer_epuisees.short_description = _("Marquer comme épuisées")
+    
+    def annuler_avances(self, request, queryset):
+        """Action pour annuler les avances sélectionnées."""
+        updated = queryset.update(statut='annulee')
+        self.message_user(request, f'{updated} avance(s) annulée(s) avec succès.')
+    annuler_avances.short_description = _("Annuler les avances sélectionnées")
+    
+    def get_queryset(self, request):
+        """Optimiser les requêtes."""
+        return super().get_queryset(request).select_related(
+            'contrat', 'contrat__locataire', 'contrat__propriete', 'paiement'
+        )
+
+
+@admin.register(ConsommationAvance)
+class ConsommationAvanceAdmin(admin.ModelAdmin):
+    """Interface d'administration pour les consommations d'avances."""
+    
+    list_display = (
+        'id', 'avance', 'mois_consomme', 'montant_consomme', 'montant_restant_apres', 'created_at'
+    )
+    list_filter = (
+        'mois_consomme', 'created_at', 'avance__contrat__propriete__ville'
+    )
+    search_fields = (
+        'avance__contrat__numero_contrat', 'avance__contrat__locataire__nom',
+        'avance__contrat__locataire__prenom'
+    )
+    ordering = ('-mois_consomme',)
+    
+    fieldsets = (
+        (_('Informations de base'), {
+            'fields': ('avance', 'paiement', 'mois_consomme', 'montant_consomme', 'montant_restant_apres')
+        }),
+        (_('Métadonnées'), {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('created_at',)
+    
+    def has_module_permission(self, request):
+        """Permet l'accès au module."""
+        return True
+    
+    def has_view_permission(self, request, obj=None):
+        """Permet la visualisation."""
+        return True
+    
+    def has_add_permission(self, request):
+        """Permet l'ajout."""
+        return True
+    
+    def has_change_permission(self, request, obj=None):
+        """Permet la modification."""
+        return True
+    
+    def has_delete_permission(self, request, obj=None):
+        """Permet la suppression."""
+        return True
+    
+    def get_queryset(self, request):
+        """Optimiser les requêtes."""
+        return super().get_queryset(request).select_related(
+            'avance', 'avance__contrat', 'avance__contrat__locataire', 'paiement'
+        )
+
+
+@admin.register(HistoriquePaiement)
+class HistoriquePaiementAdmin(admin.ModelAdmin):
+    """Interface d'administration pour l'historique des paiements."""
+    
+    list_display = (
+        'id', 'contrat', 'paiement', 'mois_paiement', 'montant_paye',
+        'montant_du', 'montant_avance_utilisee', 'montant_restant_du', 'mois_regle'
+    )
+    list_filter = (
+        'mois_regle', 'mois_paiement', 'contrat__propriete__ville'
+    )
+    search_fields = (
+        'contrat__numero_contrat', 'contrat__locataire__nom',
+        'contrat__locataire__prenom', 'paiement__reference_paiement'
+    )
+    ordering = ('-mois_paiement',)
+    
+    fieldsets = (
+        (_('Informations de base'), {
+            'fields': ('contrat', 'paiement', 'mois_paiement')
+        }),
+        (_('Montants'), {
+            'fields': (
+                'montant_paye', 'montant_du', 'montant_avance_utilisee', 
+                'montant_restant_du', 'mois_regle'
+            )
+        }),
+        (_('Métadonnées'), {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('created_at',)
+    
+    def has_module_permission(self, request):
+        """Permet l'accès au module."""
+        return True
+    
+    def has_view_permission(self, request, obj=None):
+        """Permet la visualisation."""
+        return True
+    
+    def has_add_permission(self, request):
+        """Permet l'ajout."""
+        return True
+    
+    def has_change_permission(self, request, obj=None):
+        """Permet la modification."""
+        return True
+    
+    def has_delete_permission(self, request, obj=None):
+        """Permet la suppression."""
+        return True
+    
+    def get_queryset(self, request):
+        """Optimiser les requêtes."""
+        return super().get_queryset(request).select_related(
+            'contrat', 'contrat__locataire', 'paiement'
+        )
+    
+    class Media:
+        """Ajoute des styles CSS personnalisés pour l'admin."""
+        css = {
+            'all': ('admin/css/tableau_bord_admin.css',)
+        }
+        js = ('admin/js/tableau_bord_admin.js',)
+
+
 # @admin.register(RetraitChargeDeductible)  # Modèle supprimé
 class RetraitChargeDeductibleAdmin(admin.ModelAdmin):
     """Admin pour la liaison entre retraits et charges déductibles."""
@@ -588,114 +982,6 @@ class TableauBordFinancierAdmin(admin.ModelAdmin):
         js = ('admin/js/tableau_bord_admin.js',)
 
 
-# @admin.register(RecapMensuel)  # Modèle supprimé
-class RecapMensuelAdmin(admin.ModelAdmin):
-    """Interface d'administration pour les récapitulatifs mensuels."""
-    
-    list_display = (
-        'id', 'bailleur', 'mois_recap', 'total_loyers_bruts', 
-        'total_charges_deductibles', 'total_net_a_payer', 'statut_colore',
-        'nombre_proprietes', 'nombre_contrats_actifs', 'date_creation'
-    )
-    list_filter = (
-        'statut', 'mois_recap', 'date_creation', 'bailleur'
-    )
-    search_fields = (
-        'bailleur__nom', 'bailleur__prenom', 'bailleur__code_bailleur'
-    )
-    ordering = ('-mois_recap', '-date_creation')
-    
-    fieldsets = (
-        (_('Informations de base'), {
-            'fields': ('bailleur', 'mois_recap', 'statut')
-        }),
-        (_('Montants'), {
-            'fields': ('total_loyers_bruts', 'total_charges_deductibles', 'total_net_a_payer')
-        }),
-        (_('Compteurs'), {
-            'fields': ('nombre_proprietes', 'nombre_contrats_actifs', 'nombre_paiements_recus')
-        }),
-        (_('Relations'), {
-            'fields': ('paiements_concernes', 'charges_deductibles'),
-            'classes': ('collapse',)
-        }),
-        (_('Dates'), {
-            'fields': ('date_creation', 'date_validation', 'date_envoi', 'date_paiement')
-        }),
-        (_('Utilisateurs'), {
-            'fields': ('cree_par', 'valide_par'),
-            'classes': ('collapse',)
-        }),
-    )
-    
-    readonly_fields = ('date_creation', 'total_net_a_payer')
-    
-    actions = ['valider_recaps', 'marquer_envoyes', 'marquer_payes', 'recalculer_totaux']
-    
-    def statut_colore(self, obj):
-        """Affiche le statut avec une couleur."""
-        colors = {
-            'brouillon': '#6c757d',
-            'valide': '#28a745',
-            'envoye': '#17a2b8',
-            'paye': '#007bff'
-        }
-        color = colors.get(obj.statut, '#6c757d')
-        return format_html(
-            '<span style="color: {}; font-weight: bold;">{}</span>',
-            color, obj.get_statut_display()
-        )
-    statut_colore.short_description = _("Statut")
-    
-    def valider_recaps(self, request, queryset):
-        """Action pour valider les récapitulatifs sélectionnés."""
-        updated = 0
-        for recap in queryset.filter(statut='brouillon'):
-            recap.valider_recap(request.user)
-            updated += 1
-        self.message_user(request, f'{updated} récapitulatif(s) validé(s) avec succès.')
-    valider_recaps.short_description = _("Valider les récapitulatifs sélectionnés")
-    
-    def marquer_envoyes(self, request, queryset):
-        """Action pour marquer les récapitulatifs comme envoyés."""
-        updated = 0
-        for recap in queryset.filter(statut='valide'):
-            recap.marquer_envoye(request.user)
-            updated += 1
-        self.message_user(request, f'{updated} récapitulatif(s) marqué(s) comme envoyé(s).')
-    marquer_envoyes.short_description = _("Marquer comme envoyés")
-    
-    def marquer_payes(self, request, queryset):
-        """Action pour marquer les récapitulatifs comme payés."""
-        updated = 0
-        for recap in queryset.filter(statut='envoye'):
-            recap.marquer_paye(request.user)
-            updated += 1
-        self.message_user(request, f'{updated} récapitulatif(s) marqué(s) comme payé(s).')
-    marquer_payes.short_description = _("Marquer comme payés")
-    
-    def recalculer_totaux(self, request, queryset):
-        """Action pour recalculer les totaux des récapitulatifs."""
-        updated = 0
-        for recap in queryset:
-            recap.calculer_totaux_bailleur()
-            updated += 1
-        self.message_user(request, f'{updated} récapitulatif(s) recalculé(s) avec succès.')
-    recalculer_totaux.short_description = _("Recalculer les totaux")
-    
-    def get_queryset(self, request):
-        """Optimise les requêtes avec select_related et prefetch_related."""
-        return super().get_queryset(request).select_related(
-            'bailleur', 'cree_par', 'valide_par'
-        ).prefetch_related(
-            'paiements_concernes', 'charges_deductibles'
-        )
-    
-    def save_model(self, request, obj, form, change):
-        """Sauvegarde le modèle avec l'utilisateur créateur."""
-        if not change:  # Nouvelle création
-            obj.cree_par = request.user
-        super().save_model(request, obj, form, change)
 
 
 @admin.register(ChargeBailleur)

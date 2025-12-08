@@ -2,7 +2,10 @@ from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
 from django.utils import timezone
-from .models import Contrat, Quittance, EtatLieux, ResiliationContrat, DepenseResiliation
+from .models import (
+    Contrat, Quittance, EtatLieux, ResiliationContrat, 
+    DepenseResiliation, RecuCaution, DocumentContrat
+)
 
 
 @admin.register(Contrat)
@@ -268,3 +271,105 @@ class DepenseResiliationAdmin(admin.ModelAdmin):
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('resiliation', 'resiliation__contrat')
+
+
+@admin.register(RecuCaution)
+class RecuCautionAdmin(admin.ModelAdmin):
+    """Interface d'administration pour les reçus de caution."""
+    
+    list_display = (
+        'numero_recu', 'contrat', 'type_recu', 'imprime', 
+        'date_emission', 'format_impression', 'imprime_par'
+    )
+    list_filter = (
+        'type_recu', 'imprime', 'format_impression', 'date_emission'
+    )
+    search_fields = (
+        'numero_recu', 'contrat__numero_contrat',
+        'contrat__locataire__nom', 'contrat__locataire__prenom'
+    )
+    ordering = ('-date_emission',)
+    
+    fieldsets = (
+        (_('Informations de base'), {
+            'fields': ('contrat', 'numero_recu', 'type_recu', 'date_emission')
+        }),
+        (_('Impression'), {
+            'fields': ('imprime', 'date_impression', 'imprime_par', 'format_impression')
+        }),
+        (_('Métadonnées'), {
+            'fields': ('notes_internes',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('numero_recu', 'date_emission')
+    
+    actions = ['marquer_imprimes']
+    
+    def marquer_imprimes(self, request, queryset):
+        """Action pour marquer les reçus comme imprimés."""
+        from django.utils import timezone
+        updated = 0
+        for recu in queryset.filter(imprime=False):
+            recu.marquer_imprime(request.user)
+            updated += 1
+        self.message_user(request, f'{updated} reçu(s) marqué(s) comme imprimé(s).')
+    marquer_imprimes.short_description = _("Marquer comme imprimés")
+    
+    def get_queryset(self, request):
+        """Optimiser les requêtes."""
+        return super().get_queryset(request).select_related(
+            'contrat', 'contrat__locataire', 'contrat__propriete', 'imprime_par'
+        )
+
+
+@admin.register(DocumentContrat)
+class DocumentContratAdmin(admin.ModelAdmin):
+    """Interface d'administration pour les documents de contrat."""
+    
+    list_display = (
+        'numero_document', 'contrat', 'type_document', 'imprime',
+        'date_creation', 'date_impression', 'imprime_par'
+    )
+    list_filter = (
+        'type_document', 'imprime', 'date_creation', 'format_impression'
+    )
+    search_fields = (
+        'numero_document', 'contrat__numero_contrat',
+        'contrat__locataire__nom', 'contrat__locataire__prenom'
+    )
+    ordering = ('-date_creation',)
+    
+    fieldsets = (
+        (_('Informations de base'), {
+            'fields': ('contrat', 'numero_document', 'type_document')
+        }),
+        (_('Impression'), {
+            'fields': ('imprime', 'date_impression', 'imprime_par', 'format_impression')
+        }),
+        (_('Métadonnées'), {
+            'fields': ('version_template', 'notes_internes', 'date_creation'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('numero_document', 'date_creation')
+    
+    actions = ['marquer_imprimes']
+    
+    def marquer_imprimes(self, request, queryset):
+        """Action pour marquer les documents comme imprimés."""
+        from django.utils import timezone
+        updated = 0
+        for doc in queryset.filter(imprime=False):
+            doc.marquer_imprime(request.user)
+            updated += 1
+        self.message_user(request, f'{updated} document(s) marqué(s) comme imprimé(s).')
+    marquer_imprimes.short_description = _("Marquer comme imprimés")
+    
+    def get_queryset(self, request):
+        """Optimiser les requêtes."""
+        return super().get_queryset(request).select_related(
+            'contrat', 'contrat__locataire', 'contrat__propriete', 'imprime_par'
+        )
