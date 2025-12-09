@@ -491,10 +491,12 @@ class ContratPDFService:
         # Récupérer les vraies données de la base
         locataire_nom = locataire.nom.upper() if locataire.nom else '....................'
         locataire_prenom = locataire.prenom.upper() if locataire.prenom else '....................'
-        locataire_cnib = getattr(locataire, 'numero_cnib', None) or '....................'
-        locataire_profession = getattr(locataire, 'profession', None) or '....................'
-        locataire_adresse = locataire.adresse if locataire.adresse else '....................'
-        locataire_tel = locataire.telephone if locataire.telephone else '....................'
+        locataire_cnib = getattr(locataire, 'numero_cnib', None)
+        locataire_cnib = locataire_cnib if locataire_cnib and locataire_cnib.strip() else '....................'
+        locataire_profession = getattr(locataire, 'profession', None)
+        locataire_profession = locataire_profession if locataire_profession and locataire_profession.strip() else '....................'
+        locataire_adresse = locataire.adresse if locataire.adresse and locataire.adresse.strip() else '....................'
+        locataire_tel = locataire.telephone if locataire.telephone and locataire.telephone.strip() else '....................'
         
         # Logique des civilités selon les données de la base
         civilité = self._determiner_civilite_locataire(locataire)
@@ -505,20 +507,14 @@ Profession <b>{locataire_profession}</b> adresse : <b>{locataire_adresse}</b> Te
         elements.append(Spacer(1, 6))
         
         # Personne garant (avec pointillés pour champs vides)
-        garant_nom = getattr(self.contrat, 'garant_nom', 'NOM DU GARANT')
-        garant_profession = getattr(self.contrat, 'garant_profession', 'PROFESSION')
-        garant_adresse = getattr(self.contrat, 'garant_adresse', 'ADRESSE')
-        garant_tel = getattr(self.contrat, 'garant_telephone', 'TEL')
-        
-        # Remplacer les valeurs par défaut par des pointillés bien espacés
-        if garant_nom == 'NOM DU GARANT':
-            garant_nom = '....................'
-        if garant_profession == 'PROFESSION':
-            garant_profession = '....................'
-        if garant_adresse == 'ADRESSE':
-            garant_adresse = '....................'
-        if garant_tel == 'TEL':
-            garant_tel = '....................'
+        garant_nom = getattr(self.contrat, 'garant_nom', None)
+        garant_nom = garant_nom if garant_nom and garant_nom.strip() and garant_nom != 'NOM DU GARANT' else '....................'
+        garant_profession = getattr(self.contrat, 'garant_profession', None)
+        garant_profession = garant_profession if garant_profession and garant_profession.strip() and garant_profession != 'PROFESSION' else '....................'
+        garant_adresse = getattr(self.contrat, 'garant_adresse', None)
+        garant_adresse = garant_adresse if garant_adresse and garant_adresse.strip() and garant_adresse != 'ADRESSE' else '....................'
+        garant_tel = getattr(self.contrat, 'garant_telephone', None)
+        garant_tel = garant_tel if garant_tel and garant_tel.strip() and garant_tel != 'TEL' else '....................'
             
         garant_info = f"""Personne garant M, Mme, {garant_nom} profession {garant_profession} Adresse {garant_adresse} tel : {garant_tel}"""
         elements.append(Paragraph(garant_info, self.styles['CustomBody']))
