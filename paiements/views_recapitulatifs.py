@@ -489,88 +489,137 @@ def _generer_recapitulatif_kbis_html(recapitulatif, totaux, proprietes_avec_deta
             <p><strong>Date de génération:</strong> {recapitulatif.date_creation.strftime('%d/%m/%Y à %H:%M')}</p>
         </div>
         
-        <table class="tableau-proprietes">
-            <thead>
-                <tr>
-                    <th>Propriété</th>
-                    <th>Type</th>
-                    <th>Adresse</th>
-                    <th>Loyer Brut</th>
-                    <th>Charges Déductibles</th>
-                    <th>Charges Bailleur</th>
-                    <th>Net à Payer</th>
-                </tr>
-            </thead>
-            <tbody>
     """
     
-    # Ajouter les propriétés
+    # Ajouter les propriétés groupées
     for item in proprietes_avec_details:
         propriete = item['propriete']
         loyer_total = item['loyer_total']
         unites_locatives = item['unites_locatives']
         
-        # Ligne principale de la propriété
+        # En-tête de la propriété avec toutes ses informations
         contenu += f"""
-                <tr class="propriete-principale">
-                    <td><strong>{propriete.titre}</strong></td>
-                    <td>{propriete.type_bien.nom if propriete.type_bien else 'N/A'}</td>
-                    <td>{propriete.adresse}</td>
-                    <td class="montant">{loyer_total:,.0f} F CFA</td>
-                    <td class="montant">0 F CFA</td>
-                    <td class="montant">0 F CFA</td>
-                    <td class="montant">{loyer_total:,.0f} F CFA</td>
-                </tr>
+        <div class="groupe-propriete" style="margin-bottom: 30px; page-break-inside: avoid;">
+            <div class="entete-propriete" style="background-color: #2c3e50; color: white; padding: 15px; border-radius: 5px 5px 0 0; margin-top: 20px;">
+                <h3 style="margin: 0 0 10px 0; font-size: 16px;">{propriete.titre}</h3>
+                <div style="font-size: 13px;">
+                    <strong>Type:</strong> {propriete.type_bien.nom if propriete.type_bien else 'N/A'} | 
+                    <strong>Adresse:</strong> {propriete.adresse} | 
+                    <strong>Quartier:</strong> {propriete.quartier if hasattr(propriete, 'quartier') and propriete.quartier else propriete.ville or 'N/A'} |
+                    <strong>Loyer Total:</strong> {loyer_total:,.0f} F CFA
+                </div>
+            </div>
+            
+            <table class="tableau-proprietes" style="margin-top: 0;">
+                <thead>
+                    <tr>
+                        <th>Unité Locative</th>
+                        <th>Type</th>
+                        <th>Détails</th>
+                        <th>Locataire</th>
+                        <th>Loyer</th>
+                        <th>Charges</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
         """
         
-        # Ajouter les unités locatives si elles existent
-        for unite in unites_locatives:
-            contrats_actifs = unite.contrats_actifs
-            if contrats_actifs.exists():
-                for contrat in contrats_actifs:
-                    loyer_unite = contrat.loyer_mensuel or 0
-                    charges_unite = contrat.charges_mensuelles or 0
+        # Ajouter les unités locatives de cette propriété
+        if unites_locatives.exists():
+            for unite in unites_locatives:
+                contrats_actifs = unite.contrats_actifs
+                if contrats_actifs.exists():
+                    for contrat in contrats_actifs:
+                        loyer_unite = contrat.loyer_mensuel or 0
+                        charges_unite = contrat.charges_mensuelles or 0
+                        total_unite = loyer_unite + charges_unite
+                        locataire_nom = f"{contrat.locataire.nom} {contrat.locataire.prenom}" if contrat.locataire else "N/A"
+                        
+                        contenu += f"""
+                        <tr>
+                            <td><strong>{unite.numero_unite}</strong> - {unite.nom}</td>
+                            <td>{unite.type_unite}</td>
+                            <td>Étage: {unite.etage} | {unite.surface}m²</td>
+                            <td>{locataire_nom}</td>
+                            <td class="montant">{loyer_unite:,.0f} F CFA</td>
+                            <td class="montant">{charges_unite:,.0f} F CFA</td>
+                            <td class="montant"><strong>{total_unite:,.0f} F CFA</strong></td>
+                        </tr>
+                        """
+                else:
+                    # Unité sans contrat actif
+                    loyer_unite = unite.loyer_mensuel or 0
+                    charges_unite = unite.charges_mensuelles or 0
                     total_unite = loyer_unite + charges_unite
                     
                     contenu += f"""
-                    <tr class="unite-locative">
-                        <td>└─ {unite.numero_unite} - {unite.nom}</td>
+                    <tr style="background-color: #fff3cd;">
+                        <td><strong>{unite.numero_unite}</strong> - {unite.nom}</td>
                         <td>{unite.type_unite}</td>
-                        <td>{unite.etage} - {unite.surface}m²</td>
+                        <td>Étage: {unite.etage} | {unite.surface}m²</td>
+                        <td><em>Non louée</em></td>
                         <td class="montant">{loyer_unite:,.0f} F CFA</td>
                         <td class="montant">{charges_unite:,.0f} F CFA</td>
-                        <td class="montant">0 F CFA</td>
-                        <td class="montant">{total_unite:,.0f} F CFA</td>
+                        <td class="montant"><strong>{total_unite:,.0f} F CFA</strong></td>
                     </tr>
                     """
-            else:
-                loyer_unite = unite.loyer_mensuel or 0
-                charges_unite = unite.charges_mensuelles or 0
-                total_unite = loyer_unite + charges_unite
-                
-                contenu += f"""
-                <tr class="unite-locative">
-                    <td>└─ {unite.numero_unite} - {unite.nom}</td>
-                    <td>{unite.type_unite}</td>
-                    <td>{unite.etage} - {unite.surface}m²</td>
-                    <td class="montant">{loyer_unite:,.0f} F CFA</td>
-                    <td class="montant">{charges_unite:,.0f} F CFA</td>
-                    <td class="montant">0 F CFA</td>
-                    <td class="montant">{total_unite:,.0f} F CFA</td>
-                </tr>
-                """
+        else:
+            # Propriété sans unités locatives (contrat direct sur la propriété)
+            contrats_propriete = propriete.contrats.filter(est_actif=True, est_resilie=False)
+            if contrats_propriete.exists():
+                for contrat in contrats_propriete:
+                    loyer_prop = contrat.loyer_mensuel or 0
+                    charges_prop = contrat.charges_mensuelles or 0
+                    total_prop = loyer_prop + charges_prop
+                    locataire_nom = f"{contrat.locataire.nom} {contrat.locataire.prenom}" if contrat.locataire else "N/A"
+                    
+                    contenu += f"""
+                    <tr>
+                        <td colspan="3"><strong>Propriété complète</strong></td>
+                        <td>{locataire_nom}</td>
+                        <td class="montant">{loyer_prop:,.0f} F CFA</td>
+                        <td class="montant">{charges_prop:,.0f} F CFA</td>
+                        <td class="montant"><strong>{total_prop:,.0f} F CFA</strong></td>
+                    </tr>
+                    """
+        
+        # Sous-total pour la propriété
+        contenu += f"""
+                    <tr class="totaux" style="background-color: #e8f5e8;">
+                        <td colspan="4" style="text-align: right;"><strong>SOUS-TOTAL PROPRIÉTÉ</strong></td>
+                        <td class="montant"><strong>{loyer_total:,.0f} F CFA</strong></td>
+                        <td class="montant"><strong>0 F CFA</strong></td>
+                        <td class="montant"><strong>{loyer_total:,.0f} F CFA</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        """
     
-    # Ajouter les totaux
+    # Ajouter le tableau des totaux généraux
     contenu += f"""
-                <tr class="totaux">
-                    <td colspan="3"><strong>TOTAL GÉNÉRAL</strong></td>
-                    <td class="montant"><strong>{totaux['total_loyers_bruts']:,.0f} F CFA</strong></td>
-                    <td class="montant"><strong>{totaux['total_charges_deductibles']:,.0f} F CFA</strong></td>
-                    <td class="montant"><strong>{totaux['total_charges_bailleur']:,.0f} F CFA</strong></td>
-                    <td class="montant"><strong>{totaux['total_net_a_payer']:,.0f} F CFA</strong></td>
+        <div class="totaux-generaux" style="margin-top: 30px; padding: 20px; background-color: #e8f5e8; border-radius: 5px; border: 2px solid #27ae60;">
+            <h3 style="margin: 0 0 15px 0; color: #27ae60; text-align: center;">TOTAUX GÉNÉRAUX</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #27ae60;"><strong>Total Loyers Bruts:</strong></td>
+                    <td style="padding: 10px; text-align: right; border-bottom: 1px solid #27ae60;"><strong>{totaux['total_loyers_bruts']:,.0f} F CFA</strong></td>
                 </tr>
-            </tbody>
-        </table>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #27ae60;"><strong>Total Charges Déductibles:</strong></td>
+                    <td style="padding: 10px; text-align: right; border-bottom: 1px solid #27ae60;"><strong>{totaux['total_charges_deductibles']:,.0f} F CFA</strong></td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #27ae60;"><strong>Total Charges Bailleur:</strong></td>
+                    <td style="padding: 10px; text-align: right; border-bottom: 1px solid #27ae60;"><strong>{totaux['total_charges_bailleur']:,.0f} F CFA</strong></td>
+                </tr>
+                <tr style="background-color: #d4edda;">
+                    <td style="padding: 15px; font-size: 16px;"><strong>NET À PAYER AU BAILLEUR:</strong></td>
+                    <td style="padding: 15px; text-align: right; font-size: 16px;"><strong>{totaux['total_net_a_payer']:,.0f} F CFA</strong></td>
+                </tr>
+            </table>
+        </div>
         
         <div style="margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
             <h4>Résumé du Récapitulatif</h4>
