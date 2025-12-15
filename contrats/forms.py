@@ -367,8 +367,8 @@ class ContratForm(forms.ModelForm):
         if date_debut and date_fin and date_fin <= date_debut:
             raise ValidationError("La date de fin doit être postérieure à la date de début.")
         
-        # Vérifier que la date de début n'est pas dans le passé
-        if date_debut and date_debut < timezone.now().date():
+        # Vérifier que la date de début n'est pas dans le passé (uniquement pour les nouveaux contrats)
+        if date_debut and date_debut < timezone.now().date() and not self.instance.pk:
             raise ValidationError("La date de début ne peut pas être dans le passé.")
         
         # Vérifier que la propriété n'a pas déjà un contrat actif avec ce locataire
@@ -657,8 +657,9 @@ class RenouvellementContratForm(forms.Form):
         if date_debut and date_fin and date_fin <= date_debut:
             raise ValidationError("La date de fin doit être postérieure à la date de début.")
         
-        if date_debut and date_debut < timezone.now().date():
-            raise ValidationError("La date de début ne peut pas être dans le passé.")
+        # Suppression de la validation de date passée pour permettre la modification de contrats anciens
+        # if date_debut and date_debut < timezone.now().date():
+        #     raise ValidationError("La date de début ne peut pas être dans le passé.")
         
         return cleaned_data 
 
