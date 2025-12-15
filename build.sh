@@ -21,11 +21,7 @@ python manage.py collectstatic --no-input
 echo "🗄️  Exécution des migrations..."
 python manage.py migrate --no-input
 
-# 4. Régénération des PDFs des contrats existants
-echo "📄 Régénération des PDFs des contrats..."
-python manage.py regenerer_contrats_pdf --batch-size 10 || echo "⚠️  Aucun contrat à régénérer ou erreur non bloquante"
-
-# 5. Régénération des récapitulatifs mensuels existants
+# 4. Régénération des récapitulatifs mensuels existants avec nouveau format groupé
 echo "📊 Régénération des récapitulatifs mensuels..."
 python manage.py regenerer_recapitulatifs_pdf --batch-size 5 || echo "⚠️  Aucun récapitulatif à régénérer ou erreur non bloquante"
 
