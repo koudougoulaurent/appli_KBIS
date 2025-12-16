@@ -341,7 +341,8 @@ def generer_recapitulatif_kbis(request, recapitulatif_id):
         contrats__est_actif=True,
         contrats__est_resilie=False
     ).distinct().select_related('type_bien').prefetch_related(
-        'unites_locatives__contrats__locataire'
+        'unites_locatives__contrats__locataire',
+        'unites_locatives__contrats__paiements'  # Précharger les paiements
     )
     
     # Préparer les données pour le récapitulatif
@@ -366,6 +367,40 @@ def generer_recapitulatif_kbis(request, recapitulatif_id):
     )
     
     return HttpResponse(html_recapitulatif, content_type='text/html')
+
+
+def _contrat_a_paiement_complet_dans_mois(contrat, mois_recap):
+    """
+    Vérifie si un contrat a au moins un paiement complet dans le mois du récapitulatif.
+    
+    Un paiement est considéré comme "complet" si :
+    - est_paiement_partiel = False (paiement complet d'entrée) OU
+    - montant_restant_du = 0 (paiement partiel totalement complété)
+    
+    Args:
+        contrat: Le contrat à vérifier
+        mois_recap: La date du mois du récapitulatif (datetime.date)
+    
+    Returns:
+        bool: True si le contrat a un paiement complet dans le mois, False sinon
+    """
+    from paiements.models import Paiement
+    
+    # Obtenir les paiements du contrat pour le mois du récapitulatif
+    paiements_mois = Paiement.objects.filter(
+        contrat=contrat,
+        date_paiement__year=mois_recap.year,
+        date_paiement__month=mois_recap.month,
+        statut='valide'  # Seulement les paiements validés
+    )
+    
+    # Vérifier s'il existe au moins un paiement complet
+    for paiement in paiements_mois:
+        # Paiement complet d'entrée ou paiement partiel totalement complété
+        if not paiement.est_paiement_partiel or paiement.montant_restant_du == 0:
+            return True
+    
+    return False
 
 
 def _generer_recapitulatif_kbis_html(recapitulatif, totaux, proprietes_avec_details):
@@ -497,8 +532,69 @@ def _generer_recapitulatif_kbis_html(recapitulatif, totaux, proprietes_avec_deta
         loyer_total = item['loyer_total']
         unites_locatives = item['unites_locatives']
         
-        # En-tête de la propriété avec toutes ses informations
-        contenu += f"""
+        # FILTRE : Vérifier si la propriété a au moins un locataire avec paiement complet
+        # Avant d'afficher l'en-tête de la propriété, collecter les lignes de contrats valides
+        lignes_contrats_html = []
+        loyer_propriete_cumul = 0  # Loyer cumulé des contrats valides seulement
+        
+        # Ajouter les unités locatives de cette propriété
+        if unites_locatives.exists():
+            for unite in unites_locatives:
+                contrats_actifs = unite.contrats_actifs
+                if contrats_actifs.exists():
+                    for contrat in contrats_actifs:
+                        # FILTRE : N'afficher que les locataires avec paiement complet dans le mois
+                        if not _contrat_a_paiement_complet_dans_mois(contrat, recapitulatif.mois_recap):
+                            continue  # Sauter ce contrat si pas de paiement complet
+                        
+                        loyer_unite = contrat.loyer_mensuel or 0
+                        charges_unite = contrat.charges_mensuelles or 0
+                        total_unite = loyer_unite + charges_unite
+                        locataire_nom = f"{contrat.locataire.nom} {contrat.locataire.prenom}" if contrat.locataire else "N/A"
+                        
+                        # Ajouter à la liste des lignes valides
+                        lignes_contrats_html.append(f"""
+                        <tr>
+                            <td><strong>{unite.numero_unite}</strong> - {unite.nom}</td>
+                            <td>{unite.type_unite}</td>
+                            <td>Étage: {unite.etage} | {unite.surface}m²</td>
+                            <td>{locataire_nom}</td>
+                            <td class="montant">{loyer_unite:,.0f} F CFA</td>
+                            <td class="montant">{charges_unite:,.0f} F CFA</td>
+                            <td class="montant"><strong>{total_unite:,.0f} F CFA</strong></td>
+                        </tr>
+                        """)
+                        loyer_propriete_cumul += loyer_unite
+        else:
+            # Propriété sans unités locatives (contrat direct sur la propriété)
+            contrats_propriete = propriete.contrats.filter(est_actif=True, est_resilie=False)
+            if contrats_propriete.exists():
+                for contrat in contrats_propriete:
+                    # FILTRE : N'afficher que les locataires avec paiement complet dans le mois
+                    if not _contrat_a_paiement_complet_dans_mois(contrat, recapitulatif.mois_recap):
+                        continue  # Sauter ce contrat si pas de paiement complet
+                    
+                    loyer_prop = contrat.loyer_mensuel or 0
+                    charges_prop = contrat.charges_mensuelles or 0
+                    total_prop = loyer_prop + charges_prop
+                    locataire_nom = f"{contrat.locataire.nom} {contrat.locataire.prenom}" if contrat.locataire else "N/A"
+                    
+                    # Ajouter à la liste des lignes valides
+                    lignes_contrats_html.append(f"""
+                    <tr>
+                        <td colspan="3"><strong>Propriété complète</strong></td>
+                        <td>{locataire_nom}</td>
+                        <td class="montant">{loyer_prop:,.0f} F CFA</td>
+                        <td class="montant">{charges_prop:,.0f} F CFA</td>
+                        <td class="montant"><strong>{total_prop:,.0f} F CFA</strong></td>
+                    </tr>
+                    """)
+                    loyer_propriete_cumul += loyer_prop
+        
+        # N'afficher la propriété QUE si elle a au moins un contrat valide
+        if len(lignes_contrats_html) > 0:
+            # En-tête de la propriété
+            contenu += f"""
         <div class="groupe-propriete" style="margin-bottom: 30px; page-break-inside: avoid;">
             <div class="entete-propriete" style="background-color: #2c3e50; color: white; padding: 15px; border-radius: 5px 5px 0 0; margin-top: 20px;">
                 <h3 style="margin: 0 0 10px 0; font-size: 16px;">{propriete.titre}</h3>
@@ -506,7 +602,7 @@ def _generer_recapitulatif_kbis_html(recapitulatif, totaux, proprietes_avec_deta
                     <strong>Type:</strong> {propriete.type_bien.nom if propriete.type_bien else 'N/A'} | 
                     <strong>Adresse:</strong> {propriete.adresse} | 
                     <strong>Quartier:</strong> {propriete.quartier if hasattr(propriete, 'quartier') and propriete.quartier else propriete.ville or 'N/A'} |
-                    <strong>Loyer Total:</strong> {loyer_total:,.0f} F CFA
+                    <strong>Loyer Total:</strong> {loyer_propriete_cumul:,.0f} F CFA
                 </div>
             </div>
             
@@ -523,74 +619,19 @@ def _generer_recapitulatif_kbis_html(recapitulatif, totaux, proprietes_avec_deta
                     </tr>
                 </thead>
                 <tbody>
-        """
-        
-        # Ajouter les unités locatives de cette propriété
-        if unites_locatives.exists():
-            for unite in unites_locatives:
-                contrats_actifs = unite.contrats_actifs
-                if contrats_actifs.exists():
-                    for contrat in contrats_actifs:
-                        loyer_unite = contrat.loyer_mensuel or 0
-                        charges_unite = contrat.charges_mensuelles or 0
-                        total_unite = loyer_unite + charges_unite
-                        locataire_nom = f"{contrat.locataire.nom} {contrat.locataire.prenom}" if contrat.locataire else "N/A"
-                        
-                        contenu += f"""
-                        <tr>
-                            <td><strong>{unite.numero_unite}</strong> - {unite.nom}</td>
-                            <td>{unite.type_unite}</td>
-                            <td>Étage: {unite.etage} | {unite.surface}m²</td>
-                            <td>{locataire_nom}</td>
-                            <td class="montant">{loyer_unite:,.0f} F CFA</td>
-                            <td class="montant">{charges_unite:,.0f} F CFA</td>
-                            <td class="montant"><strong>{total_unite:,.0f} F CFA</strong></td>
-                        </tr>
-                        """
-                else:
-                    # Unité sans contrat actif
-                    loyer_unite = unite.loyer_mensuel or 0
-                    charges_unite = unite.charges_mensuelles or 0
-                    total_unite = loyer_unite + charges_unite
-                    
-                    contenu += f"""
-                    <tr style="background-color: #fff3cd;">
-                        <td><strong>{unite.numero_unite}</strong> - {unite.nom}</td>
-                        <td>{unite.type_unite}</td>
-                        <td>Étage: {unite.etage} | {unite.surface}m²</td>
-                        <td><em>Non louée</em></td>
-                        <td class="montant">{loyer_unite:,.0f} F CFA</td>
-                        <td class="montant">{charges_unite:,.0f} F CFA</td>
-                        <td class="montant"><strong>{total_unite:,.0f} F CFA</strong></td>
-                    </tr>
-                    """
-        else:
-            # Propriété sans unités locatives (contrat direct sur la propriété)
-            contrats_propriete = propriete.contrats.filter(est_actif=True, est_resilie=False)
-            if contrats_propriete.exists():
-                for contrat in contrats_propriete:
-                    loyer_prop = contrat.loyer_mensuel or 0
-                    charges_prop = contrat.charges_mensuelles or 0
-                    total_prop = loyer_prop + charges_prop
-                    locataire_nom = f"{contrat.locataire.nom} {contrat.locataire.prenom}" if contrat.locataire else "N/A"
-                    
-                    contenu += f"""
-                    <tr>
-                        <td colspan="3"><strong>Propriété complète</strong></td>
-                        <td>{locataire_nom}</td>
-                        <td class="montant">{loyer_prop:,.0f} F CFA</td>
-                        <td class="montant">{charges_prop:,.0f} F CFA</td>
-                        <td class="montant"><strong>{total_prop:,.0f} F CFA</strong></td>
-                    </tr>
-                    """
-        
-        # Sous-total pour la propriété
-        contenu += f"""
+            """
+            
+            # Ajouter toutes les lignes collectées
+            for ligne_html in lignes_contrats_html:
+                contenu += ligne_html
+            
+            # Sous-total pour la propriété
+            contenu += f"""
                     <tr class="totaux" style="background-color: #e8f5e8;">
                         <td colspan="4" style="text-align: right;"><strong>SOUS-TOTAL PROPRIÉTÉ</strong></td>
-                        <td class="montant"><strong>{loyer_total:,.0f} F CFA</strong></td>
+                        <td class="montant"><strong>{loyer_propriete_cumul:,.0f} F CFA</strong></td>
                         <td class="montant"><strong>0 F CFA</strong></td>
-                        <td class="montant"><strong>{loyer_total:,.0f} F CFA</strong></td>
+                        <td class="montant"><strong>{loyer_propriete_cumul:,.0f} F CFA</strong></td>
                     </tr>
                 </tbody>
             </table>
