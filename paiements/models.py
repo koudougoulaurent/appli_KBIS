@@ -472,7 +472,12 @@ class RecapMensuel(models.Model):
                 """, [self.id, paiement_ids])
 
     def generer_pdf_recapitulatif(self, user=None):
-        """Génère le PDF du récapitulatif mensuel."""
+        """Génère le PDF du récapitulatif mensuel.
+        
+        OPTIMISATIONS:
+        - Utilise le cache pour l'image d'en-tête
+        - Méthodes get_proprietes_details optimisées
+        """
         from django.template.loader import render_to_string
         from django.utils import timezone
         from io import BytesIO
@@ -485,20 +490,12 @@ class RecapMensuel(models.Model):
             # Récupérer les totaux globaux
             totaux = self.calculer_totaux_globaux()
             
-            # Récupérer les détails des propriétés et contrats
+            # Récupérer les détails des propriétés et contrats (OPTIMISÉ)
             proprietes_details = self.get_proprietes_details()
             
-            # Charger l'image en Base64
-            import base64
-            import os
-            image_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'images', 'enteteEnImage.png')
-            entete_base64 = ""
-            try:
-                with open(image_path, "rb") as image_file:
-                    entete_base64 = base64.b64encode(image_file.read()).decode('utf-8')
-            except:
-                # Si l'image n'est pas trouvée, utiliser une chaîne vide
-                entete_base64 = ""
+            # OPTIMISATION: Charger l'image depuis le cache
+            from paiements.utils_cache import ImageCache
+            entete_base64 = ImageCache.get_entete_base64()
             
             # Récupérer la configuration de l'entreprise
             try:
@@ -626,9 +623,16 @@ class RecapMensuel(models.Model):
         return f"recapitulatif_{self.mois_recap.strftime('%Y_%m')}_{bailleur_nom}.pdf"
 
     def get_proprietes_details(self):
-        """Récupère les détails des propriétés, contrats et locataires pour le PDF."""
+        """Récupère les détails des propriétés, contrats et locataires pour le PDF.
+        
+        OPTIMISATIONS:
+        - Utilise select_related et prefetch_related pour éviter les requêtes N+1
+        - Met en cache les calculs répétitifs
+        - Précharge les charges bailleur en une seule requête
+        """
         from datetime import timedelta
         from decimal import Decimal
+        from django.db.models import Prefetch
         
         proprietes_details = []
         
@@ -643,7 +647,23 @@ class RecapMensuel(models.Model):
         else:
             mois_fin = self.mois_recap.replace(month=self.mois_recap.month + 1, day=1) - timedelta(days=1)
         
-        # Récupérer les propriétés du bailleur avec contrats actifs seulement
+        # OPTIMISATION: Précharger les charges bailleur pour toutes les propriétés en une seule requête
+        from proprietes.models import ChargesBailleur
+        charges_bailleur_dict = {}
+        charges_bailleur_qs = ChargesBailleur.objects.filter(
+            propriete__bailleur=self.bailleur,
+            date_charge__year=self.mois_recap.year,
+            date_charge__month=self.mois_recap.month,
+            statut__in=['en_attente', 'valide']
+        ).select_related('propriete')
+        
+        for charge in charges_bailleur_qs:
+            prop_id = charge.propriete_id
+            if prop_id not in charges_bailleur_dict:
+                charges_bailleur_dict[prop_id] = Decimal('0')
+            charges_bailleur_dict[prop_id] += charge.montant_restant or charge.montant
+        
+        # OPTIMISATION: Récupérer les propriétés avec tous les related objects préchargés
         proprietes = self.bailleur.proprietes.filter(
             is_deleted=False,
             contrats__est_actif=True,
@@ -651,33 +671,32 @@ class RecapMensuel(models.Model):
             contrats__date_debut__lte=mois_fin
         ).filter(
             models.Q(contrats__date_fin__gte=mois_debut) | models.Q(contrats__date_fin__isnull=True)
+        ).select_related(
+            'type_bien',
+            'bailleur'
+        ).prefetch_related(
+            Prefetch(
+                'contrats',
+                queryset=Contrat.objects.filter(
+                    est_actif=True,
+                    est_resilie=False,
+                    date_debut__lte=mois_fin
+                ).filter(
+                    models.Q(date_fin__gte=mois_debut) | models.Q(date_fin__isnull=True)
+                ).select_related('locataire')
+            )
         ).distinct()
         
-        # CRITIQUE : Importer ChargesBailleur pour calculer les charges bailleur par propriété
-        from proprietes.models import ChargesBailleur
-        
         for propriete in proprietes:
-            # CRITIQUE : Calculer les charges bailleur pour cette propriété pour le mois
-            # Les charges bailleur sont liées à la propriété, pas au contrat
-            charges_bailleur_propriete = ChargesBailleur.objects.filter(
-                propriete=propriete,
-                date_charge__year=self.mois_recap.year,
-                date_charge__month=self.mois_recap.month,
-                statut__in=['en_attente', 'valide']  # Seules les charges non encore utilisées
-            )
-            total_charges_bailleur_propriete = sum(
-                charge.montant_restant or charge.montant for charge in charges_bailleur_propriete
-            ) or Decimal('0')
+            # OPTIMISATION: Récupérer les charges bailleur depuis le dictionnaire pré-chargé
+            total_charges_bailleur_propriete = charges_bailleur_dict.get(propriete.pk, Decimal('0'))
             
-            # Récupérer les contrats actifs pour cette propriété au moment du récapitulatif
-            # Utiliser select_related pour charger le locataire et ses informations de contact
-            contrats_actifs = propriete.contrats.filter(
-                est_actif=True,
-                est_resilie=False,
-                date_debut__lte=mois_fin
-            ).filter(
-                models.Q(date_fin__gte=mois_debut) | models.Q(date_fin__isnull=True)
-            ).select_related('locataire')
+            # OPTIMISATION: Utiliser les contrats préchargés par prefetch_related
+            # Au lieu de faire une nouvelle requête, utiliser propriete.contrats.all()
+            contrats_actifs = [
+                c for c in propriete.contrats.all()
+                if c.est_actif and not c.est_resilie
+            ]
             
             for contrat in contrats_actifs:
                 # Conversion sécurisée des montants
@@ -715,24 +734,13 @@ class RecapMensuel(models.Model):
                 revenu_bailleur = loyer_mensuel - prestation_agence
                 revenu_bailleur = max(revenu_bailleur, Decimal('0'))  # Ne peut pas être négatif
                 
-                # Récupérer le téléphone du locataire depuis la base de données
+                # OPTIMISATION: Utiliser le locataire déjà chargé via select_related
                 locataire_telephone = ""
                 if contrat.locataire:
-                    # Récupérer directement depuis la base de données
-                    from proprietes.models import Locataire
-                    try:
-                        # Recharger le locataire avec ses champs téléphone
-                        locataire_db = Locataire.objects.only('telephone', 'telephone_mobile').get(pk=contrat.locataire.pk)
-                        if locataire_db.telephone:
-                            locataire_telephone = str(locataire_db.telephone).strip()
-                        elif locataire_db.telephone_mobile:
-                            locataire_telephone = str(locataire_db.telephone_mobile).strip()
-                    except Exception as e:
-                        # Fallback : utiliser l'objet déjà chargé
-                        if contrat.locataire.telephone:
-                            locataire_telephone = str(contrat.locataire.telephone).strip()
-                        elif contrat.locataire.telephone_mobile:
-                            locataire_telephone = str(contrat.locataire.telephone_mobile).strip()
+                    if contrat.locataire.telephone:
+                        locataire_telephone = str(contrat.locataire.telephone).strip()
+                    elif hasattr(contrat.locataire, 'telephone_mobile') and contrat.locataire.telephone_mobile:
+                        locataire_telephone = str(contrat.locataire.telephone_mobile).strip()
                 
                 # CRITIQUE : Ajouter tous les champs nécessaires pour les différents templates
                 proprietes_details.append({

@@ -316,7 +316,12 @@ def detail_recapitulatif(request, recapitulatif_id):
 
 @login_required
 def generer_recapitulatif_kbis(request, recapitulatif_id):
-    """Génère un récapitulatif A4 paysage avec en-tête KBIS et pied de page dynamique."""
+    """Génère un récapitulatif A4 paysage avec en-tête KBIS et pied de page dynamique.
+    
+    OPTIMISATIONS:
+    - Requêtes DB optimisées avec select_related et prefetch_related
+    - Préchargement des paiements pour le filtre de caution/avance
+    """
     
     # Vérification des permissions
     from core.utils import check_group_permissions_with_fallback
@@ -335,14 +340,39 @@ def generer_recapitulatif_kbis(request, recapitulatif_id):
     # Calculer les totaux
     totaux = recapitulatif.calculer_totaux_bailleur()
     
-    # Récupérer les propriétés du bailleur avec contrats actifs seulement
+    # OPTIMISATION: Récupérer les propriétés avec tous les related objects préchargés
+    from django.db.models import Prefetch
+    from contrats.models import Contrat
+    from paiements.models import Paiement
+    
+    # Précharger les paiements de type caution/avance validés pour le filtre
+    paiements_caution_prefetch = Prefetch(
+        'paiements',
+        queryset=Paiement.objects.filter(
+            type_paiement__in=['caution', 'avance'],
+            statut='valide'
+        ),
+        to_attr='paiements_caution_avance'
+    )
+    
+    contrats_prefetch = Prefetch(
+        'contrats',
+        queryset=Contrat.objects.filter(
+            est_actif=True,
+            est_resilie=False
+        ).select_related('locataire').prefetch_related(paiements_caution_prefetch)
+    )
+    
     proprietes = recapitulatif.bailleur.proprietes.filter(
         is_deleted=False,
         contrats__est_actif=True,
         contrats__est_resilie=False
-    ).distinct().select_related('type_bien').prefetch_related(
-        'unites_locatives__contrats__locataire',
-        'unites_locatives__contrats__paiements'  # Précharger les paiements
+    ).distinct().select_related(
+        'type_bien',
+        'bailleur'
+    ).prefetch_related(
+        'unites_locatives',
+        contrats_prefetch
     )
     
     # Préparer les données pour le récapitulatif
@@ -379,22 +409,28 @@ def _contrat_a_caution_avance_versee(contrat):
     - Mais une fois la caution/avance versée, il apparaît dans TOUS les récaps suivants,
       même s'il n'a pas encore payé le loyer du mois.
     
+    OPTIMISATION:
+    - Utilise les paiements préchargés si disponibles (via prefetch_related)
+    - Sinon fait une requête DB classique
+    
     Args:
         contrat: Le contrat à vérifier
     
     Returns:
         bool: True si le contrat a reçu au moins un paiement de caution ou avance validé
     """
-    from paiements.models import Paiement
-    
-    # Vérifier s'il existe au moins un paiement de type caution ou avance validé
-    paiement_initial = Paiement.objects.filter(
-        contrat=contrat,
-        type_paiement__in=['caution', 'avance'],
-        statut='valide'
-    ).exists()
-    
-    return paiement_initial
+    # OPTIMISATION: Vérifier si les paiements ont été préchargés
+    if hasattr(contrat, 'paiements_caution_avance'):
+        # Utiliser les paiements préchargés
+        return len(contrat.paiements_caution_avance) > 0
+    else:
+        # Fallback: Faire une requête DB classique
+        from paiements.models import Paiement
+        return Paiement.objects.filter(
+            contrat=contrat,
+            type_paiement__in=['caution', 'avance'],
+            statut='valide'
+        ).exists()
 
 
 def _generer_recapitulatif_kbis_html(recapitulatif, totaux, proprietes_avec_details):
