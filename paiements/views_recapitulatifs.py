@@ -369,38 +369,32 @@ def generer_recapitulatif_kbis(request, recapitulatif_id):
     return HttpResponse(html_recapitulatif, content_type='text/html')
 
 
-def _contrat_a_paiement_complet_dans_mois(contrat, mois_recap):
+def _contrat_a_caution_avance_versee(contrat):
     """
-    Vérifie si un contrat a au moins un paiement complet dans le mois du récapitulatif.
+    Vérifie si un contrat a reçu au moins un paiement de caution ou d'avance.
     
-    Un paiement est considéré comme "complet" si :
-    - est_paiement_partiel = False (paiement complet d'entrée) OU
-    - montant_restant_du = 0 (paiement partiel totalement complété)
+    RÈGLE MÉTIER :
+    - Un locataire qui signe un contrat en mi-mois et verse sa caution/avance 
+      ne doit PAS apparaître dans le récap de ce mois-là.
+    - Mais une fois la caution/avance versée, il apparaît dans TOUS les récaps suivants,
+      même s'il n'a pas encore payé le loyer du mois.
     
     Args:
         contrat: Le contrat à vérifier
-        mois_recap: La date du mois du récapitulatif (datetime.date)
     
     Returns:
-        bool: True si le contrat a un paiement complet dans le mois, False sinon
+        bool: True si le contrat a reçu au moins un paiement de caution ou avance validé
     """
     from paiements.models import Paiement
     
-    # Obtenir les paiements du contrat pour le mois du récapitulatif
-    paiements_mois = Paiement.objects.filter(
+    # Vérifier s'il existe au moins un paiement de type caution ou avance validé
+    paiement_initial = Paiement.objects.filter(
         contrat=contrat,
-        date_paiement__year=mois_recap.year,
-        date_paiement__month=mois_recap.month,
-        statut='valide'  # Seulement les paiements validés
-    )
+        type_paiement__in=['caution', 'avance'],
+        statut='valide'
+    ).exists()
     
-    # Vérifier s'il existe au moins un paiement complet
-    for paiement in paiements_mois:
-        # Paiement complet d'entrée ou paiement partiel totalement complété
-        if not paiement.est_paiement_partiel or paiement.montant_restant_du == 0:
-            return True
-    
-    return False
+    return paiement_initial
 
 
 def _generer_recapitulatif_kbis_html(recapitulatif, totaux, proprietes_avec_details):
@@ -543,9 +537,9 @@ def _generer_recapitulatif_kbis_html(recapitulatif, totaux, proprietes_avec_deta
                 contrats_actifs = unite.contrats_actifs
                 if contrats_actifs.exists():
                     for contrat in contrats_actifs:
-                        # FILTRE : N'afficher que les locataires avec paiement complet dans le mois
-                        if not _contrat_a_paiement_complet_dans_mois(contrat, recapitulatif.mois_recap):
-                            continue  # Sauter ce contrat si pas de paiement complet
+                        # FILTRE : N'afficher que les locataires ayant versé leur caution/avance initiale
+                        if not _contrat_a_caution_avance_versee(contrat):
+                            continue  # Sauter ce contrat si caution/avance non versée
                         
                         loyer_unite = contrat.loyer_mensuel or 0
                         charges_unite = contrat.charges_mensuelles or 0
@@ -570,9 +564,9 @@ def _generer_recapitulatif_kbis_html(recapitulatif, totaux, proprietes_avec_deta
             contrats_propriete = propriete.contrats.filter(est_actif=True, est_resilie=False)
             if contrats_propriete.exists():
                 for contrat in contrats_propriete:
-                    # FILTRE : N'afficher que les locataires avec paiement complet dans le mois
-                    if not _contrat_a_paiement_complet_dans_mois(contrat, recapitulatif.mois_recap):
-                        continue  # Sauter ce contrat si pas de paiement complet
+                    # FILTRE : N'afficher que les locataires ayant versé leur caution/avance initiale
+                    if not _contrat_a_caution_avance_versee(contrat):
+                        continue  # Sauter ce contrat si caution/avance non versée
                     
                     loyer_prop = contrat.loyer_mensuel or 0
                     charges_prop = contrat.charges_mensuelles or 0
