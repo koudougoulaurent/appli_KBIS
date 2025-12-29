@@ -707,13 +707,13 @@ class ServiceGestionAvance:
             else:
                 periode_fin = mois_fin
         
-        # Récupérer l'historique des paiements pour la période calculée (si besoin)
-        # Pour le rapport, on utilise les avances directement, pas l'historique vide
-        
         # Calculer les statistiques DYNAMIQUES depuis les vraies avances
         total_avances_versees = sum(avance.montant_avance for avance in avances)
         total_avances_consommees = sum(avance.montant_avance - avance.montant_restant for avance in avances)
         total_avances_restantes = sum(avance.montant_restant for avance in avances)
+        
+        # Historique : liste vide car le PDF utilise directement les consommations des avances
+        historique = []
         
         return {
             'contrat': contrat,
@@ -722,6 +722,7 @@ class ServiceGestionAvance:
                 'fin': periode_fin
             },
             'avances': avances,
+            'historique': historique,  # Requis par utils_pdf.py
             'statistiques': {
                 'total_avances_versees': float(total_avances_versees),
                 'total_avances_consommees': float(total_avances_consommees),
