@@ -401,7 +401,9 @@ def api_contexte_intelligent_contrat(request, contrat_id):
                         'date': p.date_paiement.strftime('%d/%m/%Y'),
                         'montant': clean_numeric_value(p.montant),
                         'type': p.get_type_paiement_display(),
-                        'statut': p.get_statut_display()
+                        'statut': p.get_statut_display(),
+                        'mois_description': p.get_mois_description(),
+                        'mois_paye': p.mois_paye or ''
                     } for p in paiements_recents
                 ],
                 # *** AJOUT DES AVANCES DANS L'HISTORIQUE ***
