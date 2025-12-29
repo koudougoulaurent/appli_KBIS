@@ -1176,8 +1176,15 @@ class Paiement(models.Model):
             try:
                 # Chercher l'avance associée à ce paiement
                 avance = AvanceLoyer.objects.filter(paiement=self).first()
-                if avance and avance.nombre_mois_couverts:
-                    # Récupérer les mois couverts
+                if avance:
+                    # Option 1: Utiliser mois_debut_couverture et mois_fin_couverture si disponibles
+                    if avance.mois_debut_couverture and avance.mois_fin_couverture:
+                        if avance.mois_debut_couverture == avance.mois_fin_couverture:
+                            return f"Avance {avance.mois_debut_couverture.strftime('%B %Y')} ({avance.nombre_mois_couverts} mois)"
+                        else:
+                            return f"Avance {avance.mois_debut_couverture.strftime('%B %Y')} - {avance.mois_fin_couverture.strftime('%B %Y')} ({avance.nombre_mois_couverts} mois)"
+                    
+                    # Option 2: Utiliser les consommations
                     from paiements.models_avance import ConsommationAvance
                     consommations = ConsommationAvance.objects.filter(
                         avance=avance
@@ -1192,14 +1199,25 @@ class Paiement(models.Model):
                             return f"Avance {premier_mois.strftime('%B %Y')} ({avance.nombre_mois_couverts} mois)"
                         else:
                             return f"Avance {premier_mois.strftime('%B %Y')} - {dernier_mois.strftime('%B %Y')} ({avance.nombre_mois_couverts} mois)"
-                    else:
-                        return f"Avance ({avance.nombre_mois_couverts} mois)"
-                elif self.mois_paye:
+                    
+                    # Option 3: Si nombre de mois connu, afficher au moins ça
+                    if avance.nombre_mois_couverts and avance.nombre_mois_couverts > 0:
+                        return f"Avance de loyer ({avance.nombre_mois_couverts} mois)"
+                    
+                    # Option 4: Utiliser la date de l'avance comme base
+                    if avance.date_avance:
+                        return f"Avance {avance.date_avance.strftime('%B %Y')}"
+                
+                # Fallback: utiliser mois_paye si disponible
+                if self.mois_paye:
                     return f"Avance {self.mois_paye}"
-                else:
-                    return "Avance de loyer"
-            except Exception:
-                return "Avance de loyer"
+                
+                # Dernier fallback: utiliser la date du paiement
+                return f"Avance {self.date_paiement.strftime('%B %Y')}"
+                
+            except Exception as e:
+                # En cas d'erreur, retourner au moins la date du paiement
+                return f"Avance {self.date_paiement.strftime('%B %Y')}"
         
         # Pour les cautions
         elif self.type_paiement == 'caution':
