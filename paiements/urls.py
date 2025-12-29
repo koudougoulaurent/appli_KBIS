@@ -19,6 +19,7 @@ urlpatterns = [
     # path('dashboard-recaps/', views.dashboard_recaps_simple, name='dashboard_recaps_simple'),  # Fonction non disponible
     path('liste/', views.paiement_list, name='liste'),  # Alias principal pour compatibilité
     path('liste-enhanced/', views.paiement_enhanced_list, name='liste_enhanced'),  # Liste améliorée
+    path('<int:pk>/', views.paiement_detail, name='paiement_detail_short'),  # URL courte pour détail paiement
     path('detail/<int:pk>/', views.paiement_detail, name='detail'),  # Alias principal pour compatibilité
     path('ajouter/', views.ajouter_paiement, name='ajouter'),  # Alias principal pour compatibilité
     path('corriger-annees-mois-paye/', views.corriger_annees_mois_paye, name='corriger_annees_mois_paye'),
