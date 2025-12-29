@@ -189,7 +189,12 @@
                     <i class="fas fa-print me-2"></i>
                     Version Imprimable - Historique des Paiements
                 </h2>
-                <p class="text-muted mb-0">{{ contrat.numero_contrat }} - {{ locataire.get_nom_complet }}</p>
+                <p class="text-muted mb-0">
+                    {{ contrat.numero_contrat }} - {{ locataire.get_nom_complet }}
+                    {% if contrat.unite_locative %}
+                    <br><small><i class="fas fa-door-open me-1"></i>{{ contrat.unite_locative.numero_unite }} - {{ contrat.unite_locative.nom }}</small>
+                    {% endif %}
+                </p>
             </div>
             <div>
                 <button onclick="window.print()" class="btn btn-primary btn-lg">
@@ -218,6 +223,9 @@
                 <div style="font-size: 11px; opacity: 0.9;">
                     <div><strong>Locataire:</strong> {{ locataire.get_nom_complet }}</div>
                     <div><strong>Propriété:</strong> {{ propriete.titre }}</div>
+                    {% if contrat.unite_locative %}
+                    <div><strong>Unité:</strong> {{ contrat.unite_locative.numero_unite }} - {{ contrat.unite_locative.nom }}</div>
+                    {% endif %}
                     <div><strong>Généré:</strong> {{ generation_date|date:"d/m/Y H:i" }}</div>
                 </div>
             </div>

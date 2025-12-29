@@ -262,7 +262,10 @@ def historique_paiements_contrat_imprimer(request, contrat_id):
         return redirect('contrats:liste')
     
     try:
-        contrat = get_object_or_404(Contrat, id=contrat_id)
+        contrat = get_object_or_404(
+            Contrat.objects.select_related('locataire', 'propriete', 'unite_locative'),
+            id=contrat_id
+        )
     except Exception:
         messages.error(request, 'Contrat non trouvé')
         return redirect('contrats:liste')
