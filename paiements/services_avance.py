@@ -673,14 +673,16 @@ class ServiceGestionAvance:
         """
         Génère un rapport détaillé des avances pour un contrat
         """
-        # Récupérer les données
-        avances = ServiceGestionAvance.get_avances_actives_contrat(contrat)
+        from paiements.models_avance import AvanceLoyer
+        
+        # Récupérer TOUTES les avances du contrat (pas seulement actives)
+        avances = AvanceLoyer.objects.filter(contrat=contrat).order_by('-date_avance')
         
         # Calculer la période réelle de couverture des avances
         periode_debut = None
         periode_fin = None
         
-        if avances:
+        if avances.exists():
             # Trouver la date de début la plus ancienne
             dates_debut = [avance.mois_debut_couverture for avance in avances if avance.mois_debut_couverture]
             if dates_debut:
@@ -694,7 +696,8 @@ class ServiceGestionAvance:
         # Si pas de période calculée, utiliser les paramètres par défaut
         if not periode_debut:
             if not mois_debut:
-                periode_debut = date.today().replace(day=1) - relativedelta(months=12)
+                # Utiliser la date de début du contrat si disponible
+                periode_debut = contrat.date_debut if contrat.date_debut else (date.today().replace(day=1) - relativedelta(months=12))
             else:
                 periode_debut = mois_debut
         
@@ -704,10 +707,10 @@ class ServiceGestionAvance:
             else:
                 periode_fin = mois_fin
         
-        # Récupérer l'historique des paiements pour la période calculée
-        historique = ServiceGestionAvance.get_historique_paiements_contrat(contrat, periode_debut, periode_fin)
+        # Récupérer l'historique des paiements pour la période calculée (si besoin)
+        # Pour le rapport, on utilise les avances directement, pas l'historique vide
         
-        # Calculer les statistiques
+        # Calculer les statistiques DYNAMIQUES depuis les vraies avances
         total_avances_versees = sum(avance.montant_avance for avance in avances)
         total_avances_consommees = sum(avance.montant_avance - avance.montant_restant for avance in avances)
         total_avances_restantes = sum(avance.montant_restant for avance in avances)
@@ -719,11 +722,10 @@ class ServiceGestionAvance:
                 'fin': periode_fin
             },
             'avances': avances,
-            'historique': historique,
             'statistiques': {
-                'total_avances_versees': total_avances_versees,
-                'total_avances_consommees': total_avances_consommees,
-                'total_avances_restantes': total_avances_restantes,
+                'total_avances_versees': float(total_avances_versees),
+                'total_avances_consommees': float(total_avances_consommees),
+                'total_avances_restantes': float(total_avances_restantes),
                 'nombre_mois_couverts': sum(avance.nombre_mois_couverts for avance in avances)
             }
         }
