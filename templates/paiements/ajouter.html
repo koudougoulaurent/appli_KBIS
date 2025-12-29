@@ -951,11 +951,22 @@ function afficherContexteComplet(data) {
     if (historiqueHtml) {
         $('#historique-paiements').html(historiqueHtml);
         // Afficher les boutons d'action et configurer leurs URLs
-        if (data.contrat && data.contrat.id) {
-            const contratId = data.contrat.id;
+        // Essayer plusieurs façons de récupérer l'ID du contrat
+        const contratId = (data.contrat && (data.contrat.id || data.contrat.pk)) || $('#id_contrat').val();
+        
+        console.log('🔍 Debug - Affichage des boutons:', {
+            'data.contrat': data.contrat,
+            'contratId': contratId,
+            'historiqueHtml': historiqueHtml ? 'OUI' : 'NON'
+        });
+        
+        if (contratId) {
             $('#btn-pdf-historique').attr('href', `/paiements/historique/contrat/${contratId}/imprimer/`);
             $('#btn-voir-historique').attr('href', `/paiements/historique/contrat/${contratId}/`);
             $('#historique-actions').show();
+            console.log('✅ Boutons PDF affichés pour contrat:', contratId);
+        } else {
+            console.warn('⚠️ Impossible de récupérer l\'ID du contrat pour les boutons PDF');
         }
     } else {
         // Premier paiement - afficher des informations utiles

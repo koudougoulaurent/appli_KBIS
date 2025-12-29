@@ -379,7 +379,9 @@ def api_contexte_intelligent_contrat(request, contrat_id):
             
             contexte = {
                 'contrat': {
+                    'id': contrat.id,  # Ajout de l'ID pour les boutons PDF
                     'numero': contrat.numero_contrat,
+                    'numero_contrat': contrat.numero_contrat,  # Alias pour compatibilité
                     'date_debut': contrat.date_debut.strftime('%d/%m/%Y') if contrat.date_debut else None,
                     'date_fin': contrat.date_fin.strftime('%d/%m/%Y') if contrat.date_fin else None,
                     'montant_loyer': clean_numeric_value(contrat.loyer_mensuel),
