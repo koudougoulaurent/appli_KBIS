@@ -950,7 +950,7 @@ def historique_paiements_contrat(request, contrat_id):
     stats = {
         'total_mois': mois_depuis_debut,
         'mois_regles': paiements_valides.count(),
-        'mois_en_attente': mois_en_attente.count(),
+        'mois_en_attente': paiements_en_attente.count(),
         'montant_total_paye': paiements_valides.aggregate(total=Sum('montant'))['total'] or 0,
         'montant_total_du': contrat.loyer_mensuel * mois_depuis_debut if contrat.loyer_mensuel else 0,
         'montant_avance_utilisee': 0,  # Sera calculé depuis les avances
