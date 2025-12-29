@@ -883,6 +883,9 @@ def historique_paiements_contrat(request, contrat_id):
     """
     Historique détaillé des paiements pour un contrat
     """
+    from django.db.models import Sum
+    from paiements.models import Paiement
+    
     contrat = get_object_or_404(Contrat, id=contrat_id)
     
     # Filtres de date
@@ -893,31 +896,64 @@ def historique_paiements_contrat(request, contrat_id):
         try:
             mois_debut_date = datetime.strptime(mois_debut, '%Y-%m').date()
         except ValueError:
-            mois_debut_date = None
+            mois_debut_date = contrat.date_debut or (date.today().replace(day=1) - relativedelta(months=12))
     else:
-        mois_debut_date = date.today().replace(day=1) - relativedelta(months=12)
+        mois_debut_date = contrat.date_debut or (date.today().replace(day=1) - relativedelta(months=12))
     
     if mois_fin:
         try:
             mois_fin_date = datetime.strptime(mois_fin, '%Y-%m').date()
         except ValueError:
-            mois_fin_date = None
+            mois_fin_date = date.today().replace(day=1)
     else:
         mois_fin_date = date.today().replace(day=1)
     
-    # Récupérer l'historique
-    historique = ServiceGestionAvance.get_historique_paiements_contrat(
-        contrat, mois_debut_date, mois_fin_date
-    )
+    # Récupérer TOUS les paiements du contrat (pas de dépendance sur HistoriquePaiement)
+    paiements_query = Paiement.objects.filter(
+        contrat=contrat,
+        is_deleted=False,
+        date_paiement__gte=mois_debut_date,
+        date_paiement__lte=mois_fin_date
+    ).order_by('-date_paiement')
     
-    # Statistiques
+    # Créer l'historique dynamiquement
+    historique = []
+    for paiement in paiements_query:
+        mois_paiement = paiement.date_paiement.replace(day=1)
+        historique.append({
+            'id': paiement.id,
+            'contrat': contrat,
+            'paiement': paiement,
+            'mois_paiement': mois_paiement,
+            'montant_paye': paiement.montant,
+            'montant_du': contrat.loyer_mensuel if paiement.type_paiement == 'loyer' else paiement.montant,
+            'montant_avance_utilisee': 0,  # Sera calculé si nécessaire
+            'montant_restant_du': 0,
+            'mois_regle': paiement.statut == 'valide',
+            'type_paiement': paiement.get_type_paiement_display(),
+            'mois_description': paiement.get_mois_description(),
+            'statut': paiement.get_statut_display(),
+            'mode_paiement': paiement.get_mode_paiement_display(),
+        })
+    
+    # Calculer le nombre de mois depuis le début du contrat
+    mois_depuis_debut = 0
+    if contrat.date_debut:
+        mois_actuel = date.today().replace(day=1)
+        mois_debut_contrat = contrat.date_debut.replace(day=1)
+        mois_depuis_debut = (mois_actuel.year - mois_debut_contrat.year) * 12 + (mois_actuel.month - mois_debut_contrat.month) + 1
+    
+    # Statistiques DYNAMIQUES calculées depuis les vrais paiements
+    paiements_valides = paiements_query.filter(statut='valide')
+    paiements_en_attente = paiements_query.filter(statut='en_attente')
+    
     stats = {
-        'total_mois': historique.count(),
-        'mois_regles': historique.filter(mois_regle=True).count(),
-        'mois_en_attente': historique.filter(mois_regle=False).count(),
-        'montant_total_paye': historique.aggregate(total=Sum('montant_paye'))['total'] or 0,
-        'montant_total_du': historique.aggregate(total=Sum('montant_du'))['total'] or 0,
-        'montant_avance_utilisee': historique.aggregate(total=Sum('montant_avance_utilisee'))['total'] or 0,
+        'total_mois': mois_depuis_debut,
+        'mois_regles': paiements_valides.count(),
+        'mois_en_attente': mois_en_attente.count(),
+        'montant_total_paye': paiements_valides.aggregate(total=Sum('montant'))['total'] or 0,
+        'montant_total_du': contrat.loyer_mensuel * mois_depuis_debut if contrat.loyer_mensuel else 0,
+        'montant_avance_utilisee': 0,  # Sera calculé depuis les avances
     }
     
     # Statut des avances

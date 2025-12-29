@@ -276,56 +276,52 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for paiement in historique %}
+                            {% for item in historique %}
                             <tr class="month-row">
                                 <td>
-                                    <strong>{{ paiement.mois|date:"F Y" }}</strong>
-                                    {% if paiement.montant_avance_utilisee > 0 %}
+                                    <strong>{{ item.mois_paiement|date:"F Y" }}</strong>
+                                    <br><small class="text-muted">{{ item.mois_description }}</small>
+                                    {% if item.montant_avance_utilisee > 0 %}
                                     <div class="avance-info">
                                         <i class="bi bi-house-check"></i>
-                                        Avance utilisée: {{ paiement.montant_avance_utilisee|floatformat:0 }} F CFA
+                                        Avance utilisée: {{ item.montant_avance_utilisee|floatformat:0 }} F CFA
                                     </div>
                                     {% endif %}
                                 </td>
-                                <td>{{ paiement.montant_du|floatformat:0 }} F CFA</td>
-                                <td>{{ paiement.montant_paye|floatformat:0 }} F CFA</td>
+                                <td>{{ item.montant_du|floatformat:0 }} F CFA</td>
+                                <td><strong>{{ item.montant_paye|floatformat:0 }} F CFA</strong></td>
                                 <td>
-                                    {% if paiement.montant_avance_utilisee > 0 %}
+                                    {% if item.montant_avance_utilisee > 0 %}
                                         <span class="text-success">
                                             <i class="bi bi-check-circle"></i>
-                                            {{ paiement.montant_avance_utilisee|floatformat:0 }} F CFA
+                                            {{ item.montant_avance_utilisee|floatformat:0 }} F CFA
                                         </span>
                                     {% else %}
                                         <span class="text-muted">-</span>
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {% if paiement.solde > 0 %}
-                                        <span class="text-danger">{{ paiement.solde|floatformat:0 }} F CFA</span>
-                                    {% elif paiement.solde < 0 %}
-                                        <span class="text-success">{{ paiement.solde|floatformat:0 }} F CFA</span>
+                                    {% if item.montant_restant_du > 0 %}
+                                        <span class="text-danger">{{ item.montant_restant_du|floatformat:0 }} F CFA</span>
                                     {% else %}
-                                        <span class="text-muted">0 F CFA</span>
+                                        <span class="text-success">Soldé</span>
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {% if paiement.mois_regle %}
+                                    {% if item.mois_regle %}
                                         <span class="badge badge-status badge-regle">
-                                            <i class="bi bi-check-circle"></i> Réglé
+                                            <i class="bi bi-check-circle"></i> {{ item.statut }}
                                         </span>
                                     {% else %}
                                         <span class="badge badge-status badge-attente">
-                                            <i class="bi bi-clock"></i> En attente
+                                            <i class="bi bi-clock"></i> {{ item.statut }}
                                         </span>
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {% if not paiement.mois_regle %}
-                                    <button class="btn btn-sm btn-outline-primary" 
-                                            onclick="marquerCommeRegle('{{ paiement.mois|date:"Y-m" }}')">
-                                        <i class="bi bi-check"></i> Marquer réglé
-                                    </button>
-                                    {% endif %}
+                                    <a href="/paiements/{{ item.paiement.id }}/" class="btn btn-sm btn-outline-info" title="Voir le détail">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
                                 </td>
                             </tr>
                             {% endfor %}
