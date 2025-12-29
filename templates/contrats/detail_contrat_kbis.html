@@ -19,6 +19,12 @@
                             <a href="{% url 'contrats:generer_pdf_contrat_kbis' contrat.id %}" class="btn btn-success" target="_blank">
                                 <i class="bi bi-file-pdf"></i> Générer PDF
                             </a>
+                            <a href="{% url 'paiements:historique:historique_contrat_imprimer' contrat.id %}" 
+                               class="btn btn-danger" 
+                               target="_blank"
+                               title="Historique des paiements en PDF">
+                                <i class="bi bi-file-pdf-fill"></i> PDF Historique
+                            </a>
                             <a href="{% url 'contrats:modifier_contrat_kbis' contrat.id %}" class="btn btn-warning">
                                 <i class="bi bi-pencil"></i> Modifier
                             </a>

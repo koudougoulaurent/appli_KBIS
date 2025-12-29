@@ -906,6 +906,7 @@ function afficherContexteComplet(data) {
     if (data.paiements_recents && data.paiements_recents.length > 0) {
         data.paiements_recents.forEach(paiement => {
             const statutClass = paiement.statut === 'valide' ? 'success' : 'warning';
+            const moisInfo = paiement.mois_description || paiement.mois_paye || '';
             historiqueHtml += `
                 <div class="historique-item">
                     <div class="d-flex justify-content-between">
@@ -913,6 +914,7 @@ function afficherContexteComplet(data) {
                         <span class="badge bg-${statutClass}">${paiement.statut}</span>
                     </div>
                     <div>${Math.round(paiement.montant).toLocaleString('fr-FR', {maximumFractionDigits: 0})} F CFA - ${paiement.type}</div>
+                    ${moisInfo ? `<div class="text-muted small"><i class="fas fa-calendar-alt me-1"></i>${moisInfo}</div>` : ''}
                 </div>
             `;
         });

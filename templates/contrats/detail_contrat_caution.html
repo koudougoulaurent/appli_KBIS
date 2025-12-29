@@ -28,6 +28,12 @@
            class="btn btn-outline-info">
             <i class="bi bi-history"></i> Historique Paiements
         </a>
+        <a href="{% url 'paiements:historique:historique_contrat_imprimer' contrat.id %}" 
+           class="btn btn-danger" 
+           target="_blank"
+           title="Imprimer l'historique des paiements en PDF">
+            <i class="bi bi-file-pdf"></i> PDF Historique
+        </a>
         <a href="{% url 'contrats:liste_contrats_caution' %}" class="btn btn-outline-primary">
             <i class="bi bi-arrow-left"></i> Retour à la liste
         </a>

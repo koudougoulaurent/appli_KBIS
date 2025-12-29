@@ -373,6 +373,7 @@ def historique_paiements_ajax(request, contrat_id):
                 'statut_color': paiement.get_statut_color(),
                 'mode_paiement': paiement.get_mode_paiement_display(),
                 'mois_paye': paiement.mois_paye or '',
+                'mois_description': paiement.get_mois_description(),
                 'date_creation': paiement.date_creation.strftime('%d/%m/%Y %H:%M'),
             })
         

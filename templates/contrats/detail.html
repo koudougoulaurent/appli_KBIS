@@ -77,6 +77,12 @@
                     <a href="{% url 'contrats:detail_contrat_caution' contrat.pk %}" class="btn btn-primary">
                         <i class="bi bi-shield-check"></i> Gestion Caution
                     </a>
+                    <a href="{% url 'paiements:historique:historique_contrat_imprimer' contrat.pk %}" 
+                       class="btn btn-danger" 
+                       target="_blank"
+                       title="Imprimer l'historique des paiements">
+                        <i class="bi bi-file-pdf"></i> PDF Historique
+                    </a>
                 </div>
             </div>
         </div>

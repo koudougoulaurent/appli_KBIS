@@ -114,6 +114,45 @@
         text-decoration: none;
     }
     
+    /* Styles pour les boutons d'impression modernes */
+    .btn-lg {
+        padding: 12px 24px;
+        font-size: 16px;
+        font-weight: 600;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-danger {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        border: none;
+        box-shadow: 0 4px 6px rgba(220, 53, 69, 0.3);
+    }
+    
+    .btn-danger:hover {
+        background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+        box-shadow: 0 6px 12px rgba(220, 53, 69, 0.4);
+        transform: translateY(-2px);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        border: none;
+        box-shadow: 0 4px 6px rgba(0, 123, 255, 0.3);
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+        box-shadow: 0 6px 12px rgba(0, 123, 255, 0.4);
+        transform: translateY(-2px);
+    }
+    
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+    }
+    
     .chart-container {
         background: white;
         border-radius: 8px;
@@ -164,15 +203,22 @@
                     </h2>
                     <p class="text-muted mb-0">{{ contrat.numero_contrat }} - {{ locataire.get_nom_complet }}</p>
                 </div>
-                <div>
+                <div class="d-flex gap-2">
+                    <!-- Bouton Imprimer PDF - Design Moderne -->
                     <a href="{% url 'paiements:historique:historique_contrat_imprimer' contrat.id %}" 
-                       class="print-button" target="_blank">
-                        <i class="fas fa-print me-1"></i>
-                        Imprimer
+                       class="btn btn-danger btn-lg" 
+                       target="_blank"
+                       title="Imprimer ou télécharger en PDF">
+                        <i class="fas fa-file-pdf me-2"></i>
+                        Générer PDF
                     </a>
-                    <a href="{% url 'contrats:detail' contrat.id %}" class="btn btn-outline-secondary ms-2">
-                        <i class="fas fa-arrow-left me-1"></i>
-                        Retour au Contrat
+                    <button onclick="window.print()" class="btn btn-primary btn-lg" title="Impression rapide">
+                        <i class="fas fa-print me-2"></i>
+                        Imprimer
+                    </button>
+                    <a href="{% url 'contrats:detail' contrat.id %}" class="btn btn-outline-secondary btn-lg">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        Retour
                     </a>
                 </div>
             </div>
@@ -333,14 +379,9 @@
                             </div>
                             <div class="col-md-2">
                                 <div class="fw-bold text-uppercase">{{ paiement.get_type_paiement_display }}</div>
-                                {% if paiement.mois_paye %}
                                 <div class="text-muted small">
                                     <i class="fas fa-calendar-alt me-1"></i>
-                                    <strong>Mois:</strong> {{ paiement.mois_paye }}
-                                </div>
-                                {% endif %}
-                                <div class="text-muted small">
-                                    <strong>Type:</strong> {{ paiement.type_paiement }}
+                                    {{ paiement.get_mois_description }}
                                 </div>
                             </div>
                             <div class="col-md-2">
@@ -479,7 +520,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                         <div class="col-md-2">
                             <div class="fw-bold">${paiement.type_paiement}</div>
-                            ${paiement.mois_paye ? `<div class="text-muted small"><i class="fas fa-calendar-alt me-1"></i>${paiement.mois_paye}</div>` : ''}
+                            <div class="text-muted small"><i class="fas fa-calendar-alt me-1"></i>${paiement.mois_description || paiement.mois_paye || ''}</div>
                         </div>
                         <div class="col-md-2">
                             <div class="paiement-montant">${paiement.montant} F CFA</div>

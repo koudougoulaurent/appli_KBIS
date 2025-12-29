@@ -206,8 +206,7 @@
                     <tr>
                         <th>Date</th>
                         <th>Référence</th>
-                        <th>Type</th>
-                        <th>Mois Payé</th>
+                        <th>Type / Période</th>
                         <th>Montant</th>
                         <th>Statut</th>
                         <th>Mode</th>
@@ -218,8 +217,10 @@
                     <tr>
                         <td>{{ paiement.date_paiement|date:"d/m/Y" }}</td>
                         <td>{{ paiement.reference_paiement }}</td>
-                        <td>{{ paiement.get_type_paiement_display }}</td>
-                        <td>{{ paiement.mois_paye|default:"-" }}</td>
+                        <td>
+                            <strong>{{ paiement.get_type_paiement_display }}</strong>
+                            <br><small class="text-muted">{{ paiement.get_mois_description }}</small>
+                        </td>
                         <td class="montant-print">{{ paiement.montant|floatformat:0 }} F</td>
                         <td>
                             <span class="statut-print statut-{{ paiement.statut }}">
@@ -265,9 +266,7 @@
                         <div class="d-flex justify-content-between">
                             <div>
                                 <strong>{{ paiement.get_type_paiement_display }}</strong>
-                                {% if paiement.mois_paye %}
-                                <br><small class="text-muted">{{ paiement.mois_paye }}</small>
-                                {% endif %}
+                                <br><small class="text-muted">{{ paiement.get_mois_description }}</small>
                             </div>
                             <div class="text-end">
                                 <div class="montant-print">{{ paiement.montant|floatformat:0 }} F</div>

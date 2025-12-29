@@ -1153,6 +1153,86 @@ class Paiement(models.Model):
         }
         return colors.get(self.statut, 'secondary')
     
+    def get_mois_description(self):
+        """
+        Retourne une description du mois/période payé(e) selon le type de paiement.
+        - Pour les loyers: le mois spécifique (ex: "Décembre 2024")
+        - Pour les avances: la période couverte (ex: "Décembre 2024 - Février 2025")
+        - Pour les cautions: "Caution"
+        - Pour les autres: le mois si disponible
+        """
+        from paiements.models_avance import AvanceLoyer
+        
+        # Pour les loyers, afficher le mois payé
+        if self.type_paiement == 'loyer':
+            if self.mois_paye:
+                return f"Loyer {self.mois_paye}"
+            else:
+                # Si le mois n'est pas renseigné, utiliser la date du paiement
+                return f"Loyer {self.date_paiement.strftime('%B %Y')}"
+        
+        # Pour les avances, afficher la période couverte
+        elif self.type_paiement == 'avance':
+            try:
+                # Chercher l'avance associée à ce paiement
+                avance = AvanceLoyer.objects.filter(paiement=self).first()
+                if avance and avance.nombre_mois_couverts:
+                    # Récupérer les mois couverts
+                    from paiements.models_avance import ConsommationAvance
+                    consommations = ConsommationAvance.objects.filter(
+                        avance=avance
+                    ).order_by('mois_consomme')
+                    
+                    if consommations.exists():
+                        premier_mois = consommations.first().mois_consomme
+                        dernier_mois = consommations.last().mois_consomme
+                        
+                        # Formatter la période
+                        if premier_mois == dernier_mois:
+                            return f"Avance {premier_mois.strftime('%B %Y')} ({avance.nombre_mois_couverts} mois)"
+                        else:
+                            return f"Avance {premier_mois.strftime('%B %Y')} - {dernier_mois.strftime('%B %Y')} ({avance.nombre_mois_couverts} mois)"
+                    else:
+                        return f"Avance ({avance.nombre_mois_couverts} mois)"
+                elif self.mois_paye:
+                    return f"Avance {self.mois_paye}"
+                else:
+                    return "Avance de loyer"
+            except Exception:
+                return "Avance de loyer"
+        
+        # Pour les cautions
+        elif self.type_paiement == 'caution':
+            return "Caution"
+        
+        # Pour les charges
+        elif self.type_paiement == 'charges':
+            if self.mois_paye:
+                return f"Charges {self.mois_paye}"
+            else:
+                return "Charges"
+        
+        # Pour les régularisations
+        elif self.type_paiement == 'regularisation':
+            if self.mois_paye:
+                return f"Régularisation {self.mois_paye}"
+            else:
+                return "Régularisation"
+        
+        # Pour les paiements partiels
+        elif self.type_paiement == 'paiement_partiel':
+            if self.mois_paye:
+                return f"Paiement partiel {self.mois_paye}"
+            else:
+                return "Paiement partiel"
+        
+        # Pour les autres types
+        else:
+            if self.mois_paye:
+                return f"{self.get_type_paiement_display()} {self.mois_paye}"
+            else:
+                return self.get_type_paiement_display()
+    
     def generer_quittance_kbis_dynamique(self, user=None):
         """Génère une quittance KBIS dynamique avec le format correct."""
         import sys
