@@ -453,7 +453,17 @@
                     
                     <!-- Historique des paiements -->
                     <div class="info-card">
-                        <h6><i class="bi bi-clock-history"></i> Historique des Paiements</h6>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0"><i class="bi bi-clock-history"></i> Historique des Paiements</h6>
+                            <div id="historique-actions" style="display: none;">
+                                <a href="#" id="btn-pdf-historique" class="btn btn-sm btn-danger" target="_blank" title="Télécharger l'historique en PDF">
+                                    <i class="bi bi-file-pdf"></i> PDF
+                                </a>
+                                <a href="#" id="btn-voir-historique" class="btn btn-sm btn-info" title="Voir l'historique complet">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </div>
+                        </div>
                         <div id="historique-paiements"></div>
                     </div>
                     
@@ -940,6 +950,13 @@ function afficherContexteComplet(data) {
     
     if (historiqueHtml) {
         $('#historique-paiements').html(historiqueHtml);
+        // Afficher les boutons d'action et configurer leurs URLs
+        if (data.contrat && data.contrat.id) {
+            const contratId = data.contrat.id;
+            $('#btn-pdf-historique').attr('href', `/paiements/historique/contrat/${contratId}/imprimer/`);
+            $('#btn-voir-historique').attr('href', `/paiements/historique/contrat/${contratId}/`);
+            $('#historique-actions').show();
+        }
     } else {
         // Premier paiement - afficher des informations utiles
         let premierPaiementHtml = `
@@ -957,6 +974,8 @@ function afficherContexteComplet(data) {
             </div>
         `;
         $('#historique-paiements').html(premierPaiementHtml);
+        // Cacher les boutons pour le premier paiement
+        $('#historique-actions').hide();
     }
     
     // Suggestions de paiement
