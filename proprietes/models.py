@@ -1601,10 +1601,9 @@ class ChargesBailleur(models.Model):
         from decimal import Decimal
         
         montant_deduction = Decimal(str(montant_deduction))
-        montant_restant = Decimal(str(self.montant_restant))
         
-        # Calculer le montant effectivement déductible
-        montant_effectivement_deduit = min(montant_deduction, montant_restant)
+        # Utiliser le montant exact saisi par l'utilisateur sans limitation
+        montant_effectivement_deduit = montant_deduction
         
         if montant_effectivement_deduit > 0:
             # Mettre à jour les montants

@@ -292,7 +292,7 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Mise à jour dynamique du montant maximum déductible
+    // Mise à jour dynamique du placeholder pour information
     const chargeSelect = document.getElementById('charge_bailleur_select');
     const montantInput = document.getElementById('montant_deduction');
     
@@ -305,8 +305,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const match = text.match(/(\d+(?:\.\d+)?)\s+F CFA restant/);
                 if (match) {
                     const montantRestant = parseFloat(match[1]);
-                    montantInput.max = montantRestant;
-                    montantInput.placeholder = `Max: ${montantRestant} F CFA`;
+                    montantInput.placeholder = `Montant restant: ${montantRestant} F CFA`;
                 }
             }
         });

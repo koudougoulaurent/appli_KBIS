@@ -633,15 +633,9 @@ class ChargesBailleurForm(forms.ModelForm):
                 montant_clean = montant.replace(',', '.')
                 try:
                     montant_decimal = Decimal(montant_clean)
-                    if montant_decimal <= 0:
-                        raise ValidationError(_('Le montant doit être supérieur à 0.'))
-                    if montant_decimal > Decimal('999999999.99'):
-                        raise ValidationError(_('Le montant est trop élevé (maximum 999,999,999.99 F CFA).'))
                     return montant_decimal
                 except (ValueError, TypeError):
                     raise ValidationError(_('Le montant doit être un nombre valide.'))
-            elif montant <= 0:
-                raise ValidationError(_('Le montant doit être supérieur à 0.'))
         return montant
 
     def clean_date_charge(self):
@@ -722,13 +716,11 @@ class ChargesBailleurDeductionForm(forms.Form):
     montant_deduction = forms.DecimalField(
         max_digits=10,
         decimal_places=2,
-        min_value=0.01,
         label=_('Montant à déduire (F CFA)'),
         help_text=_('Montant à déduire du loyer pour rembourser les charges bailleur'),
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
-            'step': '0.01',
-            'min': '0.01'
+            'step': '0.01'
         })
     )
     
