@@ -14,37 +14,48 @@
                     </h3>
                 </div>
                 <div class="card-body">
+                    <!-- Sélection du contrat -->
+                    <div class="mb-4">
+                        <label for="selectContrat" class="form-label"><strong>Sélectionner un contrat :</strong></label>
+                        <select id="selectContrat" class="form-select form-select-lg">
+                            <option value="">-- Sélectionnez un contrat --</option>
+                            {% for contrat in contrats %}
+                            <option value="{{ contrat.id }}">
+                                {{ contrat.numero_contrat }} - {{ contrat.locataire }} 
+                                (Loyer: {{ contrat.get_loyer_total }} F CFA)
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
                     <!-- Boutons d'action -->
                     <div class="mb-4">
-                        <button id="btnDiagnostic" class="btn btn-info btn-lg">
+                        <button id="btnDiagnostic" class="btn btn-info btn-lg" disabled>
                             <i class="bi bi-search"></i> Diagnostic
                         </button>
-                        <button id="btnCorriger Tout" class="btn btn-success btn-lg" disabled>
-                            <i class="bi bi-check-all"></i> Corriger Tout
+                        <button id="btnCorriger" class="btn btn-success btn-lg" style="display:none;">
+                            <i class="bi bi-check-all"></i> Corriger
                         </button>
                     </div>
 
                     <!-- Zone de résultats -->
                     <div id="resultats" class="mt-4"></div>
 
-                    <!-- Tableau des avances problématiques -->
+                    <!-- Tableau des avances -->
                     <div id="tableContainer" class="mt-4" style="display: none;">
-                        <h4>Avances Problématiques Détectées</h4>
+                        <h4>Avances du Contrat</h4>
                         <div class="table-responsive">
                             <table class="table table-striped table-hover">
                                 <thead class="table-dark">
                                     <tr>
                                         <th>ID</th>
-                                        <th>Contrat</th>
                                         <th>Date</th>
                                         <th>Montant</th>
-                                        <th>Loyer Avance</th>
-                                        <th>Loyer Contrat</th>
-                                        <th>Mois Enregistrés</th>
-                                        <th>Mois Calculés</th>
-                                        <th>Couverture Actuelle</th>
-                                        <th>Correction</th>
-                                        <th>Action</th>
+                                        <th>Mois Couverts</th>
+                                        <th>Période</th>
+                                        <th>Restant</th>
+                                        <th>Statut</th>
+                                        <th>Problème</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tableBody"></tbody>
@@ -79,6 +90,181 @@
 </style>
 
 <script>
+    let contratSelectionne = null;
+    let avancesData = null;
+
+    // Activer le bouton Diagnostic quand un contrat est sélectionné
+    document.getElementById('selectContrat').addEventListener('change', function() {
+        const contratId = this.value;
+        const btnDiagnostic = document.getElementById('btnDiagnostic');
+        const btnCorriger = document.getElementById('btnCorriger');
+        
+        if (contratId) {
+            contratSelectionne = contratId;
+            btnDiagnostic.disabled = false;
+            btnCorriger.style.display = 'none';
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('resultats').innerHTML = '';
+        } else {
+            contratSelectionne = null;
+            btnDiagnostic.disabled = true;
+            btnCorriger.style.display = 'none';
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('resultats').innerHTML = '';
+        }
+    });
+
+    // Diagnostic du contrat sélectionné
+    document.getElementById('btnDiagnostic').addEventListener('click', function() {
+        if (!contratSelectionne) return;
+        
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Analyse...';
+
+        fetch(`/paiements/admin/corriger-avances/api/diagnostic-contrat/${contratSelectionne}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    avancesData = data;
+                    afficherResultats(data);
+                } else {
+                    alert('Erreur: ' + data.error);
+                }
+                
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-search"></i> Diagnostic';
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors du diagnostic');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-search"></i> Diagnostic';
+            });
+    });
+
+    // Afficher les résultats
+    function afficherResultats(data) {
+        const resultatsDiv = document.getElementById('resultats');
+        const totalProblemes = data.total_doublons + data.total_problemes;
+        
+        if (totalProblemes === 0) {
+            resultatsDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <h4><i class="bi bi-check-circle"></i> Aucun problème détecté !</h4>
+                    <p>Les ${data.total_avances} avance(s) du contrat sont correctement configurées.</p>
+                </div>
+            `;
+            document.getElementById('btnCorriger').style.display = 'none';
+        } else {
+            let message = '<ul class="mb-0">';
+            if (data.total_doublons > 0) {
+                message += `<li><strong>${data.total_doublons}</strong> avance(s) en double à supprimer</li>`;
+            }
+            if (data.total_problemes > 0) {
+                message += `<li><strong>${data.total_problemes}</strong> avance(s) mal configurée(s) à corriger</li>`;
+            }
+            message += '</ul>';
+            
+            resultatsDiv.innerHTML = `
+                <div class="alert alert-warning">
+                    <h4><i class="bi bi-exclamation-triangle"></i> Problèmes Détectés</h4>
+                    ${message}
+                </div>
+            `;
+            
+            document.getElementById('btnCorriger').style.display = 'inline-block';
+        }
+        
+        // Toujours afficher le tableau
+        afficherTableau(data.avances, data.doublons_ids, data.problemes_ids);
+    }
+
+    // Afficher le tableau des avances
+    function afficherTableau(avances, doublonsIds, problemesIds) {
+        const tableBody = document.getElementById('tableBody');
+        tableBody.innerHTML = '';
+        
+        avances.forEach(avance => {
+            const estDoublon = doublonsIds.includes(avance.id);
+            const estProbleme = problemesIds.includes(avance.id);
+            
+            let badge = '';
+            let rowClass = '';
+            
+            if (estDoublon) {
+                badge = '<span class="badge bg-danger">DOUBLON</span>';
+                rowClass = 'table-danger';
+            } else if (estProbleme) {
+                badge = '<span class="badge bg-warning">À CORRIGER</span>';
+                rowClass = 'table-warning';
+            } else {
+                badge = '<span class="badge bg-success">OK</span>';
+            }
+            
+            const problemeDetail = estProbleme && !estDoublon ? 
+                `<br><small class="text-muted">→ Devrait couvrir ${avance.mois_corriges} mois</small>` : '';
+            
+            const row = `
+                <tr class="${rowClass}">
+                    <td>${avance.id}</td>
+                    <td>${new Date(avance.date_avance).toLocaleDateString('fr-FR')}</td>
+                    <td>${avance.montant.toLocaleString('fr-FR')} F CFA</td>
+                    <td>${avance.mois_couverts}${problemeDetail}</td>
+                    <td>${new Date(avance.mois_debut).toLocaleDateString('fr-FR', {month: 'short', year: 'numeric'})} - 
+                        ${new Date(avance.mois_fin).toLocaleDateString('fr-FR', {month: 'short', year: 'numeric'})}</td>
+                    <td>${avance.montant_restant.toLocaleString('fr-FR')} F CFA</td>
+                    <td><span class="badge bg-${avance.statut === 'active' ? 'primary' : 'secondary'}">${avance.statut}</span></td>
+                    <td>${badge}</td>
+                </tr>
+            `;
+            
+            tableBody.innerHTML += row;
+        });
+        
+        document.getElementById('tableContainer').style.display = 'block';
+    }
+
+    // Corriger le contrat
+    document.getElementById('btnCorriger').addEventListener('click', function() {
+        if (!contratSelectionne) return;
+        
+        if (!confirm('Confirmer la correction des avances ?\n\n- Les doublons seront supprimés\n- Les avances mal configurées seront corrigées')) {
+            return;
+        }
+        
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Correction...';
+
+        fetch(`/paiements/admin/corriger-avances/api/corriger-contrat/${contratSelectionne}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`✅ Correction réussie !\n\n${data.message}`);
+                    // Relancer le diagnostic
+                    document.getElementById('btnDiagnostic').click();
+                } else {
+                    alert('Erreur: ' + data.error);
+                }
+                
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-all"></i> Corriger';
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la correction');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-all"></i> Corriger';
+            });
+    });
+</script>
 document.addEventListener('DOMContentLoaded', function() {
     let avancesProblematiques = [];
 

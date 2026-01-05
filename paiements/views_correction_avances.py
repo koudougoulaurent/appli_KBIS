@@ -5,7 +5,9 @@ from django.shortcuts import render
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from django.db.models import Count
 from paiements.models_avance import AvanceLoyer
+from contrats.models import Contrat
 from decimal import Decimal
 from dateutil.relativedelta import relativedelta
 import json
@@ -14,7 +16,15 @@ import json
 @staff_member_required
 def page_correction_avances(request):
     """Page d'administration pour corriger les avances"""
-    return render(request, 'paiements/admin/corriger_avances.html')
+    # Récupérer tous les contrats actifs avec avances
+    contrats_avec_avances = Contrat.objects.filter(
+        avanceloyer__isnull=False,
+        is_deleted=False
+    ).distinct().select_related('locataire', 'propriete').order_by('-date_debut')
+    
+    return render(request, 'paiements/admin/corriger_avances.html', {
+        'contrats': contrats_avec_avances
+    })
 
 
 @staff_member_required
@@ -211,3 +221,142 @@ def api_corriger_toutes_avances(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@staff_member_required
+@require_http_methods(["GET"])
+def api_diagnostic_contrat(request, contrat_id):
+    """API pour diagnostiquer les avances d'un contrat spécifique"""
+    try:
+        contrat = Contrat.objects.get(pk=contrat_id, is_deleted=False)
+        loyer_contrat = Decimal(str(contrat.get_loyer_total()))
+        
+        avances = AvanceLoyer.objects.filter(contrat=contrat).order_by('-date_avance')
+        
+        # Détecter les doublons
+        doublons_groups = AvanceLoyer.objects.filter(
+            contrat=contrat
+        ).values('date_avance', 'montant_avance').annotate(
+            count=Count('id')
+        ).filter(count__gt=1)
+        
+        avances_data = []
+        doublons_ids = []
+        problemes = []
+        
+        for avance in avances:
+            mois_calcules = int(avance.montant_avance // loyer_contrat) if loyer_contrat > 0 else 0
+            loyer_incorrect = abs(avance.loyer_mensuel - loyer_contrat) > 100
+            mois_incorrects = mois_calcules != avance.nombre_mois_couverts
+            
+            avance_data = {
+                'id': avance.id,
+                'date_avance': str(avance.date_avance),
+                'montant': float(avance.montant_avance),
+                'loyer_mensuel': float(avance.loyer_mensuel),
+                'mois_couverts': avance.nombre_mois_couverts,
+                'mois_debut': str(avance.mois_debut_couverture),
+                'mois_fin': str(avance.mois_fin_couverture),
+                'montant_restant': float(avance.montant_restant),
+                'statut': avance.statut,
+                'loyer_incorrect': loyer_incorrect,
+                'mois_incorrects': mois_incorrects,
+                'mois_corriges': mois_calcules
+            }
+            avances_data.append(avance_data)
+            
+            if loyer_incorrect or mois_incorrects:
+                problemes.append(avance.id)
+        
+        # Identifier les doublons
+        for groupe in doublons_groups:
+            avances_dup = AvanceLoyer.objects.filter(
+                contrat=contrat,
+                date_avance=groupe['date_avance'],
+                montant_avance=groupe['montant_avance']
+            ).order_by('id')
+            # Garder le premier, marquer les autres comme doublons
+            for avance in avances_dup.exclude(id=avances_dup.first().id):
+                doublons_ids.append(avance.id)
+        
+        return JsonResponse({
+            'success': True,
+            'contrat': {
+                'id': contrat.id,
+                'numero': contrat.numero_contrat,
+                'locataire': str(contrat.locataire),
+                'loyer_mensuel': float(loyer_contrat)
+            },
+            'avances': avances_data,
+            'doublons_ids': doublons_ids,
+            'problemes_ids': problemes,
+            'total_avances': len(avances_data),
+            'total_doublons': len(doublons_ids),
+            'total_problemes': len(problemes)
+        })
+    
+    except Contrat.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Contrat introuvable'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@staff_member_required
+@require_http_methods(["POST"])
+def api_corriger_contrat(request, contrat_id):
+    """API pour corriger toutes les avances d'un contrat"""
+    try:
+        contrat = Contrat.objects.get(pk=contrat_id, is_deleted=False)
+        loyer_contrat = Decimal(str(contrat.get_loyer_total()))
+        
+        # 1. Supprimer les doublons
+        doublons_groups = AvanceLoyer.objects.filter(
+            contrat=contrat
+        ).values('date_avance', 'montant_avance').annotate(
+            count=Count('id')
+        ).filter(count__gt=1)
+        
+        doublons_supprimes = 0
+        for groupe in doublons_groups:
+            avances_dup = AvanceLoyer.objects.filter(
+                contrat=contrat,
+                date_avance=groupe['date_avance'],
+                montant_avance=groupe['montant_avance']
+            ).order_by('id')
+            # Supprimer tous sauf le premier
+            count = avances_dup.exclude(id=avances_dup.first().id).count()
+            avances_dup.exclude(id=avances_dup.first().id).delete()
+            doublons_supprimes += count
+        
+        # 2. Corriger les avances mal configurées
+        avances = AvanceLoyer.objects.filter(contrat=contrat)
+        avances_corrigees = 0
+        
+        for avance in avances:
+            mois_calcules = int(avance.montant_avance // loyer_contrat) if loyer_contrat > 0 else 0
+            loyer_incorrect = abs(avance.loyer_mensuel - loyer_contrat) > 100
+            mois_incorrects = mois_calcules != avance.nombre_mois_couverts
+            
+            if loyer_incorrect or mois_incorrects:
+                avance.loyer_mensuel = loyer_contrat
+                avance.nombre_mois_couverts = mois_calcules
+                
+                if mois_calcules > 0:
+                    avance.mois_fin_couverture = avance.mois_debut_couverture + relativedelta(months=mois_calcules - 1)
+                else:
+                    avance.mois_fin_couverture = avance.mois_debut_couverture
+                
+                avance.save()
+                avances_corrigees += 1
+        
+        return JsonResponse({
+            'success': True,
+            'doublons_supprimes': doublons_supprimes,
+            'avances_corrigees': avances_corrigees,
+            'message': f'{doublons_supprimes} doublon(s) supprimé(s), {avances_corrigees} avance(s) corrigée(s)'
+        })
+    
+    except Contrat.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Contrat introuvable'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

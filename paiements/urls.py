@@ -56,6 +56,8 @@ urlpatterns = [
     path('admin/corriger-avances/api/diagnostic/', views_correction_avances.api_diagnostic_avances, name='api_diagnostic_avances'),
     path('admin/corriger-avances/api/corriger/', views_correction_avances.api_corriger_avance, name='api_corriger_avance'),
     path('admin/corriger-avances/api/corriger-tout/', views_correction_avances.api_corriger_toutes_avances, name='api_corriger_toutes_avances'),
+    path('admin/corriger-avances/api/diagnostic-contrat/<int:contrat_id>/', views_correction_avances.api_diagnostic_contrat, name='api_diagnostic_contrat'),
+    path('admin/corriger-avances/api/corriger-contrat/<int:contrat_id>/', views_correction_avances.api_corriger_contrat, name='api_corriger_contrat'),
     
     path('recaps-mensuels/creer/', views_recapitulatifs.creer_recapitulatif, name='creer_recap_mensuel'),
     path('recaps-mensuels/<int:recapitulatif_id>/', views_recapitulatifs.detail_recapitulatif, name='detail_recap_mensuel'),
