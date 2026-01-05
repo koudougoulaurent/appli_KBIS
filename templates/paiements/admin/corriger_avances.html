@@ -1,0 +1,288 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Correction des Avances de Loyer{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="bi bi-wrench"></i> Correction Automatique des Avances
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Boutons d'action -->
+                    <div class="mb-4">
+                        <button id="btnDiagnostic" class="btn btn-info btn-lg">
+                            <i class="bi bi-search"></i> Diagnostic
+                        </button>
+                        <button id="btnCorriger Tout" class="btn btn-success btn-lg" disabled>
+                            <i class="bi bi-check-all"></i> Corriger Tout
+                        </button>
+                    </div>
+
+                    <!-- Zone de résultats -->
+                    <div id="resultats" class="mt-4"></div>
+
+                    <!-- Tableau des avances problématiques -->
+                    <div id="tableContainer" class="mt-4" style="display: none;">
+                        <h4>Avances Problématiques Détectées</h4>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Contrat</th>
+                                        <th>Date</th>
+                                        <th>Montant</th>
+                                        <th>Loyer Avance</th>
+                                        <th>Loyer Contrat</th>
+                                        <th>Mois Enregistrés</th>
+                                        <th>Mois Calculés</th>
+                                        <th>Couverture Actuelle</th>
+                                        <th>Correction</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .badge-error {
+        background-color: #dc3545;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+    }
+    .badge-warning {
+        background-color: #ffc107;
+        color: black;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+    }
+    .badge-success {
+        background-color: #28a745;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let avancesProblematiques = [];
+
+    // Fonction de diagnostic
+    document.getElementById('btnDiagnostic').addEventListener('click', function() {
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Analyse en cours...';
+
+        fetch('/paiements/admin/corriger-avances/api/diagnostic/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    avancesProblematiques = data.avances_problematiques;
+                    
+                    const resultatsDiv = document.getElementById('resultats');
+                    
+                    if (data.problemes_trouves === 0) {
+                        resultatsDiv.innerHTML = `
+                            <div class="alert alert-success">
+                                <h4><i class="bi bi-check-circle"></i> Aucun problème détecté !</h4>
+                                <p>Toutes les ${data.total_avances} avances actives sont correctement configurées.</p>
+                            </div>
+                        `;
+                        document.getElementById('btnCorrigerTout').disabled = true;
+                    } else {
+                        resultatsDiv.innerHTML = `
+                            <div class="alert alert-warning">
+                                <h4><i class="bi bi-exclamation-triangle"></i> Problèmes Détectés</h4>
+                                <p><strong>${data.problemes_trouves}</strong> avance(s) sur ${data.total_avances} nécessitent une correction.</p>
+                            </div>
+                        `;
+                        
+                        // Afficher le tableau
+                        afficherTableau(avancesProblematiques);
+                        document.getElementById('btnCorrigerTout').disabled = false;
+                    }
+                } else {
+                    alert('Erreur: ' + data.error);
+                }
+                
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-search"></i> Diagnostic';
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors du diagnostic');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-search"></i> Diagnostic';
+            });
+    });
+
+    // Fonction pour afficher le tableau
+    function afficherTableau(avances) {
+        const tableBody = document.getElementById('tableBody');
+        tableBody.innerHTML = '';
+        
+        avances.forEach(avance => {
+            const row = document.createElement('tr');
+            
+            const difference = Math.abs(avance.mois_enregistres - avance.mois_calcules);
+            const badgeClass = difference > 1 ? 'badge-error' : 'badge-warning';
+            
+            row.innerHTML = `
+                <td>${avance.id}</td>
+                <td><a href="/contrats/${avance.contrat_id}/" target="_blank">${avance.contrat}</a></td>
+                <td>${avance.date_avance}</td>
+                <td>${avance.montant_avance.toLocaleString('fr-FR')} F</td>
+                <td><span class="badge-error">${avance.loyer_avance.toLocaleString('fr-FR')} F</span></td>
+                <td><span class="badge-success">${avance.loyer_contrat.toLocaleString('fr-FR')} F</span></td>
+                <td><span class="${badgeClass}">${avance.mois_enregistres} mois</span></td>
+                <td><span class="badge-success">${avance.mois_calcules} mois</span></td>
+                <td>${avance.mois_debut} → ${avance.mois_fin}</td>
+                <td>
+                    <small>
+                        Loyer: ${avance.correction_suggeree.nouveau_loyer.toLocaleString('fr-FR')} F<br>
+                        Mois: ${avance.correction_suggeree.nouveau_nombre_mois}<br>
+                        Fin: ${avance.correction_suggeree.nouvelle_fin}
+                    </small>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-success btnCorriger" data-avance-id="${avance.id}">
+                        <i class="bi bi-check"></i> Corriger
+                    </button>
+                </td>
+            `;
+            
+            tableBody.appendChild(row);
+        });
+        
+        document.getElementById('tableContainer').style.display = 'block';
+        
+        // Ajouter les événements sur les boutons de correction individuelle
+        document.querySelectorAll('.btnCorriger').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const avanceId = this.getAttribute('data-avance-id');
+                corrigerAvance(avanceId, this);
+            });
+        });
+    }
+
+    // Fonction pour corriger une avance individuelle
+    function corrigerAvance(avanceId, bouton) {
+        if (!confirm(`Êtes-vous sûr de vouloir corriger l'avance #${avanceId} ?`)) {
+            return;
+        }
+
+        bouton.disabled = true;
+        bouton.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        fetch('/paiements/admin/corriger-avances/api/corriger/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ avance_id: avanceId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Avance #${avanceId} corrigée avec succès !\\n\\nChangements:\\n- Loyer: ${data.changements.loyer.avant} → ${data.changements.loyer.apres} F\\n- Mois: ${data.changements.mois.avant} → ${data.changements.mois.apres}\\n- Fin: ${data.changements.fin_couverture.avant} → ${data.changements.fin_couverture.apres}`);
+                
+                // Retirer la ligne du tableau
+                bouton.closest('tr').remove();
+                
+                // Vérifier s'il reste des avances
+                if (document.querySelectorAll('#tableBody tr').length === 0) {
+                    document.getElementById('resultats').innerHTML = `
+                        <div class="alert alert-success">
+                            <h4><i class="bi bi-check-circle"></i> Toutes les avances ont été corrigées !</h4>
+                        </div>
+                    `;
+                    document.getElementById('tableContainer').style.display = 'none';
+                    document.getElementById('btnCorrigerTout').disabled = true;
+                }
+            } else {
+                alert('Erreur: ' + data.error);
+                bouton.disabled = false;
+                bouton.innerHTML = '<i class="bi bi-check"></i> Corriger';
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la correction');
+            bouton.disabled = false;
+            bouton.innerHTML = '<i class="bi bi-check"></i> Corriger';
+        });
+    }
+
+    // Fonction pour corriger toutes les avances
+    document.getElementById('btnCorrigerTout').addEventListener('click', function() {
+        if (!confirm(`Êtes-vous sûr de vouloir corriger TOUTES les ${avancesProblematiques.length} avances problématiques ?`)) {
+            return;
+        }
+
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Correction en cours...';
+
+        fetch('/paiements/admin/corriger-avances/api/corriger-tout/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`✅ Correction terminée !\\n\\nAvances corrigées: ${data.corrections_appliquees}\\nErreurs: ${data.erreurs.length}`);
+                
+                // Rafraîchir le diagnostic
+                document.getElementById('btnDiagnostic').click();
+            } else {
+                alert('Erreur: ' + data.error);
+            }
+            
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-all"></i> Corriger Tout';
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la correction');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-all"></i> Corriger Tout';
+        });
+    });
+
+    // Fonction helper pour récupérer le cookie CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+{% endblock %}

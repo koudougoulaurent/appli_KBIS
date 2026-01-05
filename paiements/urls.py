@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges, views_retrait_ameliore, views_avance, views_document_unifie, views_document_unifie_complet, views_avance_corrige, views_retraits_temporels, views_validation_paiements, views_ajax_historique
+from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges, views_retrait_ameliore, views_avance, views_document_unifie, views_document_unifie_complet, views_avance_corrige, views_retraits_temporels, views_validation_paiements, views_ajax_historique, views_correction_avances
 # from . import views_locataire_paiements
 
 app_name = 'paiements'
@@ -50,6 +50,13 @@ urlpatterns = [
     # RÉCAPITULATIFS MENSUELS - NOUVEAU SYSTÈME COMPLET
     # Redirection de l'ancien système vers le nouveau pour compatibilité
     path('recaps-mensuels/', views_recapitulatifs.liste_recapitulatifs, name='liste_recaps_mensuels'),
+    
+    # *** NOUVEAU : Administration - Correction des avances ***
+    path('admin/corriger-avances/', views_correction_avances.page_correction_avances, name='page_correction_avances'),
+    path('admin/corriger-avances/api/diagnostic/', views_correction_avances.api_diagnostic_avances, name='api_diagnostic_avances'),
+    path('admin/corriger-avances/api/corriger/', views_correction_avances.api_corriger_avance, name='api_corriger_avance'),
+    path('admin/corriger-avances/api/corriger-tout/', views_correction_avances.api_corriger_toutes_avances, name='api_corriger_toutes_avances'),
+    
     path('recaps-mensuels/creer/', views_recapitulatifs.creer_recapitulatif, name='creer_recap_mensuel'),
     path('recaps-mensuels/<int:recapitulatif_id>/', views_recapitulatifs.detail_recapitulatif, name='detail_recap_mensuel'),
     path('recaps-mensuels/<int:recapitulatif_id>/valider/', views_recapitulatifs.valider_recapitulatif, name='valider_recap_mensuel'),
