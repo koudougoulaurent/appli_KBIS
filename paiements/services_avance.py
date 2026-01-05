@@ -741,15 +741,28 @@ class ServiceGestionAvance:
             from datetime import datetime
             import re
             
-            # Récupérer le dernier paiement de loyer validé (pas d'avance)
+            # Récupérer le dernier paiement validé (loyer, avance ou paiement_partiel qui a un mois_paye)
             try:
                 from .models import Paiement
+                # CORRECTION : Inclure tous les types de paiements qui ont un mois_paye pour déterminer le dernier mois payé
                 dernier_paiement = Paiement.objects.filter(
                     contrat=contrat,
-                    type_paiement='loyer',
                     statut='valide',
                     is_deleted=False
+                ).exclude(
+                    mois_paye__isnull=True
+                ).exclude(
+                    mois_paye=''
                 ).order_by('-date_paiement').first()
+                
+                # Si aucun paiement avec mois_paye, chercher le dernier paiement de loyer
+                if not dernier_paiement:
+                    dernier_paiement = Paiement.objects.filter(
+                        contrat=contrat,
+                        type_paiement='loyer',
+                        statut='valide',
+                        is_deleted=False
+                    ).order_by('-date_paiement').first()
             except ImportError:
                 dernier_paiement = None
             
@@ -813,23 +826,50 @@ class ServiceGestionAvance:
                 montant_restant__gt=0
             )
             
+            # DEBUG : Afficher les informations de calcul
+            print(f"\n🔍 DEBUG calculer_prochain_mois_paiement:")
+            print(f"   Contrat: {contrat}")
+            print(f"   Dernier mois payé: {dernier_mois_paye}")
+            print(f"   Prochain mois de base: {prochain_mois_base}")
+            print(f"   Avances actives: {avances_actives.count()}")
+            
             # Si pas d'avances actives, retourner le mois de base
             if not avances_actives.exists():
+                print(f"   ✅ Pas d'avances actives → Retour mois de base: {prochain_mois_base}")
                 return prochain_mois_base
+            
+            # Afficher les détails des avances
+            for i, avance in enumerate(avances_actives, 1):
+                print(f"   Avance #{i}:")
+                print(f"     - Montant: {avance.montant_avance} F CFA")
+                print(f"     - Loyer mensuel: {avance.loyer_mensuel} F CFA")
+                print(f"     - Mois couverts: {avance.nombre_mois_couverts}")
+                print(f"     - Montant restant: {avance.montant_restant} F CFA")
+                print(f"     - Début: {avance.mois_debut_couverture}")
+                print(f"     - Fin: {avance.mois_fin_couverture}")
             
             # Vérifier si le mois de base est couvert par une avance
             # Si oui, trouver le premier mois non couvert
             mois_courant = prochain_mois_base
             mois_max = prochain_mois_base + relativedelta(months=24)  # Limite de sécurité (2 ans)
             
+            print(f"   🔍 Recherche du premier mois non couvert à partir de {mois_courant}...")
+            
             while mois_courant <= mois_max:
                 # Vérifier si ce mois est couvert par une avance active
                 mois_couvert = False
+                avance_couvrant = None
                 for avance in avances_actives:
                     if avance.mois_debut_couverture and avance.mois_fin_couverture:
                         if avance.mois_debut_couverture <= mois_courant <= avance.mois_fin_couverture:
                             mois_couvert = True
+                            avance_couvrant = avance
                             break
+                
+                if mois_couvert:
+                    print(f"   ⏭️  {mois_courant.strftime('%B %Y')}: COUVERT par avance (montant restant: {avance_couvrant.montant_restant} F)")
+                else:
+                    print(f"   ✅ {mois_courant.strftime('%B %Y')}: NON COUVERT → C'est le prochain paiement !")
                 
                 # Si le mois n'est pas couvert, c'est le mois attendu
                 if not mois_couvert:
