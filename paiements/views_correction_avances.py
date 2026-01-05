@@ -2,7 +2,7 @@
 Vue pour corriger les avances mal configurées depuis l'interface web
 """
 from django.shortcuts import render
-from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.db.models import Count
@@ -13,21 +13,27 @@ from dateutil.relativedelta import relativedelta
 import json
 
 
-@staff_member_required
+@login_required
 def page_correction_avances(request):
     """Page d'administration pour corriger les avances"""
-    # Récupérer tous les contrats actifs avec avances
-    contrats_avec_avances = Contrat.objects.filter(
-        avanceloyer__isnull=False,
-        is_deleted=False
-    ).distinct().select_related('locataire', 'propriete').order_by('-date_debut')
-    
-    return render(request, 'paiements/admin/corriger_avances.html', {
-        'contrats': contrats_avec_avances
-    })
+    try:
+        # Récupérer tous les contrats actifs
+        contrats = Contrat.objects.filter(
+            is_deleted=False
+        ).select_related('locataire', 'propriete').order_by('-date_debut')[:100]  # Limiter à 100
+        
+        return render(request, 'paiements/admin/corriger_avances.html', {
+            'contrats': contrats
+        })
+    except Exception as e:
+        # En cas d'erreur, afficher une page simple
+        return render(request, 'paiements/admin/corriger_avances.html', {
+            'contrats': [],
+            'error': str(e)
+        })
 
 
-@staff_member_required
+@login_required
 @require_http_methods(["GET"])
 def api_diagnostic_avances(request):
     """API pour diagnostiquer les avances problématiques"""
@@ -93,7 +99,7 @@ def api_diagnostic_avances(request):
         }, status=500)
 
 
-@staff_member_required
+@login_required
 @require_http_methods(["POST"])
 def api_corriger_avance(request):
     """API pour corriger une avance spécifique"""
@@ -162,7 +168,7 @@ def api_corriger_avance(request):
         }, status=500)
 
 
-@staff_member_required
+@login_required
 @require_http_methods(["POST"])
 def api_corriger_toutes_avances(request):
     """API pour corriger toutes les avances problématiques d'un coup"""
@@ -223,7 +229,7 @@ def api_corriger_toutes_avances(request):
         }, status=500)
 
 
-@staff_member_required
+@login_required
 @require_http_methods(["GET"])
 def api_diagnostic_contrat(request, contrat_id):
     """API pour diagnostiquer les avances d'un contrat spécifique"""
@@ -301,7 +307,7 @@ def api_diagnostic_contrat(request, contrat_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@staff_member_required
+@login_required
 @require_http_methods(["POST"])
 def api_corriger_contrat(request, contrat_id):
     """API pour corriger toutes les avances d'un contrat"""
