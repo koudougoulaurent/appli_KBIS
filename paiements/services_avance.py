@@ -826,6 +826,31 @@ class ServiceGestionAvance:
                 montant_restant__gt=0
             )
             
+            # *** AUTO-CORRECTION : Vérifier et corriger les avances avant le calcul ***
+            for avance in avances_actives:
+                try:
+                    loyer_contrat = contrat.get_loyer_total()
+                    if isinstance(loyer_contrat, str):
+                        loyer_contrat = Decimal(loyer_contrat.replace(',', '').replace(' ', ''))
+                    else:
+                        loyer_contrat = Decimal(str(loyer_contrat))
+                    
+                    # Vérifier l'incohérence
+                    difference_loyer = abs(avance.loyer_mensuel - loyer_contrat)
+                    mois_calcules_contrat = int(avance.montant_avance // loyer_contrat) if loyer_contrat > 0 else 0
+                    
+                    # Correction si nécessaire
+                    if difference_loyer > 100 or mois_calcules_contrat != avance.nombre_mois_couverts:
+                        if abs(avance.montant_avance - loyer_contrat) < 1000 and avance.nombre_mois_couverts > 1:
+                            # Cas avance 1 mois
+                            print(f"🔧 AUTO-CORRECTION: Avance {avance.id} - Ajustement à 1 mois")
+                            avance.nombre_mois_couverts = 1
+                            avance.loyer_mensuel = loyer_contrat
+                            avance.mois_fin_couverture = avance.mois_debut_couverture
+                            avance.save()
+                except Exception as e:
+                    print(f"⚠️ Erreur auto-correction avance {avance.id}: {e}")
+            
             # DEBUG : Afficher les informations de calcul
             print(f"\n🔍 DEBUG calculer_prochain_mois_paiement:")
             print(f"   Contrat: {contrat}")

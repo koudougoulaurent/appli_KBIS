@@ -23,3 +23,8 @@ class PaiementsConfig(AppConfig):
             from . import signals_financiers
         except ImportError:
             pass
+        try:
+            # Signal de correction automatique des avances au démarrage
+            from . import signals_correction_avances
+        except ImportError:
+            pass
