@@ -705,9 +705,19 @@ def ajouter_paiement(request):
     """Ajouter un nouveau paiement avec contexte intelligent."""
     # Vérification des permissions
     from core.utils import check_group_permissions
+    
+    # 🔍 DEBUG : Afficher les infos utilisateur et permissions
+    print(f"🔍 DEBUG ajouter_paiement:")
+    print(f"   User: {request.user.username}")
+    print(f"   Authenticated: {request.user.is_authenticated}")
+    print(f"   Groupe: {getattr(request.user, 'groupe_travail', None)}")
+    
     permissions = check_group_permissions(request.user, [], 'add')
+    print(f"   Permissions: {permissions}")
+    
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
+        print(f"   ❌ ACCÈS REFUSÉ: {permissions['message']}")
         return redirect('paiements:liste')
     
     # Initialiser les variables pour le contexte (utilisées dans GET et POST)
