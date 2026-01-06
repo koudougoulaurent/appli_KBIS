@@ -869,9 +869,19 @@ class ServiceGestionAvance:
             # DEBUG : Afficher les informations de calcul
             print(f"\n🔍 DEBUG calculer_prochain_mois_paiement:")
             print(f"   Contrat: {contrat}")
+            if dernier_paiement:
+                print(f"   Dernier paiement trouvé:")
+                print(f"     - ID: {dernier_paiement.id}")
+                print(f"     - Type: {dernier_paiement.type_paiement}")
+                print(f"     - Date: {dernier_paiement.date_paiement}")
+                print(f"     - Mois payé: {dernier_paiement.mois_paye}")
+                print(f"     - Montant: {dernier_paiement.montant}")
+            else:
+                print(f"   Aucun paiement trouvé")
             print(f"   Dernier mois payé: {dernier_mois_paye}")
             print(f"   Prochain mois de base: {prochain_mois_base}")
-            print(f"   Avances actives: {avances_actives.count()}")
+            print(f"   Avances actives (non expirées): {avances_actives.count()}")
+            print(f"   Date aujourd'hui: {aujourd_hui}")
             
             # Si pas d'avances actives, retourner le mois de base
             if not avances_actives.exists():
