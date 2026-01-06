@@ -820,10 +820,25 @@ class ServiceGestionAvance:
                 prochain_mois_base = timezone.now().date().replace(day=1) + relativedelta(months=1)
             
             # Récupérer les avances actives qui ont encore du montant restant
+            # ET dont la date d'expiration n'est pas dépassée
+            from datetime import date
+            aujourd_hui = date.today().replace(day=1)  # Premier du mois actuel
+            
+            # Marquer les avances expirées comme épuisées
+            avances_expirees = AvanceLoyer.objects.filter(
+                contrat=contrat,
+                statut='active',
+                mois_fin_couverture__lt=aujourd_hui
+            )
+            if avances_expirees.exists():
+                print(f"🔄 {avances_expirees.count()} avance(s) expirée(s) détectée(s), passage au statut 'epuisee'")
+                avances_expirees.update(statut='epuisee')
+            
             avances_actives = AvanceLoyer.objects.filter(
                 contrat=contrat,
                 statut='active',
-                montant_restant__gt=0
+                montant_restant__gt=0,
+                mois_fin_couverture__gte=aujourd_hui  # Avance non expirée
             )
             
             # *** AUTO-CORRECTION : Vérifier et corriger les avances avant le calcul ***
