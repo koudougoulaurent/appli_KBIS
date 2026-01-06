@@ -816,8 +816,9 @@ class ServiceGestionAvance:
             if dernier_mois_paye:
                 prochain_mois_base = dernier_mois_paye + relativedelta(months=1)
             else:
-                # Pas de paiement précédent, prochain paiement = mois suivant le mois actuel
-                prochain_mois_base = timezone.now().date().replace(day=1) + relativedelta(months=1)
+                # Pas de paiement précédent, prochain paiement = mois actuel (pas le suivant!)
+                # CORRIGÉ: Si aucun paiement, le loyer du mois actuel est dû
+                prochain_mois_base = timezone.now().date().replace(day=1)
             
             # Récupérer les avances actives qui ont encore du montant restant
             # ET dont la date d'expiration n'est pas dépassée
