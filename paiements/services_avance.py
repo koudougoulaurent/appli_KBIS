@@ -755,11 +755,11 @@ class ServiceGestionAvance:
                     mois_paye=''
                 ).order_by('-date_paiement').first()
                 
-                # Si aucun paiement avec mois_paye, chercher le dernier paiement de loyer
+                # Si aucun paiement avec mois_paye, chercher le dernier paiement de loyer OU d'avance
                 if not dernier_paiement:
                     dernier_paiement = Paiement.objects.filter(
                         contrat=contrat,
-                        type_paiement='loyer',
+                        type_paiement__in=['loyer', 'avance'],
                         statut='valide',
                         is_deleted=False
                     ).order_by('-date_paiement').first()
@@ -807,6 +807,21 @@ class ServiceGestionAvance:
                 # Priorité au mois_paye si disponible (plus précis)
                 if dernier_paiement.mois_paye:
                     dernier_mois_paye = convertir_mois_paye_en_date(dernier_paiement.mois_paye)
+                
+                # Si c'est une avance sans mois_paye, chercher l'AvanceLoyer correspondante
+                elif dernier_paiement.type_paiement == 'avance':
+                    try:
+                        # Trouver l'avance correspondant à ce paiement
+                        avance_liee = AvanceLoyer.objects.filter(
+                            contrat=contrat,
+                            date_paiement=dernier_paiement.date_paiement
+                        ).order_by('-date_paiement').first()
+                        
+                        if avance_liee and avance_liee.mois_fin_couverture:
+                            # Le dernier mois payé = le dernier mois couvert par l'avance
+                            dernier_mois_paye = avance_liee.mois_fin_couverture
+                    except:
+                        pass
                 
                 # Sinon utiliser date_paiement
                 if not dernier_mois_paye:
