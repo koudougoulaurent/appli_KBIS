@@ -541,8 +541,13 @@ Profession <b>{locataire_profession}</b> adresse : <b>{locataire_adresse}</b> Te
         elements.append(Paragraph(propriete_info, self.styles['CustomBody']))
         elements.append(Spacer(1, 6))
         
-        # Reçu de la caution - EN GRAS
-        caution_montant = self.contrat.get_depot_garantie_formatted()
+        # Reçu de la caution - CALCUL AUTOMATIQUE DE 3 MOIS
+        from decimal import Decimal
+        loyer_mensuel = Decimal(str(self.contrat.get_loyer_total()))
+        caution_3_mois = loyer_mensuel * 3
+        from core.utils import format_currency_fcfa
+        caution_montant = format_currency_fcfa(caution_3_mois)
+        
         elements.append(Paragraph(f"<b>KBIS IMMOBILIER</b> reconnait avoir reçu la somme <b>{caution_montant}</b>", self.styles['CustomBody']))
         elements.append(Paragraph("Représentant <b>Trois (03) Mois de caution</b>.", self.styles['CustomBody']))
         elements.append(Spacer(1, 6))
