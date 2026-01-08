@@ -17,7 +17,8 @@ class Contrat(models.Model):
     numero_contrat = models.CharField(
         max_length=50,
         unique=True,
-        verbose_name=_("Numéro de contrat")
+        verbose_name=_("Numéro de contrat"),
+        help_text=_("Vous pouvez saisir un nom personnalisé (ex: DUPONT MARTIN) ou laisser vide pour générer automatiquement un numéro CT-...")
     )
     propriete = models.ForeignKey(
         Propriete,

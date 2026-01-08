@@ -28,7 +28,8 @@ class ContratAdmin(admin.ModelAdmin):
     
     fieldsets = (
         (_('Informations de base'), {
-            'fields': ('numero_contrat', 'propriete', 'locataire')
+            'fields': ('numero_contrat', 'propriete', 'locataire'),
+            'description': _('Le numéro de contrat peut être modifié. Si laissé vide lors de la création, un numéro sera généré automatiquement.')
         }),
         (_('Dates'), {
             'fields': ('date_debut', 'date_fin', 'date_signature')
@@ -49,7 +50,7 @@ class ContratAdmin(admin.ModelAdmin):
         }),
     )
     
-    readonly_fields = ('numero_contrat', 'date_creation', 'date_modification')
+    readonly_fields = ('date_creation', 'date_modification')
     
     actions = ['activer_contrats', 'desactiver_contrats', 'resilier_contrats']
     
