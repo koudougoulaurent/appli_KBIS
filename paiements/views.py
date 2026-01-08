@@ -1086,8 +1086,8 @@ def ajouter_paiement(request):
     else:
         # Vérifier s'il y a un contrat sélectionné dans le GET pour afficher les reliquats
         contrat_id_get = request.GET.get('contrat_id')
-        mois_autorises = None
-        mois_attendu = None
+        mois_autorises = []  # CORRECTION: Liste vide au lieu de None
+        mois_attendu = ""   # CORRECTION: Chaîne vide au lieu de None
         
         if contrat_id_get:
             try:
