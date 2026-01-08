@@ -724,6 +724,8 @@ def ajouter_paiement(request):
     contrat_obj_get = None
     reliquats = []
     total_reliquat = 0
+    mois_autorises = []  # CORRECTION: Initialiser pour éviter UnboundLocalError
+    mois_attendu = ""    # CORRECTION: Initialiser pour éviter UnboundLocalError
     
     if request.method == 'POST':
         form = PaiementForm(request.POST)
@@ -1086,8 +1088,6 @@ def ajouter_paiement(request):
     else:
         # Vérifier s'il y a un contrat sélectionné dans le GET pour afficher les reliquats
         contrat_id_get = request.GET.get('contrat_id')
-        mois_autorises = []  # CORRECTION: Liste vide au lieu de None
-        mois_attendu = ""   # CORRECTION: Chaîne vide au lieu de None
         
         if contrat_id_get:
             try:
