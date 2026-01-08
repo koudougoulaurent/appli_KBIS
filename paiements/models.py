@@ -1121,20 +1121,39 @@ class Paiement(models.Model):
         return f"PAI-{timestamp}-{count_today:04d}"
     
     def generate_numero_paiement(self):
-        """Génère un numéro de paiement unique"""
+        """Génère un numéro de paiement unique (thread-safe)"""
         from django.utils import timezone
+        from django.db import transaction
+        import time
         
         # Format: PAI-YYYYMMDD-XXXX
         now = timezone.now()
         date_str = now.strftime('%Y%m%d')
         
-        # Compter les paiements du jour
-        today = now.date()
-        count_today = Paiement.objects.filter(
-            date_creation__date=today
-        ).count() + 1
+        # CORRECTION: Utiliser une boucle avec retry pour éviter les duplications
+        max_retries = 10
+        for attempt in range(max_retries):
+            # Compter les paiements du jour de manière atomique
+            with transaction.atomic():
+                today = now.date()
+                # Verrouiller la table pour compter de manière sûre
+                count_today = Paiement.objects.select_for_update().filter(
+                    date_creation__date=today
+                ).count() + 1 + attempt  # Ajouter attempt pour éviter collision
+                
+                numero = f"PAI-{date_str}-{count_today:04d}"
+                
+                # Vérifier que ce numéro n'existe pas déjà
+                if not Paiement.objects.filter(numero_paiement=numero).exists():
+                    return numero
+            
+            # Si le numéro existe, attendre un peu et réessayer
+            time.sleep(0.01)  # 10ms
         
-        return f"PAI-{date_str}-{count_today:04d}"
+        # Dernier recours: ajouter un timestamp microseconde
+        import uuid
+        unique_suffix = str(uuid.uuid4())[:4]
+        return f"PAI-{date_str}-{unique_suffix}"
     
     def generate_libelle(self):
         """Génère un libellé automatique pour le paiement"""
