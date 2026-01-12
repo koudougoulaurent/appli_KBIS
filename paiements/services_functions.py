@@ -45,10 +45,11 @@ def generate_recap_pdf(recap, method='reportlab'):
             title_style = ParagraphStyle(
                 'CustomTitle',
                 parent=styles['Heading1'],
-                fontSize=16,
+                fontSize=20,
                 spaceAfter=30,
                 alignment=1,  # Centré
-                textColor=colors.darkblue
+                textColor=colors.black,
+                fontName='Helvetica-Bold'
             )
             
             # Contenu du PDF
@@ -146,10 +147,11 @@ def generate_recap_pdf_batch(mois_recap, method='reportlab'):
         title_style = ParagraphStyle(
             'CustomTitle',
             parent=styles['Heading1'],
-            fontSize=16,
+            fontSize=20,
             spaceAfter=30,
             alignment=1,  # Centré
-            textColor=colors.darkblue
+            textColor=colors.black,
+            fontName='Helvetica-Bold'
         )
         
         # Contenu du PDF

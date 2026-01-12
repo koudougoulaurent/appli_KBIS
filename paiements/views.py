@@ -2541,22 +2541,26 @@ def imprimer_recap_mensuel(request, recap_id):
         title_style = ParagraphStyle(
             'CustomTitle',
             parent=styles['Heading1'],
-            fontSize=16,
+            fontSize=20,
             spaceAfter=30,
             alignment=1,  # Centré
-            textColor=colors.darkblue
+            textColor=colors.black,
+            fontName='Helvetica-Bold'
         )
         
         subtitle_style = ParagraphStyle(
             'CustomSubtitle',
             parent=styles['Heading2'],
-            fontSize=14,
+            fontSize=16,
             spaceAfter=20,
-            textColor=colors.darkblue
+            textColor=colors.black,
+            fontName='Helvetica-Bold'
         )
         
         normal_style = styles['Normal']
-        normal_style.fontSize = 10
+        normal_style.fontSize = 12
+        normal_style.textColor = colors.black
+        normal_style.fontName = 'Helvetica-Bold'
         
         # Contenu du PDF
         story = []
@@ -2593,14 +2597,17 @@ def imprimer_recap_mensuel(request, recap_id):
         
         montants_table = Table(montants_data, colWidths=[8*cm, 4*cm])
         montants_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.black),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 1), (-1, -1), 12),
+            ('GRID', (0, 0), (-1, -1), 2, colors.black)
         ]))
         
         story.append(montants_table)
@@ -2637,15 +2644,17 @@ def imprimer_recap_mensuel(request, recap_id):
         
         proprietes_table = Table(proprietes_data, colWidths=[3*cm, 4*cm, 3*cm, 2*cm, 2*cm, 2*cm, 2*cm])
         proprietes_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.black),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('FONTSIZE', (0, 0), (-1, 0), 11),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
             ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 2, colors.black),
+            ('FONTSIZE', (0, 1), (-1, -1), 10),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]))
         
@@ -2954,10 +2963,10 @@ def quittance_detail(request, pk):
         return redirect('paiements:liste')
     
     quittance = get_object_or_404(
-        QuittancePaiement.objects.select_related(
-            'paiement__contrat__locataire',
-            'paiement__contrat__propriete',
-            'paiement__contrat__propriete__bailleur'
+        QuittancePaiement.objects.prefetch_related('paiements').select_related(
+            'paiement_principal__contrat__locataire',
+            'paiement_principal__contrat__propriete',
+            'paiement_principal__contrat__propriete__bailleur'
         ),
         pk=pk
     )
@@ -2967,11 +2976,15 @@ def quittance_detail(request, pk):
         from .services_document_unifie_complet import DocumentUnifieA5ServiceComplet
         
         service = DocumentUnifieA5ServiceComplet()
-        html_content = service.generer_document_unifie('paiement_quittance', paiement_id=quittance.paiement.id)
+        # Utiliser le paiement principal ou le premier paiement de la liste
+        paiement_id = quittance.paiement_principal.id if quittance.paiement_principal else quittance.paiements.first().id
+        html_content = service.generer_document_unifie('paiement_quittance', paiement_id=paiement_id)
         
         return HttpResponse(html_content, content_type='text/html')
             
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         messages.error(request, f'Erreur lors de la génération: {str(e)}')
         return redirect('paiements:quittance_list')
 
@@ -3098,9 +3111,9 @@ def quittance_list(request):
         messages.error(request, permissions['message'])
         return redirect('paiements:liste')
     
-    quittances = QuittancePaiement.objects.select_related(
-        'paiement__contrat__locataire',
-        'paiement__contrat__propriete',
+    quittances = QuittancePaiement.objects.prefetch_related('paiements').select_related(
+        'paiement_principal__contrat__locataire',
+        'paiement_principal__contrat__propriete',
         'cree_par'
     ).order_by('-date_emission')
     
@@ -3113,12 +3126,14 @@ def quittance_list(request):
     total_quittances = quittances.count()
     quittances_imprimees = quittances.filter(statut='imprimee').count()
     quittances_envoyees = quittances.filter(statut='envoyee').count()
+    quittances_cumulees = quittances.filter(est_cumulee=True).count()
     
     context = get_context_with_entreprise_config({
         'quittances': page_obj,
         'total_quittances': total_quittances,
         'quittances_imprimees': quittances_imprimees,
         'quittances_envoyees': quittances_envoyees,
+        'quittances_cumulees': quittances_cumulees,
         'title': 'Liste des récépissés de paiement'
     })
     

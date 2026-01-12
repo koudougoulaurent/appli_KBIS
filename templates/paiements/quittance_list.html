@@ -239,6 +239,9 @@
                             <div class="quittance-number">{{ quittance.numero_quittance }}</div>
                             <div class="quittance-date">
                                 Émise le {{ quittance.date_emission|date:"d/m/Y" }}
+                                {% if quittance.est_cumulee %}
+                                    <span class="badge bg-info ms-2">Cumulée</span>
+                                {% endif %}
                             </div>
                         </div>
                         
@@ -252,13 +255,31 @@
                             <!-- Informations de la propriété -->
                             <div class="quittance-info">
                                 <div class="label">Propriété</div>
-                                <div class="value">{{ quittance.get_propriete.adresse }}, {{ quittance.get_propriete.ville }}</div>
+                                <div class="value">
+                                    {% if quittance.get_propriete %}
+                                        {{ quittance.get_propriete.adresse }}, {{ quittance.get_propriete.ville }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </div>
                             </div>
                             
                             <!-- Montant -->
                             <div class="quittance-amount">
-                                <div class="amount-value">{{ quittance.paiement.get_montant_formatted }}</div>
-                                <div class="text-muted">Montant payé</div>
+                                <div class="amount-value">
+                                    {% if quittance.est_cumulee %}
+                                        {{ quittance.get_montant_total|floatformat:0 }} F CFA
+                                    {% else %}
+                                        {{ quittance.paiement_principal.montant|floatformat:0 }} F CFA
+                                    {% endif %}
+                                </div>
+                                <div class="text-muted">
+                                    {% if quittance.est_cumulee %}
+                                        Total ({{ quittance.paiements.count }} paiements)
+                                    {% else %}
+                                        Montant payé
+                                    {% endif %}
+                                </div>
                             </div>
                             
                             <!-- Statut -->

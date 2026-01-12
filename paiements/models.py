@@ -2373,7 +2373,8 @@ class RetraitQuittance(models.Model):
 
 class QuittancePaiement(models.Model):
     """
-    Modèle pour les quittances de paiement
+    Modèle pour les quittances de paiement.
+    Support des quittances cumulées pour plusieurs paiements du même jour.
     """
     STATUT_CHOICES = [
         ('generee', 'Générée'),
@@ -2382,12 +2383,28 @@ class QuittancePaiement(models.Model):
         ('archivee', 'Archivée'),
     ]
     
-    # Relations
-    paiement = models.OneToOneField(
+    # Relations - Support des quittances cumulées
+    paiements = models.ManyToManyField(
+        Paiement,
+        related_name='quittances',
+        verbose_name=_("Paiements")
+    )
+    
+    # Paiement principal (pour compatibilité)
+    paiement_principal = models.ForeignKey(
         Paiement,
         on_delete=models.CASCADE,
-        related_name='quittance',
-        verbose_name=_("Paiement")
+        related_name='quittance_principale',
+        verbose_name=_("Paiement principal"),
+        null=True,
+        blank=True
+    )
+    
+    # Type de quittance
+    est_cumulee = models.BooleanField(
+        default=False,
+        verbose_name=_("Quittance cumulée"),
+        help_text=_("Indique si cette quittance regroupe plusieurs paiements")
     )
     
     # Informations de base
@@ -2453,13 +2470,53 @@ class QuittancePaiement(models.Model):
         ordering = ['-date_emission']
     
     def __str__(self):
-        return f"Quittance {self.numero_quittance} - {self.paiement.contrat.locataire.get_nom_complet()}"
+        if self.est_cumulee:
+            count = self.paiements.count()
+            return f"Quittance cumulée {self.numero_quittance} - {count} paiements"
+        elif self.paiement_principal:
+            return f"Quittance {self.numero_quittance} - {self.paiement_principal.contrat.locataire.get_nom_complet()}"
+        else:
+            return f"Quittance {self.numero_quittance}"
     
     def generer_numero(self):
         """Génère un numéro de quittance unique"""
         from datetime import datetime
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        return f"QUI-{timestamp}-{self.paiement.id}"
+        if self.paiement_principal:
+            return f"QUI-{timestamp}-{self.paiement_principal.id}"
+        else:
+            # Pour les nouvelles quittances sans paiement principal encore assigné
+            from django.db.models import Max
+            last_id = QuittancePaiement.objects.aggregate(Max('id'))['id__max'] or 0
+            return f"QUI-{timestamp}-{last_id + 1}"
+    
+    def get_montant_total(self):
+        """Retourne le montant total de la quittance (somme de tous les paiements)"""
+        from decimal import Decimal
+        return self.paiements.aggregate(
+            total=models.Sum('montant')
+        )['total'] or Decimal('0')
+    
+    def get_locataire(self):
+        """Retourne le locataire de la quittance"""
+        if self.paiement_principal:
+            return self.paiement_principal.contrat.locataire
+        elif self.paiements.exists():
+            return self.paiements.first().contrat.locataire
+        return None
+    
+    def get_contrat(self):
+        """Retourne le contrat de la quittance"""
+        if self.paiement_principal:
+            return self.paiement_principal.contrat
+        elif self.paiements.exists():
+            return self.paiements.first().contrat
+        return None
+    
+    def get_propriete(self):
+        """Retourne la propriété de la quittance"""
+        contrat = self.get_contrat()
+        return contrat.propriete if contrat else None
     
     def marquer_imprimee(self):
         """Marque la quittance comme imprimée"""

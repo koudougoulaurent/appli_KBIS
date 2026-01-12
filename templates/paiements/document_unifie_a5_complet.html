@@ -447,7 +447,14 @@
         
         <!-- Section montant -->
         <div class="amount-section">
-            {% if document_type == 'retrait_quittance' or document_type == 'retrait_recu' %}
+            {% if est_quittance_cumulee %}
+                {# Afficher le montant total cumulé #}
+                <div class="amount">{{ montant_total_cumule|floatformat:0 }} F CFA</div>
+                <div class="amount-words">{{ montant_lettres }}</div>
+                <div style="text-align: center; font-size: 8px; margin-top: 2mm; color: #666;">
+                    (Quittance cumulée - {{ paiements_cumules|length }} paiements)
+                </div>
+            {% elif document_type == 'retrait_quittance' or document_type == 'retrait_recu' %}
                 {% if montant_reellement_paye %}
                     <div class="amount">{{ montant_reellement_paye|floatformat:0 }} F CFA</div>
                     <div class="amount-words">{{ montant_reellement_paye_lettres }}</div>
@@ -463,6 +470,43 @@
                 <div class="amount-words">{{ montant_lettres }}</div>
             {% endif %}
         </div>
+        
+        <!-- Détails des paiements cumulés (si applicable) -->
+        {% if est_quittance_cumulee and paiements_cumules %}
+        <div style="border: 1px solid #000; padding: 2mm; margin: 3mm 0; background-color: #f8f9fa;">
+            <div style="font-size: 10px; font-weight: 900; text-align: center; margin-bottom: 2mm; border-bottom: 1px solid #000; padding-bottom: 1mm;">
+                DÉTAIL DES MOIS PAYÉS
+            </div>
+            <table style="width: 100%; font-size: 8px; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 1px solid #000;">
+                        <th style="text-align: left; padding: 1mm;">Mois</th>
+                        <th style="text-align: left; padding: 1mm;">Mode paiement</th>
+                        <th style="text-align: right; padding: 1mm;">Montant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pai in paiements_cumules %}
+                    <tr style="border-bottom: 1px dotted #ccc;">
+                        <td style="padding: 1mm;">
+                            {% if pai.mois_paye %}
+                                {{ pai.mois_paye }}
+                            {% else %}
+                                {{ pai.date_paiement|date:"F Y" }}
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1mm;">{{ pai.get_mode_paiement_display }}</td>
+                        <td style="text-align: right; padding: 1mm;">{{ pai.montant|floatformat:0 }} F</td>
+                    </tr>
+                    {% endfor %}
+                    <tr style="border-top: 2px solid #000; font-weight: 900;">
+                        <td colspan="2" style="padding: 1mm; text-align: right;">TOTAL:</td>
+                        <td style="text-align: right; padding: 1mm;">{{ montant_total_cumule|floatformat:0 }} F</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
         
         <!-- Informations détaillées -->
         <div class="payment-details-section">

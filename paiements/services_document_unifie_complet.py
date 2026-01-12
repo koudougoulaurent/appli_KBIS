@@ -84,12 +84,26 @@ class DocumentUnifieA5ServiceComplet:
             raise Exception(f"Erreur lors de la génération du document: {str(e)}")
     
     def _prepare_paiement_context(self, document_type, paiement_id, user=None):
-        """Prépare le contexte pour un document de paiement."""
+        """Prépare le contexte pour un document de paiement (simple ou cumulé)."""
         paiement = Paiement.objects.select_related(
             'contrat__locataire',
             'contrat__propriete__type_bien',
             'contrat__propriete__bailleur'
         ).get(id=paiement_id)
+        
+        # Vérifier s'il existe une quittance cumulée pour ce paiement
+        from .models import QuittancePaiement
+        quittance_cumulee = QuittancePaiement.objects.filter(
+            paiements=paiement,
+            est_cumulee=True,
+            is_deleted=False
+        ).first()
+        
+        # Si c'est une quittance cumulée, récupérer tous les paiements
+        paiements_cumules = None
+        if quittance_cumulee:
+            paiements_cumules = list(quittance_cumulee.paiements.all().order_by('date_creation'))
+            print(f"[DEBUG] Quittance cumulée détectée avec {len(paiements_cumules)} paiements")
         
         # CORRECTION CRITIQUE : Récupérer l'avance correspondante pour les avances
         avance_loyer = None
@@ -213,6 +227,11 @@ class DocumentUnifieA5ServiceComplet:
             'montant_du_mois': getattr(paiement, 'montant_du_mois', None),
             'montant_restant_du': getattr(paiement, 'montant_restant_du', 0),
             'info_paiement_partiel': info_paiement_partiel,
+            # Support des quittances cumulées
+            'est_quittance_cumulee': quittance_cumulee is not None,
+            'paiements_cumules': paiements_cumules,
+            'montant_total_cumule': sum(p.montant for p in paiements_cumules) if paiements_cumules else montant_a_afficher,
+            'quittance_cumulee': quittance_cumulee,
         }
     
     def _prepare_retrait_context(self, retrait_id, user=None):

@@ -153,45 +153,54 @@ class QuittancePaiementAdmin(admin.ModelAdmin):
     """Interface d'administration pour les quittances de paiement."""
     
     list_display = (
-        'numero_quittance', 'paiement', 'get_locataire', 'get_propriete', 
-        'statut_colore', 'date_emission', 'date_impression', 'cree_par'
+        'numero_quittance', 'get_paiement_principal', 'get_locataire', 'get_propriete', 
+        'est_cumulee', 'statut_colore', 'date_emission', 'date_impression', 'cree_par'
     )
     list_filter = (
-        'statut', 'date_emission', 'date_impression', 
-        'paiement__contrat__propriete__ville'
+        'statut', 'est_cumulee', 'date_emission', 'date_impression'
     )
     search_fields = (
-        'numero_quittance', 'paiement__reference_paiement',
-        'paiement__contrat__locataire__nom', 'paiement__contrat__locataire__prenom',
-        'paiement__contrat__propriete__titre'
+        'numero_quittance', 'paiement_principal__reference_paiement',
+        'paiement_principal__contrat__locataire__nom', 'paiement_principal__contrat__locataire__prenom',
+        'paiement_principal__contrat__propriete__titre'
     )
     ordering = ('-date_emission',)
     
     fieldsets = (
         (_('Informations de base'), {
-            'fields': ('numero_quittance', 'paiement')
+            'fields': ('numero_quittance', 'paiement_principal', 'est_cumulee')
         }),
         (_('Statut et dates'), {
             'fields': ('statut', 'date_emission', 'date_impression')
         }),
         (_('Métadonnées'), {
-            'fields': ('cree_par', 'created_at', 'updated_at'),
+            'fields': ('cree_par',),
             'classes': ('collapse',)
         }),
     )
     
-    readonly_fields = ('numero_quittance',)
+    readonly_fields = ('numero_quittance', 'est_cumulee')
+    filter_horizontal = ('paiements',)
     
     actions = ['marquer_imprimees', 'marquer_envoyees', 'marquer_archivees']
     
+    def get_paiement_principal(self, obj):
+        """Affiche le paiement principal."""
+        if obj.paiement_principal:
+            return f"{obj.paiement_principal.numero_paiement} ({obj.paiements.count()} paiements)" if obj.est_cumulee else obj.paiement_principal.numero_paiement
+        return f"Quittance cumulée ({obj.paiements.count()} paiements)"
+    get_paiement_principal.short_description = _("Paiement")
+    
     def get_locataire(self, obj):
         """Affiche le nom du locataire."""
-        return obj.get_locataire().get_nom_complet()
+        locataire = obj.get_locataire()
+        return locataire.get_nom_complet() if locataire else "N/A"
     get_locataire.short_description = _("Locataire")
     
     def get_propriete(self, obj):
         """Affiche l'adresse de la propriété."""
-        return f"{obj.get_propriete().adresse}, {obj.get_propriete().ville}"
+        propriete = obj.get_propriete()
+        return f"{propriete.adresse}, {propriete.ville}" if propriete else "N/A"
     get_propriete.short_description = _("Propriété")
     
     def statut_colore(self, obj):

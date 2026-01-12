@@ -77,16 +77,17 @@
 .recu-title-box {
     text-align: center;
     margin-bottom: 30px;
-    background: #1e3c72;
+    background: #000;
     color: white;
-    padding: 15px;
+    padding: 18px;
     border-radius: 8px;
+    border: 3px solid #000;
 }
 
 .recu-title-box h1 {
     color: white;
-    font-size: 20px;
-    font-weight: bold;
+    font-size: 24px;
+    font-weight: 900;
     margin: 0;
 }
 
@@ -107,7 +108,7 @@
 }
 
 .info-item {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     display: flex;
     align-items: center;
 }
@@ -121,35 +122,40 @@
 }
 
 .label {
-    font-weight: bold;
+    font-weight: 900;
     margin-right: 10px;
-    color: #333;
+    color: #000;
+    font-size: 14px;
 }
 
 .value {
-    color: #666;
+    color: #000;
+    font-weight: bold;
+    font-size: 14px;
 }
 
 .amount-box {
-    background: #1e3c72;
+    background: #000;
     color: white;
     border-radius: 8px;
-    padding: 20px;
+    padding: 25px;
     margin-bottom: 20px;
     text-align: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+    border: 3px solid #000;
 }
 
 .amount-main {
-    font-size: 28px;
-    font-weight: bold;
+    font-size: 32px;
+    font-weight: 900;
     color: white;
     margin-bottom: 5px;
 }
 
 .amount-text {
-    font-size: 14px;
-    color: #e2e8f0;
+    font-size: 16px;
+    color: white;
+    font-weight: bold;
 }
 
 .payment-details {
@@ -160,14 +166,14 @@
     width: 100%;
     border-collapse: collapse;
     background: white;
-    border: 1px solid #1e3c72;
+    border: 3px solid #000;
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .details-table tr {
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 2px solid #000;
 }
 
 .details-table tr:last-child {
@@ -175,31 +181,34 @@
 }
 
 .detail-label {
-    padding: 15px 20px;
-    font-weight: bold;
+    padding: 18px 20px;
+    font-weight: 900;
     background: white;
-    color: #333;
+    color: #000;
     width: 50%;
-    border-right: 1px solid #e2e8f0;
+    border-right: 2px solid #000;
+    font-size: 14px;
 }
 
 .detail-value {
-    padding: 15px 20px;
-    color: #666;
+    padding: 18px 20px;
+    color: #000;
     width: 50%;
     text-align: right;
+    font-weight: bold;
+    font-size: 14px;
 }
 
 .total-row .detail-label {
-    background: #e7f3ff;
-    font-weight: bold;
-    color: #1e3c72;
+    background: #e0e0e0;
+    font-weight: 900;
+    color: #000;
 }
 
 .total-row .detail-value {
-    background: #e7f3ff;
-    font-weight: bold;
-    color: #1e3c72;
+    background: #e0e0e0;
+    font-weight: 900;
+    color: #000;
 }
 
 .signature-area {
@@ -208,18 +217,39 @@
 }
 
 .signature-box {
-    border: 2px dashed #ccc;
-    padding: 40px 20px;
+    border: 3px dashed #000;
+    padding: 45px 20px;
     border-radius: 8px;
-    background: #f8fafc;
+    background: #f0f0f0;
     max-width: 300px;
     margin: 0 auto;
 }
 
 .signature-box p {
     margin: 0;
-    color: #666;
-    font-weight: bold;
+    color: #000;
+    font-weight: 900;
+    font-size: 14px;
+}
+
+@media print {
+    * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        color: #000 !important;
+    }
+    .amount-box {
+        background: #000 !important;
+    }
+    .amount-main, .amount-text {
+        color: white !important;
+    }
+    .recu-title-box {
+        background: #000 !important;
+    }
+    .recu-title-box h1 {
+        color: white !important;
+    }
 }
 </style>
 {% endblock %}

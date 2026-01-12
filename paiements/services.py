@@ -33,38 +33,44 @@ class PaiementPDFService:
         self.styles.add(ParagraphStyle(
             name='CustomTitle',
             parent=self.styles['Title'],
-            fontSize=18,
+            fontSize=22,
             spaceAfter=20,
             alignment=TA_CENTER,
-            textColor=colors.darkblue
+            textColor=colors.black,
+            fontName='Helvetica-Bold'
         ))
         
         # Style pour les titres de section
         self.styles.add(ParagraphStyle(
             name='CustomHeading',
             parent=self.styles['Heading1'],
-            fontSize=14,
+            fontSize=16,
             spaceAfter=12,
             spaceBefore=20,
-            textColor=colors.darkblue
+            textColor=colors.black,
+            fontName='Helvetica-Bold'
         ))
         
         # Style pour le corps du texte
         self.styles.add(ParagraphStyle(
             name='CustomBody',
             parent=self.styles['Normal'],
-            fontSize=10,
+            fontSize=12,
             spaceAfter=6,
-            alignment=TA_JUSTIFY
+            alignment=TA_JUSTIFY,
+            textColor=colors.black,
+            fontName='Helvetica-Bold'
         ))
         
         # Style pour les signatures
         self.styles.add(ParagraphStyle(
             name='CustomSignature',
             parent=self.styles['Normal'],
-            fontSize=10,
+            fontSize=12,
             spaceAfter=20,
-            alignment=TA_CENTER
+            alignment=TA_CENTER,
+            textColor=colors.black,
+            fontName='Helvetica-Bold'
         ))
 
     def generate_recu_pdf(self):
@@ -152,10 +158,11 @@ class PaiementPDFService:
         table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+            ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('GRID', (0, 0), (-1, -1), 2, colors.black),
         ]))
         
         elements.append(table)
@@ -183,10 +190,11 @@ class PaiementPDFService:
         table_contrat.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+            ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('GRID', (0, 0), (-1, -1), 2, colors.black),
         ]))
         
         elements.append(table_contrat)
@@ -303,46 +311,33 @@ class QuittancePDFService:
         self.styles.add(ParagraphStyle(
             name='CustomTitle',
             parent=self.styles['Title'],
-            fontSize=18,
+            fontSize=22,
             spaceAfter=20,
             alignment=TA_CENTER,
-            textColor=colors.darkblue
+            textColor=colors.black,
+            fontName='Helvetica-Bold'
         ))
         
         # Style pour les titres de section
         self.styles.add(ParagraphStyle(
             name='CustomHeading',
             parent=self.styles['Heading1'],
-            fontSize=14,
+            fontSize=16,
             spaceAfter=12,
             spaceBefore=20,
-            textColor=colors.darkblue
+            textColor=colors.black,
+            fontName='Helvetica-Bold'
         ))
         
         # Style pour le corps du texte
         self.styles.add(ParagraphStyle(
             name='CustomBody',
             parent=self.styles['Normal'],
-            fontSize=10,
+            fontSize=12,
             spaceAfter=6,
-            alignment=TA_JUSTIFY
-        ))
-
-    def generate_quittance_pdf(self):
-        """Génère le PDF de la quittance avec informations extraites des documents."""
-        buffer = BytesIO()
-        doc = SimpleDocTemplate(
-            buffer,
-            pagesize=A4,
-            rightMargin=2*cm,
-            leftMargin=2*cm,
-            topMargin=2*cm,
-            bottomMargin=2*cm
-        )
-        
-        # Construction du contenu du PDF
-        story = []
-        
+            alignment=TA_JUSTIFY,
+            textColor=colors.black,
+            fontName='Helvetica-Bold'
         # En-tête avec informations de l'entreprise
         story.extend(self._create_header())
         story.append(Spacer(1, 20))
@@ -406,10 +401,11 @@ class QuittancePDFService:
         table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+            ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('GRID', (0, 0), (-1, -1), 2, colors.black),
         ]))
         
         elements.append(table)

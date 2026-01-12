@@ -109,9 +109,9 @@
 }
 
 .quittance-title h1 {
-    color: #1e3c72;
-    font-size: 24px;
-    font-weight: bold;
+    color: #000;
+    font-size: 28px;
+    font-weight: 900;
     margin: 0;
 }
 
@@ -124,59 +124,64 @@
 }
 
 .info-item {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     display: flex;
     align-items: center;
 }
 
 .label {
-    font-weight: bold;
+    font-weight: 900;
     margin-right: 10px;
-    color: #333;
-    min-width: 120px;
+    color: #000;
+    min-width: 150px;
+    font-size: 14px;
 }
 
 .value {
-    color: #666;
+    color: #000;
+    font-weight: bold;
+    font-size: 14px;
 }
 
 .contract-info, .financial-details, .payment-status {
     margin-bottom: 25px;
-    padding: 15px;
-    background: #f8fafc;
+    padding: 18px;
+    background: #f0f0f0;
     border-radius: 8px;
-    border-left: 4px solid #1e3c72;
+    border-left: 5px solid #000;
+    border: 2px solid #000;
 }
 
 .contract-info h3, .financial-details h3, .payment-status h3 {
-    color: #1e3c72;
-    font-size: 16px;
+    color: #000;
+    font-size: 18px;
     margin-bottom: 15px;
-    font-weight: bold;
+    font-weight: 900;
     text-transform: uppercase;
 }
 
 .info-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: 12px;
 }
 
 .info-grid .info-item {
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
 .total-item {
-    background: #e7f3ff;
-    padding: 10px;
+    background: #e0e0e0;
+    padding: 12px;
     border-radius: 4px;
-    font-weight: bold;
-    color: #1e3c72;
+    font-weight: 900;
+    color: #000;
+    border: 2px solid #000;
 }
 
 .status-paid {
-    color: #28a745;
-    font-weight: bold;
+    color: #000;
+    font-weight: 900;
 }
 
 .signature-area {
@@ -185,23 +190,32 @@
 }
 
 .signature-box {
-    border: 1px solid #ccc;
-    padding: 20px;
+    border: 3px solid #000;
+    padding: 25px;
     border-radius: 8px;
-    background: #f8fafc;
+    background: #f0f0f0;
     max-width: 400px;
 }
 
 .signature-box p {
     margin: 0 0 10px 0;
-    color: #666;
-    font-weight: bold;
+    color: #000;
+    font-weight: 900;
+    font-size: 14px;
 }
 
 .signature-line {
-    border-bottom: 1px solid #333;
+    border-bottom: 2px solid #000;
     height: 2px;
     margin-top: 20px;
+}
+
+@media print {
+    * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        color: #000 !important;
+    }
 }
 </style>
 {% endblock %}
