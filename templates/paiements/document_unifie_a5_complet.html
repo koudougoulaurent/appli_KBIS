@@ -754,23 +754,33 @@
         <!-- Section Note - JUSTE AVANT LE FOOTER -->
         <div style="margin-top: 4mm; margin-bottom: 4mm; clear: both; width: 100%; border: 2px solid #000; padding: 2mm; background-color: #f9f9f9;">
             <div style="font-weight: 900; color: #000; font-size: 11px; margin-bottom: 1mm;">Note:</div>
-            <div style="font-size: 10px; font-weight: bold; color: #000; line-height: 1.4;">
+            <div style="font-size: 10px; font-weight: bold; color: #000; line-height: 1.5;">
                 {% if est_paiement_partiel and info_paiement_partiel %}
                     Paiement partiel - Période {{ paiement.mois_paye|default:"courante" }}
                 {% elif document_type == 'paiement_caution' %}
                     Caution remboursable en fin de contrat
                 {% elif document_type == 'paiement_avance' %}
-                    Avance loyer {% if mois_couverts %}{{ mois_couverts.nombre }} mois ({{ mois_couverts.mois_texte }}){% else %}plusieurs mois{% endif %}
+                    <strong>Avance de loyer</strong>{% if mois_couverts %}<br>
+                    • {{ mois_couverts.nombre }} mois : {{ mois_couverts.mois_texte }}<br>
+                    • Période : {{ mois_couverts.date_debut|date:"F Y" }} à {{ mois_couverts.date_fin|date:"F Y" }}{% else %}<br>
+                    • Plusieurs mois de loyer{% endif %}
                 {% elif document_type == 'paiement_quittance' %}
                     Paiement loyer {{ paiement.mois_paye|default:"courante" }}
                 {% elif document_type == 'retrait_quittance' or document_type == 'retrait_recu' %}
-                    Retrait bailleur ({{ periode_retrait }}){% if commission_agence %} - Commission 10%{% endif %}
+                    <strong>Retrait bailleur</strong><br>
+                    • Période : {{ periode_retrait }}{% if commission_agence %}<br>
+                    • Commission agence : 10%{% endif %}{% if charges_bailleur and charges_bailleur > 0 %}<br>
+                    • Charges déduites : {{ charges_bailleur|floatformat:0 }} FCFA{% endif %}
                 {% elif document_type == 'recap_quittance' %}
-                    Récapitulatif montant versé
+                    Récapitulatif montant versé au bailleur
                 {% elif document_type == 'paiement_recu' and 'avance' in type_paiement|lower %}
-                    Avance loyer {% if mois_couverts %}{{ mois_couverts.nombre }} mois{% endif %} - Loyer: {{ montant_loyer|floatformat:0 }} FCFA/mois
+                    <strong>Avance de loyer</strong>{% if mois_couverts %}<br>
+                    • {{ mois_couverts.nombre }} mois : {{ mois_couverts.mois_texte }}<br>
+                    • Période : {{ mois_couverts.date_debut|date:"F Y" }} à {{ mois_couverts.date_fin|date:"F Y" }}<br>
+                    • Loyer mensuel : {{ montant_loyer|floatformat:0 }} FCFA{% else %}<br>
+                    • Loyer mensuel : {{ montant_loyer|floatformat:0 }} FCFA/mois{% endif %}
                 {% elif document_type == 'paiement_recu' and type_paiement == 'caution' %}
-                    Dépôt garantie remboursable
+                    Dépôt garantie remboursable en fin de contrat
                 {% elif document_type == 'paiement_recu' and type_paiement == 'loyer' %}
                     Paiement loyer {{ paiement.mois_paye|default:"courante" }}
                 {% else %}
