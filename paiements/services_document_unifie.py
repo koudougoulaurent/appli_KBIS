@@ -50,11 +50,17 @@ class DocumentUnifieA5Service:
             
             # Calculer les mois couverts par l'avance si c'est une avance
             mois_couverts = None
+            logger.info(f"=== GÉNÉRATION DOCUMENT UNIFIÉ ===")
+            logger.info(f"Paiement ID: {paiement.id}, Type: {paiement.type_paiement}, Document type: {document_type}")
+            logger.info(f"Montant: {paiement.montant}, Loyer mensuel: {paiement.contrat.loyer_mensuel}")
+            
             if document_type == 'avance' and paiement.montant > 0 and paiement.contrat.loyer_mensuel > 0:
                 mois_couverts = self._calculer_mois_couverts_avance(paiement)
-                print(f"DEBUG: mois_couverts calculés: {mois_couverts}")  # Debug
+                logger.info(f"✓ mois_couverts calculés: {mois_couverts}")
             elif document_type == 'avance':
-                print(f"DEBUG: Avance détectée mais conditions non remplies - montant: {paiement.montant}, loyer: {paiement.contrat.loyer_mensuel}")  # Debug
+                logger.warning(f"✗ Avance détectée mais conditions non remplies - montant: {paiement.montant}, loyer: {paiement.contrat.loyer_mensuel}")
+            else:
+                logger.info(f"Document type '{document_type}' - pas de calcul mois_couverts")
             
             # Préparer les données du document
             context = {
@@ -94,6 +100,10 @@ class DocumentUnifieA5Service:
                 # Charges déductibles (si applicable)
                 'charges_deduites': getattr(paiement, 'charges_deduites', []),
             }
+            
+            logger.info(f"✓ Context préparé - mois_couverts: {context.get('mois_couverts')}")
+            logger.info(f"✓ document_type dans context: {context.get('document_type')}")
+            logger.info(f"=== FIN GÉNÉRATION DOCUMENT UNIFIÉ ===")
             
             # Rendre le template
             html_content = render_to_string(
@@ -168,11 +178,16 @@ class DocumentUnifieA5Service:
         Calcule le nombre de mois couverts par l'avance basé sur le montant et le loyer mensuel.
         Retourne un dictionnaire avec le nombre de mois et la liste des mois.
         """
+        logger.info(f"=== CALCUL MOIS COUVERTS AVANCE ===")
         try:
             montant_avance = float(paiement.montant)
             loyer_mensuel = float(paiement.contrat.loyer_mensuel)
             
+            logger.info(f"Montant avance: {montant_avance} FCFA")
+            logger.info(f"Loyer mensuel: {loyer_mensuel} FCFA")
+            
             if loyer_mensuel <= 0:
+                logger.warning(f"✗ Loyer mensuel <= 0, retour None")
                 return None
                 
             # Calculer le nombre de mois complets
@@ -220,7 +235,7 @@ class DocumentUnifieA5Service:
             date_debut = date_paiement
             date_fin = date_paiement + relativedelta(months=nombre_mois-1)
             
-            return {
+            resultat = {
                 'nombre': nombre_mois,
                 'mois_liste': mois_couverts,
                 'mois_texte': ', '.join(mois_couverts),
@@ -228,7 +243,13 @@ class DocumentUnifieA5Service:
                 'date_fin': date_fin
             }
             
-        except (ValueError, TypeError, ZeroDivisionError, ImportError):
+            logger.info(f"✓ Résultat calcul: {resultat}")
+            logger.info(f"=== FIN CALCUL MOIS COUVERTS ===")
+            return resultat
+            
+        except (ValueError, TypeError, ZeroDivisionError, ImportError) as e:
+            logger.error(f"✗ ERREUR lors du calcul mois_couverts: {type(e).__name__}: {str(e)}")
+            logger.exception("Traceback complet:")
             return None
     
     def _convertir_mois_couverts_en_lettres(self, mois_couverts):
