@@ -595,10 +595,14 @@
                     {% elif document_type == 'caution' %}
                         Dépôt de garantie - Remboursable en fin de bail
                     {% elif document_type == 'avance' %}
-                        <strong>Avance de loyer</strong>{% if mois_couverts %}<br>
-                        • Couvre {{ mois_couverts.nombre }} mois : {{ mois_couverts.mois_texte }}<br>
-                        • Période : {{ mois_couverts.date_debut|date:"F Y" }} à {{ mois_couverts.date_fin|date:"F Y" }}{% else %}<br>
-                        • Couvre plusieurs mois de loyer{% endif %}
+                        <strong>Avance de loyer</strong>
+                        {% if mois_couverts and mois_couverts.nombre %}
+                        <br>• Couvre {{ mois_couverts.nombre }} mois : {{ mois_couverts.mois_texte }}
+                        <br>• Période : {{ mois_couverts.date_debut|date:"F Y" }} à {{ mois_couverts.date_fin|date:"F Y" }}
+                        {% else %}
+                        <br>• Montant : {{ montant_total|floatformat:0 }} F CFA
+                        <br>• Loyer mensuel : {{ montant_loyer|floatformat:0 }} F CFA
+                        {% endif %}
                     {% elif document_type == 'quittance' %}
                         Paiement de loyer - Période {{ paiement.mois_paye|default:"courante" }}
                     {% else %}

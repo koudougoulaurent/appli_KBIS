@@ -216,10 +216,16 @@ class DocumentUnifieA5Service:
                 mois_nom = mois_francais.get(mois_couvert.month, mois_couvert.strftime("%B"))
                 mois_couverts.append(f"{mois_nom} {mois_couvert.year}")
             
+            # Calculer la date de début et de fin
+            date_debut = date_paiement
+            date_fin = date_paiement + relativedelta(months=nombre_mois-1)
+            
             return {
                 'nombre': nombre_mois,
                 'mois_liste': mois_couverts,
-                'mois_texte': ', '.join(mois_couverts)
+                'mois_texte': ', '.join(mois_couverts),
+                'date_debut': date_debut,
+                'date_fin': date_fin
             }
             
         except (ValueError, TypeError, ZeroDivisionError, ImportError):
