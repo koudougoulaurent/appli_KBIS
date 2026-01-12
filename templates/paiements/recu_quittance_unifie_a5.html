@@ -590,7 +590,6 @@
             <div class="detail-row" style="border-bottom: none; padding: 2mm 3mm; clear: both; display: block; margin-bottom: 3mm;">
                 <div style="font-weight: 900; color: #000; font-size: 11px; margin-bottom: 1mm;">Note:</div>
                 <div style="font-size: 10px; font-weight: bold; color: #000; line-height: 1.5;">
-                    <!-- DEBUG: document_type={{ document_type }}, paiement.type_paiement={{ paiement.type_paiement }}, mois_couverts={{ mois_couverts }} -->
                     {% if est_paiement_partiel and info_paiement_partiel %}
                         Paiement partiel reçu en bonne et due forme pour la période {{ paiement.mois_paye|default:"courante" }}.
                     {% elif document_type == 'caution' %}
@@ -603,7 +602,6 @@
                         {% else %}
                         <br>• Montant : {{ montant_total|floatformat:0 }} F CFA
                         <br>• Loyer mensuel : {{ montant_loyer|floatformat:0 }} F CFA
-                        <br>• [DEBUG: mois_couverts non disponible - {{ mois_couverts }}]
                         {% endif %}
                     {% elif document_type == 'quittance' or paiement.type_paiement == 'loyer' %}
                         Paiement de loyer<br>
