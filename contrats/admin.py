@@ -52,7 +52,7 @@ class ContratAdmin(admin.ModelAdmin):
     
     readonly_fields = ('date_creation', 'date_modification')
     
-    actions = ['activer_contrats', 'desactiver_contrats', 'resilier_contrats']
+    actions = ['activer_contrats', 'desactiver_contrats', 'resilier_contrats', 'retablir_contrats_resilies']
     
     def statut(self, obj):
         """Affiche le statut du contrat avec une couleur."""
@@ -98,6 +98,41 @@ class ContratAdmin(admin.ModelAdmin):
             updated += 1
         self.message_user(request, f'{updated} contrat(s) résilié(s) avec succès.')
     resilier_contrats.short_description = _("Résilier les contrats sélectionnés")
+    
+    def retablir_contrats_resilies(self, request, queryset):
+        """Action pour rétablir des contrats résiliés par inadvertance."""
+        # Filtrer uniquement les contrats qui sont effectivement résiliés
+        contrats_resilies = queryset.filter(est_resilie=True)
+        
+        if not contrats_resilies.exists():
+            self.message_user(
+                request, 
+                "Aucun contrat résilié trouvé dans la sélection.", 
+                level='warning'
+            )
+            return
+        
+        updated = 0
+        for contrat in contrats_resilies:
+            # Restaurer le contrat
+            contrat.est_resilie = False
+            contrat.date_resiliation = None
+            contrat.motif_resiliation = ''
+            contrat.est_actif = True  # Réactiver automatiquement
+            contrat.save()
+            
+            # Mettre à jour la disponibilité de la propriété et de l'unité locative
+            contrat._update_disponibilite_propriete()
+            contrat._update_disponibilite_unite_locative()
+            updated += 1
+        
+        self.message_user(
+            request, 
+            f'{updated} contrat(s) rétabli(s) avec succès. '
+            f'Les propriétés/unités associées ont été marquées comme occupées.',
+            level='success'
+        )
+    retablir_contrats_resilies.short_description = _("Rétablir les contrats résiliés (annuler la résiliation)")
 
 
 @admin.register(Quittance)
