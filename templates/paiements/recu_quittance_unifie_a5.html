@@ -587,26 +587,26 @@
         
         <!-- Section Note - JUSTE AVANT LE FOOTER -->
         <div style="margin-top: 4mm; margin-bottom: 3mm; clear: both; width: 100%; position: relative; overflow: hidden; border-bottom: 2px solid #000; padding-bottom: 2mm;">
-            <div class="detail-row" style="border-bottom: none; padding-bottom: 1mm; clear: both; overflow: hidden;">
-                <span class="detail-label" style="display: inline-block; min-width: 40px; vertical-align: top; font-weight: 900; float: left; clear: left; color: #000;">Note:</span>
-                <span class="detail-value" style="display: inline-block; width: calc(100% - 50px); word-wrap: break-word; vertical-align: top; float: right; clear: right; font-weight: bold; color: #000;">
+            <div class="detail-row" style="border-bottom: none; padding: 2mm 3mm; clear: both; display: block; margin-bottom: 3mm;">
+                <div style="font-weight: 900; color: #000; font-size: 11px; margin-bottom: 1mm;">Note:</div>
+                <div style="font-size: 10px; font-weight: bold; color: #000; line-height: 1.4; text-align: justify;">
                     {% if est_paiement_partiel and info_paiement_partiel %}
                         Paiement partiel reçu en bonne et due forme pour la période {{ paiement.mois_paye|default:"courante" }}.
                     {% elif document_type == 'caution' %}
                         Dépôt de garantie - Remboursable en fin de bail
                     {% elif document_type == 'avance' %}
-                        Avance de loyer - Couvre {% if mois_couverts %}{{ mois_couverts.nombre }} mois de loyer{% else %}plusieurs mois de loyer{% endif %}
+                        Avance de loyer couvrant {% if mois_couverts %}{{ mois_couverts.nombre }} mois ({{ mois_couverts.mois_texte }}){% else %}plusieurs mois{% endif %}
                     {% elif document_type == 'quittance' %}
                         Paiement de loyer - Période {{ paiement.mois_paye|default:"courante" }}
                     {% else %}
                         Paiement reçu en bonne et due forme
                     {% endif %}
-                </span>
+                </div>
             </div>
         </div>
         
         <!-- Pied de page dynamique - TOUT EN BAS -->
-        <div class="footer">
+        <div class="footer" style="page-break-inside: avoid;">
             <div class="footer-company">{{ config_entreprise.nom_entreprise }}</div>
             {% if config_entreprise.slogan %}
             <div class="footer-address">{{ config_entreprise.slogan }}</div>
@@ -616,9 +616,9 @@
             <div class="footer-legal">{{ config_entreprise.get_informations_legales }}</div>
             
             <!-- Code Mobile Money - BIEN SÉPARÉ -->
-            <div class="footer-mobile-money">
-                <strong>Code pour paiement ultérieur :</strong><br>
-                <span style="font-family: 'Courier New', monospace; font-size: 10px; letter-spacing: 1px;">*144*3*5541519*MONTANT#</span>
+            <div class="footer-mobile-money" style="margin-top: 4mm; padding: 2mm; background-color: #f0f0f0;">
+                <strong style="font-size: 11px;">Code pour paiement ultérieur :</strong><br>
+                <span style="font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 1px; font-weight: 900;">*144*3*5541519*MONTANT#</span>
             </div>
             
             <div class="footer-generation">
