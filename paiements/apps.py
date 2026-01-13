@@ -28,3 +28,8 @@ class PaiementsConfig(AppConfig):
             from . import signals_correction_avances
         except ImportError:
             pass
+        try:
+            # Signal de complétion automatique des paiements partiels
+            from . import signals_paiement_partiel
+        except ImportError:
+            pass

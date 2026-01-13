@@ -29,7 +29,11 @@ python manage.py synchroniser_consommations_avances || echo "⚠️  Erreur non 
 echo "🔢 Recalcul des récapitulatifs mensuels..."
 python manage.py recalculer_recaps || echo "⚠️  Erreur non bloquante lors du recalcul des récapitulatifs"
 
-# 6. Régénération des récapitulatifs mensuels existants avec nouveau format groupé
+# 6. Complétion automatique des reliquats de paiements partiels
+echo "💰 Complétion des reliquats de paiements partiels..."
+python manage.py completer_reliquats || echo "⚠️  Erreur non bloquante lors de la complétion des reliquats"
+
+# 7. Régénération des récapitulatifs mensuels existants avec nouveau format groupé
 echo "📊 Régénération des récapitulatifs mensuels..."
 python manage.py regenerer_recapitulatifs_pdf --batch-size 5 || echo "⚠️  Aucun récapitulatif à régénérer ou erreur non bloquante"
 

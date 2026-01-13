@@ -420,6 +420,7 @@ class ServicePaiementPartiel:
             
             return {
                 'montant_du_mois': montant_du_mois,
+                'montant_paye': total_paye,
                 'total_paye': total_paye,
                 'montant_restant': montant_restant,
                 'est_complet': montant_restant == Decimal('0'),
@@ -431,6 +432,7 @@ class ServicePaiementPartiel:
             logger.error(f"Erreur lors du calcul du montant restant: {str(e)}")
             return {
                 'montant_du_mois': Decimal('0'),
+                'montant_paye': Decimal('0'),
                 'total_paye': Decimal('0'),
                 'montant_restant': Decimal('0'),
                 'est_complet': True,

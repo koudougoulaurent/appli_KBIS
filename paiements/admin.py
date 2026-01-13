@@ -58,7 +58,7 @@ class PaiementAdmin(admin.ModelAdmin):
     
     readonly_fields = ('created_at', 'updated_at')
     
-    actions = ['valider_paiements', 'refuser_paiements', 'annuler_paiements', suppression_definitive_conditionnelle]
+    actions = ['valider_paiements', 'refuser_paiements', 'annuler_paiements', 'completer_reliquats_action', suppression_definitive_conditionnelle]
     
     def statut_colore(self, obj):
         """Affiche le statut avec une couleur."""
@@ -104,6 +104,74 @@ class PaiementAdmin(admin.ModelAdmin):
             updated += 1
         self.message_user(request, f'{updated} paiement(s) annulé(s) avec succès.')
     annuler_paiements.short_description = _("Annuler les paiements sélectionnés")
+    
+    def completer_reliquats_action(self, request, queryset):
+        """Action pour vérifier et compléter les reliquats des paiements partiels."""
+        from .services_paiement_partiel import ServicePaiementPartiel
+        from decimal import Decimal
+        
+        # Filtrer uniquement les paiements partiels validés
+        paiements_partiels = queryset.filter(
+            est_paiement_partiel=True,
+            statut='valide',
+            is_deleted=False
+        )
+        
+        if not paiements_partiels.exists():
+            self.message_user(
+                request, 
+                "Aucun paiement partiel trouvé dans la sélection.",
+                level='warning'
+            )
+            return
+        
+        completes = 0
+        mis_a_jour = 0
+        
+        # Grouper par contrat et mois
+        from collections import defaultdict
+        paiements_par_mois = defaultdict(list)
+        
+        for paiement in paiements_partiels:
+            if paiement.mois_paye:
+                cle = (paiement.contrat.id, paiement.mois_paye)
+                paiements_par_mois[cle].append(paiement)
+        
+        # Vérifier et compléter chaque groupe
+        for (contrat_id, mois_paye), paiements in paiements_par_mois.items():
+            try:
+                # Vérifier avec le premier paiement du groupe
+                paiement_ref = paiements[0]
+                completion_effectuee = ServicePaiementPartiel.verifier_et_completer_reliquat(
+                    paiement=paiement_ref,
+                    skip_save=False
+                )
+                
+                if completion_effectuee:
+                    completes += 1
+                else:
+                    mis_a_jour += 1
+                    
+            except Exception as e:
+                self.message_user(
+                    request,
+                    f"Erreur pour {paiement_ref.contrat.numero_contrat} - {mois_paye}: {str(e)}",
+                    level='error'
+                )
+        
+        # Message de succès
+        messages = []
+        if completes > 0:
+            messages.append(f"{completes} mois complété(s)")
+        if mis_a_jour > 0:
+            messages.append(f"{mis_a_jour} mois mis à jour")
+        
+        if messages:
+            self.message_user(request, " | ".join(messages), level='success')
+        else:
+            self.message_user(request, "Aucune modification nécessaire.", level='info')
+    
+    completer_reliquats_action.short_description = _("💰 Vérifier et compléter les reliquats")
 
 
 @admin.register(ChargeDeductible)
