@@ -291,8 +291,8 @@
                 <div class="cellule montant">{{ recap.get_total_loyers_bruts_formatted }}</div>
             </div>
             <div class="ligne">
-                <div class="cellule">Total des charges déductibles</div>
-                <div class="cellule montant">- {{ recap.get_total_charges_deductibles_formatted }}</div>
+                <div class="cellule">Total des charges bailleur</div>
+                <div class="cellule montant">- {{ recap.total_charges_bailleur|floatformat:0|intcomma }}</div>
             </div>
             <div class="ligne total">
                 <div class="cellule">NET À PAYER AU BAILLEUR</div>

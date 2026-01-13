@@ -403,10 +403,6 @@
                             <div class="recap-value">{{ totaux.total_loyers_bruts|floatformat:0 }} F CFA</div>
                             <div class="recap-label">Loyers Attendus</div>
                         </div>
-                        <div class="recap-item warning">
-                            <div class="recap-value">{{ totaux.total_charges_deductibles|floatformat:0 }} F CFA</div>
-                            <div class="recap-label">Charges Déductibles</div>
-                        </div>
                         <div class="recap-item danger">
                             <div class="recap-value">{{ totaux.total_net_a_payer|floatformat:0 }} F CFA</div>
                             <div class="recap-label">Montant Net</div>
@@ -425,7 +421,6 @@
                                 <th>Loyer Mensuel</th>
                                 <th>Charges</th>
                                 <th>Loyers Attendus</th>
-                                <th>Charges Déductibles</th>
                                 <th>Montant Net</th>
                             </tr>
                         </thead>
@@ -440,7 +435,6 @@
                                 <td>{{ detail.contrat.loyer_mensuel|floatformat:0 }} F CFA</td>
                                 <td>{{ detail.contrat.charges_mensuelles|floatformat:0 }} F CFA</td>
                                 <td>{{ detail.loyers_bruts|floatformat:0 }} F CFA</td>
-                                <td>{{ detail.charges_deductibles|floatformat:0 }} F CFA</td>
                                 <td><strong>{{ detail.montant_net|floatformat:0 }} F CFA</strong></td>
                             </tr>
                             {% endfor %}
@@ -455,10 +449,6 @@
                         <div class="total-item loyers">
                             <div class="total-value">{{ totaux.total_loyers_bruts|floatformat:0 }} F CFA</div>
                             <div class="total-label">Total Loyers Attendus</div>
-                        </div>
-                        <div class="total-item charges">
-                            <div class="total-value">{{ totaux.total_charges_deductibles|floatformat:0 }} F CFA</div>
-                            <div class="total-label">Total Charges Déductibles</div>
                         </div>
                         <div class="total-item net">
                             <div class="total-value">{{ totaux.total_net_a_payer|floatformat:0 }} F CFA</div>

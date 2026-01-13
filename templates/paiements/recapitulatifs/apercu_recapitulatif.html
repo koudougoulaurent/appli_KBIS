@@ -240,10 +240,6 @@
                     <div class="totaux-label">Loyers bruts</div>
                 </div>
                 <div class="totaux-item">
-                    <div class="totaux-value">{{ totaux.total_charges_deductibles|floatformat:0 }} F CFA</div>
-                    <div class="totaux-label">Charges déductibles</div>
-                </div>
-                <div class="totaux-item">
                     <div class="totaux-value">{{ totaux.total_charges_bailleur|floatformat:0 }} F CFA</div>
                     <div class="totaux-label">Charges bailleur</div>
                 </div>
@@ -283,19 +279,15 @@
             
             <div class="bailleur-body">
                 <div class="row mb-3">
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <small class="text-muted">Loyers bruts</small>
                         <div class="fw-bold">{{ bailleur.total_loyers|floatformat:0 }} F CFA</div>
                     </div>
-                    <div class="col-md-3">
-                        <small class="text-muted">Charges déductibles</small>
-                        <div class="fw-bold">{{ bailleur.total_charges_deductibles|floatformat:0 }} F CFA</div>
-                    </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <small class="text-muted">Charges bailleur</small>
                         <div class="fw-bold">{{ bailleur.total_charges_bailleur|floatformat:0 }} F CFA</div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <small class="text-muted">Montant net</small>
                         <div class="fw-bold text-success">{{ bailleur.montant_net|floatformat:0 }} F CFA</div>
                     </div>

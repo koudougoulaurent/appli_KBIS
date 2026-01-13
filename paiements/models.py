@@ -314,20 +314,28 @@ class RecapMensuel(models.Model):
                     # Les paiements réels sont cohérents, les utiliser
                     total_loyers = total_paiements_reels
             
-            # Calculer les charges bailleur pour le mois
+            # CRITIQUE : Calculer les charges bailleur pour le mois
+            # Important : On récupère les charges validées qui n'ont pas encore été utilisées dans un retrait
+            # Chaque charge ne doit être comptée qu'une seule fois
+            # Les charges avec statut 'utilise' ont déjà été déduites dans un retrait précédent
             charges_bailleur_mois = ChargeBailleur.objects.filter(
                 bailleur=self.bailleur,
                 date_charge__year=self.mois_recap.year,
                 date_charge__month=self.mois_recap.month,
-                statut__in=['en_attente', 'valide']  # Seules les charges non encore utilisées
+                statut__in=['valide']  # Seulement les charges validées et non encore utilisées
+            ).exclude(
+                retrait_utilise__isnull=False  # Exclure les charges déjà liées à un retrait
             )
             
+            # Calculer le total des charges en utilisant le montant restant ou le montant total
             for charge in charges_bailleur_mois:
-                total_charges_bailleur += charge.montant_restant or charge.montant
+                # Utiliser montant_restant s'il existe, sinon le montant complet
+                montant_a_deduire = getattr(charge, 'montant_restant', None) or charge.montant
+                total_charges_bailleur += montant_a_deduire
             
             # CRITIQUE : Calculer le total net avec validation
-            # Total net = Loyers bruts - Charges déductibles - Charges bailleur
-            total_net = total_loyers - total_charges_deductibles - total_charges_bailleur
+            # Total net = Loyers bruts - Charges bailleur (PAS les charges déductibles!)
+            total_net = total_loyers - total_charges_bailleur
             # Validation : le total net ne peut pas être négatif
             total_net = max(total_net, Decimal('0'))
             

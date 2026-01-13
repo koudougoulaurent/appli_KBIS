@@ -215,16 +215,9 @@
         </div>
         
         <div class="total-row">
-            <span class="total-label">Charges déductibles :</span>
-            <span class="total-value">{{ recapitulatif.total_charges_deductibles|floatformat:0 }} F CFA</span>
-        </div>
-        
-        {% if recapitulatif.total_charges_bailleur %}
-        <div class="total-row">
             <span class="total-label">Charges bailleur :</span>
             <span class="total-value">{{ recapitulatif.total_charges_bailleur|floatformat:0 }} F CFA</span>
         </div>
-        {% endif %}
         
         <div class="total-row final-total">
             <span class="total-label">MONTANT NET À PAYER :</span>
