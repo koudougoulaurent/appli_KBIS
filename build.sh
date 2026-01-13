@@ -25,7 +25,11 @@ python manage.py migrate --no-input
 echo "🔄 Synchronisation des consommations d'avances..."
 python manage.py synchroniser_consommations_avances || echo "⚠️  Erreur non bloquante lors de la synchronisation des avances"
 
-# 5. Régénération des récapitulatifs mensuels existants avec nouveau format groupé
+# 5. Recalcul des récapitulatifs avec charges bailleur
+echo "🔢 Recalcul des récapitulatifs mensuels..."
+python manage.py recalculer_recaps || echo "⚠️  Erreur non bloquante lors du recalcul des récapitulatifs"
+
+# 6. Régénération des récapitulatifs mensuels existants avec nouveau format groupé
 echo "📊 Régénération des récapitulatifs mensuels..."
 python manage.py regenerer_recapitulatifs_pdf --batch-size 5 || echo "⚠️  Aucun récapitulatif à régénérer ou erreur non bloquante"
 

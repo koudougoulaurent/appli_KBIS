@@ -487,13 +487,24 @@ class RecapMensuelAdmin(admin.ModelAdmin):
     marquer_payes.short_description = _("Marquer comme payés")
     
     def recalculer_totaux(self, request, queryset):
-        """Action pour recalculer les totaux des récapitulatifs."""
+        """Action pour recalculer les totaux des récapitulatifs avec charges bailleur."""
         updated = 0
         for recap in queryset:
             recap.calculer_totaux_bailleur()
+            recap.save(update_fields=[
+                'total_loyers_bruts',
+                'total_charges_deductibles',
+                'total_charges_bailleur',
+                'total_net_a_payer',
+                'commission_agence',
+                'montant_reellement_paye',
+                'nombre_proprietes',
+                'nombre_contrats_actifs',
+                'nombre_paiements_recus'
+            ])
             updated += 1
-        self.message_user(request, f'{updated} récapitulatif(s) recalculé(s) avec succès.')
-    recalculer_totaux.short_description = _("Recalculer les totaux")
+        self.message_user(request, f'{updated} récapitulatif(s) recalculé(s) et sauvegardé(s) avec succès.')
+    recalculer_totaux.short_description = _("🔄 Recalculer les totaux (avec charges bailleur)")
     
     def get_queryset(self, request):
         """Optimise les requêtes avec select_related et prefetch_related."""
