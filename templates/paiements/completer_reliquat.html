@@ -1,0 +1,523 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Compléter le Reliquat - {{ paiement_initial.contrat.numero_contrat }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .completion-header {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(240, 147, 251, 0.3);
+    }
+    
+    .completion-header h2 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    
+    .completion-header .subtitle {
+        margin-top: 0.5rem;
+        opacity: 0.9;
+        font-size: 1.1rem;
+    }
+    
+    .info-section {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .summary-card {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        border-radius: 15px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .summary-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .summary-card.primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .summary-card.success {
+        background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+        color: white;
+    }
+    
+    .summary-card.warning {
+        background: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%);
+        color: white;
+    }
+    
+    .summary-card.danger {
+        background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+        color: white;
+    }
+    
+    .summary-card .label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 1px;
+    }
+    
+    .summary-card .value {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-top: 0.5rem;
+    }
+    
+    .progress-section {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .progress-bar-wrapper {
+        position: relative;
+        height: 40px;
+        background: #e9ecef;
+        border-radius: 20px;
+        overflow: hidden;
+        margin: 1.5rem 0;
+        box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        transition: width 0.5s ease;
+        box-shadow: 0 2px 10px rgba(102, 126, 234, 0.5);
+    }
+    
+    .progress-bar-fill.complete {
+        background: linear-gradient(90deg, #56ab2f, #a8e063);
+    }
+    
+    .paiements-existants {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    
+    .paiement-item {
+        background: #f8f9fa;
+        border-left: 4px solid #667eea;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .paiement-item:hover {
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        transform: translateX(5px);
+    }
+    
+    .paiement-item .date {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+    }
+    
+    .paiement-item .montant {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #667eea;
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 15px;
+        padding: 2.5rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        border: 2px solid #e9ecef;
+    }
+    
+    .form-section h3 {
+        color: #495057;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 3px solid #667eea;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    
+    .form-control {
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .montant-restant-display {
+        background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 15px;
+        text-align: center;
+        margin-bottom: 2rem;
+        box-shadow: 0 5px 20px rgba(235, 51, 73, 0.3);
+    }
+    
+    .montant-restant-display .label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        margin-bottom: 0.5rem;
+    }
+    
+    .montant-restant-display .value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-top: 0.5rem;
+    }
+    
+    .btn-completer {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem 2.5rem;
+        border-radius: 25px;
+        border: none;
+        font-size: 1.1rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        transition: all 0.3s ease;
+    }
+    
+    .btn-completer:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+    }
+    
+    .alert-custom {
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border: none;
+        box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+    }
+    
+    .alert-custom.info {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .alert-custom.warning {
+        background: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="completion-header">
+        <h2>
+            <i class="bi bi-cash-coin"></i>
+            Compléter le Reliquat
+        </h2>
+        <div class="subtitle">
+            Contrat: {{ paiement_initial.contrat.numero_contrat }} | 
+            Mois: {{ paiement_initial.mois_paye }}
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-custom">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Informations du contrat -->
+    <div class="info-section">
+        <h3><i class="bi bi-file-text"></i> Informations du Contrat</h3>
+        <div class="row">
+            <div class="col-md-4">
+                <p><strong>Locataire:</strong> {{ paiement_initial.contrat.locataire.get_nom_complet }}</p>
+                <p><strong>Propriété:</strong> {{ paiement_initial.contrat.propriete }}</p>
+            </div>
+            <div class="col-md-4">
+                <p><strong>Loyer mensuel:</strong> {{ paiement_initial.contrat.loyer_mensuel|intcomma }} F CFA</p>
+                <p><strong>Charges:</strong> {{ paiement_initial.contrat.charges_mensuelles|intcomma }} F CFA</p>
+            </div>
+            <div class="col-md-4">
+                <p><strong>Date début:</strong> {{ paiement_initial.contrat.date_debut|date:"d/m/Y" }}</p>
+                <p><strong>Statut:</strong> 
+                    <span class="badge badge-{{ paiement_initial.contrat.est_actif|yesno:'success,danger' }}">
+                        {{ paiement_initial.contrat.est_actif|yesno:"Actif,Inactif" }}
+                    </span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Résumé financier -->
+    <div class="summary-grid">
+        <div class="summary-card primary">
+            <div class="label">Montant Dû</div>
+            <div class="value">{{ calcul.montant_du_mois|intcomma }} F</div>
+        </div>
+        <div class="summary-card success">
+            <div class="label">Déjà Payé</div>
+            <div class="value">{{ calcul.montant_paye|intcomma }} F</div>
+        </div>
+        <div class="summary-card danger">
+            <div class="label">Reste à Payer</div>
+            <div class="value">{{ calcul.montant_restant|intcomma }} F</div>
+        </div>
+        <div class="summary-card warning">
+            <div class="label">Paiements</div>
+            <div class="value">{{ calcul.nombre_paiements }}</div>
+        </div>
+    </div>
+
+    <!-- Barre de progression -->
+    <div class="progress-section">
+        <h4 class="text-center mb-3">Progression du Paiement</h4>
+        <div class="progress-bar-wrapper">
+            <div class="progress-bar-fill {% if pourcentage >= 100 %}complete{% endif %}" 
+                 style="width: {{ pourcentage|floatformat:0 }}%">
+                {{ pourcentage|floatformat:1 }}%
+            </div>
+        </div>
+        <div class="text-center text-muted">
+            {{ calcul.montant_paye|intcomma }} F CFA sur {{ calcul.montant_du_mois|intcomma }} F CFA
+        </div>
+    </div>
+
+    <!-- Paiements existants -->
+    <div class="paiements-existants">
+        <h3><i class="bi bi-list-check"></i> Paiements Partiels Effectués</h3>
+        {% for paiement in paiements_existants %}
+        <div class="paiement-item">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <div class="date">
+                        <i class="bi bi-calendar"></i>
+                        {{ paiement.date_paiement|date:"d/m/Y" }}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="montant">{{ paiement.montant|intcomma }} F CFA</div>
+                </div>
+                <div class="col-md-3">
+                    <span class="badge badge-info">{{ paiement.mode_paiement }}</span>
+                </div>
+                <div class="col-md-3">
+                    <span class="badge badge-{{ paiement.statut|yesno:'success,warning' }}">
+                        {{ paiement.get_statut_display }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Formulaire de complétion -->
+    {% if not calcul.est_complet %}
+    <div class="form-section">
+        <h3><i class="bi bi-plus-circle"></i> Ajouter le Paiement de Complétion</h3>
+        
+        <div class="montant-restant-display">
+            <div class="label">MONTANT À COMPLÉTER</div>
+            <div class="value">{{ calcul.montant_restant|intcomma }} F CFA</div>
+        </div>
+
+        <form method="post" id="completion-form">
+            {% csrf_token %}
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="montant">
+                            <i class="bi bi-cash"></i>
+                            Montant du Paiement *
+                        </label>
+                        <input type="number" 
+                               class="form-control" 
+                               id="montant" 
+                               name="montant" 
+                               step="0.01"
+                               min="0.01"
+                               max="{{ calcul.montant_restant }}"
+                               value="{{ calcul.montant_restant }}"
+                               required>
+                        <small class="form-text text-muted">
+                            Maximum: {{ calcul.montant_restant|intcomma }} F CFA
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="mode_paiement">
+                            <i class="bi bi-credit-card"></i>
+                            Mode de Paiement *
+                        </label>
+                        <select class="form-control" id="mode_paiement" name="mode_paiement" required>
+                            <option value="">Sélectionnez...</option>
+                            <option value="especes">Espèces</option>
+                            <option value="cheque">Chèque</option>
+                            <option value="virement">Virement</option>
+                            <option value="mobile_money">Mobile Money</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="date_paiement">
+                            <i class="bi bi-calendar-event"></i>
+                            Date du Paiement *
+                        </label>
+                        <input type="date" 
+                               class="form-control" 
+                               id="date_paiement" 
+                               name="date_paiement" 
+                               value="{{ date_today }}"
+                               required>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="numero_reference">
+                            <i class="bi bi-hash"></i>
+                            Numéro de Référence
+                        </label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="numero_reference" 
+                               name="numero_reference" 
+                               placeholder="N° chèque, virement, etc.">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="notes">
+                    <i class="bi bi-sticky"></i>
+                    Notes (Optionnel)
+                </label>
+                <textarea class="form-control" 
+                          id="notes" 
+                          name="notes" 
+                          rows="3" 
+                          placeholder="Informations supplémentaires..."></textarea>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="{% url 'paiements:liste_paiements' %}" class="btn btn-secondary btn-lg mr-3">
+                    <i class="bi bi-x-circle"></i> Annuler
+                </a>
+                <button type="submit" class="btn btn-completer">
+                    <i class="bi bi-check-circle"></i>
+                    Compléter le Reliquat
+                </button>
+            </div>
+        </form>
+    </div>
+    {% else %}
+    <div class="alert alert-custom info">
+        <h4><i class="bi bi-check-circle"></i> Ce mois est déjà complètement payé !</h4>
+        <p class="mb-0">Le montant total dû pour {{ paiement_initial.mois_paye }} a été entièrement réglé.</p>
+        <a href="{% url 'paiements:liste_paiements' %}" class="btn btn-light mt-3">
+            <i class="bi bi-arrow-left"></i> Retour aux paiements
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('completion-form');
+    const montantInput = document.getElementById('montant');
+    const montantRestant = {{ calcul.montant_restant }};
+    
+    // Validation du montant
+    if (montantInput) {
+        montantInput.addEventListener('input', function() {
+            const montant = parseFloat(this.value) || 0;
+            if (montant > montantRestant) {
+                this.setCustomValidity(`Le montant ne peut pas dépasser ${montantRestant.toLocaleString()} F CFA`);
+            } else if (montant <= 0) {
+                this.setCustomValidity('Le montant doit être supérieur à 0');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    }
+    
+    // Confirmation avant soumission
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const montant = parseFloat(montantInput.value) || 0;
+            const confirmation = confirm(
+                `Confirmez-vous l'ajout de ce paiement de ${montant.toLocaleString()} F CFA ?\n\n` +
+                `Cela complètera le reliquat de ${montantRestant.toLocaleString()} F CFA.`
+            );
+            
+            if (!confirmation) {
+                e.preventDefault();
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

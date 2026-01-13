@@ -374,6 +374,134 @@ def liste_contrats_paiements_partiels(request):
     })
     
     return render(request, 'paiements/contrats_paiements_partiels.html', context)
+
+
+# -- VUE POUR COMPLÉTER UN RELIQUAT --
+@login_required
+def completer_reliquat(request, paiement_id):
+    """
+    Vue pour compléter un reliquat de paiement partiel avec un formulaire dédié
+    """
+    from .services_paiement_partiel import ServicePaiementPartiel
+    
+    # Récupérer le paiement initial
+    paiement_initial = get_object_or_404(
+        Paiement,
+        pk=paiement_id,
+        est_paiement_partiel=True,
+        is_deleted=False
+    )
+    
+    contrat = paiement_initial.contrat
+    mois_paye = paiement_initial.mois_paye
+    
+    # Calculer le montant restant
+    calcul = ServicePaiementPartiel.calculer_montant_restant(contrat, mois_paye)
+    
+    # Récupérer tous les paiements existants pour ce mois
+    paiements_existants = Paiement.objects.filter(
+        contrat=contrat,
+        mois_paye=mois_paye,
+        is_deleted=False,
+        statut='valide'
+    ).order_by('date_paiement')
+    
+    # Calculer le pourcentage de progression
+    pourcentage = 0
+    if calcul['montant_du_mois'] > 0:
+        pourcentage = (calcul['montant_paye'] / calcul['montant_du_mois']) * 100
+    
+    if request.method == 'POST':
+        try:
+            montant = Decimal(request.POST.get('montant', 0))
+            mode_paiement = request.POST.get('mode_paiement')
+            date_paiement = request.POST.get('date_paiement')
+            numero_reference = request.POST.get('numero_reference', '')
+            notes = request.POST.get('notes', '')
+            
+            # Validation
+            if montant <= 0:
+                messages.error(request, "Le montant doit être supérieur à 0.")
+                return redirect('paiements:completer_reliquat', paiement_id=paiement_id)
+            
+            if montant > calcul['montant_restant']:
+                messages.error(
+                    request,
+                    f"Le montant ({montant:,.0f} F) dépasse le montant restant ({calcul['montant_restant']:,.0f} F)."
+                )
+                return redirect('paiements:completer_reliquat', paiement_id=paiement_id)
+            
+            # Créer le paiement de complétion
+            with transaction.atomic():
+                nouveau_paiement = Paiement.objects.create(
+                    contrat=contrat,
+                    montant=montant,
+                    type_paiement='paiement_partiel',
+                    mode_paiement=mode_paiement,
+                    date_paiement=date_paiement,
+                    mois_paye=mois_paye,
+                    montant_du_mois=calcul['montant_du_mois'],
+                    est_paiement_partiel=True,
+                    statut='valide',
+                    notes=f"Complétion de reliquat. {notes}",
+                    cree_par=request.user
+                )
+                
+                # Ajouter référence si fournie
+                if numero_reference:
+                    if mode_paiement == 'cheque':
+                        nouveau_paiement.numero_cheque = numero_reference
+                    elif mode_paiement == 'virement':
+                        nouveau_paiement.reference_virement = numero_reference
+                    nouveau_paiement.save()
+                
+                # Vérifier et compléter automatiquement le reliquat
+                completion_effectuee = ServicePaiementPartiel.verifier_et_completer_reliquat(
+                    paiement=nouveau_paiement,
+                    skip_save=False
+                )
+                
+                if completion_effectuee:
+                    messages.success(
+                        request,
+                        f"✅ Reliquat complété avec succès ! "
+                        f"Le mois {mois_paye} est maintenant entièrement payé."
+                    )
+                else:
+                    nouveau_montant_restant = calcul['montant_restant'] - montant
+                    messages.success(
+                        request,
+                        f"✅ Paiement partiel ajouté avec succès ! "
+                        f"Reste à payer : {nouveau_montant_restant:,.0f} F CFA"
+                    )
+                
+                # Générer une quittance pour ce paiement
+                from .services_quittance import ServiceQuittance
+                try:
+                    quittance = ServiceQuittance.generer_quittance_pour_paiement(nouveau_paiement, request.user)
+                    messages.info(request, f"📄 Quittance générée : {quittance.numero_quittance}")
+                except Exception as e:
+                    messages.warning(request, f"⚠️ Paiement enregistré mais erreur quittance : {str(e)}")
+                
+                return redirect('paiements:liste_paiements')
+                
+        except Exception as e:
+            messages.error(request, f"❌ Erreur lors de l'ajout du paiement : {str(e)}")
+            return redirect('paiements:completer_reliquat', paiement_id=paiement_id)
+    
+    # GET - Afficher le formulaire
+    context = get_context_with_entreprise_config({
+        'paiement_initial': paiement_initial,
+        'calcul': calcul,
+        'paiements_existants': paiements_existants,
+        'pourcentage': pourcentage,
+        'date_today': timezone.now().date().isoformat(),
+        'title': f'Compléter le Reliquat - {contrat.numero_contrat}'
+    })
+    
+    return render(request, 'paiements/completer_reliquat.html', context)
+
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required

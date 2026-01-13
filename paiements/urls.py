@@ -270,6 +270,7 @@ urlpatterns = [
     # 💰 PAIEMENTS PARTIELS AMÉLIORÉS - NOUVEAU !
     path('paiements-partiels/ajouter/', views.ajouter_paiement_partiel, name='ajouter_paiement_partiel'),
     path('paiements-partiels/contrats/', views.liste_contrats_paiements_partiels, name='liste_contrats_paiements_partiels'),
+    path('paiements-partiels/<int:paiement_id>/completer/', views.completer_reliquat, name='completer_reliquat'),
     path('historique-partiel/<int:contrat_id>/<int:mois>/<int:annee>/', views.historique_paiements_partiels, name='historique_paiements_partiels'),
     
     # 📄 GÉNÉRATION PDF DES RETRAITS AVEC TEMPLATES
