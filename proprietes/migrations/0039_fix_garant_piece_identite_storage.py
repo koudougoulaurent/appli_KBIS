@@ -13,7 +13,7 @@ garant_storage = FileSystemStorage(location='media_local/garants')
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('proprietes', '0018_add_unites_locatives_system'),
+        ('proprietes', '0038_contratgestion'),
     ]
 
     operations = [
