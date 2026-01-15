@@ -1171,12 +1171,13 @@ def ajouter_paiement(request):
                 # Cette logique s'exécute à chaque ajout de paiement pour s'assurer que tous les paiements d'avance
                 # sont convertis en AvanceLoyer actifs
                 try:
+                    from .models import Paiement as PaiementModel  # Import explicite
                     from .models_avance import AvanceLoyer
                     from .services_avance import ServiceGestionAvance
                     from decimal import Decimal
                     
                     # Trouver tous les paiements d'avance de ce contrat qui n'ont pas encore d'AvanceLoyer correspondant
-                    paiements_avance_manquants = Paiement.objects.filter(
+                    paiements_avance_manquants = PaiementModel.objects.filter(
                         contrat=paiement.contrat,
                         type_paiement='avance',
                         statut='valide'

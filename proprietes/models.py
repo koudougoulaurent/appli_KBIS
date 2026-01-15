@@ -1,7 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
-
+from django.core.files.storage import FileSystemStorage
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 from .managers import NonDeletedManager
@@ -9,6 +9,9 @@ from core.duplicate_prevention import DuplicatePreventionMixin, validate_unique_
 from django.db import transaction
 from core.models import AutoNumberSequence
 from django.utils import timezone
+
+# Stockage local pour les pièces d'identité des garants (évite les problèmes avec db_file_storage)
+garant_storage = FileSystemStorage(location='media_local/garants')
 
 
 class TypeBien(models.Model):
@@ -512,11 +515,12 @@ class Locataire(DuplicatePreventionMixin, models.Model):
     garant_ville = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Ville du garant"))
     garant_pays = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Pays du garant"))
     
-    # Pièce d'identité du garant
+    # Pièce d'identité du garant - Utilise un stockage local séparé pour éviter les conflits avec db_file_storage
     garant_piece_identite = models.FileField(
         upload_to='garants/pieces_identite/',
         blank=True,
         null=True,
+        storage=garant_storage,
         verbose_name=_("Pièce d'identité du garant")
     )
     
