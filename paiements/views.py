@@ -483,7 +483,7 @@ def completer_reliquat(request, paiement_id):
                 except Exception as e:
                     messages.warning(request, f"⚠️ Paiement enregistré mais erreur quittance : {str(e)}")
                 
-                return redirect('paiements:liste_paiements')
+                return redirect('paiements:liste_contrats_paiements_partiels')
                 
         except Exception as e:
             messages.error(request, f"❌ Erreur lors de l'ajout du paiement : {str(e)}")
