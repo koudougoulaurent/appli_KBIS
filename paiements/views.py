@@ -3612,30 +3612,10 @@ def tableau_bord_export_pdf(request, pk):
 
 
 @login_required
-def tableau_bord_dashboard(request):
-    """Dashboard principal des tableaux de bord financiers."""
-    # Vérification des permissions avec fallback pour PRIVILEGE
-    permissions = check_group_permissions_with_fallback(request.user, ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 'view')
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
-        return redirect('paiements:dashboard')
-    
-    # Récupérer les tableaux de bord de l'utilisateur
-    tableaux = TableauBordFinancier.objects.filter(
-        cree_par=request.user,
-        actif=True
-    ).select_related('cree_par').prefetch_related('proprietes', 'bailleurs').order_by('-created_at')[:6]
-    
-    # Statistiques globales
-    total_tableaux = TableauBordFinancier.objects.filter(cree_par=request.user).count()
-    tableaux_actifs = TableauBordFinancier.objects.filter(cree_par=request.user, actif=True).count()
-    tableaux_alerte = sum(1 for t in tableaux if t.is_alerte_active())
-    
-    # Tableaux récents avec alertes
-    tableaux_alertes = [t for t in tableaux if t.is_alerte_active()]
-    
-    context = get_context_with_entreprise_config({
-        'tableaux': tableaux,
+def tableau_bord_list(request):
+    # Vue désactivée : modèle TableauBordFinancier supprimé
+    messages.error(request, "La fonctionnalité Tableau de Bord Financier a été désactivée (modèle supprimé).")
+    return redirect('paiements:dashboard')
         'tableaux_alertes': tableaux_alertes,
         'total_tableaux': total_tableaux,
         'tableaux_actifs': tableaux_actifs,
