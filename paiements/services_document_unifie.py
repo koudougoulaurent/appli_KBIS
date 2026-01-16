@@ -45,8 +45,49 @@ class DocumentUnifieA5Service:
                 'avance': 'QUITTANCE DE PAIEMENT D\'AVANCE',
                 'caution': 'QUITTANCE DE PAIEMENT DE CAUTION'
             }
-            
             document_title = document_titles.get(document_type, 'QUITTANCE DE PAIEMENT')
+
+            # Correction : si reliquat, titre explicite
+            # On prépare d'abord le contexte partiel/reliquat pour pouvoir ajuster le titre
+            info_paiement_partiel = None
+            est_paiement_partiel = False
+            est_reliquat = False
+            if paiement.type_paiement == 'paiement_partiel' or getattr(paiement, 'est_paiement_partiel', False):
+                from paiements.models import Paiement as PaiementModel
+                paiements_mois = PaiementModel.objects.filter(
+                    contrat=paiement.contrat,
+                    mois_paye=paiement.mois_paye,
+                    is_deleted=False
+                ).order_by('date_paiement', 'id')
+                montant_du_mois = paiements_mois.first().montant_du_mois if paiements_mois.exists() else paiement.montant
+                total_paye = sum([p.montant for p in paiements_mois])
+                paiements_partiels = [
+                    {
+                        'id': p.id,
+                        'date_paiement': p.date_paiement,
+                        'montant': p.montant,
+                    } for p in paiements_mois
+                ]
+                progression = (total_paye / montant_du_mois * 100) if montant_du_mois else 0
+                montant_restant = montant_du_mois - (total_paye - paiement.montant)
+                if abs(total_paye - montant_du_mois) < 1 and paiement.id == paiements_mois.last().id:
+                    est_reliquat = True
+                date_paiement_initial = paiements_mois.first().date_paiement if paiements_mois.exists() else paiement.date_paiement
+                est_paiement_partiel = True
+                info_paiement_partiel = {
+                    'est_reliquat': est_reliquat,
+                    'date_paiement_initial': date_paiement_initial,
+                    'montant_du_mois': montant_du_mois,
+                    'total_paye': total_paye,
+                    'nombre_paiements': paiements_mois.count(),
+                    'paiements_partiels': paiements_partiels,
+                    'montant_restant': max(0, montant_du_mois - total_paye),
+                    'pourcentage_paye': progression,
+                }
+
+            # Si reliquat, titre explicite
+            if est_reliquat:
+                document_title = "QUITTANCE DE PAIEMENT DE RESTE DE LOYER"
             
             # Calculer les mois couverts par l'avance si c'est une avance
             mois_couverts = None
@@ -62,6 +103,7 @@ class DocumentUnifieA5Service:
             else:
                 logger.info(f"Document type '{document_type}' - pas de calcul mois_couverts")
             
+
             # Préparer les données du document
             context = {
                 'document_title': document_title,
@@ -99,45 +141,11 @@ class DocumentUnifieA5Service:
 
                 # Charges déductibles (si applicable)
                 'charges_deduites': getattr(paiement, 'charges_deduites', []),
-            }
 
-            # Ajout d'informations sur le reliquat et l'historique si paiement partiel
-            if paiement.type_paiement == 'paiement_partiel' or getattr(paiement, 'est_paiement_partiel', False):
-                from paiements.models import Paiement as PaiementModel
-                paiements_mois = PaiementModel.objects.filter(
-                    contrat=paiement.contrat,
-                    mois_paye=paiement.mois_paye,
-                    is_deleted=False
-                ).order_by('date_paiement', 'id')
-                montant_du_mois = paiements_mois.first().montant_du_mois if paiements_mois.exists() else paiement.montant
-                total_paye = sum([p.montant for p in paiements_mois])
-                # Historique des paiements partiels
-                paiements_partiels = [
-                    {
-                        'id': p.id,
-                        'date_paiement': p.date_paiement,
-                        'montant': p.montant,
-                    } for p in paiements_mois
-                ]
-                # Calcul progression
-                progression = (total_paye / montant_du_mois * 100) if montant_du_mois else 0
-                # Détermination du reliquat : c'est le dernier paiement qui solde le mois
-                est_reliquat = False
-                montant_restant = montant_du_mois - (total_paye - paiement.montant)
-                if abs(total_paye - montant_du_mois) < 1 and paiement.id == paiements_mois.last().id:
-                    est_reliquat = True
-                date_paiement_initial = paiements_mois.first().date_paiement if paiements_mois.exists() else paiement.date_paiement
-                context['est_paiement_partiel'] = True
-                context['info_paiement_partiel'] = {
-                    'est_reliquat': est_reliquat,
-                    'date_paiement_initial': date_paiement_initial,
-                    'montant_du_mois': montant_du_mois,
-                    'total_paye': total_paye,
-                    'nombre_paiements': paiements_mois.count(),
-                    'paiements_partiels': paiements_partiels,
-                    'montant_restant': max(0, montant_du_mois - total_paye),
-                    'pourcentage_paye': progression,
-                }
+                # Ajout partiel/reliquat pour le template
+                'est_paiement_partiel': est_paiement_partiel,
+                'info_paiement_partiel': info_paiement_partiel,
+            }
             
             logger.info(f"✓ Context préparé - mois_couverts: {context.get('mois_couverts')}")
             logger.info(f"✓ document_type dans context: {context.get('document_type')}")
