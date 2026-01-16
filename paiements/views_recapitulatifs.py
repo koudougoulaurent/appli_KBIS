@@ -63,7 +63,9 @@ def liste_recapitulatifs(request):
     mois = request.GET.get('mois')
     statut = request.GET.get('statut')
     type_recap = request.GET.get('type')
-    tri_par = request.GET.get('tri', 'mois')  # 'mois' ou 'statut'
+    tri_par = request.GET.get('tri', 'mois')  # nom du champ à trier
+    tri_sens = request.GET.get('sens', 'desc')  # 'asc' ou 'desc'
+    recherche = request.GET.get('q', '').strip()
     
     # Récupérer uniquement les récapitulatifs non supprimés
     # Vérifier si les migrations sont appliquées en testant la présence des nouveaux champs
@@ -94,13 +96,13 @@ def liste_recapitulatifs(request):
         # En cas d'erreur, supposer que les champs n'existent pas
         has_new_fields = False
     
+
     # Récupérer les récapitulatifs
-    # Si les nouveaux champs n'existent pas, utiliser defer() pour exclure les nouveaux champs de la requête SQL
     if not has_new_fields:
         recapitulatifs = RecapMensuel.objects.filter(is_deleted=False).select_related('bailleur').defer('commission_agence', 'montant_reellement_paye')
     else:
         recapitulatifs = RecapMensuel.objects.filter(is_deleted=False).select_related('bailleur')
-    
+
     # Appliquer les filtres
     if mois:
         try:
@@ -111,17 +113,31 @@ def liste_recapitulatifs(request):
             recapitulatifs = recapitulatifs.filter(mois_recap__icontains=mois)
     if statut:
         recapitulatifs = recapitulatifs.filter(statut=statut)
-    
-    # Trier selon le choix de l'utilisateur
-    if tri_par == 'statut':
-        # Trier par statut puis par mois (plus récent en premier)
-        recapitulatifs = recapitulatifs.order_by('statut', '-mois_recap', 'bailleur__nom')
-    elif tri_par == 'bailleur':
-        # Trier par bailleur puis par mois (plus récent en premier)
-        recapitulatifs = recapitulatifs.order_by('bailleur__nom', 'bailleur__prenom', '-mois_recap')
+
+    # Recherche globale multi-champs
+    if recherche:
+        from django.db.models import Q
+        recapitulatifs = recapitulatifs.filter(
+            Q(bailleur__nom__icontains=recherche) |
+            Q(bailleur__prenom__icontains=recherche) |
+            Q(mois_recap__icontains=recherche) |
+            Q(statut__icontains=recherche)
+        )
+
+    # Tri dynamique
+    tri_map = {
+        'mois': 'mois_recap',
+        'statut': 'statut',
+        'bailleur': 'bailleur__nom',
+        'net': 'montant_net_a_payer',
+        'loyers': 'total_loyers',
+        'charges': 'total_charges',
+    }
+    tri_field = tri_map.get(tri_par, 'mois_recap')
+    if tri_sens == 'asc':
+        recapitulatifs = recapitulatifs.order_by(tri_field)
     else:
-        # Trier par mois (plus récent en premier) puis par statut puis par bailleur
-        recapitulatifs = recapitulatifs.order_by('-mois_recap', 'statut', 'bailleur__nom')
+        recapitulatifs = recapitulatifs.order_by(f'-{tri_field}')
     
     # Grouper les récapitulatifs
     recaps_par_mois = {}

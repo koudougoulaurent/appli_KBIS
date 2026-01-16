@@ -30,7 +30,7 @@
 <!-- Filtres -->
 <div class="card mb-4">
     <div class="card-body">
-        <form method="get" class="row g-3">
+        <form method="get" class="row g-3 align-items-end">
             <div class="col-md-3">
                 <label for="bailleur" class="form-label">Bailleur</label>
                 <select name="bailleur" id="bailleur" class="form-select">
@@ -52,12 +52,15 @@
                     <option value="paye" {% if request.GET.statut == 'paye' %}selected{% endif %}>Payé</option>
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label for="mois" class="form-label">Mois</label>
                 <input type="month" name="mois" id="mois" class="form-control" value="{{ request.GET.mois }}">
             </div>
-            <div class="col-md-3">
-                <label class="form-label">&nbsp;</label>
+            <div class="col-md-2">
+                <label for="search" class="form-label">Recherche globale</label>
+                <input type="text" name="search" id="search" class="form-control" placeholder="Recherche..." value="{{ request.GET.search }}">
+            </div>
+            <div class="col-md-2">
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-outline-primary">
                         <i class="bi bi-funnel"></i> Filtrer
@@ -79,14 +82,70 @@
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th>Bailleur</th>
-                            <th>Mois</th>
-                            <th>Propriétés</th>
-                            <th>Contrats Actifs</th>
-                            <th>Total Loyers</th>
-                            <th>Charges</th>
-                            <th>Net à Payer</th>
-                            <th>Statut</th>
+                            <th>
+                                <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.bailleur %}bailleur={{ request.GET.bailleur }}&{% endif %}{% if request.GET.statut %}statut={{ request.GET.statut }}&{% endif %}{% if request.GET.mois %}mois={{ request.GET.mois }}&{% endif %}sort=bailleur{% if request.GET.sort == 'bailleur' and request.GET.order != 'desc' %}&order=desc{% endif %}">
+                                    Bailleur
+                                    {% if request.GET.sort == 'bailleur' %}
+                                        <i class="bi bi-caret-{{ request.GET.order|default:'asc' == 'desc' and 'down' or 'up' }}-fill"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th>
+                                <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.bailleur %}bailleur={{ request.GET.bailleur }}&{% endif %}{% if request.GET.statut %}statut={{ request.GET.statut }}&{% endif %}{% if request.GET.mois %}mois={{ request.GET.mois }}&{% endif %}sort=mois{% if request.GET.sort == 'mois' and request.GET.order != 'desc' %}&order=desc{% endif %}">
+                                    Mois
+                                    {% if request.GET.sort == 'mois' %}
+                                        <i class="bi bi-caret-{{ request.GET.order|default:'asc' == 'desc' and 'down' or 'up' }}-fill"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th>
+                                <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.bailleur %}bailleur={{ request.GET.bailleur }}&{% endif %}{% if request.GET.statut %}statut={{ request.GET.statut }}&{% endif %}{% if request.GET.mois %}mois={{ request.GET.mois }}&{% endif %}sort=proprietes{% if request.GET.sort == 'proprietes' and request.GET.order != 'desc' %}&order=desc{% endif %}">
+                                    Propriétés
+                                    {% if request.GET.sort == 'proprietes' %}
+                                        <i class="bi bi-caret-{{ request.GET.order|default:'asc' == 'desc' and 'down' or 'up' }}-fill"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th>
+                                <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.bailleur %}bailleur={{ request.GET.bailleur }}&{% endif %}{% if request.GET.statut %}statut={{ request.GET.statut }}&{% endif %}{% if request.GET.mois %}mois={{ request.GET.mois }}&{% endif %}sort=contrats{% if request.GET.sort == 'contrats' and request.GET.order != 'desc' %}&order=desc{% endif %}">
+                                    Contrats Actifs
+                                    {% if request.GET.sort == 'contrats' %}
+                                        <i class="bi bi-caret-{{ request.GET.order|default:'asc' == 'desc' and 'down' or 'up' }}-fill"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th>
+                                <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.bailleur %}bailleur={{ request.GET.bailleur }}&{% endif %}{% if request.GET.statut %}statut={{ request.GET.statut }}&{% endif %}{% if request.GET.mois %}mois={{ request.GET.mois }}&{% endif %}sort=loyers{% if request.GET.sort == 'loyers' and request.GET.order != 'desc' %}&order=desc{% endif %}">
+                                    Total Loyers
+                                    {% if request.GET.sort == 'loyers' %}
+                                        <i class="bi bi-caret-{{ request.GET.order|default:'asc' == 'desc' and 'down' or 'up' }}-fill"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th>
+                                <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.bailleur %}bailleur={{ request.GET.bailleur }}&{% endif %}{% if request.GET.statut %}statut={{ request.GET.statut }}&{% endif %}{% if request.GET.mois %}mois={{ request.GET.mois }}&{% endif %}sort=charges{% if request.GET.sort == 'charges' and request.GET.order != 'desc' %}&order=desc{% endif %}">
+                                    Charges
+                                    {% if request.GET.sort == 'charges' %}
+                                        <i class="bi bi-caret-{{ request.GET.order|default:'asc' == 'desc' and 'down' or 'up' }}-fill"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th>
+                                <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.bailleur %}bailleur={{ request.GET.bailleur }}&{% endif %}{% if request.GET.statut %}statut={{ request.GET.statut }}&{% endif %}{% if request.GET.mois %}mois={{ request.GET.mois }}&{% endif %}sort=net{% if request.GET.sort == 'net' and request.GET.order != 'desc' %}&order=desc{% endif %}">
+                                    Net à Payer
+                                    {% if request.GET.sort == 'net' %}
+                                        <i class="bi bi-caret-{{ request.GET.order|default:'asc' == 'desc' and 'down' or 'up' }}-fill"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th>
+                                <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.bailleur %}bailleur={{ request.GET.bailleur }}&{% endif %}{% if request.GET.statut %}statut={{ request.GET.statut }}&{% endif %}{% if request.GET.mois %}mois={{ request.GET.mois }}&{% endif %}sort=statut{% if request.GET.sort == 'statut' and request.GET.order != 'desc' %}&order=desc{% endif %}">
+                                    Statut
+                                    {% if request.GET.sort == 'statut' %}
+                                        <i class="bi bi-caret-{{ request.GET.order|default:'asc' == 'desc' and 'down' or 'up' }}-fill"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
                             <th>Actions</th>
                         </tr>
                     </thead>

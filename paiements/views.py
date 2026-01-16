@@ -688,20 +688,20 @@ class PaiementListView(LoginRequiredMixin, ListView):
     
     def get_queryset(self):
         from django.db.models import Q
-        
         queryset = super().get_queryset()
         queryset = queryset.select_related(
             'contrat__locataire',
             'contrat__propriete',
             'contrat__propriete__bailleur'
         )
-        
-        # Récupérer les paramètres de recherche et filtres
+        # Recherche et filtres
         query = self.request.GET.get('q', '').strip()
         statut_filter = self.request.GET.get('statut', '')
         type_filter = self.request.GET.get('type_paiement', '')
         mode_filter = self.request.GET.get('mode_paiement', '')
-        
+        # Tri dynamique
+        sort = self.request.GET.get('sort', '')
+        order = self.request.GET.get('order', 'asc')
         # Recherche textuelle
         if query:
             queryset = queryset.filter(
@@ -714,20 +714,31 @@ class PaiementListView(LoginRequiredMixin, ListView):
                 Q(contrat__propriete__titre__icontains=query) |
                 Q(libelle__icontains=query)
             )
-        
-        # Filtre par statut
         if statut_filter:
             queryset = queryset.filter(statut=statut_filter)
-        
-        # Filtre par type de paiement
         if type_filter:
             queryset = queryset.filter(type_paiement=type_filter)
-        
-        # Filtre par mode de paiement
         if mode_filter:
             queryset = queryset.filter(mode_paiement=mode_filter)
-        
-        return queryset.order_by('-created_at')
+        # Mapping des champs triables
+        sort_fields = {
+            'reference': 'reference_paiement',
+            'locataire': 'contrat__locataire__nom',
+            'propriete': 'contrat__propriete__titre',
+            'type': 'type_paiement',
+            'montant': 'montant',
+            'mode': 'mode_paiement',
+            'date': 'date_paiement',
+            'statut': 'statut',
+        }
+        if sort in sort_fields:
+            champ = sort_fields[sort]
+            if order == 'desc':
+                champ = '-' + champ
+            queryset = queryset.order_by(champ)
+        else:
+            queryset = queryset.order_by('-created_at')
+        return queryset
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

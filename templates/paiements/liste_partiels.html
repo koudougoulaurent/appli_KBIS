@@ -299,45 +299,119 @@
                     
                     <!-- Liste des paiements partiels -->
                     <div class="p-4">
-                        {% if paiements %}
-                            {% for paiement in paiements %}
-                            <div class="paiement-item">
-                                <div class="paiement-header">
-                                    <div class="paiement-reference">{{ paiement.reference_paiement }}</div>
-                                    <div class="paiement-montant">{{ paiement.montant|floatformat:0 }} FCFA</div>
-                                </div>
-                                
-                                <div class="paiement-details">
-                                    <div class="detail-item">
-                                        <div class="detail-label">Locataire</div>
-                                        <div class="detail-value">{{ paiement.contrat.locataire.nom }} {{ paiement.contrat.locataire.prenom }}</div>
-                                    </div>
-                                    <div class="detail-item">
-                                        <div class="detail-label">Propriété</div>
-                                        <div class="detail-value">{{ paiement.contrat.propriete.titre }}</div>
-                                    </div>
-                                    <div class="detail-item">
-                                        <div class="detail-label">Type</div>
-                                        <div class="detail-value">{{ paiement.get_type_paiement_display }}</div>
-                                    </div>
-                                    <div class="detail-item">
-                                        <div class="detail-label">Mode</div>
-                                        <div class="detail-value">{{ paiement.get_mode_paiement_display }}</div>
-                                    </div>
-                                    <div class="detail-item">
-                                        <div class="detail-label">Date</div>
-                                        <div class="detail-value">{{ paiement.date_paiement|date:"d/m/Y" }}</div>
-                                    </div>
-                                    <div class="detail-item">
-                                        <div class="detail-label">Mois Payé</div>
-                                        <div class="detail-value">
-                                            {% if paiement.mois_paye %}
-                                                {{ paiement.mois_paye }}
-                                            {% else %}
-                                                Non spécifié
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>
+                                            <a href="?{% if query %}q={{ query }}&{% endif %}{% if statut_filter %}statut={{ statut_filter }}&{% endif %}{% if type_filter %}type_paiement={{ type_filter }}&{% endif %}sort=reference{% if request.GET.sort == 'reference' and request.GET.order != 'desc' %}&order=desc{% endif %}">
+                                                Référence
+                                                {% if request.GET.sort == 'reference' %}
+                                                    <i class="bi bi-caret-{{ request.GET.order|default:'asc' == 'desc' and 'down' or 'up' }}-fill"></i>
+                                                {% endif %}
+                                            </a>
+                                        </th>
+                                        <th>
+                                            <a href="?{% if query %}q={{ query }}&{% endif %}{% if statut_filter %}statut={{ statut_filter }}&{% endif %}{% if type_filter %}type_paiement={{ type_filter }}&{% endif %}sort=locataire{% if request.GET.sort == 'locataire' and request.GET.order != 'desc' %}&order=desc{% endif %}">
+                                                Locataire
+                                                {% if request.GET.sort == 'locataire' %}
+                                                    <i class="bi bi-caret-{{ request.GET.order|default:'asc' == 'desc' and 'down' or 'up' }}-fill"></i>
+                                                {% endif %}
+                                            </a>
+                                        </th>
+                                        <th>
+                                            <a href="?{% if query %}q={{ query }}&{% endif %}{% if statut_filter %}statut={{ statut_filter }}&{% endif %}{% if type_filter %}type_paiement={{ type_filter }}&{% endif %}sort=propriete{% if request.GET.sort == 'propriete' and request.GET.order != 'desc' %}&order=desc{% endif %}">
+                                                Propriété
+                                                {% if request.GET.sort == 'propriete' %}
+                                                    <i class="bi bi-caret-{{ request.GET.order|default:'asc' == 'desc' and 'down' or 'up' }}-fill"></i>
+                                                {% endif %}
+                                            </a>
+                                        </th>
+                                        <th>
+                                            <a href="?{% if query %}q={{ query }}&{% endif %}{% if statut_filter %}statut={{ statut_filter }}&{% endif %}{% if type_filter %}type_paiement={{ type_filter }}&{% endif %}sort=type{% if request.GET.sort == 'type' and request.GET.order != 'desc' %}&order=desc{% endif %}">
+                                                Type
+                                                {% if request.GET.sort == 'type' %}
+                                                    <i class="bi bi-caret-{{ request.GET.order|default:'asc' == 'desc' and 'down' or 'up' }}-fill"></i>
+                                                {% endif %}
+                                            </a>
+                                        </th>
+                                        <th>
+                                            <a href="?{% if query %}q={{ query }}&{% endif %}{% if statut_filter %}statut={{ statut_filter }}&{% endif %}{% if type_filter %}type_paiement={{ type_filter }}&{% endif %}sort=montant{% if request.GET.sort == 'montant' and request.GET.order != 'desc' %}&order=desc{% endif %}">
+                                                Montant
+                                                {% if request.GET.sort == 'montant' %}
+                                                    <i class="bi bi-caret-{{ request.GET.order|default:'asc' == 'desc' and 'down' or 'up' }}-fill"></i>
+                                                {% endif %}
+                                            </a>
+                                        </th>
+                                        <th>
+                                            <a href="?{% if query %}q={{ query }}&{% endif %}{% if statut_filter %}statut={{ statut_filter }}&{% endif %}{% if type_filter %}type_paiement={{ type_filter }}&{% endif %}sort=mode{% if request.GET.sort == 'mode' and request.GET.order != 'desc' %}&order=desc{% endif %}">
+                                                Mode
+                                                {% if request.GET.sort == 'mode' %}
+                                                    <i class="bi bi-caret-{{ request.GET.order|default:'asc' == 'desc' and 'down' or 'up' }}-fill"></i>
+                                                {% endif %}
+                                            </a>
+                                        </th>
+                                        <th>
+                                            <a href="?{% if query %}q={{ query }}&{% endif %}{% if statut_filter %}statut={{ statut_filter }}&{% endif %}{% if type_filter %}type_paiement={{ type_filter }}&{% endif %}sort=date{% if request.GET.sort == 'date' and request.GET.order != 'desc' %}&order=desc{% endif %}">
+                                                Date
+                                                {% if request.GET.sort == 'date' %}
+                                                    <i class="bi bi-caret-{{ request.GET.order|default:'asc' == 'desc' and 'down' or 'up' }}-fill"></i>
+                                                {% endif %}
+                                            </a>
+                                        </th>
+                                        <th>
+                                            <a href="?{% if query %}q={{ query }}&{% endif %}{% if statut_filter %}statut={{ statut_filter }}&{% endif %}{% if type_filter %}type_paiement={{ type_filter }}&{% endif %}sort=statut{% if request.GET.sort == 'statut' and request.GET.order != 'desc' %}&order=desc{% endif %}">
+                                                Statut
+                                                {% if request.GET.sort == 'statut' %}
+                                                    <i class="bi bi-caret-{{ request.GET.order|default:'asc' == 'desc' and 'down' or 'up' }}-fill"></i>
+                                                {% endif %}
+                                            </a>
+                                        </th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                {% if paiements %}
+                                    {% for paiement in paiements %}
+                                    <tr>
+                                        <td>{{ paiement.reference_paiement }}</td>
+                                        <td>{{ paiement.contrat.locataire.nom }} {{ paiement.contrat.locataire.prenom }}</td>
+                                        <td>{{ paiement.contrat.propriete.titre }}</td>
+                                        <td>{{ paiement.get_type_paiement_display }}</td>
+                                        <td>{{ paiement.montant|floatformat:0 }} FCFA</td>
+                                        <td>{{ paiement.get_mode_paiement_display }}</td>
+                                        <td>{{ paiement.date_paiement|date:"d/m/Y" }}</td>
+                                        <td>
+                                            <span class="status-badge status-partiel">
+                                                <i class="bi bi-pie-chart me-1"></i>Paiement Partiel
+                                            </span>
+                                            {% if paiement.montant_restant_du %}
+                                            <span class="status-badge status-en-cours ms-2">
+                                                Reste: {{ paiement.montant_restant_du|floatformat:0 }} FCFA
+                                            </span>
                                             {% endif %}
-                                        </div>
-                                    </div>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'paiements:detail' paiement.pk %}" class="btn-action btn-view me-2">
+                                                <i class="bi bi-eye me-1"></i>Voir
+                                            </a>
+                                            <a href="{% url 'paiements:ajouter_partiel' %}?contrat_id={{ paiement.contrat.id }}&mois={{ paiement.mois_paye.month }}&annee={{ paiement.mois_paye.year }}" 
+                                               class="btn-action btn-complete">
+                                                <i class="bi bi-plus-circle me-1"></i>Compléter
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="9" class="text-center text-muted py-4">
+                                            <i class="bi bi-pie-chart"></i><br>Aucun paiement partiel trouvé
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
                                 </div>
                                 
                                 <div class="paiement-status">
