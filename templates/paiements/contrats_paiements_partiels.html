@@ -200,10 +200,17 @@
                         </p>
                     </div>
                     <div class="col-md-2 text-end">
-                        <a href="{% url 'paiements:ajouter_paiement_partiel' %}?contrat_id={{ data.contrat.id }}" 
-                           class="btn btn-sm btn-primary">
-                            <i class="bi bi-plus-circle me-1"></i>Ajouter Paiement
-                        </a>
+                        {% if data.paiements_partiels %}
+                            {% for paiement in data.paiements_partiels %}
+                                {% if paiement.montant_restant_du > 0 %}
+                                    <a href="{% url 'paiements:completer_reliquat' paiement.id %}" class="btn btn-sm btn-warning">
+                                        <i class="bi bi-pencil-square me-1"></i>Compléter le Reliquat
+                                    </a>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-muted">Aucun reliquat à compléter</span>
+                        {% endif %}
                     </div>
                 </div>
                 
