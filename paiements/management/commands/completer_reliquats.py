@@ -105,15 +105,16 @@ class Command(BaseCommand):
                     )
                     
                     if not dry_run:
-                        # Marquer tous les paiements comme complétés
+                        # Utiliser la méthode verifier_et_completer_reliquat pour garantir la cohérence
                         with transaction.atomic():
-                            count = Paiement.objects.filter(
-                                id__in=[p.id for p in paiements]
-                            ).update(
-                                est_paiement_partiel=False,
-                                montant_restant_du=Decimal('0')
+                            # Prendre le premier paiement comme référence pour déclencher la vérification
+                            premier_paiement = paiements[0]
+                            completion_effectuee = ServicePaiementPartiel.verifier_et_completer_reliquat(
+                                paiement=premier_paiement,
+                                skip_save=True
                             )
-                            total_paiements_completes += count
+                            if completion_effectuee:
+                                total_paiements_completes += len(paiements)
                     else:
                         total_paiements_completes += len(paiements)
                     
@@ -124,13 +125,16 @@ class Command(BaseCommand):
                         self.style.WARNING(f'   ⏳ INCOMPLET - Reste {montant_restant} F CFA à payer')
                     )
                     
-                    # Mettre à jour les montants restants pour chaque paiement
+                    # Mettre à jour les montants restants en utilisant verifier_et_completer_reliquat
+                    # pour garantir la cohérence
                     if not dry_run:
                         with transaction.atomic():
-                            for paiement in paiements:
-                                paiement.montant_du_mois = montant_du_mois
-                                paiement.montant_restant_du = montant_restant
-                                paiement.save(update_fields=['montant_du_mois', 'montant_restant_du'])
+                            # Prendre le premier paiement comme référence pour déclencher la mise à jour
+                            premier_paiement = paiements[0]
+                            ServicePaiementPartiel.verifier_et_completer_reliquat(
+                                paiement=premier_paiement,
+                                skip_save=True
+                            )
                     
                     mois_incomplets += 1
                     

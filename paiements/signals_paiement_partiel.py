@@ -16,6 +16,9 @@ def verifier_completion_automatique(sender, instance, created, **kwargs):
     """
     Signal qui vérifie automatiquement si un paiement partiel complète le reliquat
     après chaque sauvegarde de paiement.
+    
+    Ce signal se déclenche à CHAQUE sauvegarde de paiement (création ou modification)
+    et vérifie dynamiquement si le paiement complète un reliquat existant.
     """
     # Éviter la récursion infinie
     if hasattr(instance, '_skip_signal_completion'):
@@ -33,14 +36,19 @@ def verifier_completion_automatique(sender, instance, created, **kwargs):
     if not instance.mois_paye:
         return
     
+    # Vérifier si le paiement a un contrat
+    if not instance.contrat:
+        return
+    
     try:
         # Marquer pour éviter la récursion
         instance._skip_signal_completion = True
         
         # Vérifier et compléter automatiquement le reliquat
+        # Cette méthode est DYNAMIQUE et recalcule en temps réel
         completion_effectuee = ServicePaiementPartiel.verifier_et_completer_reliquat(
             paiement=instance,
-            skip_save=False  # On utilise update() dans le service
+            skip_save=True  # On utilise update() dans le service pour éviter la récursion
         )
         
         if completion_effectuee:
@@ -48,8 +56,15 @@ def verifier_completion_automatique(sender, instance, created, **kwargs):
                 f"✅ SIGNAL: Reliquat complété automatiquement pour "
                 f"{instance.contrat.numero_contrat} - {instance.mois_paye}"
             )
+        else:
+            logger.debug(
+                f"📊 SIGNAL: Montants restants mis à jour pour "
+                f"{instance.contrat.numero_contrat} - {instance.mois_paye}"
+            )
     except Exception as e:
         logger.error(f"❌ Erreur signal complétion automatique: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
     finally:
         # Nettoyer le flag
         if hasattr(instance, '_skip_signal_completion'):

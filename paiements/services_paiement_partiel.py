@@ -476,14 +476,21 @@ class ServicePaiementPartiel:
                 )
                 
                 # VÉRIFIER SI CE PAIEMENT COMPLÈTE UN RELIQUAT (seulement si pas skip)
+                # Utiliser la nouvelle méthode verifier_et_completer_reliquat
                 if not skip_verification:
-                    ServicePaiementPartiel.verifier_completion_paiement(paiement, skip_save=True)
+                    ServicePaiementPartiel.verifier_et_completer_reliquat(
+                        paiement=paiement,
+                        skip_save=True
+                    )
                 
                 return True
             else:
-                # Si le paiement est complet, vérifier s'il y avait des paiements partiels précédents
+                # Si le paiement est complet, vérifier s'il complète d'autres paiements partiels du même mois
                 if not skip_verification:
-                    ServicePaiementPartiel.verifier_completion_paiement(paiement, skip_save=True)
+                    ServicePaiementPartiel.verifier_et_completer_reliquat(
+                        paiement=paiement,
+                        skip_save=True
+                    )
                 return False
                 
         except Exception as e:
@@ -896,4 +903,139 @@ class ServicePaiementPartiel:
         except Exception as e:
             logger.error(f"Erreur lors de la détection des reliquats: {str(e)}")
             return []
+    
+    @staticmethod
+    def verifier_et_completer_reliquat(paiement, skip_save=False):
+        """
+        Vérifie si un paiement complète automatiquement un reliquat de paiement partiel.
+        Met à jour DYNAMIQUEMENT tous les paiements partiels du même mois.
+        
+        PROCESSUS :
+        1. Calcule le montant total payé pour le mois du paiement
+        2. Compare avec le montant dû pour ce mois
+        3. Si le montant total >= montant dû, marque TOUS les paiements partiels du mois comme complétés
+        4. Sinon, met à jour les montants restants de tous les paiements partiels
+        
+        Args:
+            paiement: Instance de Paiement (nouveau paiement ou existant)
+            skip_save: Si True, utilise update() au lieu de save() pour éviter les signaux
+        
+        Returns:
+            bool: True si le reliquat a été complété, False sinon
+        """
+        try:
+            # ÉVITER LA RÉCURSION : Vérifier si on est déjà en train de traiter
+            if hasattr(paiement, '_en_completion_reliquat'):
+                return False
+            
+            # Marquer pour éviter la récursion
+            paiement._en_completion_reliquat = True
+            
+            contrat = paiement.contrat
+            if not contrat or not paiement.mois_paye:
+                logger.warning(
+                    f"⚠️ Paiement {paiement.id} sans contrat ou mois_paye - "
+                    f"impossible de vérifier la complétion"
+                )
+                return False
+            
+            # ÉTAPE 1 : Calculer le montant total payé pour ce mois
+            # Inclure TOUS les paiements validés pour ce mois (partiels ou complets)
+            calcul = ServicePaiementPartiel.calculer_montant_restant(
+                contrat, paiement.mois_paye
+            )
+            
+            montant_du_mois = calcul['montant_du_mois']
+            total_paye = calcul['total_paye']
+            montant_restant = calcul['montant_restant']
+            
+            logger.info(
+                f"📊 VÉRIFICATION RELIQUAT - Contrat: {contrat.numero_contrat}, "
+                f"Mois: {paiement.mois_paye}, Dû: {montant_du_mois}, "
+                f"Payé: {total_paye}, Restant: {montant_restant}"
+            )
+            
+            # ÉTAPE 2 : Récupérer TOUS les paiements partiels actifs pour ce mois
+            paiements_partiels = Paiement.objects.filter(
+                contrat=contrat,
+                mois_paye=paiement.mois_paye,  # Correspondance exacte
+                est_paiement_partiel=True,
+                is_deleted=False,
+                statut__in=['valide', 'en_attente']
+            )
+            
+            # ÉTAPE 3 : Vérifier si le reliquat est complété
+            if montant_restant <= 0:
+                # ✅ RELIQUAT COMPLÉTÉ - Marquer TOUS les paiements partiels comme complétés
+                count = paiements_partiels.update(
+                    est_paiement_partiel=False,
+                    montant_restant_du=Decimal('0'),
+                    montant_du_mois=montant_du_mois
+                )
+                
+                logger.info(
+                    f"✅ RELIQUAT COMPLÉTÉ pour {contrat.numero_contrat} - {paiement.mois_paye}. "
+                    f"{count} paiement(s) marqué(s) comme complété(s). "
+                    f"Total payé: {total_paye}, Dû: {montant_du_mois}"
+                )
+                
+                # Invalider le cache pour forcer un rafraîchissement
+                cache_key = 'contrats_avec_paiements_partiels'
+                cache.delete(cache_key)
+                cache_key_stats = 'statistiques_paiements_partiels'
+                cache.delete(cache_key_stats)
+                
+                return True
+            else:
+                # ⚠️ RELIQUAT NON COMPLÉTÉ - Mettre à jour les montants restants
+                # Pour chaque paiement partiel, recalculer son montant restant individuel
+                paiements_a_mettre_a_jour = []
+                for pp in paiements_partiels:
+                    # Le montant restant du mois est partagé proportionnellement
+                    # Mais pour simplifier, on met à jour seulement le montant_du_mois
+                    # et on garde le montant_restant_du calculé par rapport au montant individuel
+                    pp.montant_du_mois = montant_du_mois
+                    
+                    # Calculer le montant restant pour ce paiement individuel
+                    # Si le paiement individuel couvre le montant dû, il est complet
+                    if pp.montant >= montant_du_mois:
+                        pp.est_paiement_partiel = False
+                        pp.montant_restant_du = Decimal('0')
+                    else:
+                        # Sinon, calculer combien il reste à payer au total pour le mois
+                        # et mettre à jour le montant restant
+                        pp.montant_restant_du = montant_restant
+                    
+                    paiements_a_mettre_a_jour.append(pp)
+                
+                # Utiliser bulk_update pour éviter les signaux multiples
+                if paiements_a_mettre_a_jour:
+                    Paiement.objects.bulk_update(
+                        paiements_a_mettre_a_jour,
+                        ['est_paiement_partiel', 'montant_restant_du', 'montant_du_mois']
+                    )
+                    
+                    logger.info(
+                        f"📊 RELIQUAT MIS À JOUR pour {contrat.numero_contrat} - {paiement.mois_paye}. "
+                        f"{len(paiements_a_mettre_a_jour)} paiement(s) mis à jour. "
+                        f"Restant: {montant_restant}"
+                    )
+                
+                # Invalider le cache pour forcer un rafraîchissement
+                cache_key = 'contrats_avec_paiements_partiels'
+                cache.delete(cache_key)
+                cache_key_stats = 'statistiques_paiements_partiels'
+                cache.delete(cache_key_stats)
+                
+                return False
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de la vérification de complétion du reliquat: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return False
+        finally:
+            # Retirer le flag
+            if hasattr(paiement, '_en_completion_reliquat'):
+                delattr(paiement, '_en_completion_reliquat')
 
