@@ -146,12 +146,6 @@ urlpatterns = [
     
     # URLs pour les tableaux de bord
     path('tableaux-bord/', views.tableau_bord_list, name='tableau_bord_list'),
-    path('tableaux-bord/dashboard/', views.tableau_bord_dashboard, name='tableau_bord_dashboard'),
-    path('tableaux-bord/ajouter/', views.tableau_bord_create, name='tableau_bord_create'),
-    path('tableaux-bord/<int:pk>/', views.tableau_bord_detail, name='tableau_bord_detail'),
-    path('tableaux-bord/<int:pk>/modifier/', views.tableau_bord_update, name='tableau_bord_update'),
-    path('tableaux-bord/<int:pk>/supprimer/', views.tableau_bord_delete, name='tableau_bord_delete'),
-    path('tableaux-bord/<int:pk>/export-pdf/', views.tableau_bord_export_pdf, name='tableau_bord_export_pdf'),
     
     # URLs pour les quittances de paiement
     path('quittances/', views.quittance_list, name='quittance_list'),
