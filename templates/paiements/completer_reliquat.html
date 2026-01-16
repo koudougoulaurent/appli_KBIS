@@ -461,7 +461,7 @@
             </div>
 
             <div class="text-center mt-4">
-                <a href="{% url 'paiements:liste_paiements' %}" class="btn btn-secondary btn-lg mr-3">
+                <a href="{% url 'paiements:liste_contrats_paiements_partiels' %}" class="btn btn-secondary btn-lg mr-3">
                     <i class="bi bi-x-circle"></i> Annuler
                 </a>
                 <button type="submit" class="btn btn-completer">
@@ -475,7 +475,7 @@
     <div class="alert alert-custom info">
         <h4><i class="bi bi-check-circle"></i> Ce mois est déjà complètement payé !</h4>
         <p class="mb-0">Le montant total dû pour {{ paiement_initial.mois_paye }} a été entièrement réglé.</p>
-        <a href="{% url 'paiements:liste_paiements' %}" class="btn btn-light mt-3">
+        <a href="{% url 'paiements:liste_contrats_paiements_partiels' %}" class="btn btn-light mt-3">
             <i class="bi bi-arrow-left"></i> Retour aux paiements
         </a>
     </div>
