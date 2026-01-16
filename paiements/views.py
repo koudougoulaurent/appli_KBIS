@@ -367,25 +367,95 @@ def ajouter_paiement_partiel(request):
 def liste_contrats_paiements_partiels(request):
     """
     Liste tous les contrats ayant des paiements partiels en cours
-    avec synchronisation dynamique
-    Affiche TOUS les paiements partiels (actifs et complétés)
+    avec synchronisation dynamique, recherche, tri et filtres intelligents
     """
     from .services_paiement_partiel import ServicePaiementPartiel
+    from core.utils import get_context_with_entreprise_config
+    import unicodedata
+    
+    # Récupérer les paramètres GET
+    search = request.GET.get('search', '').strip()
+    sort = request.GET.get('sort', 'locataire')  # Par défaut tri par locataire
+    order = request.GET.get('order', 'asc')
+    statut = request.GET.get('statut', '')  # reliquat, solde, tous
+    propriete_id = request.GET.get('propriete', '')
     
     # Détecter les contrats avec paiements partiels (inclut tous les paiements partiels)
     contrats_avec_partiels = ServicePaiementPartiel.detecter_contrats_avec_paiements_partiels()
     
-    # Obtenir les statistiques DYNAMIQUEMENT à partir des contrats détectés
-    # pour garantir la cohérence entre les stats et les détails affichés
-    stats = ServicePaiementPartiel.obtenir_statistiques_paiements_partiels(contrats_avec_partiels)
+    # Filtrage/recherche intelligent (en mémoire, car peu de contrats)
+    def normalize(txt):
+        if not txt:
+            return ''
+        return unicodedata.normalize('NFKD', str(txt)).encode('ASCII', 'ignore').decode('utf-8').lower()
     
-    # Utiliser get_context_with_entreprise_config pour le contexte complet
-    from core.utils import get_context_with_entreprise_config
+    filtered = []
+    for data in contrats_avec_partiels.values():
+        contrat = data['contrat']
+        locataire = contrat.locataire.get_nom_complet() if hasattr(contrat.locataire, 'get_nom_complet') else str(contrat.locataire)
+        propriete = contrat.propriete.titre if hasattr(contrat.propriete, 'titre') else str(contrat.propriete)
+        numero_contrat = contrat.numero_contrat
+        montant_total_restant = data.get('montant_total_restant', 0)
+        paiements_partiels = data.get('paiements_partiels', [])
+        paiements_partiels_tous = data.get('paiements_partiels_tous', [])
+        # Recherche globale
+        if search:
+            search_norm = normalize(search)
+            if not (
+                search_norm in normalize(locataire)
+                or search_norm in normalize(numero_contrat)
+                or search_norm in normalize(propriete)
+            ):
+                continue
+        # Filtre propriété
+        if propriete_id and str(contrat.propriete.id) != str(propriete_id):
+            continue
+        # Filtre statut reliquat
+        if statut == 'reliquat' and not (montant_total_restant and montant_total_restant > 0):
+            continue
+        if statut == 'solde' and (montant_total_restant and montant_total_restant > 0):
+            continue
+        filtered.append(data)
+    
+    # Tri dynamique
+    def get_sort_key(data):
+        contrat = data['contrat']
+        if sort == 'locataire':
+            return normalize(contrat.locataire.get_nom_complet() if hasattr(contrat.locataire, 'get_nom_complet') else str(contrat.locataire))
+        elif sort == 'propriete':
+            return normalize(contrat.propriete.titre if hasattr(contrat.propriete, 'titre') else str(contrat.propriete))
+        elif sort == 'contrat':
+            return normalize(contrat.numero_contrat)
+        elif sort == 'montant':
+            return data.get('montant_total_restant', 0)
+        elif sort == 'nb_partiels':
+            return len(data.get('paiements_partiels_tous', []))
+        else:
+            return normalize(contrat.locataire.get_nom_complet() if hasattr(contrat.locataire, 'get_nom_complet') else str(contrat.locataire))
+    reverse = (order == 'desc')
+    filtered_sorted = sorted(filtered, key=get_sort_key, reverse=reverse)
+    
+    # Obtenir les statistiques DYNAMIQUEMENT à partir des contrats filtrés
+    stats = ServicePaiementPartiel.obtenir_statistiques_paiements_partiels({i: d for i, d in enumerate(filtered_sorted)})
+    
+    # Pour le filtre propriété : liste des propriétés concernées
+    proprietes_possibles = set()
+    for data in contrats_avec_partiels.values():
+        contrat = data['contrat']
+        if hasattr(contrat.propriete, 'id'):
+            proprietes_possibles.add((contrat.propriete.id, str(contrat.propriete)))
+    proprietes_possibles = sorted(list(proprietes_possibles), key=lambda x: x[1])
     
     context = get_context_with_entreprise_config({
-        'contrats_avec_partiels': contrats_avec_partiels,
+        'contrats_avec_partiels': {i: d for i, d in enumerate(filtered_sorted)},
         'stats': stats,
-        'title': 'Contrats avec Paiements Partiels'
+        'title': 'Contrats avec Paiements Partiels',
+        'search': search,
+        'sort': sort,
+        'order': order,
+        'statut': statut,
+        'propriete_id': propriete_id,
+        'proprietes_possibles': proprietes_possibles,
     })
     
     return render(request, 'paiements/contrats_paiements_partiels.html', context)
