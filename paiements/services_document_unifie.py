@@ -70,14 +70,14 @@ class DocumentUnifieA5Service:
                 'generation_date': timezone.now(),
                 'config_entreprise': self.config_entreprise,
                 'user': user,  # Ajouter l'utilisateur au contexte
-                
+
                 # Informations du paiement
                 'type_paiement': paiement.get_type_paiement_display(),
                 'mode_paiement': paiement.get_mode_paiement_display(),
                 'date_paiement': paiement.date_paiement,
                 'numero_cheque': paiement.numero_cheque,
                 'reference_virement': paiement.reference_virement,
-                
+
                 # Montants
                 'montant_total': paiement.montant,
                 'montant_lettres': self._convertir_en_lettres(paiement.montant),
@@ -85,21 +85,45 @@ class DocumentUnifieA5Service:
                 'montant_charges_deduites': getattr(paiement, 'montant_charges_deduites', 0),
                 'montant_net_paye': getattr(paiement, 'montant_net_paye', paiement.montant),
                 'montant_net_lettres': self._convertir_en_lettres(getattr(paiement, 'montant_net_paye', paiement.montant)),
-                
+
                 # Logique avance dynamique
                 'mois_couverts': mois_couverts,
                 'mois_couverts_lettres': self._convertir_mois_couverts_en_lettres(mois_couverts) if mois_couverts else None,
-                
+
                 # Informations des entités
                 'locataire': paiement.contrat.locataire,
                 'propriete': paiement.contrat.propriete,
                 'bailleur': paiement.contrat.propriete.bailleur,
                 'contrat': paiement.contrat,
                 'paiement': paiement,  # IMPORTANT: Passer le paiement pour accéder à mois_paye
-                
+
                 # Charges déductibles (si applicable)
                 'charges_deduites': getattr(paiement, 'charges_deduites', []),
             }
+
+            # Ajout d'informations sur le reliquat si paiement partiel
+            if paiement.type_paiement == 'paiement_partiel' or getattr(paiement, 'est_paiement_partiel', False):
+                from paiements.models import Paiement as PaiementModel
+                # Récupérer tous les paiements partiels du même mois et contrat
+                paiements_mois = PaiementModel.objects.filter(
+                    contrat=paiement.contrat,
+                    mois_paye=paiement.mois_paye,
+                    is_deleted=False
+                ).order_by('date_paiement')
+                total_paye = sum([p.montant for p in paiements_mois])
+                montant_du_mois = paiements_mois.first().montant_du_mois if paiements_mois.exists() else paiement.montant
+                est_reliquat = False
+                if abs(total_paye - montant_du_mois) < 1:  # Tolérance 1 F CFA
+                    est_reliquat = True
+                date_paiement_initial = paiements_mois.first().date_paiement if paiements_mois.exists() else paiement.date_paiement
+                context['est_paiement_partiel'] = True
+                context['info_paiement_partiel'] = {
+                    'est_reliquat': est_reliquat,
+                    'date_paiement_initial': date_paiement_initial,
+                    'montant_du_mois': montant_du_mois,
+                    'total_paye': total_paye,
+                    'nombre_paiements': paiements_mois.count(),
+                }
             
             logger.info(f"✓ Context préparé - mois_couverts: {context.get('mois_couverts')}")
             logger.info(f"✓ document_type dans context: {context.get('document_type')}")
