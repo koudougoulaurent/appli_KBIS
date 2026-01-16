@@ -101,19 +101,30 @@ class DocumentUnifieA5Service:
                 'charges_deduites': getattr(paiement, 'charges_deduites', []),
             }
 
-            # Ajout d'informations sur le reliquat si paiement partiel
+            # Ajout d'informations sur le reliquat et l'historique si paiement partiel
             if paiement.type_paiement == 'paiement_partiel' or getattr(paiement, 'est_paiement_partiel', False):
                 from paiements.models import Paiement as PaiementModel
-                # Récupérer tous les paiements partiels du même mois et contrat
                 paiements_mois = PaiementModel.objects.filter(
                     contrat=paiement.contrat,
                     mois_paye=paiement.mois_paye,
                     is_deleted=False
-                ).order_by('date_paiement')
-                total_paye = sum([p.montant for p in paiements_mois])
+                ).order_by('date_paiement', 'id')
                 montant_du_mois = paiements_mois.first().montant_du_mois if paiements_mois.exists() else paiement.montant
+                total_paye = sum([p.montant for p in paiements_mois])
+                # Historique des paiements partiels
+                paiements_partiels = [
+                    {
+                        'id': p.id,
+                        'date_paiement': p.date_paiement,
+                        'montant': p.montant,
+                    } for p in paiements_mois
+                ]
+                # Calcul progression
+                progression = (total_paye / montant_du_mois * 100) if montant_du_mois else 0
+                # Détermination du reliquat : c'est le dernier paiement qui solde le mois
                 est_reliquat = False
-                if abs(total_paye - montant_du_mois) < 1:  # Tolérance 1 F CFA
+                montant_restant = montant_du_mois - (total_paye - paiement.montant)
+                if abs(total_paye - montant_du_mois) < 1 and paiement.id == paiements_mois.last().id:
                     est_reliquat = True
                 date_paiement_initial = paiements_mois.first().date_paiement if paiements_mois.exists() else paiement.date_paiement
                 context['est_paiement_partiel'] = True
@@ -123,6 +134,9 @@ class DocumentUnifieA5Service:
                     'montant_du_mois': montant_du_mois,
                     'total_paye': total_paye,
                     'nombre_paiements': paiements_mois.count(),
+                    'paiements_partiels': paiements_partiels,
+                    'montant_restant': max(0, montant_du_mois - total_paye),
+                    'pourcentage_paye': progression,
                 }
             
             logger.info(f"✓ Context préparé - mois_couverts: {context.get('mois_couverts')}")
