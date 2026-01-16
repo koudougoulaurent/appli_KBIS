@@ -1,3 +1,18 @@
+from django.http import FileResponse, HttpResponse
+# --- Vue pour télécharger la quittance PDF KBIS d'un paiement ---
+from django.contrib.auth.decorators import login_required
+@login_required
+def telecharger_quittance_kbis_pdf(request, paiement_id):
+    """Permet de télécharger la quittance PDF KBIS générée pour un paiement donné (reliquat ou partiel)."""
+    paiement = get_object_or_404(Paiement, pk=paiement_id)
+    pdf_content = paiement.generer_quittance_kbis_dynamique(request.user)
+    if pdf_content:
+        response = HttpResponse(pdf_content, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="quittance_kbis_{paiement_id}.pdf"'
+        return response
+    else:
+        messages.error(request, "Erreur lors de la génération du PDF de quittance KBIS.")
+        return redirect('paiements:detail', pk=paiement_id)
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -484,11 +499,13 @@ def completer_reliquat(request, paiement_id):
                         f"Reste à payer : {nouveau_montant_restant:,.0f} F CFA"
                     )
                 
-                # Générer une quittance pour ce paiement
-                from .services_quittance import ServiceQuittance
+                # Générer une quittance PDF A5 KBIS pour ce paiement
                 try:
-                    quittance = ServiceQuittance.generer_quittance_pour_paiement(nouveau_paiement, request.user)
-                    messages.info(request, f"📄 Quittance générée : {quittance.numero_quittance}")
+                    quittance_pdf = nouveau_paiement.generer_quittance_kbis_dynamique(request.user)
+                    if quittance_pdf:
+                        messages.info(request, "📄 Quittance PDF KBIS générée avec succès.")
+                    else:
+                        messages.warning(request, "⚠️ Paiement enregistré mais erreur lors de la génération de la quittance PDF.")
                 except Exception as e:
                     messages.warning(request, f"⚠️ Paiement enregistré mais erreur quittance : {str(e)}")
                 

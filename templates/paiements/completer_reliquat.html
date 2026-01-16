@@ -272,12 +272,21 @@
         </div>
     </div>
 
+
     {% if messages %}
         {% for message in messages %}
         <div class="alert alert-{{ message.tags }} alert-custom">
             {{ message }}
         </div>
         {% endfor %}
+    {% endif %}
+
+    {% if pourcentage >= 100 %}
+    <div class="text-center my-4">
+        <a href="{% url 'paiements:telecharger_quittance_kbis_pdf' paiement_initial.id %}" class="btn btn-success btn-lg" target="_blank">
+            <i class="bi bi-file-earmark-pdf"></i> Télécharger la quittance PDF KBIS
+        </a>
+    </div>
     {% endif %}
 
     <!-- Informations du contrat -->
