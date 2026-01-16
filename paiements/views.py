@@ -415,9 +415,18 @@ def completer_reliquat(request, paiement_id):
         try:
             montant = Decimal(request.POST.get('montant', 0))
             mode_paiement = request.POST.get('mode_paiement')
-            date_paiement = request.POST.get('date_paiement')
+            date_paiement_str = request.POST.get('date_paiement')
             numero_reference = request.POST.get('numero_reference', '')
             notes = request.POST.get('notes', '')
+            # Conversion de la date (str) en objet date
+            from datetime import datetime
+            date_paiement = None
+            if date_paiement_str:
+                try:
+                    date_paiement = datetime.strptime(date_paiement_str, "%Y-%m-%d").date()
+                except Exception:
+                    messages.error(request, "Format de date invalide. Utilisez AAAA-MM-JJ.")
+                    return redirect('paiements:completer_reliquat', paiement_id=paiement_id)
             
             # Validation
             if montant <= 0:
