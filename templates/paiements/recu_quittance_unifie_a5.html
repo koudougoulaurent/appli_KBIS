@@ -505,7 +505,9 @@
             <div class="detail-row">
                 <span class="detail-label">Type de paiement:</span>
                 <span class="detail-value">
-                    {% if type_paiement == 'loyer' %}Loyer
+                    {% if est_paiement_partiel and info_paiement_partiel and info_paiement_partiel.est_reliquat %}
+                        Reliquat du paiement partiel du {{ info_paiement_partiel.date_paiement_initial|date:'d/m/Y' }}
+                    {% elif type_paiement == 'loyer' %}Loyer
                     {% elif type_paiement == 'caution' %}Caution
                     {% elif type_paiement == 'avance' or type_paiement == 'avance_loyer' %}Avance de loyer
                     {% elif type_paiement == 'charges' %}Charges
@@ -590,7 +592,9 @@
             <div class="detail-row" style="border-bottom: none; padding: 2mm 3mm; clear: both; display: block; margin-bottom: 3mm;">
                 <div style="font-weight: 900; color: #000; font-size: 11px; margin-bottom: 1mm;">Note:</div>
                 <div style="font-size: 10px; font-weight: bold; color: #000; line-height: 1.5;">
-                    {% if est_paiement_partiel and info_paiement_partiel %}
+                    {% if est_paiement_partiel and info_paiement_partiel and info_paiement_partiel.est_reliquat %}
+                        Reliquat du paiement partiel initial du {{ info_paiement_partiel.date_paiement_initial|date:'d/m/Y' }} reçu en bonne et due forme pour la période {{ paiement.mois_paye|default:"courante" }}.
+                    {% elif est_paiement_partiel and info_paiement_partiel %}
                         Paiement partiel reçu en bonne et due forme pour la période {{ paiement.mois_paye|default:"courante" }}.
                     {% elif document_type == 'caution' %}
                         Dépôt de garantie - Remboursable en fin de bail
@@ -634,7 +638,9 @@
                 {% if user %}
                 <strong>Généré par : {{ user.get_full_name|default:user.username }}</strong>
                 {% endif %}
-                {% if type_paiement %}
+                {% if est_paiement_partiel and info_paiement_partiel and info_paiement_partiel.est_reliquat %}
+                <br><strong>Type de paiement : Reliquat du paiement partiel du {{ info_paiement_partiel.date_paiement_initial|date:'d/m/Y' }}</strong>
+                {% elif type_paiement %}
                 <br><strong>Type de paiement : {{ type_paiement }}</strong>
                 {% endif %}
             </div>
