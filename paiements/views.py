@@ -3616,14 +3616,6 @@ def tableau_bord_list(request):
     # Vue désactivée : modèle TableauBordFinancier supprimé
     messages.error(request, "La fonctionnalité Tableau de Bord Financier a été désactivée (modèle supprimé).")
     return redirect('paiements:dashboard')
-        'tableaux_alertes': tableaux_alertes,
-        'total_tableaux': total_tableaux,
-        'tableaux_actifs': tableaux_actifs,
-        'tableaux_alerte': tableaux_alerte,
-        'title': 'Dashboard des Tableaux de Bord Financiers'
-    })
-    
-    return render(request, 'paiements/tableaux_bord/dashboard.html', context)
 
 @login_required
 def generer_recap_mensuel_automatique(request):
