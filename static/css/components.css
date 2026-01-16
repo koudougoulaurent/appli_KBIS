@@ -1,3 +1,17 @@
+/* Paiement partiel custom styles */
+.paiement-item-solded {
+    opacity: 0.7;
+    border-left: 4px solid var(--success-color);
+}
+.badge-complet {
+    font-size: 0.7rem;
+}
+.badge-encours {
+    font-size: 0.7rem;
+}
+.icon-check-success {
+    font-size: 4rem;
+}
 /* 
  * Composants UI modernes pour l'application de gestion immobilière
  * Design system cohérent et réutilisable
