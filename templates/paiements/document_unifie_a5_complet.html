@@ -750,8 +750,23 @@
         <div style="margin-top: 4mm; margin-bottom: 4mm; clear: both; width: 100%; border: 2px solid #000; padding: 2mm; background-color: #f9f9f9;">
             <div style="font-weight: 900; color: #000; font-size: 11px; margin-bottom: 1mm;">Note:</div>
             <div style="font-size: 10px; font-weight: bold; color: #000; line-height: 1.5;">
-                {% if est_paiement_partiel and info_paiement_partiel %}
-                    Paiement partiel - Période {{ paiement.mois_paye|default:"courante" }}
+                {% if est_paiement_partiel and info_paiement_partiel and info_paiement_partiel.est_reliquat %}
+                    <strong style="color: #d9534f; font-size: 11px;">⚠️ PAIEMENT DE RELIQUAT / COMPLETION</strong><br>
+                    • Ce paiement constitue {% if info_paiement_partiel.est_complet %}la complétion finale{% else %}une complétion partielle{% endif %} du reliquat pour {{ paiement.mois_paye|default:"le mois courant" }}<br>
+                    {% if info_paiement_partiel.date_paiement_initial %}
+                    • Paiement initial du : {{ info_paiement_partiel.date_paiement_initial|date:'d/m/Y' }}<br>
+                    {% endif %}
+                    • Paiement n°{{ info_paiement_partiel.numero_paiement_dans_sequence }} sur {{ info_paiement_partiel.nombre_paiements }} pour ce mois<br>
+                    {% if info_paiement_partiel.est_complet %}
+                    • <strong style="color: #5cb85c;">✓ RELIQUAT ENTIÈREMENT SOLDÉ</strong>
+                    {% else %}
+                    • Reste à payer : <strong>{{ info_paiement_partiel.montant_restant|floatformat:0 }} F CFA</strong>
+                    {% endif %}
+                {% elif est_paiement_partiel and info_paiement_partiel %}
+                    <strong style="color: #f0ad4e;">⚠️ PAIEMENT PARTIEL</strong><br>
+                    • Paiement partiel reçu en bonne et due forme pour la période {{ paiement.mois_paye|default:"courante" }}<br>
+                    • Montant payé : {{ montant_total|floatformat:0 }} F CFA sur {{ info_paiement_partiel.montant_du_mois|floatformat:0 }} F CFA<br>
+                    • Reste à payer : <strong>{{ info_paiement_partiel.montant_restant|floatformat:0 }} F CFA</strong>
                 {% elif document_type == 'paiement_caution' %}
                     Caution remboursable en fin de contrat
                 {% elif document_type == 'paiement_avance' or paiement.type_paiement == 'avance' %}

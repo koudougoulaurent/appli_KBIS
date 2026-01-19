@@ -63,6 +63,19 @@ class DocumentUnifieA5ServiceComplet:
             else:
                 raise ValueError(f"Type de document non supporté: {document_type}")
             
+            # NOUVEAU : Modifier le titre si c'est un paiement de reliquat ou de complétion
+            if document_type.startswith('paiement_') and context.get('info_paiement_partiel'):
+                info_partiel = context.get('info_paiement_partiel')
+                if info_partiel.get('est_reliquat'):
+                    # C'est un paiement de complétion/reliquat
+                    if info_partiel.get('est_complet'):
+                        document_title = 'QUITTANCE DE PAIEMENT - COMPLETION DE RELIQUAT'
+                    else:
+                        document_title = 'QUITTANCE DE PAIEMENT - RELIQUAT PARTIEL'
+                elif info_partiel.get('est_partiel'):
+                    # C'est le premier paiement partiel
+                    document_title = 'QUITTANCE DE PAIEMENT PARTIEL'
+            
             # Ajouter les données communes
             context.update({
                 'document_title': document_title,
@@ -189,6 +202,30 @@ class DocumentUnifieA5ServiceComplet:
             total_paye = calcul_restant.get('total_paye', 0)
             montant_restant = calcul_restant.get('montant_restant', 0)
             
+            # NOUVEAU : Détecter si c'est un paiement de complétion de reliquat
+            est_reliquat = False
+            date_paiement_initial = None
+            numero_paiement_dans_sequence = 1
+            
+            # Méthode 1 : Vérifier les notes
+            notes_paiement = getattr(paiement, 'notes', '') or ''
+            if 'complétion' in notes_paiement.lower() or 'reliquat' in notes_paiement.lower():
+                est_reliquat = True
+            
+            # Méthode 2 : Si ce n'est pas le premier paiement du mois
+            if paiements_partiels_mois.count() > 1:
+                # Trouver la position de ce paiement dans la séquence
+                for index, p in enumerate(paiements_partiels_mois, start=1):
+                    if p.id == paiement.id:
+                        numero_paiement_dans_sequence = index
+                        if index > 1:
+                            est_reliquat = True
+                            # Récupérer le premier paiement de la séquence
+                            premier_paiement = paiements_partiels_mois.first()
+                            if premier_paiement:
+                                date_paiement_initial = premier_paiement.date_paiement
+                        break
+            
             info_paiement_partiel = {
                 'est_partiel': True,
                 'montant_du_mois': float(montant_du_mois),
@@ -198,6 +235,10 @@ class DocumentUnifieA5ServiceComplet:
                 'nombre_paiements': calcul_restant.get('nombre_paiements', 0),
                 'paiements_partiels': paiements_partiels_mois,
                 'pourcentage_paye': (float(total_paye) / float(montant_du_mois) * 100) if montant_du_mois > 0 else 0,
+                # NOUVEAU : Informations de reliquat
+                'est_reliquat': est_reliquat,
+                'date_paiement_initial': date_paiement_initial,
+                'numero_paiement_dans_sequence': numero_paiement_dans_sequence,
             }
         
         return {
