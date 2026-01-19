@@ -656,24 +656,32 @@ class ServicePaiementPartiel:
             # Elle peut être réactivée si nécessaire mais ralentit considérablement l'application
             paiements_partiels_non_synchronises = []
             
-            # Grouper par contrat
+            # Grouper par contrat - CORRECTION : Inclure TOUS les contrats avec paiements partiels
             contrats_avec_partiels = {}
             
-            # D'abord, identifier les contrats avec paiements partiels actifs
-            for paiement in paiements_partiels_actifs:
+            # ÉTAPE 1 : D'abord, créer une entrée pour CHAQUE contrat ayant des paiements partiels
+            # (même si tous sont complétés) en parcourant TOUS les paiements partiels
+            for paiement in paiements_partiels_tous:
                 contrat_id = paiement.contrat.id
                 if contrat_id not in contrats_avec_partiels:
                     contrats_avec_partiels[contrat_id] = {
                         'contrat': paiement.contrat,
-                        'paiements_partiels': [],
+                        'paiements_partiels': [],  # Paiements avec reliquat actif
                         'paiements_partiels_tous': [],  # Tous les paiements partiels (historique complet)
                         'montant_total_restant': Decimal('0')
                     }
                 
-                contrats_avec_partiels[contrat_id]['paiements_partiels'].append(paiement)
-                contrats_avec_partiels[contrat_id]['montant_total_restant'] += paiement.montant_restant_du
+                # Ajouter à la liste complète
+                if paiement not in contrats_avec_partiels[contrat_id]['paiements_partiels_tous']:
+                    contrats_avec_partiels[contrat_id]['paiements_partiels_tous'].append(paiement)
+                
+                # Si le paiement a un reliquat actif, l'ajouter aussi à la liste des actifs
+                if paiement.montant_restant_du and paiement.montant_restant_du > 0:
+                    if paiement not in contrats_avec_partiels[contrat_id]['paiements_partiels']:
+                        contrats_avec_partiels[contrat_id]['paiements_partiels'].append(paiement)
+                        contrats_avec_partiels[contrat_id]['montant_total_restant'] += paiement.montant_restant_du
             
-            # Ajouter les paiements partiels non synchronisés
+            # ÉTAPE 2 : Ajouter les paiements partiels non synchronisés (si réactivé)
             for paiement in paiements_partiels_non_synchronises:
                 contrat_id = paiement.contrat.id
                 if contrat_id not in contrats_avec_partiels:
@@ -684,24 +692,15 @@ class ServicePaiementPartiel:
                         'montant_total_restant': Decimal('0')
                     }
                 
-                if paiement.montant_restant_du > 0:
-                    contrats_avec_partiels[contrat_id]['paiements_partiels'].append(paiement)
-                    contrats_avec_partiels[contrat_id]['montant_total_restant'] += paiement.montant_restant_du
-            
-            # Ensuite, ajouter TOUS les paiements partiels (y compris complétés) pour chaque contrat
-            for paiement in paiements_partiels_tous:
-                contrat_id = paiement.contrat.id
-                if contrat_id in contrats_avec_partiels:
-                    # Ajouter à la liste complète si pas déjà présent
-                    if paiement not in contrats_avec_partiels[contrat_id]['paiements_partiels_tous']:
-                        contrats_avec_partiels[contrat_id]['paiements_partiels_tous'].append(paiement)
-            
-            # Ajouter aussi les paiements partiels non synchronisés à la liste complète
-            for paiement in paiements_partiels_non_synchronises:
-                contrat_id = paiement.contrat.id
-                if contrat_id in contrats_avec_partiels:
-                    if paiement not in contrats_avec_partiels[contrat_id]['paiements_partiels_tous']:
-                        contrats_avec_partiels[contrat_id]['paiements_partiels_tous'].append(paiement)
+                # Ajouter à la liste complète
+                if paiement not in contrats_avec_partiels[contrat_id]['paiements_partiels_tous']:
+                    contrats_avec_partiels[contrat_id]['paiements_partiels_tous'].append(paiement)
+                
+                # Ajouter à la liste des actifs si reliquat
+                if paiement.montant_restant_du and paiement.montant_restant_du > 0:
+                    if paiement not in contrats_avec_partiels[contrat_id]['paiements_partiels']:
+                        contrats_avec_partiels[contrat_id]['paiements_partiels'].append(paiement)
+                        contrats_avec_partiels[contrat_id]['montant_total_restant'] += paiement.montant_restant_du
             
             # OPTIMISATION : Simplifier le recalcul - utiliser les valeurs déjà en base
             # Le recalcul dynamique est très coûteux, on utilise les valeurs existantes
