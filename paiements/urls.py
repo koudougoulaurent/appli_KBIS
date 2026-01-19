@@ -1,7 +1,7 @@
 from django.urls import path, include
-from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges, views_retrait_ameliore, views_avance, views_document_unifie, views_document_unifie_complet, views_avance_corrige, views_retraits_temporels, views_validation_paiements, views_ajax_historique, views_correction_avances
+from . import views_paiements_partiels_crud as views_crud
 # from . import views_locataire_paiements
 
 app_name = 'paiements'
@@ -269,6 +269,11 @@ urlpatterns = [
     path('paiements-partiels/contrats/', views.liste_contrats_paiements_partiels, name='liste_contrats_paiements_partiels'),
     path('paiements-partiels/<int:paiement_id>/completer/', views.completer_reliquat, name='completer_reliquat'),
     path('historique-partiel/<int:contrat_id>/<int:mois>/<int:annee>/', views.historique_paiements_partiels, name='historique_paiements_partiels'),
+    
+    # 🔧 CRUD Paiements partiels (PRIVILEGE)
+    path('paiements-partiels/<int:paiement_id>/detail/', views_crud.detail_paiement_partiel, name='detail_paiement_partiel'),
+    path('paiements-partiels/<int:paiement_id>/modifier/', views_crud.modifier_paiement_partiel, name='modifier_paiement_partiel'),
+    path('paiements-partiels/<int:paiement_id>/supprimer/', views_crud.supprimer_paiement_partiel, name='supprimer_paiement_partiel'),
     
     # 📄 GÉNÉRATION PDF DES RETRAITS AVEC TEMPLATES
     path('retraits/<int:retrait_id>/pdf/', views_retrait_ameliore.generer_pdf_retrait, name='generer_pdf_retrait'),

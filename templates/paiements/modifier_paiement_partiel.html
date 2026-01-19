@@ -1,0 +1,214 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Modifier le Paiement Partiel{% endblock %}
+
+{% block extra_css %}
+<style>
+    .header-section {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(240, 147, 251, 0.3);
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 15px;
+        padding: 2.5rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        border: 2px solid #e9ecef;
+    }
+    
+    .alert-warning-custom {
+        background: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%);
+        color: white;
+        border: none;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="header-section">
+        <h2>
+            <i class="bi bi-pencil-square"></i>
+            Modifier le Paiement Partiel
+        </h2>
+        <div class="subtitle">
+            Contrat: {{ contrat.numero_contrat }} | Locataire: {{ contrat.locataire.get_nom_complet }}
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Avertissement -->
+    <div class="alert-warning-custom">
+        <h5><i class="bi bi-exclamation-triangle-fill me-2"></i>Attention</h5>
+        <p class="mb-0">
+            La modification d'un paiement partiel peut affecter le calcul des reliquats.
+            Les montants restants seront automatiquement recalculés.
+        </p>
+    </div>
+
+    <!-- Informations du paiement actuel -->
+    <div class="info-card">
+        <h4><i class="bi bi-info-circle me-2"></i>Informations Actuelles</h4>
+        <div class="row">
+            <div class="col-md-3">
+                <p><strong>Montant actuel:</strong> {{ paiement.montant|intcomma }} F CFA</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Mois payé:</strong> {{ paiement.mois_paye }}</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Date paiement:</strong> {{ paiement.date_paiement|date:"d/m/Y" }}</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Statut:</strong> 
+                    <span class="badge badge-{{ paiement.statut|yesno:'success,warning' }}">
+                        {{ paiement.get_statut_display }}
+                    </span>
+                </p>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-4">
+                <p><strong>Montant dû (mois):</strong> {{ calcul.montant_du_mois|intcomma }} F CFA</p>
+            </div>
+            <div class="col-md-4">
+                <p><strong>Total payé:</strong> {{ calcul.total_paye|intcomma }} F CFA</p>
+            </div>
+            <div class="col-md-4">
+                <p><strong>Reste à payer:</strong> 
+                    <span class="badge badge-{% if calcul.montant_restant == 0 %}success{% else %}danger{% endif %}">
+                        {{ calcul.montant_restant|intcomma }} F CFA
+                    </span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulaire de modification -->
+    <div class="form-section">
+        <h3><i class="bi bi-pencil-fill me-2"></i>Modifier les Informations</h3>
+        
+        <form method="post" id="edit-form">
+            {% csrf_token %}
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="{{ form.montant.id_for_label }}">
+                            <i class="bi bi-cash"></i> Montant *
+                        </label>
+                        {{ form.montant }}
+                        {% if form.montant.errors %}
+                            <div class="text-danger">{{ form.montant.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="{{ form.mode_paiement.id_for_label }}">
+                            <i class="bi bi-credit-card"></i> Mode de Paiement *
+                        </label>
+                        {{ form.mode_paiement }}
+                        {% if form.mode_paiement.errors %}
+                            <div class="text-danger">{{ form.mode_paiement.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="{{ form.date_paiement.id_for_label }}">
+                            <i class="bi bi-calendar-event"></i> Date du Paiement *
+                        </label>
+                        {{ form.date_paiement }}
+                        {% if form.date_paiement.errors %}
+                            <div class="text-danger">{{ form.date_paiement.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="{{ form.statut.id_for_label }}">
+                            <i class="bi bi-check-circle"></i> Statut *
+                        </label>
+                        {{ form.statut }}
+                        {% if form.statut.errors %}
+                            <div class="text-danger">{{ form.statut.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="{{ form.notes.id_for_label }}">
+                    <i class="bi bi-sticky"></i> Notes
+                </label>
+                {{ form.notes }}
+                {% if form.notes.errors %}
+                    <div class="text-danger">{{ form.notes.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="{% url 'paiements:liste_contrats_paiements_partiels' %}" class="btn btn-secondary btn-lg me-3">
+                    <i class="bi bi-x-circle"></i> Annuler
+                </a>
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-check-circle"></i> Enregistrer les Modifications
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('edit-form');
+    
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const confirmation = confirm(
+                'Confirmez-vous la modification de ce paiement partiel ?\n\n' +
+                'Les montants restants seront automatiquement recalculés.'
+            );
+            
+            if (!confirmation) {
+                e.preventDefault();
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
