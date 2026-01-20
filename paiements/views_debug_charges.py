@@ -3,7 +3,8 @@ Vue de débogage temporaire pour vérifier les charges bailleur
 """
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from paiements.models import RecapMensuel, ChargeBailleur
+from paiements.models import RecapMensuel
+from proprietes.models import ChargesBailleur
 from decimal import Decimal
 
 
@@ -17,20 +18,18 @@ def debug_charges_recap(request, recap_id):
         recap = RecapMensuel.objects.get(id=recap_id)
         
         # Récupérer TOUTES les charges du bailleur pour ce mois (tous statuts)
-        toutes_charges = ChargeBailleur.objects.filter(
+        toutes_charges = ChargesBailleur.objects.filter(
             bailleur=recap.bailleur,
             date_charge__year=recap.mois_recap.year,
             date_charge__month=recap.mois_recap.month,
         )
         
-        # Récupérer seulement les charges 'valide'
-        charges_valides = ChargeBailleur.objects.filter(
+        # Récupérer seulement les charges 'valide' et 'en_attente'
+        charges_valides = ChargesBailleur.objects.filter(
             bailleur=recap.bailleur,
             date_charge__year=recap.mois_recap.year,
             date_charge__month=recap.mois_recap.month,
-            statut__in=['valide']
-        ).exclude(
-            retrait_utilise__isnull=False
+            statut__in=['en_attente', 'valide']
         )
         
         # Préparer les détails

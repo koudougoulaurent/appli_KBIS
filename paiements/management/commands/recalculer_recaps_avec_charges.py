@@ -5,7 +5,8 @@ en prenant en compte les charges bailleur
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from decimal import Decimal
-from paiements.models import RecapMensuel, ChargeBailleur
+from paiements.models import RecapMensuel
+from proprietes.models import ChargesBailleur
 import logging
 
 logger = logging.getLogger(__name__)
@@ -88,13 +89,11 @@ class Command(BaseCommand):
 
             try:
                 # Récupérer les charges bailleur pour ce mois
-                charges_bailleur_mois = ChargeBailleur.objects.filter(
+                charges_bailleur_mois = ChargesBailleur.objects.filter(
                     bailleur=recap.bailleur,
                     date_charge__year=recap.mois_recap.year,
                     date_charge__month=recap.mois_recap.month,
-                    statut__in=['valide']
-                ).exclude(
-                    retrait_utilise__isnull=False
+                    statut__in=['en_attente', 'valide']
                 )
 
                 nombre_charges = charges_bailleur_mois.count()

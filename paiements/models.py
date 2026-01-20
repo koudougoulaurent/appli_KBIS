@@ -153,7 +153,7 @@ class RecapMensuel(models.Model):
         """Calcule les totaux pour le bailleur avec les charges dynamiques et les paiements réels."""
         from decimal import Decimal
         from django.db.models import Sum, Q
-        from paiements.models import ChargeBailleur
+        from proprietes.models import ChargesBailleur
         from datetime import datetime, timedelta
         
         try:
@@ -318,13 +318,11 @@ class RecapMensuel(models.Model):
             # Important : On récupère les charges validées qui n'ont pas encore été utilisées dans un retrait
             # Chaque charge ne doit être comptée qu'une seule fois
             # Les charges avec statut 'utilise' ont déjà été déduites dans un retrait précédent
-            charges_bailleur_mois = ChargeBailleur.objects.filter(
+            charges_bailleur_mois = ChargesBailleur.objects.filter(
                 bailleur=self.bailleur,
                 date_charge__year=self.mois_recap.year,
                 date_charge__month=self.mois_recap.month,
-                statut__in=['valide']  # Seulement les charges validées et non encore utilisées
-            ).exclude(
-                retrait_utilise__isnull=False  # Exclure les charges déjà liées à un retrait
+                statut__in=['en_attente', 'valide']  # Charges validées et en attente
             )
             
             # Calculer le total des charges en utilisant le montant restant ou le montant total
