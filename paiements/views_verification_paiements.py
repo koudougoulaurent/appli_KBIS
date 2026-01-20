@@ -2,7 +2,7 @@
 Vues pour vérifier et corriger les incohérences de paiements
 """
 from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
 from datetime import datetime
@@ -19,11 +19,15 @@ def is_privilege_or_admin(user):
 
 
 @login_required
-@user_passes_test(is_privilege_or_admin)
 def verification_mois_paye(request):
     """
     Affiche tous les paiements avec leurs mois_paye et détecte les incohérences
     """
+    # Vérification manuelle des permissions
+    if not is_privilege_or_admin(request.user):
+        messages.error(request, "❌ Accès refusé. Cette fonctionnalité est réservée aux groupes PRIVILEGE et ADMINISTRATION.")
+        return redirect('core:dashboard')
+    
     # Récupérer tous les contrats actifs
     contrats = Contrat.objects.filter(est_actif=True, is_deleted=False).order_by('numero_contrat')
     
@@ -145,11 +149,15 @@ def verification_mois_paye(request):
 
 
 @login_required
-@user_passes_test(is_privilege_or_admin)
 def lancer_correction_mois_paye(request):
     """
     Lance la correction manuelle des mois_paye incohérents
     """
+    # Vérification manuelle des permissions
+    if not is_privilege_or_admin(request.user):
+        messages.error(request, "❌ Accès refusé. Cette fonctionnalité est réservée aux groupes PRIVILEGE et ADMINISTRATION.")
+        return redirect('core:dashboard')
+    
     if request.method != 'POST':
         messages.error(request, "Méthode non autorisée")
         return redirect('paiements:verification_mois_paye')
@@ -197,11 +205,15 @@ def lancer_correction_mois_paye(request):
 
 
 @login_required
-@user_passes_test(is_privilege_or_admin)
 def afficher_logs_correction(request):
     """
     Affiche les logs de la dernière correction
     """
+    # Vérification manuelle des permissions
+    if not is_privilege_or_admin(request.user):
+        messages.error(request, "❌ Accès refusé. Cette fonctionnalité est réservée aux groupes PRIVILEGE et ADMINISTRATION.")
+        return redirect('core:dashboard')
+    
     output = request.session.get('correction_output', '')
     
     if not output:

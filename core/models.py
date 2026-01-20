@@ -509,6 +509,18 @@ class ConfigurationEntreprise(models.Model):
     couleur_principale = models.CharField(max_length=7, default="#2c5aa0", help_text="Couleur hexadécimale")
     couleur_secondaire = models.CharField(max_length=7, default="#f8f9fa", help_text="Couleur hexadécimale")
     
+    # Paramètres de caution et avance
+    nombre_mois_caution = models.PositiveIntegerField(
+        default=3,
+        verbose_name="Nombre de mois de caution",
+        help_text="Nombre de mois de loyer pour la caution (généralement 3)"
+    )
+    nombre_mois_avance = models.PositiveIntegerField(
+        default=1,
+        verbose_name="Nombre de mois d'avance",
+        help_text="Nombre de mois de loyer à payer en avance (généralement 1)"
+    )
+    
     # Métadonnées
     active = models.BooleanField(default=True)
     date_creation = models.DateTimeField(auto_now_add=True)

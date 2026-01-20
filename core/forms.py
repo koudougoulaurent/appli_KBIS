@@ -102,6 +102,18 @@ class ConfigurationEntrepriseForm(forms.ModelForm):
                 'type': 'color',
                 'title': 'Couleur secondaire de votre entreprise'
             }),
+            'nombre_mois_caution': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '1',
+                'max': '12',
+                'placeholder': '3'
+            }),
+            'nombre_mois_avance': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '0',
+                'max': '12',
+                'placeholder': '1'
+            }),
             'iban': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'IBAN de votre compte bancaire'

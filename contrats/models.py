@@ -471,13 +471,20 @@ class Contrat(models.Model):
         
         # Calculer automatiquement la caution et l'avance si non spécifiés
         from decimal import Decimal
+        from core.models import ConfigurationEntreprise
+        
         try:
+            # Récupérer la configuration entreprise pour les paramètres de caution/avance
+            config = ConfigurationEntreprise.get_configuration_active()
+            nombre_mois_caution = config.nombre_mois_caution if config else 3
+            nombre_mois_avance = config.nombre_mois_avance if config else 1
+            
             loyer_decimal = Decimal(self.loyer_mensuel) if self.loyer_mensuel else Decimal('0')
             if self.depot_garantie == "0.00" or not self.depot_garantie:
-                self.depot_garantie = str(loyer_decimal * 3)  # 3 mois de caution
+                self.depot_garantie = str(loyer_decimal * nombre_mois_caution)  # Caution configurable
             
             if self.avance_loyer == "0.00" or not self.avance_loyer:
-                self.avance_loyer = str(loyer_decimal)  # 1 mois d'avance
+                self.avance_loyer = str(loyer_decimal * nombre_mois_avance)  # Avance configurable
         except (ValueError, TypeError):
             # En cas d'erreur de conversion, utiliser des valeurs par défaut
             if not self.depot_garantie:
