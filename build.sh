@@ -26,8 +26,8 @@ echo "🔄 Synchronisation des consommations d'avances..."
 python manage.py synchroniser_consommations_avances || echo "⚠️  Erreur non bloquante lors de la synchronisation des avances"
 
 # 5. Recalcul des récapitulatifs avec charges bailleur
-echo "🔢 Recalcul des récapitulatifs mensuels..."
-python manage.py recalculer_recaps || echo "⚠️  Erreur non bloquante lors du recalcul des récapitulatifs"
+echo "🔢 Recalcul des récapitulatifs mensuels avec charges bailleur..."
+python manage.py recalculer_recaps_avec_charges || echo "⚠️  Erreur non bloquante lors du recalcul des récapitulatifs"
 
 # 6. Complétion automatique des reliquats de paiements partiels
 echo "💰 Complétion des reliquats de paiements partiels..."
