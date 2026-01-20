@@ -254,13 +254,29 @@ class ServicePaiementPartiel:
     def determiner_mois_a_regler(contrat):
         """
         Détermine le mois à régler.
-        RÈGLE ABSOLUE : Le mois attendu est TOUJOURS le mois suivant le dernier paiement validé.
-        Si aucun paiement n'existe, retourne le mois suivant le mois actuel.
+        RÈGLE ABSOLUE : Le mois attendu est TOUJOURS le premier mois NON payé et NON couvert par une avance.
         """
         try:
             # Utiliser la méthode qui calcule le prochain mois (toujours = dernier paiement + 1 mois)
             from .services_avance import ServiceGestionAvance
             prochain_mois = ServiceGestionAvance.calculer_prochain_mois_paiement(contrat)
+            
+            # CRITIQUE : Vérifier si ce mois est déjà couvert par une avance active
+            # Boucler jusqu'à trouver un mois NON couvert (max 24 mois)
+            tentatives = 0
+            while tentatives < 24:
+                # Vérifier si le mois est couvert par une avance
+                est_couvert = ServiceGestionAvance.verifier_mois_couvert_par_avance(
+                    contrat, prochain_mois
+                )
+                
+                if not est_couvert:
+                    # Ce mois n'est pas couvert, c'est le bon !
+                    break
+                
+                # Ce mois est couvert par une avance, passer au suivant
+                prochain_mois = prochain_mois + relativedelta(months=1)
+                tentatives += 1
             
             # Convertir en format "mois année" (ex: "décembre 2024")
             mois_francais = [

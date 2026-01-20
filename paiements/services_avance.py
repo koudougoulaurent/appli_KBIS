@@ -637,6 +637,42 @@ class ServiceGestionAvance:
         ).order_by('-date_avance')
     
     @staticmethod
+    def verifier_mois_couvert_par_avance(contrat, date_mois):
+        """
+        Vérifie si un mois donné est couvert par une avance active.
+        
+        Args:
+            contrat: Le contrat à vérifier
+            date_mois: Date du mois à vérifier (date ou datetime)
+        
+        Returns:
+            bool: True si le mois est couvert par une avance active, False sinon
+        """
+        try:
+            # Convertir en date si nécessaire
+            if isinstance(date_mois, datetime):
+                date_mois = date_mois.date()
+            
+            # Normaliser au premier jour du mois
+            mois_a_verifier = date_mois.replace(day=1)
+            
+            # Chercher les avances actives qui couvrent ce mois
+            avances_couvrant_mois = AvanceLoyer.objects.filter(
+                contrat=contrat,
+                statut='active',
+                montant_restant__gt=0,
+                mois_debut_couverture__lte=mois_a_verifier,
+                mois_fin_couverture__gte=mois_a_verifier
+            )
+            
+            return avances_couvrant_mois.exists()
+            
+        except Exception as e:
+            # En cas d'erreur, considérer que le mois n'est pas couvert
+            print(f"Erreur lors de la vérification du mois couvert : {str(e)}")
+            return False
+    
+    @staticmethod
     def get_historique_paiements_contrat(contrat, mois_debut=None, mois_fin=None):
         """
         Retourne l'historique des paiements pour un contrat
