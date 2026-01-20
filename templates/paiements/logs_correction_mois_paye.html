@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Logs de Correction - KBIS Immobilier{% endblock %}
+
+{% block extra_css %}
+<style>
+    .logs-container {
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 13px;
+        padding: 20px;
+        border-radius: 8px;
+        max-height: 600px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+    .logs-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 8px 8px 0 0;
+        padding: 15px 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-file-alt"></i> Logs de Correction</h2>
+                    <p class="text-muted">Résultat de la dernière correction automatique</p>
+                </div>
+                <div>
+                    <a href="{% url 'paiements:verification_mois_paye' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Retour à la Vérification
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logs -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="logs-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-terminal"></i> Sortie de la Commande
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="logs-container">{{ logs }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>Info:</strong> Ces logs montrent toutes les corrections appliquées lors de la dernière exécution de la commande.
+                Si des paiements ont été corrigés, ils apparaissent avec leur ancien et nouveau <code>mois_paye</code>.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

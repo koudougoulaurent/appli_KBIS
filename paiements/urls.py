@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges, views_retrait_ameliore, views_avance, views_document_unifie, views_document_unifie_complet, views_avance_corrige, views_retraits_temporels, views_validation_paiements, views_ajax_historique, views_correction_avances, views_debug_charges
+from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges, views_retrait_ameliore, views_avance, views_document_unifie, views_document_unifie_complet, views_avance_corrige, views_retraits_temporels, views_validation_paiements, views_ajax_historique, views_correction_avances, views_debug_charges, views_verification_paiements
 from . import views_paiements_partiels_crud as views_crud
 # from . import views_locataire_paiements
 
@@ -323,4 +323,9 @@ urlpatterns = [
         # 🔄 AJAX POUR HISTORIQUE DYNAMIQUE
         path('ajax/contrats-actifs/', views_ajax_historique.get_contrats_actifs_ajax, name='ajax_contrats_actifs'),
         path('ajax/locataires-actifs/', views_ajax_historique.get_locataires_actifs_ajax, name='ajax_locataires_actifs'),
+        
+        # 🔍 VÉRIFICATION ET CORRECTION DES PAIEMENTS
+        path('verification-mois-paye/', views_verification_paiements.verification_mois_paye, name='verification_mois_paye'),
+        path('lancer-correction-mois-paye/', views_verification_paiements.lancer_correction_mois_paye, name='lancer_correction_mois_paye'),
+        path('logs-correction-mois-paye/', views_verification_paiements.afficher_logs_correction, name='afficher_logs_correction'),
 ]

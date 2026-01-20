@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Vérification des Paiements - KBIS Immobilier{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card-incoherent {
+        border-left: 4px solid #dc3545 !important;
+    }
+    .card-coherent {
+        border-left: 4px solid #28a745 !important;
+    }
+    .paiement-incoherent {
+        background-color: #fff3cd;
+        border-left: 3px solid #ffc107;
+    }
+    .paiement-coherent {
+        background-color: #d4edda;
+    }
+    .badge-incoherent {
+        background-color: #dc3545;
+    }
+    .badge-coherent {
+        background-color: #28a745;
+    }
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- En-tête -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-search-dollar"></i> Vérification des Mois Payés</h2>
+                    <p class="text-muted">Détection automatique des incohérences dans les paiements</p>
+                </div>
+                <div>
+                    <a href="{% url 'core:dashboard' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Retour
+                    </a>
+                    <form method="POST" action="{% url 'paiements:lancer_correction_mois_paye' %}" style="display: inline;" 
+                          onsubmit="return confirm('⚠️ Êtes-vous sûr de vouloir lancer la correction automatique ?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-magic"></i> Corriger Automatiquement
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="stats-card">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <h3 class="mb-0">{{ total_contrats }}</h3>
+                        <p class="mb-0">Contrat(s) avec paiements</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h3 class="mb-0 {% if total_incoherences > 0 %}text-warning{% endif %}">
+                            {{ total_incoherences }}
+                        </h3>
+                        <p class="mb-0">Incohérence(s) détectée(s)</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h3 class="mb-0">
+                            {% if total_incoherences == 0 %}
+                                <i class="fas fa-check-circle"></i>
+                            {% else %}
+                                <i class="fas fa-exclamation-triangle"></i>
+                            {% endif %}
+                        </h3>
+                        <p class="mb-0">
+                            {% if total_incoherences == 0 %}
+                                Système sain
+                            {% else %}
+                                Action requise
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert">
+                    <span>&times;</span>
+                </button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Bouton pour voir les logs -->
+    {% if request.session.correction_output %}
+        <div class="row mb-3">
+            <div class="col-12">
+                <a href="{% url 'paiements:afficher_logs_correction' %}" class="btn btn-info btn-block">
+                    <i class="fas fa-file-alt"></i> Voir les Logs de la Dernière Correction
+                </a>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Liste des contrats -->
+    {% if total_incoherences == 0 and total_contrats > 0 %}
+        <div class="alert alert-success text-center">
+            <h4><i class="fas fa-check-circle"></i> Aucune incohérence détectée !</h4>
+            <p class="mb-0">Tous les paiements sont cohérents dans leur séquence.</p>
+        </div>
+    {% elif total_contrats == 0 %}
+        <div class="alert alert-info text-center">
+            <h4><i class="fas fa-info-circle"></i> Aucun contrat avec paiements</h4>
+            <p class="mb-0">Il n'y a pas encore de paiements de loyer enregistrés.</p>
+        </div>
+    {% endif %}
+
+    {% for resultat in resultats %}
+        {% if resultat.a_incoherence %}
+            <div class="card card-incoherent mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        {{ resultat.contrat }}
+                        <span class="badge badge-light float-right">
+                            {{ resultat.paiements|length }} paiement(s)
+                        </span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Date Paiement</th>
+                                    <th>Mois Payé (BDD)</th>
+                                    <th>Montant</th>
+                                    <th>Statut</th>
+                                    <th>Vérification</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in resultat.paiements %}
+                                    <tr class="{% if p.est_incoherent %}paiement-incoherent{% else %}paiement-coherent{% endif %}">
+                                        <td>
+                                            <a href="{% url 'paiements:detail_paiement' p.paiement.id %}" target="_blank">
+                                                #{{ p.paiement.id }}
+                                            </a>
+                                        </td>
+                                        <td>{{ p.paiement.date_paiement|date:"d/m/Y" }}</td>
+                                        <td>
+                                            <strong>{{ p.paiement.mois_paye }}</strong>
+                                            {% if p.est_incoherent and p.mois_attendu %}
+                                                <br>
+                                                <small class="text-danger">
+                                                    → Devrait être: <strong>{{ p.mois_attendu }}</strong>
+                                                </small>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ p.paiement.montant|floatformat:0 }} F CFA</td>
+                                        <td>
+                                            <span class="badge badge-{% if p.paiement.statut == 'valide' %}success{% else %}info{% endif %}">
+                                                {{ p.paiement.get_statut_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if p.est_incoherent %}
+                                                <span class="badge badge-incoherent">
+                                                    <i class="fas fa-times"></i> {{ p.message }}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge badge-coherent">
+                                                    <i class="fas fa-check"></i> {{ p.message }}
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
+
+    <!-- Contrats sans incohérence (affichage réduit) -->
+    {% if resultats %}
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-check-circle"></i>
+                    Contrats sans incohérence
+                    <button class="btn btn-sm btn-light float-right" type="button" data-toggle="collapse" 
+                            data-target="#contratsOk" aria-expanded="false">
+                        <i class="fas fa-eye"></i> Afficher/Masquer
+                    </button>
+                </h5>
+            </div>
+            <div id="contratsOk" class="collapse">
+                <div class="card-body">
+                    {% for resultat in resultats %}
+                        {% if not resultat.a_incoherence %}
+                            <div class="mb-2 p-2 border-left border-success">
+                                <strong>{{ resultat.contrat }}</strong>
+                                <span class="badge badge-success ml-2">
+                                    {{ resultat.paiements|length }} paiement(s) cohérent(s)
+                                </span>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-dismiss des messages après 5 secondes
+    setTimeout(function() {
+        $('.alert').fadeOut('slow');
+    }, 5000);
+</script>
+{% endblock %}

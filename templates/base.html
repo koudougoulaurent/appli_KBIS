@@ -597,6 +597,19 @@
                                 <span class="d-inline d-lg-none">Config</span>
                             </a>
                         </li>
+                        {% if user.groups.all|length > 0 %}
+                            {% for group in user.groups.all %}
+                                {% if group.name == 'PRIVILEGE' or group.name == 'ADMINISTRATION' %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'paiements:verification_mois_paye' %}">
+                                <i class="bi bi-shield-check"></i> 
+                                <span class="d-none d-lg-inline">Vérification Paiements</span>
+                                <span class="d-inline d-lg-none">Vérif</span>
+                            </a>
+                        </li>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
                         
                         <!-- Séparateur -->
                         <li class="nav-item mt-3">
