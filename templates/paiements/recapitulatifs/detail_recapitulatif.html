@@ -244,6 +244,9 @@
                     <div class="text-center p-3">
                         <div class="h4 text-primary">{{ totaux.nombre_proprietes }}</div>
                         <div class="text-muted">Propriétés louées</div>
+                        {% if totaux.nombre_contrats_actifs %}
+                        <small class="text-info">({{ totaux.nombre_contrats_actifs }} contrat{{ totaux.nombre_contrats_actifs|pluralize }})</small>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="col-md-3">
