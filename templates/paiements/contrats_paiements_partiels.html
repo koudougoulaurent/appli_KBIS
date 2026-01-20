@@ -426,13 +426,23 @@
                                         </td>
                                         <td class="text-center">
                                             <div class="btn-group btn-group-sm" role="group">
-                                                <a href="{% url 'paiements:detail' paiement.id %}" class="btn btn-outline-primary" title="Voir détails">
+                                                <a href="{% url 'paiements:detail_paiement_partiel' paiement.id %}" class="btn btn-outline-info" title="Voir détails">
                                                     <i class="fa-solid fa-eye"></i>
                                                 </a>
                                                 {% if paiement.montant_restant_du > 0 %}
-                                                <a href="{% url 'paiements:completer_reliquat' paiement.id %}" class="btn btn-outline-warning" title="Compléter">
-                                                    <i class="fa-solid fa-pen-to-square"></i>
+                                                <a href="{% url 'paiements:completer_reliquat' paiement.id %}" class="btn btn-outline-success" title="Compléter le reliquat">
+                                                    <i class="fa-solid fa-plus-circle"></i>
                                                 </a>
+                                                {% endif %}
+                                                {% if user.groups.all.0.name == 'PRIVILEGE' or user.groups.all.0.name == 'ADMINISTRATION' %}
+                                                <a href="{% url 'paiements:modifier_paiement_partiel' paiement.id %}" class="btn btn-outline-warning" title="Modifier ce paiement">
+                                                    <i class="fa-solid fa-edit"></i>
+                                                </a>
+                                                {% endif %}
+                                                {% if user.groups.all.0.name == 'PRIVILEGE' %}
+                                                <button type="button" class="btn btn-outline-danger" title="Supprimer ce paiement" onclick="supprimerPaiementPartiel({{ paiement.id }}, '{{ paiement.montant|floatformat:0 }}')">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </button>
                                                 {% endif %}
                                             </div>
                                         </td>
@@ -466,6 +476,109 @@
 </div>
 {% endblock %}
 
+{% block extra_js %}
+<script>
+// Fonction pour supprimer un paiement partiel avec confirmation
+function supprimerPaiementPartiel(paiementId, montant) {
+    // Confirmation avec détails
+    const confirmation = confirm(
+        '⚠️ ATTENTION - Suppression de Paiement Partiel\n\n' +
+        'Êtes-vous sûr de vouloir supprimer ce paiement partiel ?\n\n' +
+        '💰 Montant : ' + montant + ' F CFA\n' +
+        '🔢 ID : #' + paiementId + '\n\n' +
+        '⚠️ Cette action :\n' +
+        '  • Supprimera le paiement (suppression logique)\n' +
+        '  • Recalculera les montants restants pour les autres paiements du mois\n' +
+        '  • Sera enregistrée dans l\'audit log\n\n' +
+        'Cette opération est réservée aux utilisateurs PRIVILEGE.'
+    );
+    
+    if (!confirmation) {
+        return;
+    }
+    
+    // Afficher un indicateur de chargement
+    const btnElement = event.target.closest('button');
+    const originalContent = btnElement.innerHTML;
+    btnElement.disabled = true;
+    btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    
+    // Envoyer la requête AJAX
+    fetch(`/paiements/paiements-partiels/${paiementId}/supprimer/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json',
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Afficher un message de succès
+            showToast('success', '✅ Paiement partiel supprimé avec succès !', data.message);
+            
+            // Recharger la page après 1 seconde
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            // Afficher l'erreur
+            showToast('error', '❌ Erreur de suppression', data.message);
+            
+            // Restaurer le bouton
+            btnElement.disabled = false;
+            btnElement.innerHTML = originalContent;
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showToast('error', '❌ Erreur réseau', 'Une erreur est survenue lors de la suppression.');
+        
+        // Restaurer le bouton
+        btnElement.disabled = false;
+        btnElement.innerHTML = originalContent;
+    });
+}
 
+// Fonction pour obtenir le token CSRF
+function getCsrfToken() {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrfToken) {
+        return csrfToken.value;
+    }
+    
+    // Fallback : chercher dans les cookies
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') {
+            return value;
+        }
+    }
+    
+    return '';
+}
 
-
+// Fonction pour afficher un toast de notification
+function showToast(type, title, message) {
+    // Créer l'élément toast
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+    
+    toast.innerHTML = `
+        <strong>${title}</strong><br>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Supprimer automatiquement après 5 secondes
+    setTimeout(() => {
+        toast.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}
