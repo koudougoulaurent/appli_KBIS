@@ -18,18 +18,19 @@ def debug_charges_recap(request, recap_id):
         recap = RecapMensuel.objects.get(id=recap_id)
         
         # Récupérer TOUTES les charges du bailleur pour ce mois (tous statuts)
+        # Les charges sont liées aux propriétés, pas directement au bailleur
         toutes_charges = ChargesBailleur.objects.filter(
-            bailleur=recap.bailleur,
+            propriete__bailleur=recap.bailleur,
             date_charge__year=recap.mois_recap.year,
             date_charge__month=recap.mois_recap.month,
         )
         
-        # Récupérer seulement les charges 'valide' et 'en_attente'
+        # Récupérer seulement les charges 'en_attente' et 'payee'
         charges_valides = ChargesBailleur.objects.filter(
-            bailleur=recap.bailleur,
+            propriete__bailleur=recap.bailleur,
             date_charge__year=recap.mois_recap.year,
             date_charge__month=recap.mois_recap.month,
-            statut__in=['en_attente', 'valide']
+            statut__in=['en_attente', 'payee']
         )
         
         # Préparer les détails

@@ -315,14 +315,13 @@ class RecapMensuel(models.Model):
                     total_loyers = total_paiements_reels
             
             # CRITIQUE : Calculer les charges bailleur pour le mois
-            # Important : On récupère les charges validées qui n'ont pas encore été utilisées dans un retrait
-            # Chaque charge ne doit être comptée qu'une seule fois
-            # Les charges avec statut 'utilise' ont déjà été déduites dans un retrait précédent
+            # Important : On récupère les charges des propriétés du bailleur pour ce mois
+            # Utiliser proprietes.ChargesBailleur qui filtre par propriete.bailleur
             charges_bailleur_mois = ChargesBailleur.objects.filter(
-                bailleur=self.bailleur,
+                propriete__bailleur=self.bailleur,
                 date_charge__year=self.mois_recap.year,
                 date_charge__month=self.mois_recap.month,
-                statut__in=['en_attente', 'valide']  # Charges validées et en attente
+                statut__in=['en_attente', 'payee']  # Statuts pour proprietes.ChargesBailleur
             )
             
             # Calculer le total des charges en utilisant le montant restant ou le montant total

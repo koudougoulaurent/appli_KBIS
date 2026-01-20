@@ -90,10 +90,10 @@ class Command(BaseCommand):
             try:
                 # Récupérer les charges bailleur pour ce mois
                 charges_bailleur_mois = ChargesBailleur.objects.filter(
-                    bailleur=recap.bailleur,
+                    propriete__bailleur=recap.bailleur,
                     date_charge__year=recap.mois_recap.year,
                     date_charge__month=recap.mois_recap.month,
-                    statut__in=['en_attente', 'valide']
+                    statut__in=['en_attente', 'payee']
                 )
 
                 nombre_charges = charges_bailleur_mois.count()
