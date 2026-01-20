@@ -207,7 +207,7 @@ class PaiementForm(forms.ModelForm):
             contrat = self.instance.contrat
             self.fields['charges_deductibles'].queryset = ChargeDeductible.objects.filter(
                 contrat=contrat, 
-                statut='validee'
+                est_valide=True  # Correction: utiliser est_valide au lieu de statut
             ).order_by('-date_charge')
     
     def clean_montant(self):
