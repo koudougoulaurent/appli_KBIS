@@ -156,9 +156,13 @@ class ContratPDFServiceUpdated:
     def _preparer_donnees_contrat(self):
         """Prépare les données du contrat pour le template."""
         # Récupérer la configuration entreprise pour les paramètres de caution
-        from core.models import ConfigurationEntreprise
-        config = ConfigurationEntreprise.get_configuration_active()
-        nombre_mois_caution = config.nombre_mois_caution if config else 3
+        try:
+            from core.models import ConfigurationEntreprise
+            config = ConfigurationEntreprise.get_configuration_active()
+            nombre_mois_caution = config.nombre_mois_caution if config else 3
+        except Exception:
+            # En cas d'erreur (ex: table n'existe pas), utiliser valeur par défaut
+            nombre_mois_caution = 3
         
         # Récupérer les montants numériques
         loyer_numerique = self._get_numeric_value(self.contrat.loyer_mensuel)

@@ -470,22 +470,40 @@ class Contrat(models.Model):
         self._valider_coherence_unite_pieces()
         
         # Calculer automatiquement la caution et l'avance si non spécifiés
+        # NOTE: Cette logique ne s'applique QUE lors de la création (pas lors de sync avances)
         from decimal import Decimal
-        from core.models import ConfigurationEntreprise
         
         try:
-            # Récupérer la configuration entreprise pour les paramètres de caution/avance
-            config = ConfigurationEntreprise.get_configuration_active()
-            nombre_mois_caution = config.nombre_mois_caution if config else 3
-            nombre_mois_avance = config.nombre_mois_avance if config else 1
-            
             loyer_decimal = Decimal(self.loyer_mensuel) if self.loyer_mensuel else Decimal('0')
-            if self.depot_garantie == "0.00" or not self.depot_garantie:
-                self.depot_garantie = str(loyer_decimal * nombre_mois_caution)  # Caution configurable
             
-            if self.avance_loyer == "0.00" or not self.avance_loyer:
-                self.avance_loyer = str(loyer_decimal * nombre_mois_avance)  # Avance configurable
-        except (ValueError, TypeError):
+            # Uniquement lors de la création OU si les valeurs sont vraiment vides/nulles
+            if (not self.pk or self.depot_garantie in ["0.00", None, ""]) and loyer_decimal > 0:
+                # Récupérer la configuration UNIQUEMENT si nécessaire
+                try:
+                    from core.models import ConfigurationEntreprise
+                    config = ConfigurationEntreprise.get_configuration_active()
+                    nombre_mois_caution = config.nombre_mois_caution if config else 3
+                except Exception:
+                    # En cas d'erreur (ex: table n'existe pas encore), utiliser défaut
+                    nombre_mois_caution = 3
+                
+                if self.depot_garantie in ["0.00", None, ""] or not self.depot_garantie:
+                    self.depot_garantie = str(loyer_decimal * nombre_mois_caution)
+            
+            if (not self.pk or self.avance_loyer in ["0.00", None, ""]) and loyer_decimal > 0:
+                # Récupérer la configuration UNIQUEMENT si nécessaire
+                try:
+                    from core.models import ConfigurationEntreprise
+                    config = ConfigurationEntreprise.get_configuration_active()
+                    nombre_mois_avance = config.nombre_mois_avance if config else 1
+                except Exception:
+                    # En cas d'erreur (ex: table n'existe pas encore), utiliser défaut
+                    nombre_mois_avance = 1
+                
+                if self.avance_loyer in ["0.00", None, ""] or not self.avance_loyer:
+                    self.avance_loyer = str(loyer_decimal * nombre_mois_avance)
+                    
+        except (ValueError, TypeError, Exception) as e:
             # En cas d'erreur de conversion, utiliser des valeurs par défaut
             if not self.depot_garantie:
                 self.depot_garantie = "0.00"

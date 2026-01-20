@@ -535,12 +535,35 @@ class ConfigurationEntreprise(models.Model):
     
     @classmethod
     def get_configuration_active(cls):
-        """Retourne la configuration active de l'entreprise."""
-        config = cls.objects.filter(active=True).first()
-        if not config:
-            # Créer une configuration par défaut si aucune n'existe
-            config = cls.objects.create()
-        return config
+        """
+        Retourne la configuration active de l'entreprise.
+        Utilise un cache simple pour éviter les requêtes multiples lors d'opérations en masse.
+        """
+        # Cache simple au niveau de la classe
+        cache_key = '_cached_config_active'
+        if hasattr(cls, cache_key):
+            cached_config = getattr(cls, cache_key)
+            # Vérifier que le cache est encore valide (moins de 60 secondes)
+            if cached_config and hasattr(cached_config, '_cache_time'):
+                import time
+                if time.time() - cached_config._cache_time < 60:
+                    return cached_config
+        
+        try:
+            config = cls.objects.filter(active=True).first()
+            if not config:
+                # Créer une configuration par défaut si aucune n'existe
+                config = cls.objects.create()
+            
+            # Mettre en cache avec timestamp
+            import time
+            config._cache_time = time.time()
+            setattr(cls, cache_key, config)
+            
+            return config
+        except Exception:
+            # En cas d'erreur (table n'existe pas, etc.), retourner None
+            return None
     
     def get_adresse_complete(self):
         """Retourne l'adresse complète formatée."""
