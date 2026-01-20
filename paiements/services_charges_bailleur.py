@@ -173,6 +173,7 @@ class ServiceChargesBailleurIntelligent:
     def integrer_charges_dans_recap(recap, mois: date = None) -> Dict:  # RecapMensuel supprimé
         """
         Intègre automatiquement les charges bailleur dans un récapitulatif mensuel.
+        CORRECTION: Mettre à jour total_charges_bailleur au lieu de total_charges_deductibles
         
         Args:
             recap: Instance du récapitulatif
@@ -195,12 +196,33 @@ class ServiceChargesBailleurIntelligent:
             
             total_charges = charges_data['total_charges']
             
-            # Mettre à jour le récapitulatif
-            montant_initial = recap.total_net_a_payer
-            montant_net = montant_initial - total_charges
+            # CORRECTION: Mettre à jour total_charges_bailleur (pas total_charges_deductibles)
+            # Les charges bailleur sont différentes des charges déductibles
+            montant_loyers_bruts = recap.total_loyers_bruts
+            montant_charges_bailleur = total_charges
             
-            recap.total_charges_deductibles += total_charges
+            # Recalculer le montant net
+            # Net = Loyers bruts - Charges bailleur
+            montant_net = montant_loyers_bruts - montant_charges_bailleur
+            montant_net = max(montant_net, Decimal('0'))  # Ne pas être négatif
+            
+            # Recalculer la commission (10% du net)
+            commission_agence = (montant_net * Decimal('0.10')).quantize(Decimal('0.01'))
+            
+            # Recalculer le montant réellement payé
+            montant_reellement_paye = montant_net - commission_agence
+            montant_reellement_paye = max(montant_reellement_paye, Decimal('0'))
+            
+            # Mettre à jour le récapitulatif
+            recap.total_charges_bailleur = montant_charges_bailleur
             recap.total_net_a_payer = montant_net
+            
+            # Mettre à jour aussi la commission et le montant réellement payé si les champs existent
+            if hasattr(recap, 'commission_agence'):
+                recap.commission_agence = commission_agence
+            if hasattr(recap, 'montant_reellement_paye'):
+                recap.montant_reellement_paye = montant_reellement_paye
+            
             recap.save()
             
             # Créer un log d'intégration
@@ -210,9 +232,11 @@ class ServiceChargesBailleurIntelligent:
             
             return {
                 'success': True,
-                'montant_initial': montant_initial,
-                'total_charges': total_charges,
+                'montant_loyers_bruts': montant_loyers_bruts,
+                'total_charges_bailleur': montant_charges_bailleur,
                 'montant_net': montant_net,
+                'commission_agence': commission_agence,
+                'montant_reellement_paye': montant_reellement_paye,
                 'nombre_charges': charges_data['nombre_charges']
             }
             
