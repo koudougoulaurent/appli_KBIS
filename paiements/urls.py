@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges, views_retrait_ameliore, views_avance, views_document_unifie, views_document_unifie_complet, views_avance_corrige, views_retraits_temporels, views_validation_paiements, views_ajax_historique, views_correction_avances
+from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges, views_retrait_ameliore, views_avance, views_document_unifie, views_document_unifie_complet, views_avance_corrige, views_retraits_temporels, views_validation_paiements, views_ajax_historique, views_correction_avances, views_debug_charges
 from . import views_paiements_partiels_crud as views_crud
 # from . import views_locataire_paiements
 
@@ -191,6 +191,9 @@ urlpatterns = [
     path('recapitulatifs/<int:recapitulatif_id>/apercu/', views_recapitulatifs.apercu_recapitulatif, name='apercu_recapitulatif'),
     path('recapitulatifs/statistiques/', views_recapitulatifs.statistiques_recapitulatifs, name='statistiques_recapitulatifs'),
     path('recapitulatifs/generer-automatique/', views_recapitulatifs.generer_recapitulatif_automatique, name='generer_recapitulatif_automatique'),
+    
+    # URL de débogage pour les charges bailleur (temporaire)
+    path('debug-charges-recap/<int:recap_id>/', views_debug_charges.debug_charges_recap, name='debug_charges_recap'),
     
     # URLs pour les reçus de récapitulatifs
     path('recus-recapitulatifs/', views_recus.liste_recus_recapitulatifs, name='liste_recus_recapitulatifs'),
