@@ -25,12 +25,13 @@ def debug_charges_recap(request, recap_id):
             date_charge__month=recap.mois_recap.month,
         )
         
-        # Récupérer seulement les charges 'en_attente' et 'payee'
+        # Récupérer seulement les charges 'en_attente' et 'valide'
+        # Utiliser les mêmes statuts que get_proprietes_details() et calculer_totaux_bailleur()
         charges_valides = ChargesBailleur.objects.filter(
             propriete__bailleur=recap.bailleur,
             date_charge__year=recap.mois_recap.year,
             date_charge__month=recap.mois_recap.month,
-            statut__in=['en_attente', 'payee']
+            statut__in=['en_attente', 'valide']
         )
         
         # Préparer les détails

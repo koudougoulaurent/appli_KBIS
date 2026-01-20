@@ -317,11 +317,12 @@ class RecapMensuel(models.Model):
             # CRITIQUE : Calculer les charges bailleur pour le mois
             # Important : On récupère les charges des propriétés du bailleur pour ce mois
             # Utiliser proprietes.ChargesBailleur qui filtre par propriete.bailleur
+            # IMPORTANT: Utiliser les MÊMES statuts que get_proprietes_details() pour cohérence
             charges_bailleur_mois = ChargesBailleur.objects.filter(
                 propriete__bailleur=self.bailleur,
                 date_charge__year=self.mois_recap.year,
                 date_charge__month=self.mois_recap.month,
-                statut__in=['en_attente', 'payee']  # Statuts pour proprietes.ChargesBailleur
+                statut__in=['en_attente', 'valide']  # Mêmes statuts que get_proprietes_details()
             )
             
             # Calculer le total des charges en utilisant le montant restant ou le montant total

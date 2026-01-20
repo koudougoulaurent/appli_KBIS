@@ -89,11 +89,12 @@ class Command(BaseCommand):
 
             try:
                 # Récupérer les charges bailleur pour ce mois
+                # Utiliser les mêmes statuts que get_proprietes_details() pour cohérence
                 charges_bailleur_mois = ChargesBailleur.objects.filter(
                     propriete__bailleur=recap.bailleur,
                     date_charge__year=recap.mois_recap.year,
                     date_charge__month=recap.mois_recap.month,
-                    statut__in=['en_attente', 'payee']
+                    statut__in=['en_attente', 'valide']
                 )
 
                 nombre_charges = charges_bailleur_mois.count()
