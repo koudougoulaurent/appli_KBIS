@@ -185,8 +185,12 @@ class AvanceLoyer(models.Model):
     
     def _calculer_mois_automatiques(self):
         """Calcule les mois couverts en mode automatique"""
+        # CORRECTION : Convertir en Decimal pour éviter TypeError
+        loyer_mensuel_decimal = Decimal(str(self.loyer_mensuel)) if self.loyer_mensuel else Decimal('0')
+        montant_avance_decimal = Decimal(str(self.montant_avance)) if self.montant_avance else Decimal('0')
+        
         # Calculer le nombre de mois complets
-        mois_complets = int(self.montant_avance // self.loyer_mensuel)
+        mois_complets = int(montant_avance_decimal // loyer_mensuel_decimal) if loyer_mensuel_decimal > 0 else 0
         
         # ⚠️ PROTECTION : Vérifier que le loyer mensuel est cohérent avec le loyer du contrat
         # Si l'avance couvre exactement 1 mois (montant = loyer), s'assurer qu'on compte bien 1 mois
@@ -199,22 +203,27 @@ class AvanceLoyer(models.Model):
             except:
                 loyer_contrat = None
         
+        # CORRECTION : Convertir self.loyer_mensuel en Decimal pour éviter TypeError
+        loyer_mensuel_decimal = Decimal(str(self.loyer_mensuel)) if self.loyer_mensuel else Decimal('0')
+        
         # Si le loyer mensuel utilisé est différent du loyer du contrat, afficher un avertissement
-        if loyer_contrat and abs(self.loyer_mensuel - loyer_contrat) > Decimal('100'):
+        if loyer_contrat and abs(loyer_mensuel_decimal - loyer_contrat) > Decimal('100'):
             print(f"⚠️ ATTENTION : Avance ID {self.id if self.id else 'NEW'}")
             print(f"   Loyer mensuel dans l'avance: {self.loyer_mensuel} F CFA")
             print(f"   Loyer mensuel du contrat: {loyer_contrat} F CFA")
-            print(f"   Différence: {abs(self.loyer_mensuel - loyer_contrat)} F CFA")
+            print(f"   Différence: {abs(loyer_mensuel_decimal - loyer_contrat)} F CFA")
             
             # Si la différence est significative ET que l'avance couvre plus de 1 mois
             # Proposer une correction intelligente
             if mois_complets > 1:
-                mois_avec_loyer_contrat = int(self.montant_avance // loyer_contrat)
+                # CORRECTION : Convertir montant_avance en Decimal
+                montant_avance_decimal = Decimal(str(self.montant_avance)) if self.montant_avance else Decimal('0')
+                mois_avec_loyer_contrat = int(montant_avance_decimal // loyer_contrat)
                 print(f"   Mois calculés avec loyer avance: {mois_complets} mois")
                 print(f"   Mois calculés avec loyer contrat: {mois_avec_loyer_contrat} mois")
                 
                 # Si avec le loyer du contrat, on obtient 1 mois, c'est probablement une erreur
-                if mois_avec_loyer_contrat == 1 and abs(self.montant_avance - loyer_contrat) < Decimal('1000'):
+                if mois_avec_loyer_contrat == 1 and abs(montant_avance_decimal - loyer_contrat) < Decimal('1000'):
                     print(f"   🔧 CORRECTION : L'avance semble être pour 1 mois seulement")
                     mois_complets = 1
         
@@ -275,10 +284,14 @@ class AvanceLoyer(models.Model):
         self.nombre_mois_couverts = len(mois_dates)
         
         # Vérifier que le montant de l'avance est suffisant
-        montant_requis = self.loyer_mensuel * self.nombre_mois_couverts
-        if self.montant_avance < montant_requis:
+        # CORRECTION : Convertir en Decimal pour éviter TypeError
+        loyer_mensuel_decimal = Decimal(str(self.loyer_mensuel)) if self.loyer_mensuel else Decimal('0')
+        montant_avance_decimal = Decimal(str(self.montant_avance)) if self.montant_avance else Decimal('0')
+        
+        montant_requis = loyer_mensuel_decimal * self.nombre_mois_couverts
+        if montant_avance_decimal < montant_requis:
             # Ajuster le nombre de mois si le montant est insuffisant
-            mois_possibles = int(self.montant_avance // self.loyer_mensuel)
+            mois_possibles = int(montant_avance_decimal // loyer_mensuel_decimal) if loyer_mensuel_decimal > 0 else 0
             if mois_possibles > 0:
                 self.nombre_mois_couverts = mois_possibles
                 self.mois_fin_couverture = self.mois_debut_couverture + relativedelta(months=mois_possibles - 1)
@@ -528,11 +541,15 @@ class AvanceLoyer(models.Model):
         # Calculer la différence en mois
         diff_mois = (mois_test.year - mois_debut.year) * 12 + (mois_test.month - mois_debut.month)
         
+        # CORRECTION : Convertir en Decimal pour éviter TypeError
+        loyer_mensuel_decimal = Decimal(str(self.loyer_mensuel)) if self.loyer_mensuel else Decimal('0')
+        montant_avance_decimal = Decimal(str(self.montant_avance)) if self.montant_avance else Decimal('0')
+        
         # Calculer le montant consommé
-        montant_consomme = diff_mois * self.loyer_mensuel
+        montant_consomme = Decimal(str(diff_mois)) * loyer_mensuel_decimal
         
         # Retourner le montant restant
-        return max(self.montant_avance - montant_consomme, Decimal('0'))
+        return max(montant_avance_decimal - montant_consomme, Decimal('0'))
     
     def est_mois_consomme(self, mois):
         """Vérifie si un mois spécifique a été consommé"""

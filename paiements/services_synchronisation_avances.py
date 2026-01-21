@@ -27,8 +27,9 @@ class ServiceSynchronisationAvances:
         try:
             with transaction.atomic():
                 # Calculer les mois couverts de manière précise
-                loyer_mensuel = float(paiement.contrat.loyer_mensuel) if paiement.contrat.loyer_mensuel else 0
-                montant_avance = float(paiement.montant)
+                # CORRECTION : Utiliser Decimal au lieu de float pour éviter TypeError
+                loyer_mensuel = Decimal(str(paiement.contrat.loyer_mensuel)) if paiement.contrat.loyer_mensuel else Decimal('0')
+                montant_avance = Decimal(str(paiement.montant))
                 
                 if loyer_mensuel <= 0:
                     raise ValueError("Loyer mensuel invalide")
@@ -105,8 +106,9 @@ class ServiceSynchronisationAvances:
                 for avance in avances:
                     if avance.paiement:
                         # Recalculer les mois couverts
-                        loyer_mensuel = float(avance.contrat.loyer_mensuel) if avance.contrat.loyer_mensuel else 0
-                        montant_avance = float(avance.montant_avance)
+                        # CORRECTION : Utiliser Decimal au lieu de float
+                        loyer_mensuel = Decimal(str(avance.contrat.loyer_mensuel)) if avance.contrat.loyer_mensuel else Decimal('0')
+                        montant_avance = Decimal(str(avance.montant_avance))
                         
                         if loyer_mensuel > 0:
                             nombre_mois = cls._calculer_mois_couverts_precis(montant_avance, loyer_mensuel)
@@ -225,10 +227,11 @@ class ServiceSynchronisationAvances:
                     continue
                 
                 # Vérifier la cohérence des montants
-                montant_paiement = float(paiement.montant)
-                montant_avance = float(avance.montant_avance)
+                # CORRECTION : Utiliser Decimal au lieu de float
+                montant_paiement = Decimal(str(paiement.montant))
+                montant_avance = Decimal(str(avance.montant_avance))
                 
-                if abs(montant_paiement - montant_avance) > 0.01:
+                if abs(montant_paiement - montant_avance) > Decimal('0.01'):
                     incohérences.append({
                         'type': 'montant_incoherent',
                         'paiement_id': paiement.id,
@@ -238,7 +241,8 @@ class ServiceSynchronisationAvances:
                     })
                 
                 # Vérifier la cohérence des mois couverts
-                loyer_mensuel = float(paiement.contrat.loyer_mensuel) if paiement.contrat.loyer_mensuel else 0
+                # CORRECTION : Utiliser Decimal au lieu de float
+                loyer_mensuel = Decimal(str(paiement.contrat.loyer_mensuel)) if paiement.contrat.loyer_mensuel else Decimal('0')
                 if loyer_mensuel > 0:
                     mois_attendu = cls._calculer_mois_couverts_precis(montant_avance, loyer_mensuel)
                     if avance.nombre_mois_couverts != mois_attendu:
