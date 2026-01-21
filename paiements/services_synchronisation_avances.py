@@ -165,11 +165,19 @@ class ServiceSynchronisationAvances:
     
     @classmethod
     def synchroniser_toutes_avances(cls):
-        """Synchronise toutes les avances avec leurs paiements."""
+        """
+        Synchronise toutes les avances avec leurs paiements.
+        OPTIMISÉ : Précharge les relations pour éviter requêtes DB dans les signaux
+        """
         paiements_avance = Paiement.objects.filter(
             type_paiement='avance',
             statut='valide'
-        ).select_related('contrat')
+        ).select_related(
+            'contrat',
+            'contrat__propriete',
+            'contrat__propriete__bailleur',
+            'contrat__locataire'
+        )
         
         synchronisees = 0
         erreurs = 0

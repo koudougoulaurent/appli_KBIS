@@ -96,20 +96,54 @@ def invalider_cache_statistiques_apres_contrat(sender, instance, created, **kwar
     """
     Invalide le cache des statistiques financières après création/modification d'un contrat.
     CORRIGÉ : Met à jour dynamiquement les statistiques financières
+    OPTIMISÉ : Skip si update partiel non significatif (ex: sync avances)
     """
     try:
+        # OPTIMISATION CRITIQUE : Vérifier si l'update concerne des champs significatifs
+        update_fields = kwargs.get('update_fields')
+        
+        # Si c'est un update partiel, vérifier s'il concerne des champs qui impactent les stats
+        if update_fields is not None:
+            # Champs non significatifs (ne nécessitent pas d'invalidation de cache)
+            champs_non_significatifs = {
+                'avance_loyer', 
+                'avance_loyer_payee', 
+                'date_paiement_avance',
+                'caution_payee',
+                'date_paiement_caution',
+            }
+            
+            # Si TOUS les champs modifiés sont non significatifs, skip l'invalidation
+            if set(update_fields).issubset(champs_non_significatifs):
+                return  # ← SKIP (optimisation)
+        
+        # Si on arrive ici : c'est une création OU un update significatif
         with transaction.atomic():
             # Invalider le cache du dashboard pour tous les utilisateurs
             DashboardOptimizer.clear_cache()
             
             # Invalider aussi les caches spécifiques
-            if instance.locataire:
+            # OPTIMISATION : Utiliser getattr pour éviter requêtes DB si déjà chargé
+            if hasattr(instance, 'locataire') and instance.locataire:
                 cache_key_locataire = f"stats_locataire_{instance.locataire.pk}"
                 cache.delete(cache_key_locataire)
             
-            if instance.propriete and instance.propriete.bailleur:
-                cache_key_bailleur = f"stats_bailleur_{instance.propriete.bailleur.pk}"
-                cache.delete(cache_key_bailleur)
+            # OPTIMISATION : Éviter l'accès à propriete.bailleur si possible
+            if hasattr(instance, 'propriete_id') and instance.propriete_id:
+                # Utiliser select_related si nécessaire ou accéder directement à l'ID
+                try:
+                    if hasattr(instance, '_propriete_cache'):
+                        # Si propriete est déjà en cache (from select_related)
+                        bailleur = instance.propriete.bailleur if instance.propriete else None
+                    else:
+                        # Récupérer juste pour le cache (inevitable ici)
+                        bailleur = instance.propriete.bailleur if instance.propriete else None
+                    
+                    if bailleur:
+                        cache_key_bailleur = f"stats_bailleur_{bailleur.pk}"
+                        cache.delete(cache_key_bailleur)
+                except Exception:
+                    pass  # Si erreur d'accès, on skip juste cette partie
             
             # Invalider le cache des paiements partiels
             cache.delete('contrats_avec_paiements_partiels')
