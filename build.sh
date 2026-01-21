@@ -21,7 +21,11 @@ python manage.py collectstatic --no-input
 echo "🗄️  Exécution des migrations..."
 python manage.py migrate --no-input
 
-# 4. Synchronisation des consommations d'avances
+# 4. Resynchronisation complète des avances (NOUVEAU - Correction V6)
+echo "🔄 Resynchronisation complète des avances..."
+python manage.py resynchroniser_avances_complet || echo "⚠️  Erreur non bloquante lors de la resynchronisation"
+
+# 4b. Synchronisation des consommations d'avances
 echo "🔄 Synchronisation des consommations d'avances..."
 python manage.py synchroniser_consommations_avances || echo "⚠️  Erreur non bloquante lors de la synchronisation des avances"
 
