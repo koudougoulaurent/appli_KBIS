@@ -245,42 +245,42 @@ class ServiceValidationPaiements:
     
     @staticmethod
     def _valider_avec_avances(contrat, montant, date_paiement, analyse_paiements):
-        """Valide en tenant compte des avances de loyer."""
+        """
+        Valide en tenant compte des avances de loyer.
+        CORRIGÉ : Utilise le système centralisé AvanceLoyer au lieu de recalculer.
+        """
         if not analyse_paiements['avances']:
             return {'valide': True, 'avertissements': []}
         
-        # Analyser les avances actives
-        avances_actives = []
-        for avance in analyse_paiements['avances']:
-            if avance.montant > 0:
-                avances_actives.append(avance)
-        
-        if not avances_actives:
-            return {'valide': True, 'avertissements': []}
+        # CORRECTION MAJEURE : Utiliser le système d'avances centralisé (AvanceLoyer)
+        # au lieu de recalculer manuellement à partir des objets Paiement
+        from .services_avance import ServiceGestionAvance
+        from .models_avance import AvanceLoyer
         
         # Vérifier si le paiement est couvert par une avance
         mois_paiement = date_paiement.replace(day=1)
         
-        for avance in avances_actives:
-            # Calculer les mois couverts par cette avance
-            from paiements.services_avance_corrige import ServiceAvanceCorrige
-            mois_couverts = ServiceAvanceCorrige.calculer_mois_couverts_correct(
-                contrat, avance.montant, avance.date_avance
-            )
+        # Vérifier directement dans le système AvanceLoyer
+        if ServiceGestionAvance.verifier_mois_couvert_par_avance(contrat, mois_paiement):
+            # Récupérer l'avance qui couvre ce mois pour afficher les détails
+            avance_couvrant = AvanceLoyer.objects.filter(
+                contrat=contrat,
+                statut='active',
+                montant_restant__gt=0,
+                mois_debut_couverture__lte=mois_paiement,
+                mois_fin_couverture__gte=mois_paiement
+            ).first()
             
-            if mois_couverts:
-                date_debut = mois_couverts['date_debut']
-                date_fin = mois_couverts['date_fin']
-                
-                if date_debut <= mois_paiement <= date_fin:
-                    return {
-                        'valide': False,
-                        'avertissements': [
-                            f"⚠️ AVANCE ACTIVE : Le mois {mois_paiement.strftime('%B %Y')} est couvert par une avance",
-                            f"Avance de {avance.montant} F CFA couvre {mois_couverts['nombre']} mois",
-                            f"Période couverte : {date_debut.strftime('%B %Y')} à {date_fin.strftime('%B %Y')}"
-                        ]
-                    }
+            if avance_couvrant:
+                return {
+                    'valide': False,
+                    'avertissements': [
+                        f"⚠️ AVANCE ACTIVE : Le mois {mois_paiement.strftime('%B %Y')} est couvert par une avance",
+                        f"Avance de {avance_couvrant.montant_avance} F CFA couvre {avance_couvrant.nombre_mois_couverts} mois",
+                        f"Période couverte : {avance_couvrant.mois_debut_couverture.strftime('%B %Y')} à {avance_couvrant.mois_fin_couverture.strftime('%B %Y')}",
+                        f"Montant restant : {avance_couvrant.montant_restant} F CFA"
+                    ]
+                }
         
         return {'valide': True, 'avertissements': []}
     

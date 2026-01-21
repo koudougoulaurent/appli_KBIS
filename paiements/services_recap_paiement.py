@@ -377,42 +377,53 @@ class ServiceRecapPaiementMensuel:
     def _avance_couvre_mois(avance_paiement, mois_debut):
         """
         Vérifie si une avance de loyer couvre le mois donné.
+        CORRIGÉ : Utilise le système centralisé AvanceLoyer au lieu de recalculer.
         
         Args:
-            avance_paiement: Instance de Paiement de type 'avance'
+            avance_paiement: Instance de Paiement de type 'avance' (LEGACY - non utilisé maintenant)
             mois_debut: Date de début du mois à vérifier
         
         Returns:
             bool: True si l'avance couvre le mois
         """
-        # Calculer le dernier mois payé avec les paiements précédents
-        dernier_mois_paiement = ServiceRecapPaiementMensuel._get_dernier_mois_paiement_avance(
-            avance_paiement.contrat, avance_paiement.date_paiement
-        )
+        # CORRECTION MAJEURE : Utiliser le système d'avances centralisé (AvanceLoyer)
+        # au lieu de recalculer manuellement les mois couverts
+        from .services_avance import ServiceGestionAvance
         
-        if not dernier_mois_paiement:
-            # Si pas de paiement précédent, l'avance commence au mois suivant la date de paiement
-            mois_couvert_debut = avance_paiement.date_paiement.replace(day=1) + relativedelta(months=1)
-        else:
-            # L'avance commence au mois suivant le dernier paiement
-            mois_couvert_debut = dernier_mois_paiement + relativedelta(months=1)
-        
-        # Calculer le nombre de mois couverts par l'avance
-        loyer_mensuel = avance_paiement.contrat.loyer_mensuel or Decimal('0')
-        if loyer_mensuel <= 0:
-            return False
-        
-        # Utiliser montant_net_paye ou montant
-        montant_avance = avance_paiement.montant_net_paye or avance_paiement.montant or Decimal('0')
-        nombre_mois = int(montant_avance // loyer_mensuel)
-        
-        if nombre_mois <= 0:
-            return False
-        
-        mois_couvert_fin = mois_couvert_debut + relativedelta(months=nombre_mois - 1)
-        
-        # Vérifier si le mois donné est dans la plage couverte
-        return mois_debut >= mois_couvert_debut and mois_debut <= mois_couvert_fin
+        try:
+            # Vérifier si le mois est couvert par une avance active dans le système AvanceLoyer
+            contrat = avance_paiement.contrat
+            return ServiceGestionAvance.verifier_mois_couvert_par_avance(contrat, mois_debut)
+        except Exception as e:
+            # En cas d'erreur, fallback sur l'ancienne logique (pour compatibilité)
+            # Calculer le dernier mois payé avec les paiements précédents
+            dernier_mois_paiement = ServiceRecapPaiementMensuel._get_dernier_mois_paiement_avance(
+                avance_paiement.contrat, avance_paiement.date_paiement
+            )
+            
+            if not dernier_mois_paiement:
+                # Si pas de paiement précédent, l'avance commence au mois suivant la date de paiement
+                mois_couvert_debut = avance_paiement.date_paiement.replace(day=1) + relativedelta(months=1)
+            else:
+                # L'avance commence au mois suivant le dernier paiement
+                mois_couvert_debut = dernier_mois_paiement + relativedelta(months=1)
+            
+            # Calculer le nombre de mois couverts par l'avance
+            loyer_mensuel = avance_paiement.contrat.loyer_mensuel or Decimal('0')
+            if loyer_mensuel <= 0:
+                return False
+            
+            # Utiliser montant_net_paye ou montant
+            montant_avance = avance_paiement.montant_net_paye or avance_paiement.montant or Decimal('0')
+            nombre_mois = int(montant_avance // loyer_mensuel)
+            
+            if nombre_mois <= 0:
+                return False
+            
+            mois_couvert_fin = mois_couvert_debut + relativedelta(months=nombre_mois - 1)
+            
+            # Vérifier si le mois donné est dans la plage couverte
+            return mois_debut >= mois_couvert_debut and mois_debut <= mois_couvert_fin
     
     @staticmethod
     def _get_dernier_mois_paiement_avance(contrat, date_reference):
