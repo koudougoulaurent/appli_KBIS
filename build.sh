@@ -25,23 +25,27 @@ python manage.py migrate --no-input
 echo "🔄 Synchronisation des consommations d'avances..."
 python manage.py synchroniser_consommations_avances || echo "⚠️  Erreur non bloquante lors de la synchronisation des avances"
 
-# 5. Correction des mois_paye incohérents
+# 5. Correction des mois_paye manquants
+echo "🔧 Correction des mois_paye manquants..."
+python manage.py corriger_mois_paye_manquants || echo "⚠️  Erreur non bloquante lors de la correction des mois_paye manquants"
+
+# 6. Correction des mois_paye incohérents
 echo "🔧 Correction des mois_paye incohérents..."
 python manage.py corriger_mois_paye_incoherents || echo "⚠️  Erreur non bloquante lors de la correction des mois_paye"
 
-# 6. Recalcul des récapitulatifs avec charges bailleur
+# 7. Recalcul des récapitulatifs avec charges bailleur
 echo "🔢 Recalcul des récapitulatifs mensuels avec charges bailleur..."
 python manage.py recalculer_recaps_avec_charges || echo "⚠️  Erreur non bloquante lors du recalcul des récapitulatifs"
 
-# 7. Complétion automatique des reliquats de paiements partiels
+# 8. Complétion automatique des reliquats de paiements partiels
 echo "💰 Complétion des reliquats de paiements partiels..."
 python manage.py completer_reliquats || echo "⚠️  Erreur non bloquante lors de la complétion des reliquats"
 
-# 8. Régénération des récapitulatifs mensuels existants avec nouveau format groupé
+# 9. Régénération des récapitulatifs mensuels existants avec nouveau format groupé
 echo "📊 Régénération des récapitulatifs mensuels..."
 python manage.py regenerer_recapitulatifs_pdf --batch-size 5 || echo "⚠️  Aucun récapitulatif à régénérer ou erreur non bloquante"
 
-# 9. Création du superuser si nécessaire (optionnel)
+# 10. Création du superuser si nécessaire (optionnel)
 # Décommentez si vous voulez créer automatiquement un superuser
 # echo "👤 Création du superuser..."
 # python manage.py createsuperuser --no-input || echo "⚠️  Superuser existe déjà"
