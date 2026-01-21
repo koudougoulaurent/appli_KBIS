@@ -75,10 +75,11 @@ class ServiceSynchronisationAvances:
                     avance.save()
                 
                 # Mettre à jour le contrat pour refléter l'avance
+                # IMPORTANT: Utiliser update_fields pour éviter de déclencher toutes les validations
                 paiement.contrat.avance_loyer = str(montant_avance)
                 paiement.contrat.avance_loyer_payee = True
                 paiement.contrat.date_paiement_avance = paiement.date_paiement
-                paiement.contrat.save()
+                paiement.contrat.save(update_fields=['avance_loyer', 'avance_loyer_payee', 'date_paiement_avance'])
                 
                 return avance
                 

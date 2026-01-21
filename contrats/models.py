@@ -467,7 +467,12 @@ class Contrat(models.Model):
                         continue
         
         # Validation : éviter unité locative ET pièces simultanément
-        self._valider_coherence_unite_pieces()
+        # IMPORTANT: Skip cette validation si on fait un update partiel qui ne touche pas unite_locative
+        # (évite les requêtes DB inutiles lors de synchronisations massives)
+        update_fields = kwargs.get('update_fields')
+        if update_fields is None or 'unite_locative' in update_fields:
+            # Seulement valider si on modifie unite_locative OU si c'est un save complet
+            self._valider_coherence_unite_pieces()
         
         # Calculer automatiquement la caution et l'avance si non spécifiés
         # NOTE: Cette logique ne s'applique QUE lors de la création (pas lors de sync avances)
@@ -511,7 +516,9 @@ class Contrat(models.Model):
                 self.avance_loyer = "0.00"
         
         # Gérer la disponibilité de la propriété
-        self._gestion_disponibilite_propriete()
+        # IMPORTANT: Skip si on fait un update partiel qui ne touche pas est_actif/est_resilie
+        if update_fields is None or 'est_actif' in update_fields or 'est_resilie' in update_fields:
+            self._gestion_disponibilite_propriete()
         
         # Sauvegarder avec gestion des erreurs d'unicité
         from django.db import IntegrityError
@@ -536,7 +543,9 @@ class Contrat(models.Model):
                     raise
         
         # Créer automatiquement l'avance de loyer si elle est payée
-        self._creer_avance_loyer_automatique()
+        # IMPORTANT: Skip si on fait un update partiel qui ne touche pas avance_loyer_payee
+        if update_fields is None or 'avance_loyer_payee' in update_fields:
+            self._creer_avance_loyer_automatique()
     
     def _gestion_disponibilite_propriete(self):
         """Gère automatiquement la disponibilité de la propriété et des unités locatives associées."""

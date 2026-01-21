@@ -1181,15 +1181,20 @@ class PaiementCautionAvanceViewSet(viewsets.ModelViewSet):
             )
         
         # Mettre à jour le contrat correspondant
+        # IMPORTANT: Utiliser update_fields pour éviter de déclencher toutes les validations
         contrat = paiement.contrat
+        fields_to_update = []
         if paiement.type_paiement == 'caution':
             contrat.caution_payee = True
             contrat.date_paiement_caution = paiement.date_paiement
+            fields_to_update = ['caution_payee', 'date_paiement_caution']
         elif paiement.type_paiement == 'avance':
             contrat.avance_payee = True
             contrat.date_paiement_avance = paiement.date_paiement
+            fields_to_update = ['avance_payee', 'date_paiement_avance']
         
-        contrat.save()
+        if fields_to_update:
+            contrat.save(update_fields=fields_to_update)
         
         # Valider le paiement
         paiement.statut = 'valide'
