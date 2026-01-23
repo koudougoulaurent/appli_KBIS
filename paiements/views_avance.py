@@ -599,15 +599,15 @@ def creer_avance(request):
                 # Générer un numéro de paiement unique
                 numero_paiement = IDGenerator.generate_id('paiement', date_paiement=date_avance)
                 
-                # Créer le paiement d'avance
+                # Créer le paiement d'avance (EN ATTENTE - validation manuelle requise)
                 paiement = Paiement.objects.create(
                     contrat=contrat,
                     montant=montant_avance,
                     date_paiement=date_avance,
                     type_paiement='avance',
-                    statut='valide',
+                    statut='en_attente',  # ← CORRIGÉ : Validation manuelle requise
                     numero_paiement=numero_paiement,
-                    notes=f"Paiement d'avance automatique - {avance.nombre_mois_couverts} mois couverts"
+                    notes=f"Paiement d'avance créé automatiquement - {avance.nombre_mois_couverts} mois couverts - VALIDATION REQUISE"
                 )
                 
                 # Lier l'avance au paiement

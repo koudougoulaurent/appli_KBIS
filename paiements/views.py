@@ -564,8 +564,8 @@ def completer_reliquat(request, paiement_id):
                     mois_paye=mois_paye,
                     montant_du_mois=calcul['montant_du_mois'],
                     est_paiement_partiel=True,
-                    statut='valide',
-                    notes=f"Complétion de reliquat. {notes}",
+                    statut='en_attente',  # ← CORRIGÉ : Validation manuelle requise
+                    notes=f"Complétion de reliquat. {notes} - VALIDATION REQUISE",
                     cree_par=request.user
                 )
                 
