@@ -350,6 +350,78 @@ class ServiceLogiqueAvanceUnique:
         Returns:
             date: Prochain mois à payer (1er du mois)
         """
-        # Utiliser la même logique que pour le début de couverture
-        # Car le prochain mois à payer = le premier mois non couvert
-        return ServiceLogiqueAvanceUnique.determiner_mois_debut_couverture_nouvelle_avance(contrat)
+        print(f"\n{'='*80}")
+        print(f"CALCUL PROCHAIN MOIS À PAYER - Contrat #{contrat.id}")
+        print(f"{'='*80}")
+        
+        # 1. Chercher le dernier paiement de loyer validé
+        dernier_paiement_loyer = Paiement.objects.filter(
+            contrat=contrat,
+            type_paiement='loyer',
+            statut='valide',
+            is_deleted=False
+        ).order_by('-date_paiement').first()
+        
+        dernier_mois_paiement = None
+        if dernier_paiement_loyer:
+            if dernier_paiement_loyer.mois_paye:
+                from .services_paiement_partiel import ServicePaiementPartiel
+                dernier_mois_paiement = ServicePaiementPartiel.convertir_mois_paye_en_date(dernier_paiement_loyer.mois_paye)
+            else:
+                dernier_mois_paiement = dernier_paiement_loyer.date_paiement.replace(day=1)
+            
+            print(f"✓ Dernier paiement: {dernier_mois_paiement}")
+        
+        # 2. Chercher la dernière avance active ET son mois de fin de couverture
+        derniere_avance = AvanceLoyer.objects.filter(
+            contrat=contrat,
+            statut='active',
+            mois_fin_couverture__isnull=False
+        ).order_by('-mois_fin_couverture').first()
+        
+        dernier_mois_avance = None
+        if derniere_avance:
+            dernier_mois_avance = derniere_avance.mois_fin_couverture
+            print(f"✓ Dernière avance: couvre jusqu'à {dernier_mois_avance}")
+            print(f"  - Début: {derniere_avance.mois_debut_couverture}")
+            print(f"  - Fin: {derniere_avance.mois_fin_couverture}")
+            print(f"  - Mois couverts: {derniere_avance.nombre_mois_couverts}")
+        
+        # 3. Prendre le plus récent
+        dernier_mois_couvert = None
+        
+        if dernier_mois_paiement and dernier_mois_avance:
+            if dernier_mois_avance > dernier_mois_paiement:
+                dernier_mois_couvert = dernier_mois_avance
+                print(f"→ Dernier mois couvert: AVANCE ({dernier_mois_avance})")
+            else:
+                dernier_mois_couvert = dernier_mois_paiement
+                print(f"→ Dernier mois couvert: PAIEMENT ({dernier_mois_paiement})")
+        elif dernier_mois_paiement:
+            dernier_mois_couvert = dernier_mois_paiement
+            print(f"→ Dernier mois couvert: PAIEMENT SEULEMENT ({dernier_mois_paiement})")
+        elif dernier_mois_avance:
+            dernier_mois_couvert = dernier_mois_avance
+            print(f"→ Dernier mois couvert: AVANCE SEULEMENT ({dernier_mois_avance})")
+        
+        # 4. Calculer le prochain mois
+        if dernier_mois_couvert:
+            prochain_mois = dernier_mois_couvert + relativedelta(months=1)
+            print(f"\n✓ PROCHAIN MOIS À PAYER: {prochain_mois.strftime('%B %Y')}")
+            print(f"  (= {dernier_mois_couvert} + 1 mois)")
+        else:
+            # Aucun paiement ni avance : utiliser date de début du contrat
+            if hasattr(contrat, 'date_debut') and contrat.date_debut:
+                prochain_mois = contrat.date_debut.replace(day=1)
+            elif hasattr(contrat, 'date_entree') and contrat.date_entree:
+                prochain_mois = contrat.date_entree.replace(day=1)
+            else:
+                from django.utils import timezone
+                prochain_mois = timezone.now().date().replace(day=1)
+            
+            print(f"\n✓ PROCHAIN MOIS À PAYER: {prochain_mois.strftime('%B %Y')}")
+            print(f"  (Aucun paiement antérieur)")
+        
+        print(f"{'='*80}\n")
+        
+        return prochain_mois

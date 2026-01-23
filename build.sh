@@ -21,6 +21,10 @@ python manage.py collectstatic --no-input
 echo "🗄️  Exécution des migrations..."
 python manage.py migrate --no-input
 
+# 3b. Optimisation des performances (NOUVEAU - Correction V10)
+echo "⚡ Optimisation des performances (ajout d'index)..."
+python manage.py optimiser_performances_avances || echo "⚠️  Erreur non bloquante"
+
 # 4. Nettoyage des doublons de paiements (NOUVEAU - Correction V9)
 echo "🧹 Nettoyage des doublons de paiements..."
 python manage.py nettoyer_doublons_paiements || echo "⚠️  Erreur non bloquante"
