@@ -234,17 +234,21 @@ class AvanceLoyer(models.Model):
             # Utiliser le mois d'effet personnalisé
             self.mois_debut_couverture = self.mois_effet_personnalise.replace(day=1)
         else:
-            # Logique automatique basée sur le jour du mois
-            # Si l'avance est versée après le 15 du mois, elle prend effet le mois suivant
-            # Sinon, elle prend effet le mois courant
-            mois_avance = self.date_avance.replace(day=1)
-            jour_avance = self.date_avance.day
-            
-            # Règle du 15+ : après le 15 = mois suivant, sinon mois courant
-            if jour_avance > 15:
-                self.mois_debut_couverture = mois_avance + relativedelta(months=1)
-            else:
-                self.mois_debut_couverture = mois_avance
+            # *** CORRECTION CRITIQUE V10.2 : Utiliser la logique unique centralisée ***
+            # Au lieu de la "règle du 15+" qui ignore les paiements précédents,
+            # on utilise la logique V10 qui regarde le dernier mois PAYÉ OU COUVERT
+            try:
+                from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
+                self.mois_debut_couverture = ServiceLogiqueAvanceUnique.determiner_mois_debut_couverture_nouvelle_avance(
+                    self.contrat,
+                    self.date_avance
+                )
+            except Exception as e:
+                # Fallback en cas d'erreur : utiliser le mois de la date d'avance
+                print(f"⚠️ Erreur calcul mois début (fallback) : {e}")
+                import traceback
+                traceback.print_exc()
+                self.mois_debut_couverture = self.date_avance.replace(day=1)
         
         # Calculer la fin de couverture
         if mois_complets > 0:

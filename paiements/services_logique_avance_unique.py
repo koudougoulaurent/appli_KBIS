@@ -36,14 +36,16 @@ class ServiceLogiqueAvanceUnique:
         """
         Détermine le mois de début de couverture pour une NOUVELLE avance.
         
-        LOGIQUE MÉTIER (UNIQUE ET CENTRALISÉE) :
+        LOGIQUE MÉTIER V10.2 (UNIQUE ET CENTRALISÉE) :
         
         1. Trouver le dernier mois PAYÉ OU COUVERT :
            a) Chercher le dernier paiement de loyer validé
            b) Chercher la dernière avance active et son mois_fin_couverture
            c) Prendre le plus récent des deux
         
-        2. Nouvelle avance commence au mois SUIVANT le dernier mois payé/couvert
+        2. GESTION DES RETARDS DE PAIEMENT (NOUVEAU V10.2) :
+           a) Si retard ≤ 2 mois : Avance couvre à partir du dernier paiement + 1
+           b) Si retard > 2 mois : Avance commence au mois actuel (dettes restent à payer)
         
         3. Si aucun paiement ni avance : utiliser date de début du contrat
         
@@ -113,12 +115,43 @@ class ServiceLogiqueAvanceUnique:
             dernier_mois_couvert = dernier_mois_avance
             print(f"→ Mois le plus récent: AVANCE SEULEMENT ({dernier_mois_avance})")
         
-        # 4. Calculer le mois de début
+        # 4. Calculer le mois de début avec gestion des retards (V10.2)
         if dernier_mois_couvert:
-            # Nouvelle avance commence au mois SUIVANT le dernier mois couvert
-            mois_debut = dernier_mois_couvert + relativedelta(months=1)
-            print(f"\n✓ MOIS DÉBUT COUVERTURE: {mois_debut}")
-            print(f"  (= Dernier mois couvert {dernier_mois_couvert} + 1 mois)")
+            # *** NOUVEAU V10.2 : Gestion des retards de paiement ***
+            # Déterminer le mois actuel ou le mois de l'avance
+            if date_avance:
+                mois_reference = date_avance.replace(day=1) if isinstance(date_avance, date) else timezone.now().date().replace(day=1)
+            else:
+                mois_reference = timezone.now().date().replace(day=1)
+            
+            # Calculer l'écart en mois entre le dernier paiement et maintenant
+            ecart_mois = (mois_reference.year - dernier_mois_couvert.year) * 12 + \
+                        (mois_reference.month - dernier_mois_couvert.month)
+            
+            print(f"\n📊 ANALYSE RETARD:")
+            print(f"  Dernier mois couvert: {dernier_mois_couvert}")
+            print(f"  Mois de référence: {mois_reference}")
+            print(f"  Écart: {ecart_mois} mois")
+            
+            # SEUIL: 2 mois (configurable)
+            SEUIL_RETARD_ACCEPTABLE = 2
+            
+            if ecart_mois <= SEUIL_RETARD_ACCEPTABLE:
+                # Retard acceptable (≤ 2 mois) : Avance couvre à partir du dernier paiement
+                mois_debut = dernier_mois_couvert + relativedelta(months=1)
+                print(f"  → Retard ACCEPTABLE (≤ {SEUIL_RETARD_ACCEPTABLE} mois)")
+                print(f"  → Avance couvre à partir du dernier paiement + 1")
+                print(f"\n✓ MOIS DÉBUT COUVERTURE: {mois_debut}")
+                print(f"  (= Dernier mois couvert {dernier_mois_couvert} + 1 mois)")
+            else:
+                # Retard important (> 2 mois) : Avance commence au mois actuel
+                # Les dettes anciennes restent à payer séparément
+                mois_debut = mois_reference
+                print(f"  → Retard IMPORTANT (> {SEUIL_RETARD_ACCEPTABLE} mois)")
+                print(f"  → Avance commence au mois actuel")
+                print(f"  → ⚠️  DETTES ANCIENNES ({ecart_mois - 1} mois) à régler séparément")
+                print(f"\n✓ MOIS DÉBUT COUVERTURE: {mois_debut}")
+                print(f"  (= Mois actuel/référence, dettes anciennes non couvertes)")
         else:
             # Aucun paiement ni avance : utiliser date de début du contrat
             if hasattr(contrat, 'date_debut') and contrat.date_debut:
@@ -342,86 +375,12 @@ class ServiceLogiqueAvanceUnique:
         """
         Détermine le prochain mois à payer pour un contrat.
         
-        LOGIQUE (cohérente avec determiner_mois_debut_couverture_nouvelle_avance) :
-        1. Trouver le dernier mois PAYÉ OU COUVERT
-        2. Prochain mois = dernier mois + 1
-        3. Vérifier que ce mois n'est PAS déjà couvert par une avance
+        LOGIQUE V10.2 : Utilise la même logique centralisée que determiner_mois_debut_couverture_nouvelle_avance
+        car le prochain mois à payer = le mois où commencerait une nouvelle avance
         
         Returns:
             date: Prochain mois à payer (1er du mois)
         """
-        print(f"\n{'='*80}")
-        print(f"CALCUL PROCHAIN MOIS À PAYER - Contrat #{contrat.id}")
-        print(f"{'='*80}")
-        
-        # 1. Chercher le dernier paiement de loyer validé
-        dernier_paiement_loyer = Paiement.objects.filter(
-            contrat=contrat,
-            type_paiement='loyer',
-            statut='valide',
-            is_deleted=False
-        ).order_by('-date_paiement').first()
-        
-        dernier_mois_paiement = None
-        if dernier_paiement_loyer:
-            if dernier_paiement_loyer.mois_paye:
-                from .services_paiement_partiel import ServicePaiementPartiel
-                dernier_mois_paiement = ServicePaiementPartiel.convertir_mois_paye_en_date(dernier_paiement_loyer.mois_paye)
-            else:
-                dernier_mois_paiement = dernier_paiement_loyer.date_paiement.replace(day=1)
-            
-            print(f"✓ Dernier paiement: {dernier_mois_paiement}")
-        
-        # 2. Chercher la dernière avance active ET son mois de fin de couverture
-        derniere_avance = AvanceLoyer.objects.filter(
-            contrat=contrat,
-            statut='active',
-            mois_fin_couverture__isnull=False
-        ).order_by('-mois_fin_couverture').first()
-        
-        dernier_mois_avance = None
-        if derniere_avance:
-            dernier_mois_avance = derniere_avance.mois_fin_couverture
-            print(f"✓ Dernière avance: couvre jusqu'à {dernier_mois_avance}")
-            print(f"  - Début: {derniere_avance.mois_debut_couverture}")
-            print(f"  - Fin: {derniere_avance.mois_fin_couverture}")
-            print(f"  - Mois couverts: {derniere_avance.nombre_mois_couverts}")
-        
-        # 3. Prendre le plus récent
-        dernier_mois_couvert = None
-        
-        if dernier_mois_paiement and dernier_mois_avance:
-            if dernier_mois_avance > dernier_mois_paiement:
-                dernier_mois_couvert = dernier_mois_avance
-                print(f"→ Dernier mois couvert: AVANCE ({dernier_mois_avance})")
-            else:
-                dernier_mois_couvert = dernier_mois_paiement
-                print(f"→ Dernier mois couvert: PAIEMENT ({dernier_mois_paiement})")
-        elif dernier_mois_paiement:
-            dernier_mois_couvert = dernier_mois_paiement
-            print(f"→ Dernier mois couvert: PAIEMENT SEULEMENT ({dernier_mois_paiement})")
-        elif dernier_mois_avance:
-            dernier_mois_couvert = dernier_mois_avance
-            print(f"→ Dernier mois couvert: AVANCE SEULEMENT ({dernier_mois_avance})")
-        
-        # 4. Calculer le prochain mois
-        if dernier_mois_couvert:
-            prochain_mois = dernier_mois_couvert + relativedelta(months=1)
-            print(f"\n✓ PROCHAIN MOIS À PAYER: {prochain_mois.strftime('%B %Y')}")
-            print(f"  (= {dernier_mois_couvert} + 1 mois)")
-        else:
-            # Aucun paiement ni avance : utiliser date de début du contrat
-            if hasattr(contrat, 'date_debut') and contrat.date_debut:
-                prochain_mois = contrat.date_debut.replace(day=1)
-            elif hasattr(contrat, 'date_entree') and contrat.date_entree:
-                prochain_mois = contrat.date_entree.replace(day=1)
-            else:
-                from django.utils import timezone
-                prochain_mois = timezone.now().date().replace(day=1)
-            
-            print(f"\n✓ PROCHAIN MOIS À PAYER: {prochain_mois.strftime('%B %Y')}")
-            print(f"  (Aucun paiement antérieur)")
-        
-        print(f"{'='*80}\n")
-        
-        return prochain_mois
+        # Utiliser directement la logique centralisée
+        # Le prochain mois à payer est exactement le même que le mois de début d'une nouvelle avance
+        return ServiceLogiqueAvanceUnique.determiner_mois_debut_couverture_nouvelle_avance(contrat)
