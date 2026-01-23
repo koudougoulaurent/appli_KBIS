@@ -115,43 +115,31 @@ class ServiceLogiqueAvanceUnique:
             dernier_mois_couvert = dernier_mois_avance
             print(f"→ Mois le plus récent: AVANCE SEULEMENT ({dernier_mois_avance})")
         
-        # 4. Calculer le mois de début avec gestion des retards (V10.2)
+        # 4. Calculer le mois de début (V10.2 - Option A : Toujours couvrir les dettes)
         if dernier_mois_couvert:
-            # *** NOUVEAU V10.2 : Gestion des retards de paiement ***
-            # Déterminer le mois actuel ou le mois de l'avance
+            # *** LOGIQUE OPTION A : L'avance couvre TOUJOURS à partir du dernier paiement ***
+            # Pas de distinction retard acceptable/problématique
+            # Simple et cohérent : dernier mois payé + 1 mois
+            mois_debut = dernier_mois_couvert + relativedelta(months=1)
+            
+            # Afficher info si retard détecté
             if date_avance:
                 mois_reference = date_avance.replace(day=1) if isinstance(date_avance, date) else timezone.now().date().replace(day=1)
             else:
                 mois_reference = timezone.now().date().replace(day=1)
             
-            # Calculer l'écart en mois entre le dernier paiement et maintenant
             ecart_mois = (mois_reference.year - dernier_mois_couvert.year) * 12 + \
                         (mois_reference.month - dernier_mois_couvert.month)
             
-            print(f"\n📊 ANALYSE RETARD:")
-            print(f"  Dernier mois couvert: {dernier_mois_couvert}")
-            print(f"  Mois de référence: {mois_reference}")
-            print(f"  Écart: {ecart_mois} mois")
+            if ecart_mois > 1:
+                print(f"\n📊 ANALYSE:")
+                print(f"  Dernier mois couvert: {dernier_mois_couvert}")
+                print(f"  Mois de référence: {mois_reference}")
+                print(f"  Écart: {ecart_mois} mois")
+                print(f"  → Avance couvre d'abord les {ecart_mois} mois de retard")
             
-            # SEUIL: 2 mois (configurable)
-            SEUIL_RETARD_ACCEPTABLE = 2
-            
-            if ecart_mois <= SEUIL_RETARD_ACCEPTABLE:
-                # Retard acceptable (≤ 2 mois) : Avance couvre à partir du dernier paiement
-                mois_debut = dernier_mois_couvert + relativedelta(months=1)
-                print(f"  → Retard ACCEPTABLE (≤ {SEUIL_RETARD_ACCEPTABLE} mois)")
-                print(f"  → Avance couvre à partir du dernier paiement + 1")
-                print(f"\n✓ MOIS DÉBUT COUVERTURE: {mois_debut}")
-                print(f"  (= Dernier mois couvert {dernier_mois_couvert} + 1 mois)")
-            else:
-                # Retard important (> 2 mois) : Avance commence au mois actuel
-                # Les dettes anciennes restent à payer séparément
-                mois_debut = mois_reference
-                print(f"  → Retard IMPORTANT (> {SEUIL_RETARD_ACCEPTABLE} mois)")
-                print(f"  → Avance commence au mois actuel")
-                print(f"  → ⚠️  DETTES ANCIENNES ({ecart_mois - 1} mois) à régler séparément")
-                print(f"\n✓ MOIS DÉBUT COUVERTURE: {mois_debut}")
-                print(f"  (= Mois actuel/référence, dettes anciennes non couvertes)")
+            print(f"\n✓ MOIS DÉBUT COUVERTURE: {mois_debut}")
+            print(f"  (= Dernier mois couvert {dernier_mois_couvert} + 1 mois)")
         else:
             # Aucun paiement ni avance : utiliser date de début du contrat
             if hasattr(contrat, 'date_debut') and contrat.date_debut:
