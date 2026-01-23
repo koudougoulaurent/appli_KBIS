@@ -188,8 +188,10 @@ class PaiementAvanceForm(forms.ModelForm):
         fields = ['contrat', 'montant', 'mode_paiement', 'date_paiement', 'notes']
         widgets = {
             'contrat': forms.Select(attrs={
-                'class': 'form-select',
-                'id': 'id_contrat_paiement'
+                'class': 'form-select select2',  # CORRIGÉ: Ajout 'select2'
+                'id': 'id_contrat_paiement',
+                'data-placeholder': 'Rechercher un contrat...',  # NOUVEAU: Placeholder
+                'data-allow-clear': 'true'  # NOUVEAU: Bouton clear
             }),
             'montant': forms.NumberInput(attrs={
                 'class': 'form-control',
@@ -220,7 +222,14 @@ class PaiementAvanceForm(forms.ModelForm):
         self.fields['contrat'].queryset = Contrat.objects.filter(
             est_actif=True,
             est_resilie=False
-        ).select_related('locataire', 'propriete')
+        ).select_related('locataire', 'propriete', 'propriete__bailleur')
+        
+        # NOUVEAU: Personnaliser l'affichage des contrats pour faciliter la recherche
+        self.fields['contrat'].label_from_instance = lambda obj: (
+            f"#{obj.id} - {obj.locataire.nom if obj.locataire else 'Sans locataire'} | "
+            f"{obj.propriete.titre if obj.propriete else 'Sans propriété'} | "
+            f"{obj.loyer_mensuel} F CFA"
+        )
         
         # Valeur par défaut pour la date
         if not self.instance.pk:

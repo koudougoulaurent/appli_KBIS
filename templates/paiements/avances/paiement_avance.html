@@ -471,6 +471,23 @@ document.addEventListener('DOMContentLoaded', function() {
             this.classList.add('selected');
         });
     });
+    
+    // *** NOUVEAU : Initialiser Select2 pour recherche dynamique des contrats ***
+    $(document).ready(function() {
+        $('#id_contrat_paiement').select2({
+            placeholder: 'Rechercher un contrat (tapez nom, propriété, montant...)',
+            allowClear: true,
+            width: '100%',
+            language: {
+                noResults: function() {
+                    return "Aucun contrat trouvé";
+                },
+                searching: function() {
+                    return "Recherche en cours...";
+                }
+            }
+        });
+    });
 });
 </script>
 {% endblock %}
