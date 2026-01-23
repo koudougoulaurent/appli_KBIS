@@ -70,8 +70,8 @@ class ServiceLogiqueAvanceUnique:
         if dernier_paiement_loyer:
             # Utiliser mois_paye si disponible (plus précis)
             if dernier_paiement_loyer.mois_paye:
-                from .services_paiement_partiel import convertir_mois_paye_en_date
-                dernier_mois_paiement = convertir_mois_paye_en_date(dernier_paiement_loyer.mois_paye)
+                from .services_paiement_partiel import ServicePaiementPartiel
+                dernier_mois_paiement = ServicePaiementPartiel.convertir_mois_paye_en_date(dernier_paiement_loyer.mois_paye)
             else:
                 dernier_mois_paiement = dernier_paiement_loyer.date_paiement.replace(day=1)
             
