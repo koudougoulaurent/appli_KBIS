@@ -229,12 +229,16 @@ $(document).ready(function() {
 
 ## 📋 **Formulaires Concernés**
 
-| Formulaire | ID du Champ | Template |
-|------------|-------------|----------|
-| **Créer Avance** | `#id_contrat_paiement` | `creer_avance.html` |
-| **Ajouter Avance** | `#id_contrat_paiement` | `ajouter_avance.html` |
-| **Paiement Avance** | `#id_contrat_paiement` | `paiement_avance.html` |
-| **Avance Manuel** | `#id_contrat_avance` | `creer_avance_manuel.html` |
+| Formulaire | ID du Champ | Template | Fichier Form |
+|------------|-------------|----------|--------------|
+| **Créer Avance** | `#id_contrat_paiement` | `creer_avance.html` | `forms_avance.py` |
+| **Ajouter Avance** | `#id_contrat_paiement` | `ajouter_avance.html` | `forms_avance.py` |
+| **Paiement Avance** | `#id_contrat_paiement` | `paiement_avance.html` | `forms_avance.py` |
+| **Avance Manuel** | `#id_contrat_avance` | `creer_avance_manuel.html` | `forms_avance.py` |
+| **Paiement Partiel** | `#id_contrat` | `ajouter_paiement_partiel.html` | `forms.py` |
+| **Paiement Partiel Dédié** | `#id_contrat` | `paiement_partiel_dedie.html` | `forms.py` |
+| **Ajouter Paiement** | `#id_contrat` | `ajouter_paiement.html` | `forms.py` |
+| **Paiement Intelligent** | `#contrat-select` | `paiement_intelligent_create.html` | `forms_intelligents.py` |
 
 ---
 

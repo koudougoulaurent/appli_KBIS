@@ -113,6 +113,13 @@ class PaiementFormIntelligent(forms.ModelForm):
         self.fields['libelle'].label = _("Libellé")
         self.fields['statut'].label = _("Statut")
         
+        # Personnaliser l'affichage des contrats (format enrichi pour recherche)
+        self.fields['contrat'].label_from_instance = lambda obj: (
+            f"#{obj.id} - {obj.locataire.nom if obj.locataire else 'Sans locataire'} | "
+            f"{obj.propriete.titre if obj.propriete else 'Sans propriété'} | "
+            f"{obj.loyer_mensuel} F CFA"
+        )
+        
         # Ajout des classes Bootstrap
         for field_name, field in self.fields.items():
             if field_name not in ['contrat', 'montant_suggere', 'libelle_suggere', 'contexte_contrat']:
@@ -217,6 +224,13 @@ class ChargeDeductibleFormIntelligent(forms.ModelForm):
         self.fields['date_charge'].label = _("Date de la charge")
         self.fields['facture_numero'].label = _("Numéro de facture")
         self.fields['fournisseur'].label = _("Fournisseur")
+        
+        # Personnaliser l'affichage des contrats (format enrichi pour recherche)
+        self.fields['contrat'].label_from_instance = lambda obj: (
+            f"#{obj.id} - {obj.locataire.nom if obj.locataire else 'Sans locataire'} | "
+            f"{obj.propriete.titre if obj.propriete else 'Sans propriété'} | "
+            f"{obj.loyer_mensuel} F CFA"
+        )
         
         # Ajout des classes Bootstrap
         for field_name, field in self.fields.items():

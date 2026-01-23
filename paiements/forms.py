@@ -111,17 +111,19 @@ class PaiementForm(forms.ModelForm):
             is_deleted=False
         ).select_related('locataire', 'propriete')
         
-        # Personnaliser l'affichage des contrats
+        # Personnaliser l'affichage des contrats (format enrichi pour recherche)
         self.fields['contrat'].label_from_instance = lambda obj: (
-            f"{obj.numero_contrat} - {obj.locataire.nom} {obj.locataire.prenom} "
-            f"({obj.propriete.titre})"
+            f"#{obj.id} - {obj.locataire.nom if obj.locataire else 'Sans locataire'} | "
+            f"{obj.propriete.titre if obj.propriete else 'Sans propriété'} | "
+            f"{obj.loyer_mensuel} F CFA"
         )
         
-        # Améliorer le widget de sélection de contrat
+        # Améliorer le widget de sélection de contrat avec Select2
         self.fields['contrat'].widget.attrs.update({
-            'class': 'form-select form-select-lg',
+            'class': 'form-select form-select-lg select2',  # AJOUT: 'select2'
             'data-toggle': 'select2',
-            'data-placeholder': 'Recherchez un contrat...',
+            'data-placeholder': 'Recherchez un contrat (tapez nom, propriété, montant)...',
+            'data-allow-clear': 'true',  # AJOUT: Bouton clear
             'id': 'id_contrat'
         })
         
