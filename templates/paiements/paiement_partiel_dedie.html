@@ -462,21 +462,27 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 1000);
     
     // *** NOUVEAU : Initialiser Select2 pour recherche dynamique des contrats ***
-    $(document).ready(function() {
-        $('#id_contrat').select2({
-            placeholder: 'Rechercher un contrat (tapez nom, propriété, montant...)',
-            allowClear: true,
-            width: '100%',
-            language: {
-                noResults: function() {
-                    return "Aucun contrat trouvé";
-                },
-                searching: function() {
-                    return "Recherche en cours...";
+    // Utiliser setTimeout pour s'assurer que jQuery et Select2 sont chargés
+    setTimeout(function() {
+        if (typeof jQuery !== 'undefined' && typeof jQuery.fn.select2 !== 'undefined') {
+            $('#id_contrat').select2({
+                placeholder: 'Rechercher un contrat (tapez nom, propriété, montant...)',
+                allowClear: true,
+                width: '100%',
+                language: {
+                    noResults: function() {
+                        return "Aucun contrat trouvé";
+                    },
+                    searching: function() {
+                        return "Recherche en cours...";
+                    }
                 }
-            }
-        });
-    });
+            });
+            console.log('✅ Select2 initialisé pour #id_contrat');
+        } else {
+            console.error('❌ jQuery ou Select2 non disponible');
+        }
+    }, 300);
 });
 </script>
 {% endblock %}
