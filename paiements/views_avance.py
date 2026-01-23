@@ -557,19 +557,35 @@ def creer_avance(request):
                     except (json.JSONDecodeError, ValueError):
                         pass
                 
-                # Créer l'avance via le service avec tous les paramètres
+                # *** NOUVELLE LOGIQUE : Utiliser le service avec logique unique ***
+                from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
+                
                 try:
-                    avance = ServiceGestionAvance.creer_avance_loyer(
-                        contrat=contrat,
-                        montant_avance=montant_avance,
-                        date_avance=date_avance,
-                        notes=notes,
-                        mois_effet_personnalise=mois_effet_personnalise,
-                        mode_selection_mois=mode_selection,
-                        mois_couverts_manuels=mois_couverts_liste
-                    )
+                    # Si mode manuel et mois spécifiques sélectionnés, utiliser l'ancien service
+                    # Sinon, utiliser la LOGIQUE UNIQUE (recommandé)
+                    if mode_selection == 'manuel' and mois_couverts_liste and mois_effet_personnalise:
+                        # Mode manuel : utiliser l'ancien service avec mois personnalisé
+                        avance = ServiceGestionAvance.creer_avance_loyer(
+                            contrat=contrat,
+                            montant_avance=montant_avance,
+                            date_avance=date_avance,
+                            notes=notes,
+                            mois_effet_personnalise=mois_effet_personnalise,
+                            mode_selection_mois=mode_selection,
+                            mois_couverts_manuels=mois_couverts_liste
+                        )
+                    else:
+                        # Mode automatique : utiliser la LOGIQUE UNIQUE
+                        avance = ServiceLogiqueAvanceUnique.creer_avance_avec_logique_unique(
+                            contrat=contrat,
+                            montant_avance=montant_avance,
+                            date_avance=date_avance,
+                            notes=notes if notes else f"Avance créée le {date_avance}"
+                        )
                 except Exception as e:
                     print(f"Erreur lors de la création de l'avance: {e}")
+                    import traceback
+                    traceback.print_exc()
                     messages.error(request, f"Erreur lors de la création de l'avance: {str(e)}")
                     return render(request, 'paiements/avances/creer_avance_manuel.html', {
                         'form': form,

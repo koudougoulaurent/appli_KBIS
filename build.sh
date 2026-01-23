@@ -21,7 +21,11 @@ python manage.py collectstatic --no-input
 echo "🗄️  Exécution des migrations..."
 python manage.py migrate --no-input
 
-# 4. Resynchronisation complète des avances (NOUVEAU - Correction V6)
+# 4. Application de la logique unique des avances (NOUVEAU - Correction V8)
+echo "🔄 Application de la logique unique des avances..."
+python manage.py appliquer_logique_unique_avances || echo "⚠️  Erreur non bloquante"
+
+# 4b. Resynchronisation complète des avances (Correction V7)
 echo "🔄 Resynchronisation complète des avances..."
 python manage.py resynchroniser_avances_complet || echo "⚠️  Erreur non bloquante lors de la resynchronisation"
 

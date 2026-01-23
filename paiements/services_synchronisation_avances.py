@@ -37,10 +37,11 @@ class ServiceSynchronisationAvances:
                 # Calculer le nombre de mois couverts avec précision
                 nombre_mois_couverts = cls._calculer_mois_couverts_precis(montant_avance, loyer_mensuel)
                 
-                # Calculer les mois de couverture
+                # Calculer les mois de couverture (avec logique unique)
                 mois_debut, mois_fin = cls._calculer_mois_couverture(
                     paiement.date_paiement, 
-                    nombre_mois_couverts
+                    nombre_mois_couverts,
+                    contrat=paiement.contrat  # ← NOUVEAU: Passer le contrat pour logique unique
                 )
                 
                 # Créer ou mettre à jour l'avance
@@ -157,11 +158,27 @@ class ServiceSynchronisationAvances:
         return max(1, mois_entiers)
     
     @classmethod
-    def _calculer_mois_couverture(cls, date_paiement, nombre_mois):
-        """Calcule les mois de début et fin de couverture."""
-        # Commencer au mois suivant le paiement
-        mois_debut = date_paiement.replace(day=1) + relativedelta(months=1)
-        mois_fin = mois_debut + relativedelta(months=nombre_mois - 1)
+    def _calculer_mois_couverture(cls, date_paiement, nombre_mois, contrat=None):
+        """
+        Calcule les mois de début et fin de couverture.
+        
+        NOUVELLE LOGIQUE : Utilise le service centralisé si le contrat est fourni
+        """
+        if contrat:
+            # Utiliser la LOGIQUE UNIQUE centralisée
+            from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
+            
+            mois_debut = ServiceLogiqueAvanceUnique.determiner_mois_debut_couverture_nouvelle_avance(
+                contrat, date_paiement
+            )
+            mois_fin = ServiceLogiqueAvanceUnique.calculer_mois_fin_couverture(
+                mois_debut, nombre_mois
+            )
+        else:
+            # Fallback : ancienne logique (pour compatibilité)
+            # Commencer au mois suivant le paiement
+            mois_debut = date_paiement.replace(day=1) + relativedelta(months=1)
+            mois_fin = mois_debut + relativedelta(months=nombre_mois - 1)
         
         return mois_debut, mois_fin
     

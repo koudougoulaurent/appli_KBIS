@@ -772,7 +772,18 @@ class ServiceGestionAvance:
         """
         Calcule le prochain mois où un paiement sera dû en tenant compte de toutes les avances
         CORRIGÉ : Utilise le mois_paye si disponible, sinon date_paiement
+        
+        NOUVELLE LOGIQUE (V8) : Utilise le service centralisé en priorité
         """
+        # *** NOUVELLE LOGIQUE (V8) : Utiliser le service centralisé ***
+        try:
+            from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
+            return ServiceLogiqueAvanceUnique.get_prochain_mois_a_payer(contrat)
+        except Exception as e:
+            print(f"⚠️  Erreur logique unique, fallback ancienne logique: {e}")
+            # Fallback sur l'ancienne logique si erreur
+        
+        # *** ANCIENNE LOGIQUE (fallback) ***
         try:
             from datetime import datetime
             import re
