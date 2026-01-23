@@ -130,12 +130,13 @@
                     {% csrf_token %}
                     
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-12">
                             <div class="form-group">
-                                <label for="{{ form.contrat.id_for_label }}" class="form-label required-field">
+                                <label class="form-label required-field">
                                     <i class="bi bi-file-text"></i> Contrat
                                 </label>
-                                {{ form.contrat }}
+                                <!-- Widget de Recherche de Contrat -->
+                                <div id="contrat-search-widget-avance"></div>
                                 {% if form.contrat.errors %}
                                     <div class="text-danger small mt-1">
                                         {% for error in form.contrat.errors %}
@@ -144,10 +145,13 @@
                                     </div>
                                 {% endif %}
                                 <div class="help-text">
-                                    Sélectionnez le contrat concerné par l'avance
+                                    Tapez au moins 2 caractères pour rechercher un contrat par nom, propriété ou montant
                                 </div>
                             </div>
                         </div>
+                    </div>
+                    
+                    <div class="row">
                         
                         <div class="col-md-6">
                             <div class="form-group">
@@ -263,24 +267,21 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/contrat-search-widget.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const contratSelect = document.getElementById('{{ form.contrat.id_for_label }}');
     const montantInput = document.getElementById('{{ form.montant_avance.id_for_label }}');
     const loyerInput = document.getElementById('loyer_mensuel');
     const calculationCard = document.getElementById('calculationCard');
     
-    // Charger les données du contrat sélectionné
-    contratSelect.addEventListener('change', function() {
-        const contratId = this.value;
-        if (contratId) {
-            // Ici, vous pourriez faire un appel AJAX pour récupérer les données du contrat
-            // Pour l'instant, on simule avec des données
-            loyerInput.value = '150,000 F CFA'; // À remplacer par un appel AJAX
+    // Initialiser le widget de recherche de contrat
+    const contratWidget = new ContratSearchWidget('contrat-search-widget-avance', {
+        placeholder: 'Rechercher un contrat (nom, propriété, montant...)',
+        fieldName: 'contrat',
+        onSelect: function(contrat) {
+            // Afficher le loyer mensuel
+            loyerInput.value = contrat.loyer_mensuel + ' F CFA';
             calculateAvance();
-        } else {
-            loyerInput.value = '';
-            calculationCard.style.display = 'none';
         }
     });
     
@@ -316,29 +317,6 @@ document.addEventListener('DOMContentLoaded', function() {
         formCard.style.opacity = '1';
         formCard.style.transform = 'translateY(0)';
     }, 100);
-    
-    // *** NOUVEAU : Initialiser Select2 pour recherche dynamique des contrats ***
-    // Utiliser setTimeout pour s'assurer que jQuery et Select2 sont chargés
-    setTimeout(function() {
-        if (typeof jQuery !== 'undefined' && typeof jQuery.fn.select2 !== 'undefined') {
-            $('#id_contrat_paiement').select2({
-                placeholder: 'Rechercher un contrat (tapez nom, propriété, montant...)',
-                allowClear: true,
-                width: '100%',
-                language: {
-                    noResults: function() {
-                        return "Aucun contrat trouvé";
-                    },
-                    searching: function() {
-                        return "Recherche en cours...";
-                    }
-                }
-            });
-            console.log('✅ Select2 initialisé pour #id_contrat_paiement');
-        } else {
-            console.error('❌ jQuery ou Select2 non disponible');
-        }
-    }, 300);
 });
 </script>
 {% endblock %}

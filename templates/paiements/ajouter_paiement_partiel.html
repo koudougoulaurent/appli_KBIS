@@ -175,26 +175,9 @@
     <!-- Sélecteur de contrat -->
     <div class="contrat-selector">
         <h5><i class="bi bi-building me-2"></i>Sélection du Contrat</h5>
-        <form method="GET" id="contratForm">
-            <div class="row">
-                <div class="col-md-10">
-                    <label for="contrat_id" class="form-label">Contrat</label>
-                    <select name="contrat_id" id="contrat_id" class="form-select" onchange="this.form.submit()">
-                        <option value="">-- Sélectionner un contrat --</option>
-                        {% for contrat in contrats_actifs %}
-                        <option value="{{ contrat.id }}" {% if contrat.id|stringformat:"s" == contrat_id %}selected{% endif %}>
-                            {{ contrat.numero_contrat }} - {{ contrat.locataire.get_nom_complet }} - {{ contrat.propriete.titre }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-search me-1"></i>Analyser
-                    </button>
-                </div>
-            </div>
-        </form>
+        <p class="text-muted mb-3">Tapez pour rechercher un contrat par nom, propriété ou montant</p>
+        <!-- Widget de Recherche de Contrat -->
+        <div id="contrat-search-widget-partiel"></div>
     </div>
     
     <!-- Informations du contrat sélectionné -->
@@ -444,8 +427,29 @@
     </div>
 </div>
 
+<script src="{% static 'js/contrat-search-widget.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser le widget de recherche de contrat
+    const contratWidget = new ContratSearchWidget('contrat-search-widget-partiel', {
+        placeholder: 'Rechercher un contrat (nom, propriété, montant...)',
+        fieldName: 'contrat_id',
+        onSelect: function(contrat) {
+            // Recharger la page avec le contrat sélectionné
+            window.location.href = '?contrat_id=' + contrat.id;
+        }
+    });
+    
+    // Pré-sélectionner le contrat si déjà sélectionné
+    {% if contrat_obj %}
+    contratWidget.setValue({
+        id: {{ contrat_obj.id }},
+        locataire: '{{ contrat_obj.locataire.get_nom_complet|escapejs }}',
+        propriete: '{{ contrat_obj.propriete.titre|escapejs }}',
+        loyer_mensuel: {{ contrat_obj.loyer_mensuel }}
+    });
+    {% endif %}
+    
     // Auto-remplissage du montant suggéré
     {% if calcul_restant and calcul_restant.montant_restant > 0 %}
     const montantInput = document.querySelector('input[name="montant"]');
@@ -454,37 +458,6 @@ document.addEventListener('DOMContentLoaded', function() {
         montantInput.focus();
     }
     {% endif %}
-    
-    // Pré-remplir le contrat si sélectionné
-    {% if contrat_obj %}
-    const contratSelect = document.querySelector('select[name="contrat"]');
-    if (contratSelect) {
-        contratSelect.value = {{ contrat_obj.id }};
-    }
-    {% endif %}
-    
-    // *** NOUVEAU : Initialiser Select2 pour recherche dynamique des contrats ***
-    // Utiliser setTimeout pour s'assurer que jQuery et Select2 sont chargés
-    setTimeout(function() {
-        if (typeof jQuery !== 'undefined' && typeof jQuery.fn.select2 !== 'undefined') {
-            $('#id_contrat').select2({
-                placeholder: 'Rechercher un contrat (tapez nom, propriété, montant...)',
-                allowClear: true,
-                width: '100%',
-                language: {
-                    noResults: function() {
-                        return "Aucun contrat trouvé";
-                    },
-                    searching: function() {
-                        return "Recherche en cours...";
-                    }
-                }
-            });
-            console.log('✅ Select2 initialisé pour #id_contrat');
-        } else {
-            console.error('❌ jQuery ou Select2 non disponible');
-        }
-    }, 300);
 });
 </script>
 {% endblock %}

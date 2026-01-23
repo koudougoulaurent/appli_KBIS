@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges, views_retrait_ameliore, views_avance, views_document_unifie, views_document_unifie_complet, views_avance_corrige, views_retraits_temporels, views_validation_paiements, views_ajax_historique, views_correction_avances, views_debug_charges, views_verification_paiements
 from . import views_paiements_partiels_crud as views_crud
+from .api_recherche_contrats import api_recherche_contrats
 # from . import views_locataire_paiements
 
 app_name = 'paiements'
@@ -227,6 +228,7 @@ urlpatterns = [
     path('paiement/<int:pk>/refuser/', views.refuser_paiement, name='refuser_paiement'),
     
     # 🔍 API DE RECHERCHE INTELLIGENTE
+    path('api/recherche-contrats/', api_recherche_contrats, name='api_recherche_contrats'),  # NOUVEAU: Widget de recherche
     path('api/recherche-rapide/', api_views.api_recherche_contrats_rapide, name='api_recherche_rapide'),
     path('api/recherche-bailleur/', api_views.api_recherche_bailleur, name='api_recherche_bailleur'),
     path('api/contexte-intelligent/contrat/<int:contrat_id>/', api_views.api_contexte_intelligent_contrat, name='api_contexte_intelligent'),
