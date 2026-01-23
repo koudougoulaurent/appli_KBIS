@@ -492,10 +492,13 @@ def api_creer_avance_rapide(request):
 
 @csrf_exempt
 def api_convertir_avances_existantes(request):
-    """API pour convertir tous les paiements d'avance d'un contrat en AvanceLoyer actifs"""
+    """
+    API pour convertir tous les paiements d'avance d'un contrat en AvanceLoyer actifs
+    CORRIGÉ V9.1 : Utilise la logique unique V8 et empêche les doublons
+    """
     if request.method == 'POST':
         try:
-            from .services_avance import ServiceGestionAvance
+            from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
             from .models_avance import AvanceLoyer
             from contrats.models import Contrat
             from decimal import Decimal
@@ -507,45 +510,66 @@ def api_convertir_avances_existantes(request):
             
             contrat = Contrat.objects.get(pk=contrat_id, is_deleted=False)
             
+            # *** NOUVELLE VÉRIFICATION (V9.1) : Vérifier si avances ACTIVES existent déjà ***
+            avances_actives = AvanceLoyer.objects.filter(
+                contrat=contrat,
+                statut='active',
+                montant_restant__gt=0
+            ).count()
+            
+            if avances_actives > 0:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'❌ AVANCE DÉJÀ ACTIVE !\n\n'
+                            f'Ce contrat a déjà {avances_actives} avance(s) active(s).\n'
+                            f'Vous ne pouvez pas convertir à nouveau.\n\n'
+                            f'💡 Si vous voulez ajouter une nouvelle avance, utilisez "Créer une avance".',
+                    'avances_actives': avances_actives
+                })
+            
             # Trouver tous les paiements d'avance de ce contrat
             paiements_avance = Paiement.objects.filter(
                 contrat=contrat,
                 type_paiement='avance',
-                statut='valide'
+                statut='valide',
+                is_deleted=False
             )
             
+            if not paiements_avance.exists():
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Aucun paiement d\'avance trouvé pour ce contrat.'
+                })
+            
             avances_creees = 0
+            avances_existantes = 0
             erreurs = []
             
             for paiement in paiements_avance:
-                # Vérifier si un AvanceLoyer existe déjà pour ce paiement
-                avance_existant = AvanceLoyer.objects.filter(
-                    contrat=paiement.contrat,
-                    montant_avance=paiement.montant,
-                    date_avance=paiement.date_paiement
-                ).first()
+                # *** VÉRIFICATION PRÉCISE (V9.1) : Par paiement_id ***
+                avance_existant = AvanceLoyer.objects.filter(paiement=paiement).first()
                 
-                if not avance_existant:
-                    # Créer l'AvanceLoyer manquant
-                    try:
-                        avance = ServiceGestionAvance.creer_avance_loyer(
-                            contrat=paiement.contrat,
-                            montant_avance=Decimal(str(paiement.montant)),
-                            date_avance=paiement.date_paiement,
-                            notes=f"Converti depuis paiement {paiement.id}"
-                        )
-                        # S'assurer que l'avance est active
-                        avance.statut = 'active'
-                        avance.save()
-                        avances_creees += 1
-                        print(f"OK - Avance creee pour paiement {paiement.id} (contrat {contrat_id})")
-                    except Exception as e:
-                        erreur_msg = f"Erreur creation AvanceLoyer pour paiement {paiement.id}: {str(e)}"
-                        print(erreur_msg)
-                        erreurs.append(erreur_msg)
-                        continue
-                else:
-                    print(f"IGNORE - Avance existe deja pour paiement {paiement.id} (contrat {contrat_id})")
+                if avance_existant:
+                    avances_existantes += 1
+                    print(f"IGNORE - AvanceLoyer existe déjà (ID: {avance_existant.id}) pour paiement {paiement.id}")
+                    continue
+                
+                # Créer l'AvanceLoyer avec LOGIQUE UNIQUE V8
+                try:
+                    avance = ServiceLogiqueAvanceUnique.creer_avance_avec_logique_unique(
+                        contrat=paiement.contrat,
+                        montant_avance=Decimal(str(paiement.montant)),
+                        date_avance=paiement.date_paiement,
+                        notes=f"Converti depuis paiement {paiement.id}",
+                        paiement=paiement  # Lier au paiement
+                    )
+                    avances_creees += 1
+                    print(f"✓ Avance créée (ID: {avance.id}) pour paiement {paiement.id} - Mois: {avance.mois_debut_couverture} → {avance.mois_fin_couverture}")
+                except Exception as e:
+                    erreur_msg = f"Erreur création AvanceLoyer pour paiement {paiement.id}: {str(e)}"
+                    print(erreur_msg)
+                    erreurs.append(erreur_msg)
+                    continue
             
             # Si aucune avance n'a été créée pour ce contrat, vérifier s'il y a des contrats avec des avances manquantes
             if avances_creees == 0:
