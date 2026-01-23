@@ -595,6 +595,21 @@ def creer_avance(request):
                 # *** CRITIQUE : Créer automatiquement le paiement correspondant ***
                 from .models import Paiement
                 from core.id_generator import IDGenerator
+                from .validators import ValidateurPaiementUnique
+                
+                # *** NOUVELLE VALIDATION (V9) : Vérifier les doublons ***
+                est_valide, message_erreur = ValidateurPaiementUnique.valider_unicite_paiement(
+                    contrat=contrat,
+                    type_paiement='avance',
+                    date_paiement=date_avance
+                )
+                
+                if not est_valide:
+                    messages.error(request, message_erreur)
+                    return render(request, 'paiements/avances/creer_avance_manuel.html', {
+                        'form': form,
+                        'contrats': Contrat.objects.filter(est_actif=True, est_resilie=False).select_related('locataire', 'propriete'),
+                    })
                 
                 # Générer un numéro de paiement unique
                 numero_paiement = IDGenerator.generate_id('paiement', date_paiement=date_avance)

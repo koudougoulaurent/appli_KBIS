@@ -21,7 +21,11 @@ python manage.py collectstatic --no-input
 echo "🗄️  Exécution des migrations..."
 python manage.py migrate --no-input
 
-# 4. Application de la logique unique des avances (NOUVEAU - Correction V8)
+# 4. Nettoyage des doublons de paiements (NOUVEAU - Correction V9)
+echo "🧹 Nettoyage des doublons de paiements..."
+python manage.py nettoyer_doublons_paiements || echo "⚠️  Erreur non bloquante"
+
+# 4b. Application de la logique unique des avances (Correction V8)
 echo "🔄 Application de la logique unique des avances..."
 python manage.py appliquer_logique_unique_avances || echo "⚠️  Erreur non bloquante"
 
