@@ -33,6 +33,10 @@ python manage.py nettoyer_doublons_paiements || echo "⚠️  Erreur non bloquan
 echo "🔄 Application de la logique unique des avances..."
 python manage.py appliquer_logique_unique_avances || echo "⚠️  Erreur non bloquante"
 
+# 4c. Correction des avances avec mois de début incorrect (Correction V10.1)
+echo "🔧 Correction des avances avec mois de début incorrect..."
+python manage.py corriger_avances_mois_debut_incorrect --corriger || echo "⚠️  Erreur non bloquante"
+
 # 4b. Resynchronisation complète des avances (Correction V7)
 echo "🔄 Resynchronisation complète des avances..."
 python manage.py resynchroniser_avances_complet || echo "⚠️  Erreur non bloquante lors de la resynchronisation"
