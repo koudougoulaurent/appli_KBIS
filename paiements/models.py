@@ -153,7 +153,7 @@ class RecapMensuel(models.Model):
         """Calcule les totaux pour le bailleur avec les charges dynamiques et les paiements réels."""
         from decimal import Decimal
         from django.db.models import Sum, Q
-        from proprietes.models import ChargesBailleur
+        from paiements.models import ChargeBailleur
         from datetime import datetime, timedelta
         
         try:
@@ -315,14 +315,16 @@ class RecapMensuel(models.Model):
                     total_loyers = total_paiements_reels
             
             # CRITIQUE : Calculer les charges bailleur pour le mois
-            # Important : On récupère les charges des propriétés du bailleur pour ce mois
-            # Utiliser proprietes.ChargesBailleur qui filtre par propriete.bailleur
-            # IMPORTANT: Utiliser les MÊMES statuts que get_proprietes_details() pour cohérence
-            charges_bailleur_mois = ChargesBailleur.objects.filter(
-                propriete__bailleur=self.bailleur,
+            # Important : On récupère les charges validées qui n'ont pas encore été utilisées dans un retrait
+            # Chaque charge ne doit être comptée qu'une seule fois
+            # Les charges avec statut 'utilise' ont déjà été déduites dans un retrait précédent
+            charges_bailleur_mois = ChargeBailleur.objects.filter(
+                bailleur=self.bailleur,
                 date_charge__year=self.mois_recap.year,
                 date_charge__month=self.mois_recap.month,
-                statut__in=['en_attente', 'valide']  # Mêmes statuts que get_proprietes_details()
+                statut__in=['valide']  # Seulement les charges validées et non encore utilisées
+            ).exclude(
+                retrait_utilise__isnull=False  # Exclure les charges déjà liées à un retrait
             )
             
             # Calculer le total des charges en utilisant le montant restant ou le montant total
@@ -1278,41 +1280,61 @@ class Paiement(models.Model):
     
     def generer_quittance_kbis_dynamique(self, user=None):
         """Génère une quittance KBIS dynamique avec le format correct."""
+        import sys
+        import os
+        from datetime import datetime
+        
         try:
-            # CORRECTION : Utiliser le nouveau système unifié DocumentUnifieA5ServiceComplet
-            from .services_document_unifie_complet import DocumentUnifieA5ServiceComplet
+            # Utiliser le système unifié - corriger le chemin vers SCRIPTS
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            scripts_path = os.path.join(project_root, 'SCRIPTS')
+            if scripts_path not in sys.path:
+                sys.path.append(scripts_path)
+            from document_kbis_unifie import DocumentKBISUnifie
             
-            # Déterminer le type de document selon le type de paiement
-            document_type_map = {
-                'loyer': 'paiement_quittance',
-                'caution': 'paiement_caution',
-                'avance': 'paiement_avance',
-                'charges': 'paiement_quittance',
-                'autre': 'paiement_quittance',
-                'paiement_partiel': 'paiement_quittance',
+            # Déterminer le type de quittance selon le type de paiement
+            type_quittance = self._determiner_type_quittance_paiement()
+            
+            # Récupérer les informations de base de manière sécurisée
+            try:
+                code_location = self.contrat.numero_contrat if self.contrat and self.contrat.numero_contrat else 'N/A'
+            except:
+                code_location = 'N/A'
+                
+            try:
+                recu_de = self.contrat.locataire.get_nom_complet() if self.contrat and self.contrat.locataire else 'LOCATAIRE'
+            except:
+                recu_de = 'LOCATAIRE'
+                
+            try:
+                quartier = self.contrat.propriete.adresse if self.contrat and self.contrat.propriete else 'Non spécifié'
+            except:
+                quartier = 'Non spécifié'
+            
+            # Générer un numéro de quittance unique au format KBIS
+            numero_quittance = f"QUI-{datetime.now().strftime('%Y%m%d%H%M%S')}-{self.id if self.id else 'X1DZ'}"
+            
+            # Données de la quittance
+            donnees_quittance = {
+                'numero': numero_quittance,
+                'date': self.date_paiement.strftime('%d-%b-%y') if self.date_paiement else datetime.now().strftime('%d-%b-%y'),
+                'code_location': code_location,
+                'recu_de': recu_de,
+                'montant': float(self.montant),
+                'mois_regle': self._obtenir_mois_regle(),
+                'type_paiement': self.get_type_paiement_display(),
+                'mode_paiement': self.get_mode_paiement_display(),
+                'quartier': quartier,
             }
             
-            # Déterminer le type de document
-            document_type = document_type_map.get(self.type_paiement, 'paiement_quittance')
+            # Ajouter des données spécialisées selon le type
+            donnees_quittance.update(self._ajouter_donnees_specialisees_quittance(type_quittance))
             
-            # Si c'est un paiement partiel, utiliser le type approprié
-            if self.est_paiement_partiel or self.type_paiement == 'paiement_partiel':
-                document_type = 'paiement_quittance'
-            
-            # Générer le document avec le nouveau système
-            service = DocumentUnifieA5ServiceComplet()
-            html_content = service.generer_document_unifie(
-                document_type=document_type,
-                user=user,
-                paiement_id=self.id
-            )
-            
-            return html_content
+            # Générer le document unifié
+            return DocumentKBISUnifie.generer_document_unifie(donnees_quittance, type_quittance)
             
         except Exception as e:
-            import traceback
-            print(f"❌ Erreur génération quittance KBIS: {e}")
-            print(f"Traceback: {traceback.format_exc()}")
+            print(f"Erreur génération quittance KBIS: {e}")
             return None
     
     def _determiner_type_quittance_paiement(self):

@@ -63,19 +63,6 @@ class DocumentUnifieA5ServiceComplet:
             else:
                 raise ValueError(f"Type de document non supporté: {document_type}")
             
-            # NOUVEAU : Modifier le titre si c'est un paiement de reliquat ou de complétion
-            if document_type.startswith('paiement_') and context.get('info_paiement_partiel'):
-                info_partiel = context.get('info_paiement_partiel')
-                if info_partiel.get('est_reliquat'):
-                    # C'est un paiement de complétion/reliquat
-                    if info_partiel.get('est_complet'):
-                        document_title = 'QUITTANCE DE PAIEMENT - COMPLETION DE RELIQUAT'
-                    else:
-                        document_title = 'QUITTANCE DE PAIEMENT - RELIQUAT PARTIEL'
-                elif info_partiel.get('est_partiel'):
-                    # C'est le premier paiement partiel
-                    document_title = 'QUITTANCE DE PAIEMENT PARTIEL'
-            
             # Ajouter les données communes
             context.update({
                 'document_title': document_title,
@@ -147,30 +134,60 @@ class DocumentUnifieA5ServiceComplet:
                     pass
         
         # Calculer les mois couverts par l'avance (pour tous les documents d'avance)
+        # CORRECTION V10.2: Utiliser ServiceLogiqueAvanceUnique (Option A)
         mois_couverts = None
         if paiement.type_paiement == 'avance' and montant_a_afficher and paiement.contrat.loyer_mensuel:
             try:
-                # Utiliser le service corrigé pour calculer les mois couverts
-                from .services_avance_corrige import ServiceAvanceCorrige
+                # CORRECTION V10.2: Utiliser la logique unique Option A (dettes prioritaires)
+                from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
+                from dateutil.relativedelta import relativedelta
                 
-                mois_couverts_data = ServiceAvanceCorrige.calculer_mois_couverts_correct(
-                    paiement.contrat, montant_a_afficher, paiement.date_paiement
+                # Déterminer le mois de début avec la logique Option A (dettes prioritaires)
+                mois_debut = ServiceLogiqueAvanceUnique.determiner_mois_debut_couverture_nouvelle_avance(
+                    paiement.contrat, 
+                    paiement.date_paiement
                 )
                 
-                if mois_couverts_data:
-                    mois_couverts = {
-                        'nombre': mois_couverts_data['nombre'],
-                        'mois_texte': mois_couverts_data['mois_texte'],
-                        'mois_liste': mois_couverts_data['mois_liste'],
-                        'date_debut': mois_couverts_data['date_debut'],
-                        'date_fin': mois_couverts_data['date_fin']
-                    }
-                    print(f"[DEBUG] Mois couverts calculés: {mois_couverts}")
+                # Calculer le nombre de mois couverts
+                nombre_mois = ServiceLogiqueAvanceUnique.calculer_nombre_mois_couverts(
+                    montant_a_afficher,
+                    paiement.contrat.loyer_mensuel
+                )
+                
+                # Calculer le mois de fin
+                mois_fin = ServiceLogiqueAvanceUnique.calculer_mois_fin_couverture(
+                    mois_debut,
+                    nombre_mois
+                )
+                
+                # Construire la liste des mois couverts
+                mois_liste = []
+                mois_courant = mois_debut
+                while mois_courant <= mois_fin:
+                    mois_liste.append(mois_courant.strftime('%B %Y'))
+                    mois_courant = mois_courant + relativedelta(months=1)
+                
+                # Construire le texte des mois couverts
+                if len(mois_liste) == 1:
+                    mois_texte = mois_liste[0]
+                elif len(mois_liste) == 2:
+                    mois_texte = f"{mois_liste[0]} et {mois_liste[1]}"
                 else:
-                    print(f"[DEBUG] Impossible de calculer les mois couverts pour le paiement {paiement.id}")
+                    mois_texte = ", ".join(mois_liste[:-1]) + " et " + mois_liste[-1]
+                
+                mois_couverts = {
+                    'nombre': nombre_mois,
+                    'mois_texte': mois_texte,
+                    'mois_liste': mois_liste,
+                    'date_debut': mois_debut,
+                    'date_fin': mois_fin
+                }
+                print(f"[V10.2] Mois couverts calculés (Option A): {mois_couverts}")
                     
             except Exception as e:
-                print(f"[DEBUG] Erreur lors du calcul des mois couverts: {e}")
+                print(f"[ERREUR V10.2] Calcul mois couverts: {e}")
+                import traceback
+                traceback.print_exc()
                 pass
         
         # Calculer les informations de paiement partiel si applicable
@@ -202,30 +219,6 @@ class DocumentUnifieA5ServiceComplet:
             total_paye = calcul_restant.get('total_paye', 0)
             montant_restant = calcul_restant.get('montant_restant', 0)
             
-            # NOUVEAU : Détecter si c'est un paiement de complétion de reliquat
-            est_reliquat = False
-            date_paiement_initial = None
-            numero_paiement_dans_sequence = 1
-            
-            # Méthode 1 : Vérifier les notes
-            notes_paiement = getattr(paiement, 'notes', '') or ''
-            if 'complétion' in notes_paiement.lower() or 'reliquat' in notes_paiement.lower():
-                est_reliquat = True
-            
-            # Méthode 2 : Si ce n'est pas le premier paiement du mois
-            if paiements_partiels_mois.count() > 1:
-                # Trouver la position de ce paiement dans la séquence
-                for index, p in enumerate(paiements_partiels_mois, start=1):
-                    if p.id == paiement.id:
-                        numero_paiement_dans_sequence = index
-                        if index > 1:
-                            est_reliquat = True
-                            # Récupérer le premier paiement de la séquence
-                            premier_paiement = paiements_partiels_mois.first()
-                            if premier_paiement:
-                                date_paiement_initial = premier_paiement.date_paiement
-                        break
-            
             info_paiement_partiel = {
                 'est_partiel': True,
                 'montant_du_mois': float(montant_du_mois),
@@ -235,10 +228,6 @@ class DocumentUnifieA5ServiceComplet:
                 'nombre_paiements': calcul_restant.get('nombre_paiements', 0),
                 'paiements_partiels': paiements_partiels_mois,
                 'pourcentage_paye': (float(total_paye) / float(montant_du_mois) * 100) if montant_du_mois > 0 else 0,
-                # NOUVEAU : Informations de reliquat
-                'est_reliquat': est_reliquat,
-                'date_paiement_initial': date_paiement_initial,
-                'numero_paiement_dans_sequence': numero_paiement_dans_sequence,
             }
         
         return {
@@ -327,28 +316,64 @@ class DocumentUnifieA5ServiceComplet:
         }
     
     def _calculer_mois_couverts_avance(self, paiement):
-        """Calcule le nombre de mois couverts par l'avance avec la logique corrigée."""
+        """
+        Calcule le nombre de mois couverts par l'avance avec la logique V10.2 Option A.
+        
+        CORRECTION CRITIQUE V10.2:
+        - Utilise ServiceLogiqueAvanceUnique (Option A - dettes prioritaires)
+        - Pas ServiceAvanceCorrige (ancienne logique)
+        """
         try:
-            # Utiliser le service corrigé
-            from .services_avance_corrige import ServiceAvanceCorrige
+            # CORRECTION V10.2: Utiliser la logique unique Option A
+            from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
+            from dateutil.relativedelta import relativedelta
+            import calendar
             
-            mois_couverts_data = ServiceAvanceCorrige.calculer_mois_couverts_correct(
-                paiement.contrat, paiement.montant, paiement.date_paiement
+            # Déterminer le mois de début avec la logique Option A (dettes prioritaires)
+            mois_debut = ServiceLogiqueAvanceUnique.determiner_mois_debut_couverture_nouvelle_avance(
+                paiement.contrat, 
+                paiement.date_paiement
             )
             
-            if not mois_couverts_data:
-                return None
+            # Calculer le nombre de mois couverts
+            nombre_mois = ServiceLogiqueAvanceUnique.calculer_nombre_mois_couverts(
+                paiement.montant,
+                paiement.contrat.loyer_mensuel
+            )
+            
+            # Calculer le mois de fin
+            mois_fin = ServiceLogiqueAvanceUnique.calculer_mois_fin_couverture(
+                mois_debut,
+                nombre_mois
+            )
+            
+            # Construire la liste des mois couverts
+            mois_liste = []
+            mois_courant = mois_debut
+            while mois_courant <= mois_fin:
+                mois_liste.append(mois_courant.strftime('%B %Y'))
+                mois_courant = mois_courant + relativedelta(months=1)
+            
+            # Construire le texte des mois couverts
+            if len(mois_liste) == 1:
+                mois_texte = mois_liste[0]
+            elif len(mois_liste) == 2:
+                mois_texte = f"{mois_liste[0]} et {mois_liste[1]}"
+            else:
+                mois_texte = ", ".join(mois_liste[:-1]) + " et " + mois_liste[-1]
             
             return {
-                'nombre': mois_couverts_data['nombre'],
-                'mois_texte': mois_couverts_data['mois_texte'],
-                'mois_liste': mois_couverts_data['mois_liste'],
-                'date_debut': mois_couverts_data['date_debut'],
-                'date_fin': mois_couverts_data['date_fin']
+                'nombre': nombre_mois,
+                'mois_texte': mois_texte,
+                'mois_liste': mois_liste,
+                'date_debut': mois_debut,
+                'date_fin': mois_fin
             }
             
         except Exception as e:
-            print(f"Erreur lors du calcul des mois couverts: {e}")
+            print(f"[ERREUR V10.2] Calcul mois couverts: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def _convertir_mois_couverts_en_lettres(self, mois_couverts):

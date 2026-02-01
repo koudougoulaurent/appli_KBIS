@@ -467,48 +467,18 @@ class Contrat(models.Model):
                         continue
         
         # Validation : éviter unité locative ET pièces simultanément
-        # IMPORTANT: Skip cette validation si on fait un update partiel qui ne touche pas unite_locative
-        # (évite les requêtes DB inutiles lors de synchronisations massives)
-        update_fields = kwargs.get('update_fields')
-        if update_fields is None or 'unite_locative' in update_fields:
-            # Seulement valider si on modifie unite_locative OU si c'est un save complet
-            self._valider_coherence_unite_pieces()
+        self._valider_coherence_unite_pieces()
         
         # Calculer automatiquement la caution et l'avance si non spécifiés
-        # NOTE: Cette logique ne s'applique QUE lors de la création (pas lors de sync avances)
         from decimal import Decimal
-        
         try:
             loyer_decimal = Decimal(self.loyer_mensuel) if self.loyer_mensuel else Decimal('0')
+            if self.depot_garantie == "0.00" or not self.depot_garantie:
+                self.depot_garantie = str(loyer_decimal * 3)  # 3 mois de caution
             
-            # Uniquement lors de la création OU si les valeurs sont vraiment vides/nulles
-            if (not self.pk or self.depot_garantie in ["0.00", None, ""]) and loyer_decimal > 0:
-                # Récupérer la configuration UNIQUEMENT si nécessaire
-                try:
-                    from core.models import ConfigurationEntreprise
-                    config = ConfigurationEntreprise.get_configuration_active()
-                    nombre_mois_caution = config.nombre_mois_caution if config else 3
-                except Exception:
-                    # En cas d'erreur (ex: table n'existe pas encore), utiliser défaut
-                    nombre_mois_caution = 3
-                
-                if self.depot_garantie in ["0.00", None, ""] or not self.depot_garantie:
-                    self.depot_garantie = str(loyer_decimal * nombre_mois_caution)
-            
-            if (not self.pk or self.avance_loyer in ["0.00", None, ""]) and loyer_decimal > 0:
-                # Récupérer la configuration UNIQUEMENT si nécessaire
-                try:
-                    from core.models import ConfigurationEntreprise
-                    config = ConfigurationEntreprise.get_configuration_active()
-                    nombre_mois_avance = config.nombre_mois_avance if config else 1
-                except Exception:
-                    # En cas d'erreur (ex: table n'existe pas encore), utiliser défaut
-                    nombre_mois_avance = 1
-                
-                if self.avance_loyer in ["0.00", None, ""] or not self.avance_loyer:
-                    self.avance_loyer = str(loyer_decimal * nombre_mois_avance)
-                    
-        except (ValueError, TypeError, Exception) as e:
+            if self.avance_loyer == "0.00" or not self.avance_loyer:
+                self.avance_loyer = str(loyer_decimal)  # 1 mois d'avance
+        except (ValueError, TypeError):
             # En cas d'erreur de conversion, utiliser des valeurs par défaut
             if not self.depot_garantie:
                 self.depot_garantie = "0.00"
@@ -516,9 +486,7 @@ class Contrat(models.Model):
                 self.avance_loyer = "0.00"
         
         # Gérer la disponibilité de la propriété
-        # IMPORTANT: Skip si on fait un update partiel qui ne touche pas est_actif/est_resilie
-        if update_fields is None or 'est_actif' in update_fields or 'est_resilie' in update_fields:
-            self._gestion_disponibilite_propriete()
+        self._gestion_disponibilite_propriete()
         
         # Sauvegarder avec gestion des erreurs d'unicité
         from django.db import IntegrityError
@@ -543,9 +511,7 @@ class Contrat(models.Model):
                     raise
         
         # Créer automatiquement l'avance de loyer si elle est payée
-        # IMPORTANT: Skip si on fait un update partiel qui ne touche pas avance_loyer_payee
-        if update_fields is None or 'avance_loyer_payee' in update_fields:
-            self._creer_avance_loyer_automatique()
+        self._creer_avance_loyer_automatique()
     
     def _gestion_disponibilite_propriete(self):
         """Gère automatiquement la disponibilité de la propriété et des unités locatives associées."""

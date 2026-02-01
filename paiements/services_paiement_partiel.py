@@ -254,29 +254,13 @@ class ServicePaiementPartiel:
     def determiner_mois_a_regler(contrat):
         """
         Détermine le mois à régler.
-        RÈGLE ABSOLUE : Le mois attendu est TOUJOURS le premier mois NON payé et NON couvert par une avance.
+        RÈGLE ABSOLUE : Le mois attendu est TOUJOURS le mois suivant le dernier paiement validé.
+        Si aucun paiement n'existe, retourne le mois suivant le mois actuel.
         """
         try:
             # Utiliser la méthode qui calcule le prochain mois (toujours = dernier paiement + 1 mois)
             from .services_avance import ServiceGestionAvance
             prochain_mois = ServiceGestionAvance.calculer_prochain_mois_paiement(contrat)
-            
-            # CRITIQUE : Vérifier si ce mois est déjà couvert par une avance active
-            # Boucler jusqu'à trouver un mois NON couvert (max 24 mois)
-            tentatives = 0
-            while tentatives < 24:
-                # Vérifier si le mois est couvert par une avance
-                est_couvert = ServiceGestionAvance.verifier_mois_couvert_par_avance(
-                    contrat, prochain_mois
-                )
-                
-                if not est_couvert:
-                    # Ce mois n'est pas couvert, c'est le bon !
-                    break
-                
-                # Ce mois est couvert par une avance, passer au suivant
-                prochain_mois = prochain_mois + relativedelta(months=1)
-                tentatives += 1
             
             # Convertir en format "mois année" (ex: "décembre 2024")
             mois_francais = [
@@ -672,32 +656,24 @@ class ServicePaiementPartiel:
             # Elle peut être réactivée si nécessaire mais ralentit considérablement l'application
             paiements_partiels_non_synchronises = []
             
-            # Grouper par contrat - CORRECTION : Inclure TOUS les contrats avec paiements partiels
+            # Grouper par contrat
             contrats_avec_partiels = {}
             
-            # ÉTAPE 1 : D'abord, créer une entrée pour CHAQUE contrat ayant des paiements partiels
-            # (même si tous sont complétés) en parcourant TOUS les paiements partiels
-            for paiement in paiements_partiels_tous:
+            # D'abord, identifier les contrats avec paiements partiels actifs
+            for paiement in paiements_partiels_actifs:
                 contrat_id = paiement.contrat.id
                 if contrat_id not in contrats_avec_partiels:
                     contrats_avec_partiels[contrat_id] = {
                         'contrat': paiement.contrat,
-                        'paiements_partiels': [],  # Paiements avec reliquat actif
+                        'paiements_partiels': [],
                         'paiements_partiels_tous': [],  # Tous les paiements partiels (historique complet)
                         'montant_total_restant': Decimal('0')
                     }
                 
-                # Ajouter à la liste complète
-                if paiement not in contrats_avec_partiels[contrat_id]['paiements_partiels_tous']:
-                    contrats_avec_partiels[contrat_id]['paiements_partiels_tous'].append(paiement)
-                
-                # Si le paiement a un reliquat actif, l'ajouter aussi à la liste des actifs
-                if paiement.montant_restant_du and paiement.montant_restant_du > 0:
-                    if paiement not in contrats_avec_partiels[contrat_id]['paiements_partiels']:
-                        contrats_avec_partiels[contrat_id]['paiements_partiels'].append(paiement)
-                        contrats_avec_partiels[contrat_id]['montant_total_restant'] += paiement.montant_restant_du
+                contrats_avec_partiels[contrat_id]['paiements_partiels'].append(paiement)
+                contrats_avec_partiels[contrat_id]['montant_total_restant'] += paiement.montant_restant_du
             
-            # ÉTAPE 2 : Ajouter les paiements partiels non synchronisés (si réactivé)
+            # Ajouter les paiements partiels non synchronisés
             for paiement in paiements_partiels_non_synchronises:
                 contrat_id = paiement.contrat.id
                 if contrat_id not in contrats_avec_partiels:
@@ -708,15 +684,24 @@ class ServicePaiementPartiel:
                         'montant_total_restant': Decimal('0')
                     }
                 
-                # Ajouter à la liste complète
-                if paiement not in contrats_avec_partiels[contrat_id]['paiements_partiels_tous']:
-                    contrats_avec_partiels[contrat_id]['paiements_partiels_tous'].append(paiement)
-                
-                # Ajouter à la liste des actifs si reliquat
-                if paiement.montant_restant_du and paiement.montant_restant_du > 0:
-                    if paiement not in contrats_avec_partiels[contrat_id]['paiements_partiels']:
-                        contrats_avec_partiels[contrat_id]['paiements_partiels'].append(paiement)
-                        contrats_avec_partiels[contrat_id]['montant_total_restant'] += paiement.montant_restant_du
+                if paiement.montant_restant_du > 0:
+                    contrats_avec_partiels[contrat_id]['paiements_partiels'].append(paiement)
+                    contrats_avec_partiels[contrat_id]['montant_total_restant'] += paiement.montant_restant_du
+            
+            # Ensuite, ajouter TOUS les paiements partiels (y compris complétés) pour chaque contrat
+            for paiement in paiements_partiels_tous:
+                contrat_id = paiement.contrat.id
+                if contrat_id in contrats_avec_partiels:
+                    # Ajouter à la liste complète si pas déjà présent
+                    if paiement not in contrats_avec_partiels[contrat_id]['paiements_partiels_tous']:
+                        contrats_avec_partiels[contrat_id]['paiements_partiels_tous'].append(paiement)
+            
+            # Ajouter aussi les paiements partiels non synchronisés à la liste complète
+            for paiement in paiements_partiels_non_synchronises:
+                contrat_id = paiement.contrat.id
+                if contrat_id in contrats_avec_partiels:
+                    if paiement not in contrats_avec_partiels[contrat_id]['paiements_partiels_tous']:
+                        contrats_avec_partiels[contrat_id]['paiements_partiels_tous'].append(paiement)
             
             # OPTIMISATION : Simplifier le recalcul - utiliser les valeurs déjà en base
             # Le recalcul dynamique est très coûteux, on utilise les valeurs existantes

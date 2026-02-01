@@ -317,20 +317,32 @@ class ServiceValidationPaiements:
         analyse = ServiceValidationPaiements._analyser_paiements_existants(contrat)
         
         # Calculer les mois couverts par les avances
+        # CORRECTION V10.2: Utiliser ServiceLogiqueAvanceUnique (Option A)
         mois_couverts_avances = set()
         for avance in analyse['avances']:
             if avance.montant > 0:
-                from paiements.services_avance_corrige import ServiceAvanceCorrige
-                mois_couverts = ServiceAvanceCorrige.calculer_mois_couverts_correct(
-                    contrat, avance.montant, avance.date_avance
+                from paiements.services_logique_avance_unique import ServiceLogiqueAvanceUnique
+                
+                # Utiliser la logique Option A (dettes prioritaires)
+                mois_debut = ServiceLogiqueAvanceUnique.determiner_mois_debut_couverture_nouvelle_avance(
+                    contrat, avance.date_avance
                 )
-                if mois_couverts:
-                    date_debut = mois_couverts['date_debut']
-                    date_fin = mois_couverts['date_fin']
-                    mois_courant = date_debut
-                    while mois_courant <= date_fin:
-                        mois_couverts_avances.add(mois_courant)
-                        mois_courant += relativedelta(months=1)
+                
+                nombre_mois = ServiceLogiqueAvanceUnique.calculer_nombre_mois_couverts(
+                    avance.montant,
+                    contrat.loyer_mensuel
+                )
+                
+                mois_fin = ServiceLogiqueAvanceUnique.calculer_mois_fin_couverture(
+                    mois_debut,
+                    nombre_mois
+                )
+                
+                # Ajouter tous les mois couverts
+                mois_courant = mois_debut
+                while mois_courant <= mois_fin:
+                    mois_couverts_avances.add(mois_courant)
+                    mois_courant += relativedelta(months=1)
         
         return {
             'contrat': contrat,

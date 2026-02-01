@@ -134,34 +134,6 @@ def ajouter_paiement_partiel(request):
                 contrat_obj, mois_a_regler['mois_paye']
             )
             
-            # CRITIQUE : Si le mois suggéré est déjà complètement payé, passer au mois suivant
-            # Boucle pour trouver le premier mois NON complété (max 12 mois)
-            tentatives = 0
-            while calcul_restant and calcul_restant.get('est_complet') and tentatives < 12:
-                # Le mois est complété, passer au suivant
-                from dateutil.relativedelta import relativedelta
-                date_mois_actuel = mois_a_regler['date_mois']
-                date_mois_suivant = date_mois_actuel + relativedelta(months=1)
-                
-                # Reformater le mois suivant
-                mois_francais = [
-                    'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
-                    'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
-                ]
-                mois_str = f"{mois_francais[date_mois_suivant.month - 1]} {date_mois_suivant.year}"
-                
-                mois_a_regler = {
-                    'mois_paye': mois_str,
-                    'date_mois': date_mois_suivant,
-                    'mois': date_mois_suivant.month,
-                    'annee': date_mois_suivant.year
-                }
-                
-                calcul_restant = ServicePaiementPartiel.calculer_montant_restant(
-                    contrat_obj, mois_a_regler['mois_paye']
-                )
-                tentatives += 1
-            
             # NOUVEAU : Détecter les reliquats en cours pour ce contrat
             reliquats = ServicePaiementPartiel.detecter_reliquats_en_cours(contrat_obj)
         except Contrat.DoesNotExist:
@@ -564,8 +536,8 @@ def completer_reliquat(request, paiement_id):
                     mois_paye=mois_paye,
                     montant_du_mois=calcul['montant_du_mois'],
                     est_paiement_partiel=True,
-                    statut='en_attente',  # ← CORRIGÉ : Validation manuelle requise
-                    notes=f"Complétion de reliquat. {notes} - VALIDATION REQUISE",
+                    statut='valide',
+                    notes=f"Complétion de reliquat. {notes}",
                     cree_par=request.user
                 )
                 

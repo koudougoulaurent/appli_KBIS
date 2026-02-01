@@ -155,20 +155,11 @@ class ContratPDFServiceUpdated:
     
     def _preparer_donnees_contrat(self):
         """Prépare les données du contrat pour le template."""
-        # Récupérer la configuration entreprise pour les paramètres de caution
-        try:
-            from core.models import ConfigurationEntreprise
-            config = ConfigurationEntreprise.get_configuration_active()
-            nombre_mois_caution = config.nombre_mois_caution if config else 3
-        except Exception:
-            # En cas d'erreur (ex: table n'existe pas), utiliser valeur par défaut
-            nombre_mois_caution = 3
-        
         # Récupérer les montants numériques
         loyer_numerique = self._get_numeric_value(self.contrat.loyer_mensuel)
         
-        # Calculer la caution selon la configuration entreprise
-        depot_numerique = loyer_numerique * nombre_mois_caution
+        # CORRECTION: Toujours calculer la caution comme 3 mois de loyer
+        depot_numerique = loyer_numerique * 3
         
         # Calculer le montant maximum de garantie (6 mois de loyer)
         montant_garantie_max = loyer_numerique * 6
@@ -181,7 +172,7 @@ class ContratPDFServiceUpdated:
             'depot_garantie_texte': self._nombre_en_lettres(int(depot_numerique)),
             'montant_garantie_max': str(int(montant_garantie_max)),
             'montant_garantie_max_texte': self._nombre_en_lettres(int(montant_garantie_max)),
-            'nombre_mois_caution': nombre_mois_caution,  # Valeur configurable
+            'nombre_mois_caution': 3,  # Toujours 3 mois
             'mois_debut_paiement': self._get_mois_debut_paiement(),
         }
         
