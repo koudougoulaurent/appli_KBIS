@@ -221,6 +221,10 @@ class DocumentUnifieA5Service:
     
     def _calculer_mois_couverts_avance(self, paiement):
         """
+        Calcule les mois couverts par une avance.
+        CORRECTION : Utilise les mois RÉELS de l'avance enregistrée si disponible.
+        """
+        """
         Calcule le nombre de mois couverts par l'avance basé sur le montant et le loyer mensuel.
         Retourne un dictionnaire avec le nombre de mois et la liste des mois.
         """
