@@ -33,7 +33,7 @@ class ServiceLogiqueAvanceUnique:
     """
     
     @staticmethod
-    def determiner_mois_debut_couverture_nouvelle_avance(contrat, date_avance=None):
+    def determiner_mois_debut_couverture_nouvelle_avance(contrat, date_avance=None, avance_a_exclure=None):
         """
         Détermine le mois de début de couverture pour une NOUVELLE avance.
         
@@ -53,6 +53,7 @@ class ServiceLogiqueAvanceUnique:
         Args:
             contrat: Contrat concerné
             date_avance: Date du paiement d'avance (optionnel, pour logging)
+            avance_a_exclure: AvanceLoyer à exclure de la recherche (optionnel, pour correction)
         
         Returns:
             date: Mois de début de couverture (1er du mois)
@@ -97,6 +98,7 @@ class ServiceLogiqueAvanceUnique:
         dernier_paiement_loyer = None
         
         # Récupérer TOUS les paiements avec mois_paye pour trouver le mois le plus récent
+        # Exclure le paiement associé à l'avance qu'on corrige (si fourni)
         paiements_avec_mois = Paiement.objects.filter(
             contrat=contrat,
             statut='valide',
@@ -106,6 +108,8 @@ class ServiceLogiqueAvanceUnique:
         ).exclude(
             mois_paye=''
         )
+        if avance_a_exclure and avance_a_exclure.paiement:
+            paiements_avec_mois = paiements_avec_mois.exclude(id=avance_a_exclure.paiement.id)
         
         # Convertir tous les mois_paye en dates et trouver le maximum
         mois_dates = []
@@ -142,12 +146,15 @@ class ServiceLogiqueAvanceUnique:
             print(f"  - Date: {dernier_paiement_loyer.date_paiement}")
             print(f"  - Mois payé: {dernier_mois_paiement}")
         
-        # 2. Chercher la dernière avance active
-        derniere_avance = AvanceLoyer.objects.filter(
+        # 2. Chercher la dernière avance active (en excluant l'avance à corriger si fournie)
+        queryset_avances = AvanceLoyer.objects.filter(
             contrat=contrat,
             statut='active',
             mois_fin_couverture__isnull=False
-        ).order_by('-mois_fin_couverture').first()
+        )
+        if avance_a_exclure:
+            queryset_avances = queryset_avances.exclude(id=avance_a_exclure.id)
+        derniere_avance = queryset_avances.order_by('-mois_fin_couverture').first()
         
         dernier_mois_avance = None
         if derniere_avance:
@@ -567,7 +574,7 @@ class ServiceLogiqueAvanceUnique:
             return None
     
     @staticmethod
-    def _get_dernier_mois_paye_reel(contrat):
+    def _get_dernier_mois_paye_reel(contrat, avance_a_exclure=None):
         """
         Retourne le DERNIER MOIS RÉELLEMENT PAYÉ OU COUVERT.
         Considère :
@@ -575,6 +582,10 @@ class ServiceLogiqueAvanceUnique:
         2. Les mois consommés par des avances (via ConsommationAvance)
         
         IMPORTANT : Un mois consommé par une avance équivaut à un paiement réel.
+        
+        Args:
+            contrat: Contrat concerné
+            avance_a_exclure: AvanceLoyer à exclure de la recherche (optionnel)
         
         Returns:
             date: Dernier mois réellement payé/couvert (1er du mois) ou None
@@ -609,6 +620,7 @@ class ServiceLogiqueAvanceUnique:
             return None
         
         # 1. Trouver le dernier mois payé directement (via Paiement)
+        # Exclure le paiement associé à l'avance qu'on corrige (si fourni)
         dernier_mois_paiement = None
         paiements_avec_mois = Paiement.objects.filter(
             contrat=contrat,
@@ -619,6 +631,8 @@ class ServiceLogiqueAvanceUnique:
         ).exclude(
             mois_paye=''
         )
+        if avance_a_exclure and avance_a_exclure.paiement:
+            paiements_avec_mois = paiements_avec_mois.exclude(id=avance_a_exclure.paiement.id)
         
         mois_dates_paiements = []
         for paiement in paiements_avec_mois:
@@ -630,11 +644,15 @@ class ServiceLogiqueAvanceUnique:
             dernier_mois_paiement = max(mois_dates_paiements)
         
         # 2. Trouver le dernier mois consommé par une avance
+        # Exclure les ConsommationAvance liées à l'avance qu'on corrige (si fourni)
         from .models_avance import ConsommationAvance
         dernier_mois_consomme = None
-        consommations = ConsommationAvance.objects.filter(
+        queryset_consommations = ConsommationAvance.objects.filter(
             avance__contrat=contrat
-        ).order_by('-mois_consomme').first()
+        )
+        if avance_a_exclure:
+            queryset_consommations = queryset_consommations.exclude(avance=avance_a_exclure)
+        consommations = queryset_consommations.order_by('-mois_consomme').first()
         
         if consommations:
             dernier_mois_consomme = consommations.mois_consomme.replace(day=1)

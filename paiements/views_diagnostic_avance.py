@@ -130,14 +130,33 @@ def forcer_consommation_avances_ajax(request, contrat_id):
                 mois_avance = date_avance.replace(day=1)
                 mois_debut_norm = mois_debut_actuel.replace(day=1)
                 
-                # Calculer le mois début correct
+                # Calculer le mois début correct (en excluant cette avance pour éviter les boucles)
                 from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
                 mois_debut_correct = ServiceLogiqueAvanceUnique.determiner_mois_debut_couverture_nouvelle_avance(
-                    contrat, date_avance
+                    contrat, date_avance, avance_a_exclure=avance
                 )
                 
-                # Si mois début est incorrect (dans le futur alors qu'il devrait être dans le passé)
-                if mois_debut_correct != mois_debut_norm and mois_debut_norm >= mois_actuel and date_avance < date.today() - relativedelta(months=1):
+                # Normaliser les dates pour comparaison
+                mois_debut_correct_norm = mois_debut_correct.replace(day=1) if mois_debut_correct else None
+                
+                # Logique de correction améliorée :
+                # 1. Si le mois début actuel est différent du mois début correct
+                # 2. ET que l'avance date d'il y a plus d'un mois (donc devrait être consommée)
+                # 3. OU que le mois début actuel est dans le futur alors que l'avance est ancienne
+                should_correct = False
+                if mois_debut_correct_norm and mois_debut_correct_norm != mois_debut_norm:
+                    # Cas 1: Avance ancienne (plus d'un mois) avec mois début incorrect
+                    if date_avance < date.today() - relativedelta(months=1):
+                        should_correct = True
+                    # Cas 2: Mois début actuel dans le futur alors que l'avance est ancienne
+                    elif mois_debut_norm >= mois_actuel and date_avance < date.today():
+                        should_correct = True
+                    # Cas 3: Mois début actuel très différent du mois début correct (écart > 2 mois)
+                    elif abs((mois_debut_norm.year - mois_debut_correct_norm.year) * 12 + 
+                            (mois_debut_norm.month - mois_debut_correct_norm.month)) > 2:
+                        should_correct = True
+                
+                if should_correct:
                     # Corriger le mois début
                     avance.mois_debut_couverture = mois_debut_correct
                     if avance.nombre_mois_couverts > 0:
