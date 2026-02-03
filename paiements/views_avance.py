@@ -484,6 +484,7 @@ def detail_avance_paiement(request, paiement_id):
 def creer_avance(request):
     """
     Créer une nouvelle avance de loyer avec vérification des avances existantes
+    IMPORTANT : Consomme automatiquement toutes les avances avant de créer une nouvelle
     """
     # *** CONSOMMATION AUTOMATIQUE DES AVANCES PASSÉES (AVANT TOUT) ***
     # Consommer toutes les avances pour tous les contrats avant de créer une nouvelle avance
@@ -666,8 +667,15 @@ def creer_avance(request):
                 # Synchroniser toutes les avances du contrat pour calculer les totaux
                 ServiceSynchronisationAvances.synchroniser_toutes_avances_contrat(contrat)
                 
-                # Récupérer les statistiques globales des avances du contrat
-                avances_contrat = AvanceLoyer.objects.filter(contrat=contrat, statut='active')
+                # *** RE-EXÉCUTER CONSOMMATION APRÈS CRÉATION pour avoir les données à jour ***
+                ServiceConsommationDynamique.consommer_avances_automatiquement(contrat)
+                
+                # Récupérer les statistiques globales des avances du contrat (recharger après consommation)
+                avances_contrat = list(AvanceLoyer.objects.filter(
+                    contrat=contrat, 
+                    statut='active',
+                    montant_restant__gt=0  # Seulement celles qui ont encore de l'argent
+                ))
                 total_mois_couverts = sum(avance.nombre_mois_couverts for avance in avances_contrat)
                 total_montant_restant = sum(avance.montant_restant for avance in avances_contrat)
                 
@@ -707,6 +715,11 @@ def creer_avance(request):
                     messages.error(request, f"ERREUR - Erreur inattendue : {str(e)}")
     else:
         form = AvanceLoyerForm()
+    
+    # *** CONSOMMATION AUTOMATIQUE DES AVANCES PASSÉES (pour GET aussi) ***
+    from .services_consommation_dynamique import ServiceConsommationDynamique
+    # Consommer automatiquement toutes les avances pour tous les contrats avant d'afficher le formulaire
+    ServiceConsommationDynamique.consommer_avances_automatiquement()
     
     context = {
         'form': form,
