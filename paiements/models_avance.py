@@ -229,17 +229,77 @@ class AvanceLoyer(models.Model):
             # Utiliser le mois d'effet personnalisé
             self.mois_debut_couverture = self.mois_effet_personnalise.replace(day=1)
         else:
-            # Logique automatique basée sur le jour du mois
-            # Si l'avance est versée après le 15 du mois, elle prend effet le mois suivant
-            # Sinon, elle prend effet le mois courant
-            mois_avance = self.date_avance.replace(day=1)
-            jour_avance = self.date_avance.day
-            
-            # Règle du 15+ : après le 15 = mois suivant, sinon mois courant
-            if jour_avance > 15:
-                self.mois_debut_couverture = mois_avance + relativedelta(months=1)
-            else:
-                self.mois_debut_couverture = mois_avance
+            # CORRECTION V10.2 : Utiliser ServiceLogiqueAvanceUnique au lieu de la règle du 15+
+            try:
+                from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
+                self.mois_debut_couverture = ServiceLogiqueAvanceUnique.determiner_mois_debut_couverture_nouvelle_avance(
+                    self.contrat, 
+                    self.date_avance
+                )
+            except Exception:
+                # Fallback : utiliser l'ancienne logique si erreur
+                mois_avance = self.date_avance.replace(day=1)
+                jour_avance = self.date_avance.day
+                if jour_avance > 15:
+                    self.mois_debut_couverture = mois_avance + relativedelta(months=1)
+                else:
+                    self.mois_debut_couverture = mois_avance
+        
+        # *** VALIDATION CRITIQUE : Vérifier qu'aucun mois n'est sauté ***
+        # (Seulement si c'est une nouvelle avance, pas lors d'une mise à jour)
+        if not self.pk:  # Nouvelle avance seulement
+            try:
+                dernier_mois_couvert = ServiceLogiqueAvanceUnique._get_dernier_mois_couvert(self.contrat)
+                
+                if dernier_mois_couvert and self.mois_debut_couverture:
+                    mois_francais = {
+                        1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+                        5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+                        9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
+                    }
+                    
+                    # Vérifier tous les mois entre dernier_mois_couvert + 1 et mois_debut_couverture
+                    mois_manquants = []
+                    mois_courant = dernier_mois_couvert + relativedelta(months=1)
+                    
+                    while mois_courant < self.mois_debut_couverture:
+                        mois_paye_ou_couvert = ServiceLogiqueAvanceUnique._verifier_mois_paye_ou_couvert(
+                            self.contrat, mois_courant
+                        )
+                        
+                        if not mois_paye_ou_couvert:
+                            mois_nom = mois_francais.get(mois_courant.month, mois_courant.strftime('%B'))
+                            mois_manquants.append(f"{mois_nom} {mois_courant.year}")
+                        
+                        mois_courant = mois_courant + relativedelta(months=1)
+                    
+                    # Si des mois sont manquants, lever une exception avec message clair
+                    if mois_manquants:
+                        mois_manquants_str = ", ".join(mois_manquants)
+                        dernier_mois_nom = mois_francais.get(dernier_mois_couvert.month, dernier_mois_couvert.strftime('%B'))
+                        mois_debut_nom = mois_francais.get(self.mois_debut_couverture.month, self.mois_debut_couverture.strftime('%B'))
+                        
+                        raise ValueError(
+                            f"❌ IMPOSSIBLE DE CRÉER CETTE AVANCE !\n\n"
+                            f"⚠️ PROBLÈME : Vous tentez de créer une avance qui commence en {mois_debut_nom} {self.mois_debut_couverture.year}, "
+                            f"mais les mois suivants n'ont PAS été payés :\n"
+                            f"   • {mois_manquants_str}\n\n"
+                            f"📋 CONTEXTE :\n"
+                            f"   • Dernier mois payé/couvert : {dernier_mois_nom} {dernier_mois_couvert.year}\n"
+                            f"   • Mois de début de l'avance : {mois_debut_nom} {self.mois_debut_couverture.year}\n\n"
+                            f"✅ SOLUTION :\n"
+                            f"   1. Payez d'abord les mois manquants ({mois_manquants_str})\n"
+                            f"   2. OU créez une avance qui commence en {mois_manquants[0]} pour couvrir les dettes\n\n"
+                            f"💡 RAPPEL : Une avance doit TOUJOURS couvrir les mois en ordre chronologique, "
+                            f"sans sauter de mois non payés."
+                        )
+            except ValueError:
+                # Re-lever les ValueError (messages d'erreur de validation)
+                raise
+            except Exception as e:
+                # Ignorer les autres erreurs pour ne pas bloquer la création
+                if settings.DEBUG:
+                    print(f"[AVERTISSEMENT] Validation mois manquants échouée: {e}")
         
         # Calculer la fin de couverture
         if mois_complets > 0:
@@ -274,8 +334,63 @@ class AvanceLoyer(models.Model):
         mois_dates.sort()
         
         # Définir les mois de début et fin
-        self.mois_debut_couverture = mois_dates[0]
-        self.mois_fin_couverture = mois_dates[-1]
+        self.mois_debut_couverture = mois_dates[0].replace(day=1)
+        self.mois_fin_couverture = mois_dates[-1].replace(day=1)
+        
+        # *** VALIDATION CRITIQUE : Vérifier qu'aucun mois n'est sauté ***
+        try:
+            from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
+            dernier_mois_couvert = ServiceLogiqueAvanceUnique._get_dernier_mois_couvert(self.contrat)
+            
+            if dernier_mois_couvert:
+                mois_francais = {
+                    1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+                    5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+                    9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
+                }
+                
+                # Vérifier tous les mois entre dernier_mois_couvert + 1 et le premier mois sélectionné
+                mois_manquants = []
+                mois_courant = dernier_mois_couvert + relativedelta(months=1)
+                
+                while mois_courant < self.mois_debut_couverture:
+                    mois_paye_ou_couvert = ServiceLogiqueAvanceUnique._verifier_mois_paye_ou_couvert(
+                        self.contrat, mois_courant
+                    )
+                    
+                    if not mois_paye_ou_couvert:
+                        mois_nom = mois_francais.get(mois_courant.month, mois_courant.strftime('%B'))
+                        mois_manquants.append(f"{mois_nom} {mois_courant.year}")
+                    
+                    mois_courant = mois_courant + relativedelta(months=1)
+                
+                # Si des mois sont manquants, lever une exception avec message clair
+                if mois_manquants:
+                    mois_manquants_str = ", ".join(mois_manquants)
+                    dernier_mois_nom = mois_francais.get(dernier_mois_couvert.month, dernier_mois_couvert.strftime('%B'))
+                    mois_debut_nom = mois_francais.get(self.mois_debut_couverture.month, self.mois_debut_couverture.strftime('%B'))
+                    
+                    raise ValueError(
+                        f"❌ IMPOSSIBLE DE CRÉER CETTE AVANCE !\n\n"
+                        f"⚠️ PROBLÈME : Vous avez sélectionné des mois commençant en {mois_debut_nom} {self.mois_debut_couverture.year}, "
+                        f"mais les mois suivants n'ont PAS été payés :\n"
+                        f"   • {mois_manquants_str}\n\n"
+                        f"📋 CONTEXTE :\n"
+                        f"   • Dernier mois payé/couvert : {dernier_mois_nom} {dernier_mois_couvert.year}\n"
+                        f"   • Premier mois sélectionné : {mois_debut_nom} {self.mois_debut_couverture.year}\n\n"
+                        f"✅ SOLUTION :\n"
+                        f"   1. Payez d'abord les mois manquants ({mois_manquants_str})\n"
+                        f"   2. OU sélectionnez des mois qui commencent en {mois_manquants[0]} pour couvrir les dettes\n\n"
+                        f"💡 RAPPEL : Une avance doit TOUJOURS couvrir les mois en ordre chronologique, "
+                        f"sans sauter de mois non payés."
+                    )
+        except ValueError:
+            # Re-lever les ValueError (messages d'erreur de validation)
+            raise
+        except Exception as e:
+            # Ignorer les autres erreurs pour ne pas bloquer la création
+            if settings.DEBUG:
+                print(f"[AVERTISSEMENT] Validation mois manquants (mode manuel) échouée: {e}")
         self.nombre_mois_couverts = len(mois_dates)
         
         # Vérifier que le montant de l'avance est suffisant

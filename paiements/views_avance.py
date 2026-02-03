@@ -582,6 +582,16 @@ def creer_avance(request):
                             date_avance=date_avance,
                             notes=notes if notes else f"Avance créée le {date_avance}"
                         )
+                except ValueError as e:
+                    # Erreur de validation métier (mois manquants, etc.) - afficher le message complet
+                    error_message = str(e)
+                    # Remplacer \n par <br> pour l'affichage HTML
+                    from django.utils.safestring import mark_safe
+                    messages.error(request, mark_safe(error_message.replace('\n', '<br>')))
+                    return render(request, 'paiements/avances/creer_avance_manuel.html', {
+                        'form': form,
+                        'contrats': Contrat.objects.filter(est_actif=True, est_resilie=False).select_related('locataire', 'propriete'),
+                    })
                 except Exception as e:
                     print(f"Erreur lors de la création de l'avance: {e}")
                     import traceback

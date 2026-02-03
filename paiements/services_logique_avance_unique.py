@@ -350,6 +350,53 @@ class ServiceLogiqueAvanceUnique:
                 contrat, date_avance
             )
             
+            # *** VALIDATION CRITIQUE : Vérifier qu'aucun mois n'est sauté ***
+            # Trouver le dernier mois payé ou couvert
+            dernier_mois_couvert = ServiceLogiqueAvanceUnique._get_dernier_mois_couvert(contrat)
+            
+            if dernier_mois_couvert:
+                # Dictionnaire de traduction des mois en français
+                mois_francais = {
+                    1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+                    5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+                    9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
+                }
+                
+                # Vérifier tous les mois entre dernier_mois_couvert + 1 et mois_debut
+                mois_manquants = []
+                mois_courant = dernier_mois_couvert + relativedelta(months=1)
+                
+                while mois_courant < mois_debut:
+                    # Vérifier si ce mois est payé ou couvert par une avance
+                    mois_paye_ou_couvert = ServiceLogiqueAvanceUnique._verifier_mois_paye_ou_couvert(contrat, mois_courant)
+                    
+                    if not mois_paye_ou_couvert:
+                        mois_nom = mois_francais.get(mois_courant.month, mois_courant.strftime('%B'))
+                        mois_manquants.append(f"{mois_nom} {mois_courant.year}")
+                    
+                    mois_courant = mois_courant + relativedelta(months=1)
+                
+                # Si des mois sont manquants, lever une exception avec message clair
+                if mois_manquants:
+                    mois_manquants_str = ", ".join(mois_manquants)
+                    dernier_mois_nom = mois_francais.get(dernier_mois_couvert.month, dernier_mois_couvert.strftime('%B'))
+                    mois_debut_nom = mois_francais.get(mois_debut.month, mois_debut.strftime('%B'))
+                    
+                    raise ValueError(
+                        f"❌ IMPOSSIBLE DE CRÉER CETTE AVANCE !\n\n"
+                        f"⚠️ PROBLÈME : Vous tentez de créer une avance qui commence en {mois_debut_nom} {mois_debut.year}, "
+                        f"mais les mois suivants n'ont PAS été payés :\n"
+                        f"   • {mois_manquants_str}\n\n"
+                        f"📋 CONTEXTE :\n"
+                        f"   • Dernier mois payé/couvert : {dernier_mois_nom} {dernier_mois_couvert.year}\n"
+                        f"   • Mois de début de l'avance : {mois_debut_nom} {mois_debut.year}\n\n"
+                        f"✅ SOLUTION :\n"
+                        f"   1. Payez d'abord les mois manquants ({mois_manquants_str})\n"
+                        f"   2. OU créez une avance qui commence en {mois_manquants[0]} pour couvrir les dettes\n\n"
+                        f"💡 RAPPEL : Une avance doit TOUJOURS couvrir les mois en ordre chronologique, "
+                        f"sans sauter de mois non payés."
+                    )
+            
             # 2. Calculer le nombre de mois couverts
             nombre_mois, reste = ServiceLogiqueAvanceUnique.calculer_nombre_mois_couverts(
                 montant_avance, loyer_mensuel
@@ -434,6 +481,156 @@ class ServiceLogiqueAvanceUnique:
                 print(f"  ✓ Resynchronisée: {avance.mois_debut_couverture} → {mois_fin} ({nombre_mois} mois)")
             
             return avance
+    
+    @staticmethod
+    def _get_dernier_mois_couvert(contrat):
+        """
+        Retourne le dernier mois payé ou couvert par une avance.
+        Utilise la même logique que determiner_mois_debut_couverture_nouvelle_avance.
+        
+        Returns:
+            date: Dernier mois couvert (1er du mois) ou None
+        """
+        # Fonction pour convertir mois_paye en date
+        def convertir_mois_paye_en_date(mois_paye_str):
+            """Convertit 'Novembre 2024' ou 'November 2024' en date."""
+            if not mois_paye_str:
+                return None
+            
+            from datetime import date
+            import re
+            
+            mois_francais = {
+                'janvier': 1, 'février': 2, 'mars': 3, 'avril': 4,
+                'mai': 5, 'juin': 6, 'juillet': 7, 'août': 8,
+                'septembre': 9, 'octobre': 10, 'novembre': 11, 'décembre': 12
+            }
+            mois_anglais = {
+                'january': 1, 'february': 2, 'march': 3, 'april': 4,
+                'may': 5, 'june': 6, 'july': 7, 'august': 8,
+                'september': 9, 'october': 10, 'november': 11, 'december': 12
+            }
+            
+            mois_paye_lower = mois_paye_str.lower().strip()
+            for mois, num in {**mois_francais, **mois_anglais}.items():
+                if mois in mois_paye_lower:
+                    annee_match = re.search(r'(\d{4})', mois_paye_str)
+                    if annee_match:
+                        annee = int(annee_match.group(1))
+                        return date(annee, num, 1)
+            return None
+        
+        # Trouver le dernier mois payé
+        dernier_mois_paiement = None
+        paiements_avec_mois = Paiement.objects.filter(
+            contrat=contrat,
+            statut='valide',
+            is_deleted=False
+        ).exclude(
+            mois_paye__isnull=True
+        ).exclude(
+            mois_paye=''
+        )
+        
+        mois_dates = []
+        for paiement in paiements_avec_mois:
+            mois_date = convertir_mois_paye_en_date(paiement.mois_paye)
+            if mois_date:
+                mois_dates.append(mois_date)
+        
+        if mois_dates:
+            dernier_mois_paiement = max(mois_dates)
+        
+        # Trouver le dernier mois couvert par une avance
+        derniere_avance = AvanceLoyer.objects.filter(
+            contrat=contrat,
+            statut='active',
+            mois_fin_couverture__isnull=False
+        ).order_by('-mois_fin_couverture').first()
+        
+        dernier_mois_avance = None
+        if derniere_avance:
+            dernier_mois_avance = derniere_avance.mois_fin_couverture
+        
+        # Retourner le plus récent
+        if dernier_mois_paiement and dernier_mois_avance:
+            return max(dernier_mois_paiement, dernier_mois_avance)
+        elif dernier_mois_paiement:
+            return dernier_mois_paiement
+        elif dernier_mois_avance:
+            return dernier_mois_avance
+        else:
+            return None
+    
+    @staticmethod
+    def _verifier_mois_paye_ou_couvert(contrat, mois_date):
+        """
+        Vérifie si un mois spécifique est payé ou couvert par une avance.
+        
+        Args:
+            contrat: Contrat concerné
+            mois_date: Date du mois à vérifier (1er du mois)
+        
+        Returns:
+            bool: True si le mois est payé ou couvert, False sinon
+        """
+        # Fonction pour convertir mois_paye en date
+        def convertir_mois_paye_en_date(mois_paye_str):
+            """Convertit 'Novembre 2024' ou 'November 2024' en date."""
+            if not mois_paye_str:
+                return None
+            
+            from datetime import date
+            import re
+            
+            mois_francais = {
+                'janvier': 1, 'février': 2, 'mars': 3, 'avril': 4,
+                'mai': 5, 'juin': 6, 'juillet': 7, 'août': 8,
+                'septembre': 9, 'octobre': 10, 'novembre': 11, 'décembre': 12
+            }
+            mois_anglais = {
+                'january': 1, 'february': 2, 'march': 3, 'april': 4,
+                'may': 5, 'june': 6, 'july': 7, 'august': 8,
+                'september': 9, 'october': 10, 'november': 11, 'december': 12
+            }
+            
+            mois_paye_lower = mois_paye_str.lower().strip()
+            for mois, num in {**mois_francais, **mois_anglais}.items():
+                if mois in mois_paye_lower:
+                    annee_match = re.search(r'(\d{4})', mois_paye_str)
+                    if annee_match:
+                        annee = int(annee_match.group(1))
+                        return date(annee, num, 1)
+            return None
+        
+        # Vérifier si le mois est payé
+        paiements_mois = Paiement.objects.filter(
+            contrat=contrat,
+            statut='valide',
+            is_deleted=False
+        ).exclude(
+            mois_paye__isnull=True
+        ).exclude(
+            mois_paye=''
+        )
+        
+        for paiement in paiements_mois:
+            mois_paye_date = convertir_mois_paye_en_date(paiement.mois_paye)
+            if mois_paye_date == mois_date:
+                return True
+        
+        # Vérifier si le mois est couvert par une avance active
+        avances_couvrantes = AvanceLoyer.objects.filter(
+            contrat=contrat,
+            statut='active',
+            mois_debut_couverture__lte=mois_date,
+            mois_fin_couverture__gte=mois_date
+        )
+        
+        if avances_couvrantes.exists():
+            return True
+        
+        return False
     
     @staticmethod
     def get_prochain_mois_a_payer(contrat):
