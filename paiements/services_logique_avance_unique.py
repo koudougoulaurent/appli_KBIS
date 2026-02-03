@@ -567,13 +567,15 @@ class ServiceLogiqueAvanceUnique:
     @staticmethod
     def _get_dernier_mois_paye_reel(contrat):
         """
-        Retourne le DERNIER MOIS RÉELLEMENT PAYÉ (par un paiement, pas par une avance).
-        Utilisé pour la validation afin de détecter les mois manquants.
+        Retourne le DERNIER MOIS RÉELLEMENT PAYÉ OU COUVERT.
+        Considère :
+        1. Les paiements directs (via Paiement avec mois_paye)
+        2. Les mois consommés par des avances (via ConsommationAvance)
         
-        IMPORTANT : Cette méthode ne considère PAS les avances, seulement les paiements réels.
+        IMPORTANT : Un mois consommé par une avance équivaut à un paiement réel.
         
         Returns:
-            date: Dernier mois réellement payé (1er du mois) ou None
+            date: Dernier mois réellement payé/couvert (1er du mois) ou None
         """
         # Fonction pour convertir mois_paye en date
         def convertir_mois_paye_en_date(mois_paye_str):
@@ -604,7 +606,7 @@ class ServiceLogiqueAvanceUnique:
                         return date(annee, num, 1)
             return None
         
-        # Trouver le dernier mois payé (SEULEMENT les paiements réels, pas les avances)
+        # 1. Trouver le dernier mois payé directement (via Paiement)
         dernier_mois_paiement = None
         paiements_avec_mois = Paiement.objects.filter(
             contrat=contrat,
@@ -616,16 +618,34 @@ class ServiceLogiqueAvanceUnique:
             mois_paye=''
         )
         
-        mois_dates = []
+        mois_dates_paiements = []
         for paiement in paiements_avec_mois:
             mois_date = convertir_mois_paye_en_date(paiement.mois_paye)
             if mois_date:
-                mois_dates.append(mois_date)
+                mois_dates_paiements.append(mois_date)
         
-        if mois_dates:
-            dernier_mois_paiement = max(mois_dates)
+        if mois_dates_paiements:
+            dernier_mois_paiement = max(mois_dates_paiements)
         
-        return dernier_mois_paiement
+        # 2. Trouver le dernier mois consommé par une avance
+        from .models_avance import ConsommationAvance
+        dernier_mois_consomme = None
+        consommations = ConsommationAvance.objects.filter(
+            avance__contrat=contrat
+        ).order_by('-mois_consomme').first()
+        
+        if consommations:
+            dernier_mois_consomme = consommations.mois_consomme.replace(day=1)
+        
+        # 3. Retourner le plus récent entre paiement direct et consommation d'avance
+        if dernier_mois_paiement and dernier_mois_consomme:
+            return max(dernier_mois_paiement, dernier_mois_consomme)
+        elif dernier_mois_paiement:
+            return dernier_mois_paiement
+        elif dernier_mois_consomme:
+            return dernier_mois_consomme
+        else:
+            return None
     
     @staticmethod
     def _verifier_mois_paye_ou_couvert(contrat, mois_date):
