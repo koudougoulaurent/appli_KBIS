@@ -756,15 +756,23 @@
                     Caution remboursable en fin de contrat
                 {% elif document_type == 'paiement_avance' or paiement.type_paiement == 'avance' %}
                     <strong>Avance de loyer</strong>
-                    {% if mois_couverts and mois_couverts.nombre %}
-                    <br><strong style="font-size: 11px; color: #28a745;">✓ MOIS COUVERTS :</strong>
-                    <br><span style="font-size: 11px; font-weight: bold; color: #000;">{{ mois_couverts.mois_texte }}</span>
-                    <br>• Période : {{ mois_couverts.date_debut|date:"F Y" }} à {{ mois_couverts.date_fin|date:"F Y" }}
-                    <br>• Montant : {{ montant_total|floatformat:0 }} FCFA
+                    {% if mois_couverts and mois_couverts.nombre and mois_couverts.mois_texte %}
+                    <br><strong style="font-size: 12px; color: #28a745; text-decoration: underline;">✓ MOIS COUVERTS PAR CETTE AVANCE :</strong>
+                    <br><span style="font-size: 12px; font-weight: bold; color: #000; background-color: #f0fff4; padding: 2px 5px; border: 1px solid #28a745;">{{ mois_couverts.mois_texte }}</span>
+                    <br>• Période de couverture : {{ mois_couverts.date_debut|date:"F Y" }} à {{ mois_couverts.date_fin|date:"F Y" }}
+                    <br>• Nombre de mois : {{ mois_couverts.nombre }} mois
+                    <br>• Montant de l'avance : {{ montant_total|floatformat:0 }} FCFA
+                    <br>• Loyer mensuel : {{ montant_loyer|floatformat:0 }} FCFA
+                    {% elif avance_loyer and avance_loyer.mois_debut_couverture and avance_loyer.mois_fin_couverture %}
+                    <br><strong style="font-size: 12px; color: #28a745; text-decoration: underline;">✓ MOIS COUVERTS PAR CETTE AVANCE :</strong>
+                    <br><span style="font-size: 12px; font-weight: bold; color: #000; background-color: #f0fff4; padding: 2px 5px; border: 1px solid #28a745;">{{ avance_loyer.mois_debut_couverture|date:"F Y" }} à {{ avance_loyer.mois_fin_couverture|date:"F Y" }}</span>
+                    <br>• Nombre de mois : {{ avance_loyer.nombre_mois_couverts }} mois
+                    <br>• Montant de l'avance : {{ montant_total|floatformat:0 }} FCFA
                     <br>• Loyer mensuel : {{ montant_loyer|floatformat:0 }} FCFA
                     {% else %}
                     <br>• Montant : {{ montant_total|floatformat:0 }} FCFA
                     <br>• Loyer mensuel : {{ montant_loyer|floatformat:0 }} FCFA
+                    <br><span style="color: #dc3545; font-size: 10px;">⚠️ Les mois couverts n'ont pas pu être calculés</span>
                     {% endif %}
                 {% elif document_type == 'paiement_quittance' or paiement.type_paiement == 'loyer' %}
                     Paiement loyer<br>

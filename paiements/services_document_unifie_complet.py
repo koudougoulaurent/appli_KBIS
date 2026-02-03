@@ -111,9 +111,9 @@ class DocumentUnifieA5ServiceComplet:
         if document_type == 'paiement_avance' or paiement.type_paiement == 'avance':
             try:
                 from .models_avance import AvanceLoyer
+                # Chercher l'avance liée à ce paiement (sans filtrer par statut pour avoir toutes les avances)
                 avance_loyer = AvanceLoyer.objects.filter(
-                    paiement=paiement,
-                    statut='active'
+                    paiement=paiement
                 ).first()
             except Exception:
                 pass
@@ -137,7 +137,11 @@ class DocumentUnifieA5ServiceComplet:
         # Calculer les mois couverts par l'avance (pour tous les documents d'avance)
         # CORRECTION V10.2: Utiliser ServiceLogiqueAvanceUnique (Option A)
         mois_couverts = None
-        if paiement.type_paiement == 'avance' and montant_a_afficher and paiement.contrat.loyer_mensuel:
+        
+        # Vérifier si c'est une avance (vérifier à la fois document_type et type_paiement)
+        est_avance = (document_type == 'paiement_avance' or paiement.type_paiement == 'avance')
+        
+        if est_avance and montant_a_afficher and paiement.contrat.loyer_mensuel:
             try:
                 # CORRECTION V10.2: Utiliser la logique unique Option A (dettes prioritaires)
                 from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
@@ -149,8 +153,8 @@ class DocumentUnifieA5ServiceComplet:
                     paiement.date_paiement
                 )
                 
-                # Calculer le nombre de mois couverts
-                nombre_mois = ServiceLogiqueAvanceUnique.calculer_nombre_mois_couverts(
+                # Calculer le nombre de mois couverts (retourne un tuple: (nombre_mois, reste))
+                nombre_mois, reste = ServiceLogiqueAvanceUnique.calculer_nombre_mois_couverts(
                     montant_a_afficher,
                     paiement.contrat.loyer_mensuel
                 )
@@ -193,13 +197,54 @@ class DocumentUnifieA5ServiceComplet:
                 }
                 if settings.DEBUG:
                     print(f"[V10.2] Mois couverts calculés (Option A): {mois_couverts}")
-                    
             except Exception as e:
-                if settings.DEBUG:
-                    print(f"[ERREUR V10.2] Calcul mois couverts: {e}")
+                # Toujours logger l'erreur même en production pour diagnostiquer
                 import traceback
+                print(f"[ERREUR CRITIQUE] Calcul mois couverts pour paiement {paiement.id}: {e}")
                 traceback.print_exc()
-                pass
+                
+                # FALLBACK : Utiliser l'AvanceLoyer si elle existe
+                if avance_loyer and avance_loyer.mois_debut_couverture and avance_loyer.mois_fin_couverture:
+                    try:
+                        from dateutil.relativedelta import relativedelta
+                        mois_francais = {
+                            1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+                            5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+                            9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
+                        }
+                        
+                        mois_debut = avance_loyer.mois_debut_couverture
+                        mois_fin = avance_loyer.mois_fin_couverture
+                        
+                        # Construire la liste des mois couverts
+                        mois_liste = []
+                        mois_courant = mois_debut
+                        while mois_courant <= mois_fin:
+                            mois_nom = mois_francais.get(mois_courant.month, mois_courant.strftime('%B'))
+                            mois_liste.append(f"{mois_nom} {mois_courant.year}")
+                            mois_courant = mois_courant + relativedelta(months=1)
+                        
+                        # Construire le texte des mois couverts
+                        if len(mois_liste) == 1:
+                            mois_texte = mois_liste[0]
+                        elif len(mois_liste) == 2:
+                            mois_texte = f"{mois_liste[0]} et {mois_liste[1]}"
+                        else:
+                            mois_texte = ", ".join(mois_liste[:-1]) + " et " + mois_liste[-1]
+                        
+                        mois_couverts = {
+                            'nombre': avance_loyer.nombre_mois_couverts or len(mois_liste),
+                            'mois_texte': mois_texte,
+                            'mois_liste': mois_liste,
+                            'date_debut': mois_debut,
+                            'date_fin': mois_fin
+                        }
+                        print(f"[FALLBACK] Mois couverts récupérés depuis AvanceLoyer #{avance_loyer.id}: {mois_couverts}")
+                    except Exception as e2:
+                        print(f"[ERREUR FALLBACK] Impossible d'utiliser AvanceLoyer: {e2}")
+                        mois_couverts = None
+                else:
+                    mois_couverts = None
         
         # Calculer les informations de paiement partiel si applicable
         info_paiement_partiel = None
@@ -241,7 +286,9 @@ class DocumentUnifieA5ServiceComplet:
                 'pourcentage_paye': (float(total_paye) / float(montant_du_mois) * 100) if montant_du_mois > 0 else 0,
             }
         
-        return {
+        # Ajouter document_type au contexte pour que le template puisse vérifier
+        context_data = {
+            'document_type': document_type,  # IMPORTANT : Ajouter document_type au contexte
             'document_number': paiement.numero_paiement or f"PAI-{paiement.id}",
             'type_paiement': paiement.get_type_paiement_display(),
             'mode_paiement': paiement.get_mode_paiement_display(),
@@ -254,7 +301,7 @@ class DocumentUnifieA5ServiceComplet:
             'montant_charges_deduites': getattr(paiement, 'montant_charges_deduites', 0),
             'montant_net_paye': getattr(paiement, 'montant_net_paye', montant_a_afficher),
             'montant_net_lettres': self._convertir_en_lettres(getattr(paiement, 'montant_net_paye', montant_a_afficher)),
-            'mois_couverts': mois_couverts,
+            'mois_couverts': mois_couverts,  # Toujours passer mois_couverts même si None
             'mois_couverts_lettres': self._convertir_mois_couverts_en_lettres(mois_couverts) if mois_couverts else None,
             'locataire': paiement.contrat.locataire,
             'propriete': paiement.contrat.propriete,
@@ -274,6 +321,8 @@ class DocumentUnifieA5ServiceComplet:
             'montant_total_cumule': sum(p.montant for p in paiements_cumules) if paiements_cumules else montant_a_afficher,
             'quittance_cumulee': quittance_cumulee,
         }
+        
+        return context_data
     
     def _prepare_retrait_context(self, retrait_id, user=None):
         """Prépare le contexte pour un document de retrait."""
@@ -346,8 +395,8 @@ class DocumentUnifieA5ServiceComplet:
                 paiement.date_paiement
             )
             
-            # Calculer le nombre de mois couverts
-            nombre_mois = ServiceLogiqueAvanceUnique.calculer_nombre_mois_couverts(
+            # Calculer le nombre de mois couverts (retourne un tuple: (nombre_mois, reste))
+            nombre_mois, reste = ServiceLogiqueAvanceUnique.calculer_nombre_mois_couverts(
                 paiement.montant,
                 paiement.contrat.loyer_mensuel
             )
