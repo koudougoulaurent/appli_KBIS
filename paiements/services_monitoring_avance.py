@@ -49,7 +49,21 @@ class ServiceMonitoringAvance:
                 avance.refresh_from_db()
                 
                 # Calculer les mois consommés (après consommation automatique)
-                mois_consommes = ConsommationAvance.objects.filter(avance=avance).count()
+                # IMPORTANT : Utiliser une requête fraîche pour éviter les problèmes de cache
+                mois_consommes = ConsommationAvance.objects.filter(avance_id=avance.id).count()
+                
+                # Vérifier aussi directement dans la DB si besoin
+                if mois_consommes == 0 and avance.mois_debut_couverture:
+                    # Double vérification : peut-être que la consommation n'a pas été créée
+                    mois_debut = avance.mois_debut_couverture.replace(day=1)
+                    mois_actuel = date.today().replace(day=1)
+                    if mois_debut < mois_actuel:
+                        # Il devrait y avoir au moins une consommation
+                        # Forcer une nouvelle tentative de consommation
+                        from .services_consommation_dynamique import ServiceConsommationDynamique
+                        ServiceConsommationDynamique._consommer_avance_par_temps(avance)
+                        avance.refresh_from_db()
+                        mois_consommes = ConsommationAvance.objects.filter(avance_id=avance.id).count()
                 
                 # *** CORRECTION : Calculer le montant réel consommé et restant ***
                 montant_consomme = sum(
