@@ -146,8 +146,15 @@ class ServiceGestionAvance:
         """
         Vérifie si un contrat a déjà des avances actives
         Retourne les informations sur les avances existantes
+        IMPORTANT : Consomme automatiquement les mois passés avant de vérifier
         """
         try:
+            # *** CONSOMMATION AUTOMATIQUE PRIORITAIRE ***
+            from .services_consommation_dynamique import ServiceConsommationDynamique
+            # Consommer automatiquement toutes les avances du contrat pour les mois écoulés
+            ServiceConsommationDynamique.consommer_avances_automatiquement(contrat)
+            
+            # Recharger après consommation pour avoir les données à jour
             avances_actives = AvanceLoyer.objects.filter(
                 contrat=contrat,
                 statut='active',
@@ -631,10 +638,19 @@ class ServiceGestionAvance:
     def get_avances_actives_contrat(contrat):
         """
         Retourne les avances actives pour un contrat
+        IMPORTANT : Consomme automatiquement les mois passés avant de retourner les résultats
         """
+        # *** CONSOMMATION AUTOMATIQUE PRIORITAIRE ***
+        from .services_consommation_dynamique import ServiceConsommationDynamique
+        # Consommer automatiquement toutes les avances du contrat pour les mois écoulés
+        ServiceConsommationDynamique.consommer_avances_automatiquement(contrat)
+        
+        # Recharger les avances APRÈS consommation pour avoir les données à jour
+        # Retourner seulement les actives (les épuisées ne sont plus "actives")
         return AvanceLoyer.objects.filter(
             contrat=contrat,
-            statut='active'
+            statut='active',
+            montant_restant__gt=0  # Seulement celles qui ont encore de l'argent
         ).order_by('-date_avance')
     
     @staticmethod

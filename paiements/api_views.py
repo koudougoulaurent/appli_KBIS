@@ -330,12 +330,14 @@ def api_contexte_intelligent_contrat(request, contrat_id):
                 # Consommer automatiquement toutes les avances du contrat pour les mois écoulés
                 ServiceConsommationDynamique.consommer_avances_automatiquement(contrat)
                 
+                # *** IMPORTANT : Recharger les avances APRÈS consommation pour avoir les données à jour ***
                 # Récupérer les avances actives (seulement celles qui ont encore du montant restant)
-                avances_actives = AvanceLoyer.objects.filter(
+                # Utiliser une nouvelle requête pour éviter les problèmes de cache
+                avances_actives = list(AvanceLoyer.objects.filter(
                     contrat=contrat,
                     statut='active',
                     montant_restant__gt=0  # Seulement les avances qui ont encore de l'argent
-                )
+                ))
                 
                 # Calculer le montant total des avances disponibles
                 montant_avances_disponible = sum(avance.montant_restant for avance in avances_actives)
@@ -500,7 +502,13 @@ def api_convertir_avances_existantes(request):
             
             contrat = Contrat.objects.get(pk=contrat_id, is_deleted=False)
             
+            # *** CONSOMMATION AUTOMATIQUE PRIORITAIRE ***
+            from .services_consommation_dynamique import ServiceConsommationDynamique
+            # Consommer automatiquement toutes les avances du contrat pour les mois écoulés
+            ServiceConsommationDynamique.consommer_avances_automatiquement(contrat)
+            
             # *** NOUVELLE VÉRIFICATION (V9.1) : Vérifier si avances ACTIVES existent déjà ***
+            # Recharger après consommation pour avoir les données à jour
             avances_actives = AvanceLoyer.objects.filter(
                 contrat=contrat,
                 statut='active',

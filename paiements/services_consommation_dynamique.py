@@ -19,11 +19,14 @@ class ServiceConsommationDynamique:
     def consommer_avances_automatiquement(cls, contrat=None):
         """
         Consomme automatiquement les avances en fonction du temps écoulé.
+        IMPORTANT : Cette méthode est appelée systématiquement avant chaque affichage des avances.
         """
         if contrat:
-            avances = AvanceLoyer.objects.filter(contrat=contrat, statut='active')
+            # Récupérer les avances actives du contrat
+            avances = list(AvanceLoyer.objects.filter(contrat=contrat, statut='active'))
         else:
-            avances = AvanceLoyer.objects.filter(statut='active')
+            # Récupérer toutes les avances actives
+            avances = list(AvanceLoyer.objects.filter(statut='active'))
         
         consommees = 0
         erreurs = 0
@@ -31,6 +34,13 @@ class ServiceConsommationDynamique:
         for avance in avances:
             try:
                 with transaction.atomic():
+                    # Recharger l'avance pour avoir les données à jour
+                    avance.refresh_from_db()
+                    
+                    # Vérifier que l'avance est toujours active avant consommation
+                    if avance.statut != 'active':
+                        continue
+                    
                     resultat = cls._consommer_avance_par_temps(avance)
                     if resultat['consommee']:
                         consommees += 1
@@ -40,12 +50,15 @@ class ServiceConsommationDynamique:
                         print(f"INFO - Avance {avance.id} pas encore a consommer")
             except Exception as e:
                 erreurs += 1
-                print(f"ERREUR - Avance {avance.id}: {str(e)}")
+                if settings.DEBUG:
+                    print(f"ERREUR - Avance {avance.id}: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
         
         return {
             'consommees': consommees,
             'erreurs': erreurs,
-            'total': avances.count()
+            'total': len(avances)
         }
     
     @classmethod
@@ -67,11 +80,11 @@ class ServiceConsommationDynamique:
             # Normaliser le mois au 1er du mois
             mois_normalise = mois.replace(day=1)
             
+            # Recharger l'avance pour avoir les données à jour avant vérification
+            avance.refresh_from_db()
+            
             # Vérifier si ce mois n'est pas déjà consommé (double vérification)
             if not avance.est_mois_consomme(mois_normalise):
-                # Recharger l'avance pour avoir les données à jour
-                avance.refresh_from_db()
-                
                 # Calculer le montant restant après cette consommation
                 montant_restant_apres = max(Decimal('0'), avance.montant_restant - avance.loyer_mensuel)
                 
@@ -104,6 +117,9 @@ class ServiceConsommationDynamique:
                             print(f"  - Avance épuisée, statut changé à 'epuisee'")
                     
                     avance.save(update_fields=['montant_restant', 'statut'])
+                    
+                    # Recharger après sauvegarde pour avoir les données à jour
+                    avance.refresh_from_db()
                     
                     mois_ajoutes += 1
                 except Exception as e:
@@ -147,6 +163,8 @@ class ServiceConsommationDynamique:
             # CORRECTION : Seuls les mois COMPLÈTEMENT écoulés peuvent être consommés
             # Un mois est considéré comme écoulé s'il est strictement antérieur au mois actuel
             if mois_courant_normalise < mois_actuel_normalise:
+                # IMPORTANT : Recharger l'avance pour avoir les consommations à jour
+                avance.refresh_from_db()
                 est_deja_consomme = avance.est_mois_consomme(mois_courant_normalise)
                 
                 if settings.DEBUG:

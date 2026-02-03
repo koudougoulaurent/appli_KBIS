@@ -164,15 +164,23 @@ class AvanceLoyerForm(forms.ModelForm):
     def verifier_avance_existante(self, contrat):
         """
         Vérifie s'il y a déjà une avance active sur ce contrat
+        IMPORTANT : Consomme automatiquement les mois passés avant de vérifier
         """
         if not contrat:
             return None
         
+        # *** CONSOMMATION AUTOMATIQUE PRIORITAIRE ***
+        from .services_consommation_dynamique import ServiceConsommationDynamique
+        # Consommer automatiquement toutes les avances du contrat pour les mois écoulés
+        ServiceConsommationDynamique.consommer_avances_automatiquement(contrat)
+        
         from .models_avance import AvanceLoyer
         
+        # Recharger après consommation pour avoir les données à jour
         avance_existante = AvanceLoyer.objects.filter(
             contrat=contrat,
-            statut='active'
+            statut='active',
+            montant_restant__gt=0  # Seulement celles qui ont encore de l'argent
         ).first()
         
         return avance_existante
