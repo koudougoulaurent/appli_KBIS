@@ -249,18 +249,19 @@ class AvanceLoyer(models.Model):
         # (Seulement si c'est une nouvelle avance, pas lors d'une mise à jour)
         if not self.pk:  # Nouvelle avance seulement
             try:
-                dernier_mois_couvert = ServiceLogiqueAvanceUnique._get_dernier_mois_couvert(self.contrat)
+                # IMPORTANT : Utiliser _get_dernier_mois_paye_reel pour ne considérer QUE les paiements réels
+                dernier_mois_paye_reel = ServiceLogiqueAvanceUnique._get_dernier_mois_paye_reel(self.contrat)
                 
-                if dernier_mois_couvert and self.mois_debut_couverture:
+                if dernier_mois_paye_reel and self.mois_debut_couverture:
                     mois_francais = {
                         1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
                         5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
                         9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
                     }
                     
-                    # Vérifier tous les mois entre dernier_mois_couvert + 1 et mois_debut_couverture
+                    # Vérifier tous les mois entre dernier_mois_paye_reel + 1 et mois_debut_couverture
                     mois_manquants = []
-                    mois_courant = dernier_mois_couvert + relativedelta(months=1)
+                    mois_courant = dernier_mois_paye_reel + relativedelta(months=1)
                     
                     while mois_courant < self.mois_debut_couverture:
                         mois_paye_ou_couvert = ServiceLogiqueAvanceUnique._verifier_mois_paye_ou_couvert(
@@ -276,7 +277,7 @@ class AvanceLoyer(models.Model):
                     # Si des mois sont manquants, lever une exception avec message clair
                     if mois_manquants:
                         mois_manquants_str = ", ".join(mois_manquants)
-                        dernier_mois_nom = mois_francais.get(dernier_mois_couvert.month, dernier_mois_couvert.strftime('%B'))
+                        dernier_mois_nom = mois_francais.get(dernier_mois_paye_reel.month, dernier_mois_paye_reel.strftime('%B'))
                         mois_debut_nom = mois_francais.get(self.mois_debut_couverture.month, self.mois_debut_couverture.strftime('%B'))
                         
                         raise ValueError(
@@ -285,7 +286,7 @@ class AvanceLoyer(models.Model):
                             f"mais les mois suivants n'ont PAS été payés :\n"
                             f"   • {mois_manquants_str}\n\n"
                             f"📋 CONTEXTE :\n"
-                            f"   • Dernier mois payé/couvert : {dernier_mois_nom} {dernier_mois_couvert.year}\n"
+                            f"   • Dernier mois réellement payé : {dernier_mois_nom} {dernier_mois_paye_reel.year}\n"
                             f"   • Mois de début de l'avance : {mois_debut_nom} {self.mois_debut_couverture.year}\n\n"
                             f"✅ SOLUTION :\n"
                             f"   1. Payez d'abord les mois manquants ({mois_manquants_str})\n"
@@ -340,18 +341,19 @@ class AvanceLoyer(models.Model):
         # *** VALIDATION CRITIQUE : Vérifier qu'aucun mois n'est sauté ***
         try:
             from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
-            dernier_mois_couvert = ServiceLogiqueAvanceUnique._get_dernier_mois_couvert(self.contrat)
+            # IMPORTANT : Utiliser _get_dernier_mois_paye_reel pour ne considérer QUE les paiements réels
+            dernier_mois_paye_reel = ServiceLogiqueAvanceUnique._get_dernier_mois_paye_reel(self.contrat)
             
-            if dernier_mois_couvert:
+            if dernier_mois_paye_reel:
                 mois_francais = {
                     1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
                     5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
                     9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
                 }
                 
-                # Vérifier tous les mois entre dernier_mois_couvert + 1 et le premier mois sélectionné
+                # Vérifier tous les mois entre dernier_mois_paye_reel + 1 et le premier mois sélectionné
                 mois_manquants = []
-                mois_courant = dernier_mois_couvert + relativedelta(months=1)
+                mois_courant = dernier_mois_paye_reel + relativedelta(months=1)
                 
                 while mois_courant < self.mois_debut_couverture:
                     mois_paye_ou_couvert = ServiceLogiqueAvanceUnique._verifier_mois_paye_ou_couvert(
@@ -367,7 +369,7 @@ class AvanceLoyer(models.Model):
                 # Si des mois sont manquants, lever une exception avec message clair
                 if mois_manquants:
                     mois_manquants_str = ", ".join(mois_manquants)
-                    dernier_mois_nom = mois_francais.get(dernier_mois_couvert.month, dernier_mois_couvert.strftime('%B'))
+                    dernier_mois_nom = mois_francais.get(dernier_mois_paye_reel.month, dernier_mois_paye_reel.strftime('%B'))
                     mois_debut_nom = mois_francais.get(self.mois_debut_couverture.month, self.mois_debut_couverture.strftime('%B'))
                     
                     raise ValueError(
@@ -376,7 +378,7 @@ class AvanceLoyer(models.Model):
                         f"mais les mois suivants n'ont PAS été payés :\n"
                         f"   • {mois_manquants_str}\n\n"
                         f"📋 CONTEXTE :\n"
-                        f"   • Dernier mois payé/couvert : {dernier_mois_nom} {dernier_mois_couvert.year}\n"
+                        f"   • Dernier mois réellement payé : {dernier_mois_nom} {dernier_mois_paye_reel.year}\n"
                         f"   • Premier mois sélectionné : {mois_debut_nom} {self.mois_debut_couverture.year}\n\n"
                         f"✅ SOLUTION :\n"
                         f"   1. Payez d'abord les mois manquants ({mois_manquants_str})\n"
