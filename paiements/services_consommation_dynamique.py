@@ -64,31 +64,55 @@ class ServiceConsommationDynamique:
         
         mois_ajoutes = 0
         for mois in mois_a_consommer:
-            # Vérifier si ce mois n'est pas déjà consommé
-            if not avance.est_mois_consomme(mois):
+            # Normaliser le mois au 1er du mois
+            mois_normalise = mois.replace(day=1)
+            
+            # Vérifier si ce mois n'est pas déjà consommé (double vérification)
+            if not avance.est_mois_consomme(mois_normalise):
+                # Recharger l'avance pour avoir les données à jour
+                avance.refresh_from_db()
+                
                 # Calculer le montant restant après cette consommation
                 montant_restant_apres = max(Decimal('0'), avance.montant_restant - avance.loyer_mensuel)
                 
+                if settings.DEBUG:
+                    print(f"[CONSO] Création consommation pour avance {avance.id}, mois {mois_normalise}")
+                    print(f"  - Montant restant avant: {avance.montant_restant}")
+                    print(f"  - Montant restant après: {montant_restant_apres}")
+                
                 # Créer la consommation
-                consommation = ConsommationAvance.objects.create(
-                    avance=avance,
-                    mois_consomme=mois,
-                    montant_consomme=avance.loyer_mensuel,
-                    montant_restant_apres=montant_restant_apres,
-                    paiement=None  # Consommation automatique, pas liée à un paiement
-                )
-                
-                # Mettre à jour l'avance
-                avance.montant_restant = montant_restant_apres
-                
-                # Si l'avance est épuisée, changer le statut
-                if avance.montant_restant <= 0:
-                    avance.statut = 'epuisee'
-                    avance.montant_restant = Decimal('0')
-                
-                avance.save(update_fields=['montant_restant', 'statut'])
-                
-                mois_ajoutes += 1
+                try:
+                    consommation = ConsommationAvance.objects.create(
+                        avance=avance,
+                        mois_consomme=mois_normalise,
+                        montant_consomme=avance.loyer_mensuel,
+                        montant_restant_apres=montant_restant_apres,
+                        paiement=None  # Consommation automatique, pas liée à un paiement
+                    )
+                    
+                    if settings.DEBUG:
+                        print(f"  - Consommation créée: ID {consommation.id}")
+                    
+                    # Mettre à jour l'avance
+                    avance.montant_restant = montant_restant_apres
+                    
+                    # Si l'avance est épuisée, changer le statut
+                    if avance.montant_restant <= 0:
+                        avance.statut = 'epuisee'
+                        avance.montant_restant = Decimal('0')
+                        if settings.DEBUG:
+                            print(f"  - Avance épuisée, statut changé à 'epuisee'")
+                    
+                    avance.save(update_fields=['montant_restant', 'statut'])
+                    
+                    mois_ajoutes += 1
+                except Exception as e:
+                    if settings.DEBUG:
+                        print(f"  - ERREUR lors de la création de la consommation: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    # Continuer avec le mois suivant même en cas d'erreur
+                    continue
         
         return {'consommee': mois_ajoutes > 0, 'mois_ajoutes': mois_ajoutes}
     
@@ -99,25 +123,46 @@ class ServiceConsommationDynamique:
         LOGIQUE CORRIGÉE : Ne consommer que les mois réellement écoulés.
         """
         if not avance.mois_debut_couverture:
+            if settings.DEBUG:
+                print(f"[AVANCE {avance.id}] Pas de mois_debut_couverture")
             return []
         
+        # Normaliser les dates au 1er du mois pour comparaison correcte
+        mois_debut = avance.mois_debut_couverture.replace(day=1)
+        mois_actuel_normalise = mois_actuel.replace(day=1)
+        
         mois_a_consommer = []
-        mois_courant = avance.mois_debut_couverture
+        mois_courant = mois_debut
+        
+        if settings.DEBUG:
+            print(f"[AVANCE {avance.id}] Calcul mois à consommer:")
+            print(f"  - Mois début: {mois_debut}")
+            print(f"  - Mois actuel: {mois_actuel_normalise}")
+            print(f"  - Nombre mois couverts: {avance.nombre_mois_couverts}")
         
         # Parcourir tous les mois couverts par l'avance
-        for _ in range(avance.nombre_mois_couverts):
+        for i in range(avance.nombre_mois_couverts):
+            mois_courant_normalise = mois_courant.replace(day=1)
+            
             # CORRECTION : Seuls les mois COMPLÈTEMENT écoulés peuvent être consommés
             # Un mois est considéré comme écoulé s'il est strictement antérieur au mois actuel
-            if mois_courant < mois_actuel and not avance.est_mois_consomme(mois_courant):
-                mois_a_consommer.append(mois_courant)
+            if mois_courant_normalise < mois_actuel_normalise:
+                est_deja_consomme = avance.est_mois_consomme(mois_courant_normalise)
+                
                 if settings.DEBUG:
-                    print(f"[CONSO] Mois à consommer: {mois_courant} (mois actuel: {mois_actuel})")
+                    print(f"  - Mois {mois_courant_normalise}: {'déjà consommé' if est_deja_consomme else 'à consommer'}")
+                
+                if not est_deja_consomme:
+                    mois_a_consommer.append(mois_courant_normalise)
             
             # Passer au mois suivant
             mois_courant = mois_courant + relativedelta(months=1)
         
-        if settings.DEBUG and mois_a_consommer:
-            print(f"[AVANCE] Avance {avance.id}: {len(mois_a_consommer)} mois à consommer sur {avance.nombre_mois_couverts} total")
+        if settings.DEBUG:
+            print(f"[AVANCE {avance.id}] Résultat: {len(mois_a_consommer)} mois à consommer sur {avance.nombre_mois_couverts} total")
+            if mois_a_consommer:
+                print(f"  - Mois à consommer: {mois_a_consommer}")
+        
         return mois_a_consommer
     
     @classmethod
