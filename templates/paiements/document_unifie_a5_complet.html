@@ -757,8 +757,11 @@
                 {% elif document_type == 'paiement_avance' or paiement.type_paiement == 'avance' %}
                     <strong>Avance de loyer</strong>
                     {% if mois_couverts and mois_couverts.nombre %}
-                    <br>• {{ mois_couverts.nombre }} mois : {{ mois_couverts.mois_texte }}
+                    <br><strong style="font-size: 11px; color: #28a745;">✓ MOIS COUVERTS :</strong>
+                    <br><span style="font-size: 11px; font-weight: bold; color: #000;">{{ mois_couverts.mois_texte }}</span>
                     <br>• Période : {{ mois_couverts.date_debut|date:"F Y" }} à {{ mois_couverts.date_fin|date:"F Y" }}
+                    <br>• Montant : {{ montant_total|floatformat:0 }} FCFA
+                    <br>• Loyer mensuel : {{ montant_loyer|floatformat:0 }} FCFA
                     {% else %}
                     <br>• Montant : {{ montant_total|floatformat:0 }} FCFA
                     <br>• Loyer mensuel : {{ montant_loyer|floatformat:0 }} FCFA
@@ -776,8 +779,10 @@
                 {% elif document_type == 'paiement_recu' and 'avance' in type_paiement|lower %}
                     <strong>Avance de loyer</strong>
                     {% if mois_couverts and mois_couverts.nombre %}
-                    <br>• {{ mois_couverts.nombre }} mois : {{ mois_couverts.mois_texte }}
+                    <br><strong style="font-size: 11px; color: #28a745;">✓ MOIS COUVERTS :</strong>
+                    <br><span style="font-size: 11px; font-weight: bold; color: #000;">{{ mois_couverts.mois_texte }}</span>
                     <br>• Période : {{ mois_couverts.date_debut|date:"F Y" }} à {{ mois_couverts.date_fin|date:"F Y" }}
+                    <br>• Montant : {{ montant_total|floatformat:0 }} FCFA
                     <br>• Loyer mensuel : {{ montant_loyer|floatformat:0 }} FCFA
                     {% else %}
                     <br>• Montant : {{ montant_total|floatformat:0 }} FCFA

@@ -742,35 +742,6 @@ class ServiceGestionAvance:
             from datetime import datetime
             import re
             
-            # Récupérer le dernier paiement validé (loyer, avance ou paiement_partiel qui a un mois_paye)
-            try:
-                from .models import Paiement
-                # CORRECTION : Inclure tous les types de paiements qui ont un mois_paye pour déterminer le dernier mois payé
-                dernier_paiement = Paiement.objects.select_related(
-                    'contrat', 'contrat__locataire', 'contrat__propriete'
-                ).filter(
-                    contrat=contrat,
-                    statut='valide',
-                    is_deleted=False
-                ).exclude(
-                    mois_paye__isnull=True
-                ).exclude(
-                    mois_paye=''
-                ).order_by('-date_paiement').first()
-                
-                # Si aucun paiement avec mois_paye, chercher le dernier paiement de loyer OU d'avance
-                if not dernier_paiement:
-                    dernier_paiement = Paiement.objects.select_related(
-                    'contrat', 'contrat__locataire', 'contrat__propriete'
-                ).filter(
-                        contrat=contrat,
-                        type_paiement__in=['loyer', 'avance'],
-                        statut='valide',
-                        is_deleted=False
-                    ).order_by('-date_paiement').first()
-            except ImportError:
-                dernier_paiement = None
-            
             # Fonction pour convertir mois_paye (ex: "Novembre 2024") en date
             def convertir_mois_paye_en_date(mois_paye_str):
                 """
@@ -806,33 +777,71 @@ class ServiceGestionAvance:
                             return date(annee, num, 1)
                 return None
             
-            # Déterminer le dernier mois payé
+            # *** CORRECTION CRITIQUE : Trouver le DERNIER MOIS PAYÉ, pas le dernier paiement en date ***
+            # Si plusieurs paiements ont la même date (ex: décembre et janvier payés le même jour),
+            # on doit prendre le mois le plus récent, pas juste le premier paiement trouvé
             dernier_mois_paye = None
-            if dernier_paiement:
-                # Priorité au mois_paye si disponible (plus précis)
-                if dernier_paiement.mois_paye:
-                    dernier_mois_paye = convertir_mois_paye_en_date(dernier_paiement.mois_paye)
+            dernier_paiement = None
+            
+            try:
+                from .models import Paiement
+                # Récupérer TOUS les paiements avec mois_paye pour trouver le mois le plus récent
+                paiements_avec_mois = Paiement.objects.select_related(
+                    'contrat', 'contrat__locataire', 'contrat__propriete'
+                ).filter(
+                    contrat=contrat,
+                    statut='valide',
+                    is_deleted=False
+                ).exclude(
+                    mois_paye__isnull=True
+                ).exclude(
+                    mois_paye=''
+                )
                 
-                # Si c'est une avance sans mois_paye, chercher l'AvanceLoyer correspondante
-                elif dernier_paiement.type_paiement == 'avance':
-                    try:
-                        # Trouver l'avance correspondant à ce paiement
-                        avance_liee = AvanceLoyer.objects.select_related(
-                            'contrat', 'paiement'
-                        ).filter(
-                            contrat=contrat,
-                            date_paiement=dernier_paiement.date_paiement
-                        ).order_by('-date_paiement').first()
-                        
-                        if avance_liee and avance_liee.mois_fin_couverture:
-                            # Le dernier mois payé = le dernier mois couvert par l'avance
-                            dernier_mois_paye = avance_liee.mois_fin_couverture
-                    except:
-                        pass
+                # Convertir tous les mois_paye en dates et trouver le maximum
+                mois_dates = []
+                for paiement in paiements_avec_mois:
+                    mois_date = convertir_mois_paye_en_date(paiement.mois_paye)
+                    if mois_date:
+                        mois_dates.append((mois_date, paiement))
                 
-                # Sinon utiliser date_paiement
-                if not dernier_mois_paye:
-                    dernier_mois_paye = dernier_paiement.date_paiement.replace(day=1)
+                if mois_dates:
+                    # Trouver le mois le plus récent
+                    dernier_mois_paye, dernier_paiement = max(mois_dates, key=lambda x: x[0])
+                
+                # Si aucun paiement avec mois_paye, chercher le dernier paiement de loyer OU d'avance
+                if not dernier_paiement:
+                    dernier_paiement = Paiement.objects.select_related(
+                        'contrat', 'contrat__locataire', 'contrat__propriete'
+                    ).filter(
+                        contrat=contrat,
+                        type_paiement__in=['loyer', 'avance'],
+                        statut='valide',
+                        is_deleted=False
+                    ).order_by('-date_paiement').first()
+                    
+                    # Si c'est une avance sans mois_paye, chercher l'AvanceLoyer correspondante
+                    if dernier_paiement and dernier_paiement.type_paiement == 'avance':
+                        try:
+                            # Trouver l'avance correspondant à ce paiement
+                            avance_liee = AvanceLoyer.objects.select_related(
+                                'contrat', 'paiement'
+                            ).filter(
+                                contrat=contrat,
+                                date_paiement=dernier_paiement.date_paiement
+                            ).order_by('-date_paiement').first()
+                            
+                            if avance_liee and avance_liee.mois_fin_couverture:
+                                # Le dernier mois payé = le dernier mois couvert par l'avance
+                                dernier_mois_paye = avance_liee.mois_fin_couverture
+                        except:
+                            pass
+                    
+                    # Sinon utiliser date_paiement
+                    if dernier_paiement and not dernier_mois_paye:
+                        dernier_mois_paye = dernier_paiement.date_paiement.replace(day=1)
+            except ImportError:
+                dernier_paiement = None
             
             # RÈGLE DE BASE : Prochain mois = dernier mois payé + 1 mois
             if dernier_mois_paye:

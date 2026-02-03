@@ -17,6 +17,7 @@ RÈGLE MÉTIER ABSOLUE :
 """
 from django.db import transaction
 from django.utils import timezone
+from django.conf import settings
 from decimal import Decimal
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
@@ -56,27 +57,86 @@ class ServiceLogiqueAvanceUnique:
         Returns:
             date: Mois de début de couverture (1er du mois)
         """
-        print(f"\n{'='*80}")
-        print(f"DÉTERMINATION MOIS DÉBUT COUVERTURE - Contrat #{contrat.id}")
-        print(f"{'='*80}")
+        if settings.DEBUG:
+            print(f"\n{'='*80}")
+            print(f"DÉTERMINATION MOIS DÉBUT COUVERTURE - Contrat #{contrat.id}")
+            print(f"{'='*80}")
         
-        # 1. Chercher le dernier paiement de loyer
-        dernier_paiement_loyer = Paiement.objects.filter(
+        # Fonction pour convertir mois_paye en date
+        def convertir_mois_paye_en_date(mois_paye_str):
+            """Convertit 'Novembre 2024' ou 'November 2024' en date."""
+            if not mois_paye_str:
+                return None
+            
+            from datetime import date
+            import re
+            
+            mois_francais = {
+                'janvier': 1, 'février': 2, 'mars': 3, 'avril': 4,
+                'mai': 5, 'juin': 6, 'juillet': 7, 'août': 8,
+                'septembre': 9, 'octobre': 10, 'novembre': 11, 'décembre': 12
+            }
+            mois_anglais = {
+                'january': 1, 'february': 2, 'march': 3, 'april': 4,
+                'may': 5, 'june': 6, 'july': 7, 'august': 8,
+                'september': 9, 'october': 10, 'november': 11, 'december': 12
+            }
+            
+            mois_paye_lower = mois_paye_str.lower().strip()
+            for mois, num in {**mois_francais, **mois_anglais}.items():
+                if mois in mois_paye_lower:
+                    annee_match = re.search(r'(\d{4})', mois_paye_str)
+                    if annee_match:
+                        annee = int(annee_match.group(1))
+                        return date(annee, num, 1)
+            return None
+        
+        # *** CORRECTION CRITIQUE : Trouver le DERNIER MOIS PAYÉ parmi TOUS les paiements ***
+        # Ne pas se limiter aux paiements de type 'loyer', mais chercher tous les paiements avec mois_paye
+        dernier_mois_paiement = None
+        dernier_paiement_loyer = None
+        
+        # Récupérer TOUS les paiements avec mois_paye pour trouver le mois le plus récent
+        paiements_avec_mois = Paiement.objects.filter(
             contrat=contrat,
-            type_paiement='loyer',
             statut='valide',
             is_deleted=False
-        ).order_by('-date_paiement').first()
+        ).exclude(
+            mois_paye__isnull=True
+        ).exclude(
+            mois_paye=''
+        )
         
-        dernier_mois_paiement = None
-        if dernier_paiement_loyer:
-            # Utiliser mois_paye si disponible (plus précis)
-            if dernier_paiement_loyer.mois_paye:
-                from .services_paiement_partiel import ServicePaiementPartiel
-                dernier_mois_paiement = ServicePaiementPartiel.convertir_mois_paye_en_date(dernier_paiement_loyer.mois_paye)
-            else:
-                dernier_mois_paiement = dernier_paiement_loyer.date_paiement.replace(day=1)
+        # Convertir tous les mois_paye en dates et trouver le maximum
+        mois_dates = []
+        for paiement in paiements_avec_mois:
+            mois_date = convertir_mois_paye_en_date(paiement.mois_paye)
+            if mois_date:
+                mois_dates.append((mois_date, paiement))
+                # Garder aussi le dernier paiement de loyer pour l'affichage
+                if paiement.type_paiement == 'loyer':
+                    dernier_paiement_loyer = paiement
+        
+        if mois_dates:
+            # Trouver le mois le plus récent
+            dernier_mois_paiement, dernier_paiement_trouve = max(mois_dates, key=lambda x: x[0])
+            # Si le dernier paiement trouvé est un loyer, le garder pour l'affichage
+            if dernier_paiement_trouve.type_paiement == 'loyer':
+                dernier_paiement_loyer = dernier_paiement_trouve
+        
+        # Si aucun paiement avec mois_paye, chercher le dernier paiement de loyer
+        if not dernier_mois_paiement:
+            dernier_paiement_loyer = Paiement.objects.filter(
+                contrat=contrat,
+                type_paiement='loyer',
+                statut='valide',
+                is_deleted=False
+            ).order_by('-date_paiement').first()
             
+            if dernier_paiement_loyer:
+                dernier_mois_paiement = dernier_paiement_loyer.date_paiement.replace(day=1)
+        
+        if settings.DEBUG and dernier_paiement_loyer:
             print(f"✓ Dernier paiement de loyer trouvé:")
             print(f"  - ID: {dernier_paiement_loyer.id}")
             print(f"  - Date: {dernier_paiement_loyer.date_paiement}")
@@ -92,10 +152,11 @@ class ServiceLogiqueAvanceUnique:
         dernier_mois_avance = None
         if derniere_avance:
             dernier_mois_avance = derniere_avance.mois_fin_couverture
-            print(f"✓ Dernière avance active trouvée:")
-            print(f"  - ID: {derniere_avance.id}")
-            print(f"  - Montant: {derniere_avance.montant_avance} F CFA")
-            print(f"  - Mois fin couverture: {dernier_mois_avance}")
+            if settings.DEBUG:
+                print(f"✓ Dernière avance active trouvée:")
+                print(f"  - ID: {derniere_avance.id}")
+                print(f"  - Montant: {derniere_avance.montant_avance} F CFA")
+                print(f"  - Mois fin couverture: {dernier_mois_avance}")
         
         # 3. Prendre le plus récent
         dernier_mois_couvert = None
@@ -104,16 +165,20 @@ class ServiceLogiqueAvanceUnique:
             # Comparer les deux et prendre le plus récent
             if dernier_mois_avance > dernier_mois_paiement:
                 dernier_mois_couvert = dernier_mois_avance
-                print(f"→ Mois le plus récent: AVANCE ({dernier_mois_avance})")
+                if settings.DEBUG:
+                    print(f"→ Mois le plus récent: AVANCE ({dernier_mois_avance})")
             else:
                 dernier_mois_couvert = dernier_mois_paiement
-                print(f"→ Mois le plus récent: PAIEMENT ({dernier_mois_paiement})")
+                if settings.DEBUG:
+                    print(f"→ Mois le plus récent: PAIEMENT ({dernier_mois_paiement})")
         elif dernier_mois_paiement:
             dernier_mois_couvert = dernier_mois_paiement
-            print(f"→ Mois le plus récent: PAIEMENT SEULEMENT ({dernier_mois_paiement})")
+            if settings.DEBUG:
+                print(f"→ Mois le plus récent: PAIEMENT SEULEMENT ({dernier_mois_paiement})")
         elif dernier_mois_avance:
             dernier_mois_couvert = dernier_mois_avance
-            print(f"→ Mois le plus récent: AVANCE SEULEMENT ({dernier_mois_avance})")
+            if settings.DEBUG:
+                print(f"→ Mois le plus récent: AVANCE SEULEMENT ({dernier_mois_avance})")
         
         # 4. Calculer le mois de début (V10.2 - Option A : Toujours couvrir les dettes)
         if dernier_mois_couvert:
@@ -131,32 +196,37 @@ class ServiceLogiqueAvanceUnique:
             ecart_mois = (mois_reference.year - dernier_mois_couvert.year) * 12 + \
                         (mois_reference.month - dernier_mois_couvert.month)
             
-            if ecart_mois > 1:
+            if settings.DEBUG and ecart_mois > 1:
                 print(f"\n📊 ANALYSE:")
                 print(f"  Dernier mois couvert: {dernier_mois_couvert}")
                 print(f"  Mois de référence: {mois_reference}")
                 print(f"  Écart: {ecart_mois} mois")
                 print(f"  → Avance couvre d'abord les {ecart_mois} mois de retard")
             
-            print(f"\n✓ MOIS DÉBUT COUVERTURE: {mois_debut}")
-            print(f"  (= Dernier mois couvert {dernier_mois_couvert} + 1 mois)")
+            if settings.DEBUG:
+                print(f"\n✓ MOIS DÉBUT COUVERTURE: {mois_debut}")
+                print(f"  (= Dernier mois couvert {dernier_mois_couvert} + 1 mois)")
         else:
             # Aucun paiement ni avance : utiliser date de début du contrat
             if hasattr(contrat, 'date_debut') and contrat.date_debut:
                 mois_debut = contrat.date_debut.replace(day=1)
-                print(f"\n✓ MOIS DÉBUT COUVERTURE: {mois_debut}")
-                print(f"  (= Date début contrat, aucun paiement antérieur)")
+                if settings.DEBUG:
+                    print(f"\n✓ MOIS DÉBUT COUVERTURE: {mois_debut}")
+                    print(f"  (= Date début contrat, aucun paiement antérieur)")
             elif hasattr(contrat, 'date_entree') and contrat.date_entree:
                 mois_debut = contrat.date_entree.replace(day=1)
-                print(f"\n✓ MOIS DÉBUT COUVERTURE: {mois_debut}")
-                print(f"  (= Date entrée contrat, aucun paiement antérieur)")
+                if settings.DEBUG:
+                    print(f"\n✓ MOIS DÉBUT COUVERTURE: {mois_debut}")
+                    print(f"  (= Date entrée contrat, aucun paiement antérieur)")
             else:
                 # Fallback : mois actuel
                 mois_debut = timezone.now().date().replace(day=1)
-                print(f"\n✓ MOIS DÉBUT COUVERTURE: {mois_debut}")
-                print(f"  (= Mois actuel, fallback)")
+                if settings.DEBUG:
+                    print(f"\n✓ MOIS DÉBUT COUVERTURE: {mois_debut}")
+                    print(f"  (= Mois actuel, fallback)")
         
-        print(f"{'='*80}\n")
+        if settings.DEBUG:
+            print(f"{'='*80}\n")
         
         return mois_debut
     
@@ -199,12 +269,13 @@ class ServiceLogiqueAvanceUnique:
         # Au minimum 1 mois
         nombre_mois = max(1, mois_complets)
         
-        print(f"\nCALCUL MOIS COUVERTS:")
-        print(f"  Montant avance: {montant_avance} F CFA")
-        print(f"  Loyer mensuel: {loyer_mensuel} F CFA")
-        print(f"  Mois complets: {mois_complets}")
-        print(f"  Reste: {reste} F CFA")
-        print(f"  → TOTAL MOIS COUVERTS: {nombre_mois}")
+        if settings.DEBUG:
+            print(f"\nCALCUL MOIS COUVERTS:")
+            print(f"  Montant avance: {montant_avance} F CFA")
+            print(f"  Loyer mensuel: {loyer_mensuel} F CFA")
+            print(f"  Mois complets: {mois_complets}")
+            print(f"  Reste: {reste} F CFA")
+            print(f"  → TOTAL MOIS COUVERTS: {nombre_mois}")
         
         return nombre_mois, reste
     
@@ -233,10 +304,11 @@ class ServiceLogiqueAvanceUnique:
         
         mois_fin = mois_debut + relativedelta(months=nombre_mois_couverts - 1)
         
-        print(f"\nCALCUL MOIS FIN COUVERTURE:")
-        print(f"  Mois début: {mois_debut}")
-        print(f"  Nombre de mois: {nombre_mois_couverts}")
-        print(f"  → MOIS FIN: {mois_fin}")
+        if settings.DEBUG:
+            print(f"\nCALCUL MOIS FIN COUVERTURE:")
+            print(f"  Mois début: {mois_debut}")
+            print(f"  Nombre de mois: {nombre_mois_couverts}")
+            print(f"  → MOIS FIN: {mois_fin}")
         
         return mois_fin
     
@@ -256,12 +328,13 @@ class ServiceLogiqueAvanceUnique:
             AvanceLoyer: L'avance créée
         """
         with transaction.atomic():
-            print(f"\n{'='*80}")
-            print(f"CRÉATION AVANCE AVEC LOGIQUE UNIQUE")
-            print(f"{'='*80}")
-            print(f"Contrat: #{contrat.id} - {contrat.locataire.get_nom_complet()}")
-            print(f"Montant: {montant_avance} F CFA")
-            print(f"Date: {date_avance}")
+            if settings.DEBUG:
+                print(f"\n{'='*80}")
+                print(f"CRÉATION AVANCE AVEC LOGIQUE UNIQUE")
+                print(f"{'='*80}")
+                print(f"Contrat: #{contrat.id} - {contrat.locataire.get_nom_complet()}")
+                print(f"Montant: {montant_avance} F CFA")
+                print(f"Date: {date_avance}")
             
             # Convertir en Decimal
             if not isinstance(montant_avance, Decimal):
@@ -304,12 +377,13 @@ class ServiceLogiqueAvanceUnique:
                 mode_selection_mois='automatique'
             )
             
-            print(f"\n✓ AVANCE CRÉÉE AVEC SUCCÈS:")
-            print(f"  - ID: {avance.id}")
-            print(f"  - Période: {mois_debut} → {mois_fin}")
-            print(f"  - Mois couverts: {nombre_mois}")
-            print(f"  - Reste: {reste} F CFA")
-            print(f"{'='*80}\n")
+            if settings.DEBUG:
+                print(f"\n✓ AVANCE CRÉÉE AVEC SUCCÈS:")
+                print(f"  - ID: {avance.id}")
+                print(f"  - Période: {mois_debut} → {mois_fin}")
+                print(f"  - Mois couverts: {nombre_mois}")
+                print(f"  - Reste: {reste} F CFA")
+                print(f"{'='*80}\n")
             
             return avance
     
@@ -328,13 +402,15 @@ class ServiceLogiqueAvanceUnique:
             AvanceLoyer: L'avance mise à jour
         """
         with transaction.atomic():
-            print(f"\nRESYNCHRONISATION AVANCE #{avance.id}")
+            if settings.DEBUG:
+                print(f"\nRESYNCHRONISATION AVANCE #{avance.id}")
             
             loyer_mensuel = Decimal(str(avance.contrat.loyer_mensuel)) if avance.contrat.loyer_mensuel else Decimal('0')
             montant_avance = Decimal(str(avance.montant_avance))
             
             if loyer_mensuel <= 0:
-                print(f"  ⚠️ Loyer mensuel invalide, skip")
+                if settings.DEBUG:
+                    print(f"  ⚠️ Loyer mensuel invalide, skip")
                 return avance
             
             # Recalculer le nombre de mois
@@ -354,7 +430,8 @@ class ServiceLogiqueAvanceUnique:
             avance.mois_fin_couverture = mois_fin
             avance.save()
             
-            print(f"  ✓ Resynchronisée: {avance.mois_debut_couverture} → {mois_fin} ({nombre_mois} mois)")
+            if settings.DEBUG:
+                print(f"  ✓ Resynchronisée: {avance.mois_debut_couverture} → {mois_fin} ({nombre_mois} mois)")
             
             return avance
     

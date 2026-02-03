@@ -161,11 +161,19 @@ class DocumentUnifieA5ServiceComplet:
                     nombre_mois
                 )
                 
-                # Construire la liste des mois couverts
+                # Dictionnaire de traduction des mois en français
+                mois_francais = {
+                    1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+                    5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+                    9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
+                }
+                
+                # Construire la liste des mois couverts (en français)
                 mois_liste = []
                 mois_courant = mois_debut
                 while mois_courant <= mois_fin:
-                    mois_liste.append(mois_courant.strftime('%B %Y'))
+                    mois_nom = mois_francais.get(mois_courant.month, mois_courant.strftime('%B'))
+                    mois_liste.append(f"{mois_nom} {mois_courant.year}")
                     mois_courant = mois_courant + relativedelta(months=1)
                 
                 # Construire le texte des mois couverts
@@ -183,10 +191,12 @@ class DocumentUnifieA5ServiceComplet:
                     'date_debut': mois_debut,
                     'date_fin': mois_fin
                 }
-                print(f"[V10.2] Mois couverts calculés (Option A): {mois_couverts}")
+                if settings.DEBUG:
+                    print(f"[V10.2] Mois couverts calculés (Option A): {mois_couverts}")
                     
             except Exception as e:
-                print(f"[ERREUR V10.2] Calcul mois couverts: {e}")
+                if settings.DEBUG:
+                    print(f"[ERREUR V10.2] Calcul mois couverts: {e}")
                 import traceback
                 traceback.print_exc()
                 pass
@@ -348,11 +358,19 @@ class DocumentUnifieA5ServiceComplet:
                 nombre_mois
             )
             
-            # Construire la liste des mois couverts
+            # Dictionnaire de traduction des mois en français
+            mois_francais = {
+                1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+                5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+                9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
+            }
+            
+            # Construire la liste des mois couverts (en français)
             mois_liste = []
             mois_courant = mois_debut
             while mois_courant <= mois_fin:
-                mois_liste.append(mois_courant.strftime('%B %Y'))
+                mois_nom = mois_francais.get(mois_courant.month, mois_courant.strftime('%B'))
+                mois_liste.append(f"{mois_nom} {mois_courant.year}")
                 mois_courant = mois_courant + relativedelta(months=1)
             
             # Construire le texte des mois couverts
