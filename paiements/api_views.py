@@ -255,7 +255,8 @@ def api_contexte_intelligent_contrat(request, contrat_id):
             ).get(pk=contrat_id, is_deleted=False)
             
             # Récupérer l'historique des paiements (5 derniers mois)
-            from datetime import datetime, timedelta
+            from datetime import datetime, timedelta, date
+            from dateutil.relativedelta import relativedelta
             date_limite = datetime.now() - timedelta(days=150)
             
             paiements_recents = Paiement.objects.filter(
@@ -265,17 +266,22 @@ def api_contexte_intelligent_contrat(request, contrat_id):
             ).order_by('-date_paiement')[:5]
             
             # *** CALCUL INTELLIGENT DU PROCHAIN MOIS DE PAIEMENT ***
+            # Initialiser les variables par défaut
+            prochain_mois = None
+            mois_suggere = "Mois actuel"
+            prochain_mois_paiement_avec_avances = None
+            
             # D'abord vérifier s'il y a des avances actives
             try:
                 from .services_avance import ServiceGestionAvance
                 from .models_avance import AvanceLoyer
-                
-                # Récupérer les avances actives ET récemment épuisées (qui ont encore un impact)
                 from datetime import datetime, timedelta
                 from dateutil.relativedelta import relativedelta
+                
+                # Récupérer les avances actives ET récemment épuisées (qui ont encore un impact)
                 date_limite_avances = datetime.now() - timedelta(days=30)  # Avances des 30 derniers jours
                 
-                avances_actives = AvanceLoyer.objects.filter(
+                avances_actives_temp = AvanceLoyer.objects.filter(
                     contrat=contrat,
                     statut='active'
                 )
@@ -288,36 +294,40 @@ def api_contexte_intelligent_contrat(request, contrat_id):
                 )
                 
                 # Combiner les deux types d'avances
-                toutes_les_avances = avances_actives.union(avances_recentes)
+                toutes_les_avances = avances_actives_temp.union(avances_recentes)
                 
                 # *** CALCULER LE PROCHAIN MOIS (avec ou sans avances) ***
                 # CORRIGÉ : Utiliser toujours la méthode calculer_prochain_mois_paiement() qui prend en compte mois_paye
-                prochain_mois_paiement_avec_avances = None
                 try:
                     # Utiliser la méthode corrigée qui prend en compte mois_paye et les avances
                     prochain_mois_paiement_avec_avances = ServiceGestionAvance.calculer_prochain_mois_paiement(contrat)
-                    prochain_mois = prochain_mois_paiement_avec_avances.month
-                    
-                    if toutes_les_avances.exists():
-                        mois_suggere = f"Prochain paiement avec avances: {prochain_mois_paiement_avec_avances.strftime('%B %Y')}"
+                    if prochain_mois_paiement_avec_avances:
+                        prochain_mois = prochain_mois_paiement_avec_avances.month
+                        
+                        if toutes_les_avances.exists():
+                            mois_suggere = f"Prochain paiement avec avances: {prochain_mois_paiement_avec_avances.strftime('%B %Y')}"
+                        else:
+                            mois_suggere = f"Prochain paiement: {prochain_mois_paiement_avec_avances.strftime('%B %Y')}"
                     else:
-                        mois_suggere = f"Prochain paiement: {prochain_mois_paiement_avec_avances.strftime('%B %Y')}"
+                        prochain_mois = datetime.now().month
+                        mois_suggere = "Mois actuel"
                         
                 except Exception as e:
-                    print(f"Erreur calcul prochain mois: {str(e)}")
-                    import traceback
-                    traceback.print_exc()
+                    if settings.DEBUG:
+                        print(f"Erreur calcul prochain mois: {str(e)}")
+                        import traceback
+                        traceback.print_exc()
                     # Fallback : utiliser le mois actuel
-                    from datetime import datetime
                     prochain_mois = datetime.now().month
                     mois_suggere = "Mois actuel"
                     prochain_mois_paiement_avec_avances = None
                             
             except Exception as e:
                 # En cas d'erreur, utiliser le mois actuel
-                print(f"Erreur dans le calcul du prochain mois: {str(e)}")
-                import traceback
-                traceback.print_exc()
+                if settings.DEBUG:
+                    print(f"Erreur dans le calcul du prochain mois: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
                 from datetime import datetime
                 prochain_mois = datetime.now().month
                 mois_suggere = "Mois actuel"
@@ -418,15 +428,15 @@ def api_contexte_intelligent_contrat(request, contrat_id):
                 # *** AJOUT DES AVANCES DANS L'HISTORIQUE ***
                 'avances_recents': [
                     {
-                        'date': avance.date_avance.strftime('%d/%m/%Y'),
+                        'date': avance.date_avance.strftime('%d/%m/%Y') if avance.date_avance else '',
                         'montant': clean_numeric_value(avance.montant_avance),
                         'type': 'Avance de loyer',
                         'statut': 'Active' if avance.statut == 'active' else 'Épuisée',
                         'mois_couverts': avance.nombre_mois_couverts,
                         'montant_restant': clean_numeric_value(avance.montant_restant)
-                    } for avance in avances_actives
+                    } for avance in avances_actives if avance
                 ],
-                'prochain_mois_paiement': prochain_mois,
+                'prochain_mois_paiement': prochain_mois if prochain_mois is not None else datetime.now().month,
                 'prochain_mois_paiement_avec_avances': _convertir_mois_francais_api(prochain_mois_paiement_avec_avances.strftime('%B %Y')) if 'prochain_mois_paiement_avec_avances' in locals() and prochain_mois_paiement_avec_avances else None,
                 'date_expiration_avances': date_expiration_avances.strftime('%d/%m/%Y') if date_expiration_avances else None,
                 'mois_suggere': mois_suggere,
@@ -438,7 +448,7 @@ def api_contexte_intelligent_contrat(request, contrat_id):
                 'mois_couverts_par_avances': mois_couverts_par_avances,
                 'montant_du_mois_prochain': clean_numeric_value(montant_du_mois_prochain),
                 'montant_avance_utilisee': clean_numeric_value(montant_avance_utilisee),
-                'avances_actives': avances_actives.count() if 'avances_actives' in locals() else 0,
+                'avances_actives': len(avances_actives) if 'avances_actives' in locals() and isinstance(avances_actives, list) else 0,
                 'progression_avances': progression_avances if 'progression_avances' in locals() else {},
                 'avances_a_consommer': avances_a_consommer if 'avances_a_consommer' in locals() else {}
             }
