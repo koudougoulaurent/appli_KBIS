@@ -20,19 +20,28 @@ class ServiceConsommationDynamique:
         """
         Consomme automatiquement les avances en fonction du temps écoulé.
         IMPORTANT : Cette méthode est appelée systématiquement avant chaque affichage des avances.
+        
+        OPTIMISATION : Si contrat=None, limite à 100 avances pour éviter les timeouts.
         """
         if contrat:
             # Récupérer les avances actives du contrat
-            avances = list(AvanceLoyer.objects.filter(contrat=contrat, statut='active'))
+            avances = list(AvanceLoyer.objects.filter(contrat=contrat, statut='active')[:100])
         else:
-            # Récupérer toutes les avances actives
-            avances = list(AvanceLoyer.objects.filter(statut='active'))
+            # OPTIMISATION : Limiter à 100 avances pour éviter les timeouts
+            # Ne pas consommer toutes les avances de tous les contrats en une seule fois
+            avances = list(AvanceLoyer.objects.filter(statut='active')[:100])
+            if settings.DEBUG:
+                total_avances = AvanceLoyer.objects.filter(statut='active').count()
+                if total_avances > 100:
+                    print(f"⚠️ ATTENTION: {total_avances} avances actives trouvées, limité à 100 pour éviter timeout")
         
         consommees = 0
         erreurs = 0
         
         for avance in avances:
             try:
+                # OPTIMISATION : Utiliser transaction.atomic() seulement pour chaque avance individuellement
+                # pour éviter de bloquer trop longtemps
                 with transaction.atomic():
                     # Recharger l'avance pour avoir les données à jour
                     avance.refresh_from_db()
@@ -41,7 +50,7 @@ class ServiceConsommationDynamique:
                     if avance.statut != 'active':
                         continue
                     
-                    # *** DIAGNOSTIC DÉTAILLÉ ***
+                    # *** DIAGNOSTIC DÉTAILLÉ (seulement si DEBUG) ***
                     if settings.DEBUG:
                         print(f"\n=== DIAGNOSTIC AVANCE {avance.id} ===")
                         print(f"  - Contrat: {avance.contrat_id}")
@@ -74,6 +83,7 @@ class ServiceConsommationDynamique:
                     print(f"✗ ERREUR - Avance {avance.id}: {str(e)}")
                     import traceback
                     traceback.print_exc()
+                # Continuer avec les autres avances même en cas d'erreur
         
         return {
             'consommees': consommees,

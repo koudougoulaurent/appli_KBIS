@@ -430,12 +430,10 @@ def detail_avance_paiement(request, paiement_id):
 def creer_avance(request):
     """
     Créer une nouvelle avance de loyer avec vérification des avances existantes
-    IMPORTANT : Consomme automatiquement toutes les avances avant de créer une nouvelle
+    IMPORTANT : Consomme automatiquement les avances du contrat concerné avant de créer une nouvelle
     """
-    # *** CONSOMMATION AUTOMATIQUE DES AVANCES PASSÉES (AVANT TOUT) ***
-    # Consommer toutes les avances pour tous les contrats avant de créer une nouvelle avance
-    from .services_consommation_dynamique import ServiceConsommationDynamique
-    ServiceConsommationDynamique.consommer_avances_automatiquement()
+    # NOTE : La consommation automatique sera faite pour le contrat spécifique lors de la soumission du formulaire
+    # Ne pas consommer toutes les avances ici pour éviter les timeouts
     
     if request.method == 'POST':
         print("=== SOUMISSION FORMULAIRE ===")
@@ -662,10 +660,8 @@ def creer_avance(request):
     else:
         form = AvanceLoyerForm()
     
-    # *** CONSOMMATION AUTOMATIQUE DES AVANCES PASSÉES (pour GET aussi) ***
-    from .services_consommation_dynamique import ServiceConsommationDynamique
-    # Consommer automatiquement toutes les avances pour tous les contrats avant d'afficher le formulaire
-    ServiceConsommationDynamique.consommer_avances_automatiquement()
+    # NOTE : Ne pas consommer toutes les avances ici pour éviter les timeouts
+    # La consommation sera faite dynamiquement via AJAX quand un contrat est sélectionné
     
     context = {
         'form': form,
