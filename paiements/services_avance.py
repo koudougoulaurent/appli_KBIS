@@ -1,5 +1,6 @@
 from django.db import transaction
 from django.utils import timezone
+from django.conf import settings
 from decimal import Decimal
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
@@ -745,7 +746,9 @@ class ServiceGestionAvance:
             try:
                 from .models import Paiement
                 # CORRECTION : Inclure tous les types de paiements qui ont un mois_paye pour déterminer le dernier mois payé
-                dernier_paiement = Paiement.objects.filter(
+                dernier_paiement = Paiement.objects.select_related(
+                    'contrat', 'contrat__locataire', 'contrat__propriete'
+                ).filter(
                     contrat=contrat,
                     statut='valide',
                     is_deleted=False
@@ -757,7 +760,9 @@ class ServiceGestionAvance:
                 
                 # Si aucun paiement avec mois_paye, chercher le dernier paiement de loyer OU d'avance
                 if not dernier_paiement:
-                    dernier_paiement = Paiement.objects.filter(
+                    dernier_paiement = Paiement.objects.select_related(
+                    'contrat', 'contrat__locataire', 'contrat__propriete'
+                ).filter(
                         contrat=contrat,
                         type_paiement__in=['loyer', 'avance'],
                         statut='valide',
@@ -812,7 +817,9 @@ class ServiceGestionAvance:
                 elif dernier_paiement.type_paiement == 'avance':
                     try:
                         # Trouver l'avance correspondant à ce paiement
-                        avance_liee = AvanceLoyer.objects.filter(
+                        avance_liee = AvanceLoyer.objects.select_related(
+                            'contrat', 'paiement'
+                        ).filter(
                             contrat=contrat,
                             date_paiement=dernier_paiement.date_paiement
                         ).order_by('-date_paiement').first()
@@ -847,7 +854,8 @@ class ServiceGestionAvance:
                 mois_fin_couverture__lt=aujourd_hui
             )
             if avances_expirees.exists():
-                print(f"🔄 {avances_expirees.count()} avance(s) expirée(s) détectée(s), passage au statut 'epuisee'")
+                if settings.DEBUG:
+                    print(f"🔄 {avances_expirees.count()} avance(s) expirée(s) détectée(s), passage au statut 'epuisee'")
                 avances_expirees.update(statut='epuisee')
             
             avances_actives = AvanceLoyer.objects.filter(
@@ -855,7 +863,7 @@ class ServiceGestionAvance:
                 statut='active',
                 montant_restant__gt=0,
                 mois_fin_couverture__gte=aujourd_hui  # Avance non expirée
-            )
+            ).select_related('contrat', 'contrat__locataire', 'contrat__propriete', 'paiement')
             
             # *** AUTO-CORRECTION : Vérifier et corriger les avances avant le calcul ***
             for avance in avances_actives:
@@ -874,52 +882,58 @@ class ServiceGestionAvance:
                     if difference_loyer > 100 or mois_calcules_contrat != avance.nombre_mois_couverts:
                         if abs(avance.montant_avance - loyer_contrat) < 1000 and avance.nombre_mois_couverts > 1:
                             # Cas avance 1 mois
-                            print(f"🔧 AUTO-CORRECTION: Avance {avance.id} - Ajustement à 1 mois")
+                            if settings.DEBUG:
+                                print(f"🔧 AUTO-CORRECTION: Avance {avance.id} - Ajustement à 1 mois")
                             avance.nombre_mois_couverts = 1
                             avance.loyer_mensuel = loyer_contrat
                             avance.mois_fin_couverture = avance.mois_debut_couverture
                             avance.save()
                 except Exception as e:
-                    print(f"⚠️ Erreur auto-correction avance {avance.id}: {e}")
+                    if settings.DEBUG:
+                        print(f"⚠️ Erreur auto-correction avance {avance.id}: {e}")
             
-            # DEBUG : Afficher les informations de calcul
-            print(f"\n🔍 DEBUG calculer_prochain_mois_paiement:")
-            print(f"   Contrat: {contrat}")
-            if dernier_paiement:
-                print(f"   Dernier paiement trouvé:")
-                print(f"     - ID: {dernier_paiement.id}")
-                print(f"     - Type: {dernier_paiement.type_paiement}")
-                print(f"     - Date: {dernier_paiement.date_paiement}")
-                print(f"     - Mois payé: {dernier_paiement.mois_paye}")
-                print(f"     - Montant: {dernier_paiement.montant}")
-            else:
-                print(f"   Aucun paiement trouvé")
-            print(f"   Dernier mois payé: {dernier_mois_paye}")
-            print(f"   Prochain mois de base: {prochain_mois_base}")
-            print(f"   Avances actives (non expirées): {avances_actives.count()}")
-            print(f"   Date aujourd'hui: {aujourd_hui}")
+            # DEBUG : Afficher les informations de calcul (uniquement en mode DEBUG)
+            if settings.DEBUG:
+                print(f"\n🔍 DEBUG calculer_prochain_mois_paiement:")
+                print(f"   Contrat: {contrat}")
+                if dernier_paiement:
+                    print(f"   Dernier paiement trouvé:")
+                    print(f"     - ID: {dernier_paiement.id}")
+                    print(f"     - Type: {dernier_paiement.type_paiement}")
+                    print(f"     - Date: {dernier_paiement.date_paiement}")
+                    print(f"     - Mois payé: {dernier_paiement.mois_paye}")
+                    print(f"     - Montant: {dernier_paiement.montant}")
+                else:
+                    print(f"   Aucun paiement trouvé")
+                print(f"   Dernier mois payé: {dernier_mois_paye}")
+                print(f"   Prochain mois de base: {prochain_mois_base}")
+                print(f"   Avances actives (non expirées): {avances_actives.count()}")
+                print(f"   Date aujourd'hui: {aujourd_hui}")
             
             # Si pas d'avances actives, retourner le mois de base
             if not avances_actives.exists():
-                print(f"   ✅ Pas d'avances actives → Retour mois de base: {prochain_mois_base}")
+                if settings.DEBUG:
+                    print(f"   ✅ Pas d'avances actives → Retour mois de base: {prochain_mois_base}")
                 return prochain_mois_base
             
-            # Afficher les détails des avances
-            for i, avance in enumerate(avances_actives, 1):
-                print(f"   Avance #{i}:")
-                print(f"     - Montant: {avance.montant_avance} F CFA")
-                print(f"     - Loyer mensuel: {avance.loyer_mensuel} F CFA")
-                print(f"     - Mois couverts: {avance.nombre_mois_couverts}")
-                print(f"     - Montant restant: {avance.montant_restant} F CFA")
-                print(f"     - Début: {avance.mois_debut_couverture}")
-                print(f"     - Fin: {avance.mois_fin_couverture}")
+            # Afficher les détails des avances (uniquement en mode DEBUG)
+            if settings.DEBUG:
+                for i, avance in enumerate(avances_actives, 1):
+                    print(f"   Avance #{i}:")
+                    print(f"     - Montant: {avance.montant_avance} F CFA")
+                    print(f"     - Loyer mensuel: {avance.loyer_mensuel} F CFA")
+                    print(f"     - Mois couverts: {avance.nombre_mois_couverts}")
+                    print(f"     - Montant restant: {avance.montant_restant} F CFA")
+                    print(f"     - Début: {avance.mois_debut_couverture}")
+                    print(f"     - Fin: {avance.mois_fin_couverture}")
             
             # Vérifier si le mois de base est couvert par une avance
             # Si oui, trouver le premier mois non couvert
             mois_courant = prochain_mois_base
             mois_max = prochain_mois_base + relativedelta(months=24)  # Limite de sécurité (2 ans)
             
-            print(f"   🔍 Recherche du premier mois non couvert à partir de {mois_courant}...")
+            if settings.DEBUG:
+                print(f"   🔍 Recherche du premier mois non couvert à partir de {mois_courant}...")
             
             while mois_courant <= mois_max:
                 # Vérifier si ce mois est couvert par une avance active
@@ -932,10 +946,11 @@ class ServiceGestionAvance:
                             avance_couvrant = avance
                             break
                 
-                if mois_couvert:
-                    print(f"   ⏭️  {mois_courant.strftime('%B %Y')}: COUVERT par avance (montant restant: {avance_couvrant.montant_restant} F)")
-                else:
-                    print(f"   ✅ {mois_courant.strftime('%B %Y')}: NON COUVERT → C'est le prochain paiement !")
+                if settings.DEBUG:
+                    if mois_couvert:
+                        print(f"   ⏭️  {mois_courant.strftime('%B %Y')}: COUVERT par avance (montant restant: {avance_couvrant.montant_restant} F)")
+                    else:
+                        print(f"   ✅ {mois_courant.strftime('%B %Y')}: NON COUVERT → C'est le prochain paiement !")
                 
                 # Si le mois n'est pas couvert, c'est le mois attendu
                 if not mois_couvert:

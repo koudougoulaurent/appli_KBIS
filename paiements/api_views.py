@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
+from django.conf import settings
 from datetime import date
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -527,12 +528,17 @@ def api_convertir_avances_existantes(request):
                     'avances_actives': avances_actives
                 })
             
-            # Trouver tous les paiements d'avance de ce contrat
+            # Trouver tous les paiements d'avance de ce contrat (optimisé avec select_related)
             paiements_avance = Paiement.objects.filter(
                 contrat=contrat,
                 type_paiement='avance',
                 statut='valide',
                 is_deleted=False
+            ).select_related(
+                'contrat',
+                'contrat__locataire',
+                'contrat__propriete',
+                'contrat__propriete__bailleur'
             )
             
             if not paiements_avance.exists():
@@ -551,7 +557,8 @@ def api_convertir_avances_existantes(request):
                 
                 if avance_existant:
                     avances_existantes += 1
-                    print(f"IGNORE - AvanceLoyer existe déjà (ID: {avance_existant.id}) pour paiement {paiement.id}")
+                    if settings.DEBUG:
+                        print(f"IGNORE - AvanceLoyer existe déjà (ID: {avance_existant.id}) pour paiement {paiement.id}")
                     continue
                 
                 # Créer l'AvanceLoyer avec LOGIQUE UNIQUE V8
@@ -564,46 +571,18 @@ def api_convertir_avances_existantes(request):
                         paiement=paiement  # Lier au paiement
                     )
                     avances_creees += 1
-                    print(f"✓ Avance créée (ID: {avance.id}) pour paiement {paiement.id} - Mois: {avance.mois_debut_couverture} → {avance.mois_fin_couverture}")
+                    if settings.DEBUG:
+                        print(f"✓ Avance créée (ID: {avance.id}) pour paiement {paiement.id} - Mois: {avance.mois_debut_couverture} → {avance.mois_fin_couverture}")
                 except Exception as e:
                     erreur_msg = f"Erreur création AvanceLoyer pour paiement {paiement.id}: {str(e)}"
-                    print(erreur_msg)
+                    if settings.DEBUG:
+                        print(erreur_msg)
                     erreurs.append(erreur_msg)
                     continue
             
-            # Si aucune avance n'a été créée pour ce contrat, vérifier s'il y a des contrats avec des avances manquantes
+            # Message de réponse simple (suppression de la vérification globale coûteuse)
             if avances_creees == 0:
-                print(f"VERIFICATION - Aucune avance creee pour le contrat {contrat_id}, verification globale...")
-                
-                # Vérifier tous les contrats qui ont des paiements d'avance sans AvanceLoyer
-                contrats_avec_avances_manquantes = Contrat.objects.filter(
-                    paiements__type_paiement__in=['avance_loyer', 'avance'],
-                    paiements__statut='valide'
-                ).distinct()
-                
-                total_avances_manquantes = 0
-                for contrat_verif in contrats_avec_avances_manquantes:
-                    paiements_verif = Paiement.objects.filter(
-                        contrat=contrat_verif,
-                        type_paiement='avance',
-                        statut='valide'
-                    )
-                    
-                    for paiement_verif in paiements_verif:
-                        avance_existante_verif = AvanceLoyer.objects.filter(
-                            contrat=paiement_verif.contrat,
-                            montant_avance=paiement_verif.montant,
-                            date_avance=paiement_verif.date_paiement
-                        ).first()
-                        
-                        if not avance_existante_verif:
-                            total_avances_manquantes += 1
-                            print(f"ATTENTION - Contrat {contrat_verif.id}: Paiement {paiement_verif.id} sans AvanceLoyer")
-                
-                if total_avances_manquantes > 0:
-                    message = f"Aucune avance créée pour ce contrat, mais {total_avances_manquantes} avances manquantes détectées dans d'autres contrats. Utilisez la conversion globale."
-                else:
-                    message = "Toutes les avances sont déjà converties."
+                message = "Toutes les avances sont déjà converties pour ce contrat."
             else:
                 message = f'{avances_creees} avances créées avec succès'
             

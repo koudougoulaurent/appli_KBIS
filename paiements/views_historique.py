@@ -9,6 +9,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.db.models import Sum
 from django.utils import timezone
+from django.conf import settings
 from datetime import timedelta
 from decimal import Decimal
 
@@ -91,14 +92,15 @@ def historique_paiements_contrat(request, contrat_id):
     # Trier par mois
     paiements_par_mois = dict(sorted(paiements_par_mois.items(), reverse=True))
     
-    # Debug pour vérifier
-    print(f"=== DEBUG CONTRAT {contrat_id} ===")
-    print(f"Paiements trouvés: {len(paiements_list)}")
-    print(f"Contrat: {contrat.numero_contrat}")
-    print(f"Locataire: {contrat.locataire.get_nom_complet()}")
-    print(f"Propriété: {contrat.propriete.titre}")
-    for p in paiements_list:
-        print(f"- {p['type_paiement']}: {p['montant']} F CFA ({p['date_paiement']})")
+    # Debug pour vérifier (uniquement en mode DEBUG)
+    if settings.DEBUG:
+        print(f"=== DEBUG CONTRAT {contrat_id} ===")
+        print(f"Paiements trouvés: {len(paiements_list)}")
+        print(f"Contrat: {contrat.numero_contrat}")
+        print(f"Locataire: {contrat.locataire.get_nom_complet()}")
+        print(f"Propriété: {contrat.propriete.titre}")
+        for p in paiements_list:
+            print(f"- {p['type_paiement']}: {p['montant']} F CFA ({p['date_paiement']})")
     
     context = {
         'contrat': contrat,
@@ -190,14 +192,15 @@ def historique_paiements_contrat_old(request, contrat_id):
     # Trier par mois
     paiements_par_mois = dict(sorted(paiements_par_mois.items(), reverse=True))
     
-    # Debug: Afficher les informations pour le développement
-    print(f"DEBUG - Contrat: {contrat.numero_contrat}")
-    print(f"DEBUG - Nombre de paiements: {paiements.count()}")
-    print(f"DEBUG - Paiements: {list(paiements.values('type_paiement', 'montant', 'date_paiement'))}")
-    print(f"DEBUG - Stats: {stats}")
-    print(f"DEBUG - Stats par type: {stats_par_type}")
-    print(f"DEBUG - Paiements QuerySet: {paiements}")
-    print(f"DEBUG - Paiements SQL: {paiements.query}")
+    # Debug: Afficher les informations pour le développement (uniquement en mode DEBUG)
+    if settings.DEBUG:
+        print(f"DEBUG - Contrat: {contrat.numero_contrat}")
+        print(f"DEBUG - Nombre de paiements: {paiements.count()}")
+        print(f"DEBUG - Paiements: {list(paiements.values('type_paiement', 'montant', 'date_paiement'))}")
+        print(f"DEBUG - Stats: {stats}")
+        print(f"DEBUG - Stats par type: {stats_par_type}")
+        print(f"DEBUG - Paiements QuerySet: {paiements}")
+        print(f"DEBUG - Paiements SQL: {paiements.query}")
     
     # Créer une liste simple des paiements pour forcer l'affichage
     paiements_list = []
@@ -215,8 +218,9 @@ def historique_paiements_contrat_old(request, contrat_id):
             'notes': paiement.notes,
         })
     
-    # Debug supplémentaire pour le contrat ID 12
-    print(f"DEBUG CONTRAT {contrat_id}:")
+    # Debug supplémentaire pour le contrat ID 12 (uniquement en mode DEBUG)
+    if settings.DEBUG:
+        print(f"DEBUG CONTRAT {contrat_id}:")
     print(f"- Paiements QuerySet: {paiements.count()}")
     print(f"- Paiements List: {len(paiements_list)}")
     print(f"- Contrat: {contrat.numero_contrat}")

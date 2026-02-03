@@ -941,18 +941,21 @@ def ajouter_paiement(request):
     # Vérification des permissions
     from core.utils import check_group_permissions
     
-    # 🔍 DEBUG : Afficher les infos utilisateur et permissions
-    print(f"🔍 DEBUG ajouter_paiement:")
-    print(f"   User: {request.user.username}")
-    print(f"   Authenticated: {request.user.is_authenticated}")
-    print(f"   Groupe: {getattr(request.user, 'groupe_travail', None)}")
+    # 🔍 DEBUG : Afficher les infos utilisateur et permissions (uniquement en mode DEBUG)
+    if settings.DEBUG:
+        print(f"🔍 DEBUG ajouter_paiement:")
+        print(f"   User: {request.user.username}")
+        print(f"   Authenticated: {request.user.is_authenticated}")
+        print(f"   Groupe: {getattr(request.user, 'groupe_travail', None)}")
     
     permissions = check_group_permissions(request.user, [], 'add')
-    print(f"   Permissions: {permissions}")
+    if settings.DEBUG:
+        print(f"   Permissions: {permissions}")
     
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
-        print(f"   ❌ ACCÈS REFUSÉ: {permissions['message']}")
+        if settings.DEBUG:
+            print(f"   ❌ ACCÈS REFUSÉ: {permissions['message']}")
         return redirect('paiements:liste')
     
     # Initialiser les variables pour le contexte (utilisées dans GET et POST)
@@ -964,10 +967,12 @@ def ajouter_paiement(request):
     
     if request.method == 'POST':
         form = PaiementForm(request.POST)
-        print(f"Données POST: {request.POST}")
-        print(f"Formulaire valide: {form.is_valid()}")
+        if settings.DEBUG:
+            print(f"Données POST: {request.POST}")
+            print(f"Formulaire valide: {form.is_valid()}")
         if not form.is_valid():
-            print(f"Erreurs du formulaire: {form.errors}")
+            if settings.DEBUG:
+                print(f"Erreurs du formulaire: {form.errors}")
             # Si le formulaire n'est pas valide, récupérer le contrat depuis les données POST
             try:
                 contrat_id_from_form = request.POST.get('contrat')

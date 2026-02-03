@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator
+from django.conf import settings
 from decimal import Decimal
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
@@ -201,21 +202,24 @@ class AvanceLoyer(models.Model):
         
         # Si le loyer mensuel utilisé est différent du loyer du contrat, afficher un avertissement
         if loyer_contrat and abs(self.loyer_mensuel - loyer_contrat) > Decimal('100'):
-            print(f"⚠️ ATTENTION : Avance ID {self.id if self.id else 'NEW'}")
-            print(f"   Loyer mensuel dans l'avance: {self.loyer_mensuel} F CFA")
-            print(f"   Loyer mensuel du contrat: {loyer_contrat} F CFA")
-            print(f"   Différence: {abs(self.loyer_mensuel - loyer_contrat)} F CFA")
+            if settings.DEBUG:
+                print(f"⚠️ ATTENTION : Avance ID {self.id if self.id else 'NEW'}")
+                print(f"   Loyer mensuel dans l'avance: {self.loyer_mensuel} F CFA")
+                print(f"   Loyer mensuel du contrat: {loyer_contrat} F CFA")
+                print(f"   Différence: {abs(self.loyer_mensuel - loyer_contrat)} F CFA")
             
             # Si la différence est significative ET que l'avance couvre plus de 1 mois
             # Proposer une correction intelligente
             if mois_complets > 1:
                 mois_avec_loyer_contrat = int(self.montant_avance // loyer_contrat)
-                print(f"   Mois calculés avec loyer avance: {mois_complets} mois")
-                print(f"   Mois calculés avec loyer contrat: {mois_avec_loyer_contrat} mois")
+                if settings.DEBUG:
+                    print(f"   Mois calculés avec loyer avance: {mois_complets} mois")
+                    print(f"   Mois calculés avec loyer contrat: {mois_avec_loyer_contrat} mois")
                 
                 # Si avec le loyer du contrat, on obtient 1 mois, c'est probablement une erreur
                 if mois_avec_loyer_contrat == 1 and abs(self.montant_avance - loyer_contrat) < Decimal('1000'):
-                    print(f"   🔧 CORRECTION : L'avance semble être pour 1 mois seulement")
+                    if settings.DEBUG:
+                        print(f"   🔧 CORRECTION : L'avance semble être pour 1 mois seulement")
                     mois_complets = 1
         
         self.nombre_mois_couverts = mois_complets

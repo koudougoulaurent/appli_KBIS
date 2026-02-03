@@ -103,7 +103,8 @@ class DocumentUnifieA5ServiceComplet:
         paiements_cumules = None
         if quittance_cumulee:
             paiements_cumules = list(quittance_cumulee.paiements.all().order_by('date_creation'))
-            print(f"[DEBUG] Quittance cumulée détectée avec {len(paiements_cumules)} paiements")
+            if settings.DEBUG:
+                print(f"[DEBUG] Quittance cumulée détectée avec {len(paiements_cumules)} paiements")
         
         # CORRECTION CRITIQUE : Récupérer l'avance correspondante pour les avances
         avance_loyer = None
