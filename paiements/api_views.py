@@ -324,6 +324,16 @@ def api_contexte_intelligent_contrat(request, contrat_id):
                 prochain_mois_paiement_avec_avances = None
             
             # *** RÉCUPÉRATION DES INFORMATIONS SUR LES AVANCES ***
+            # Initialiser les variables par défaut
+            montant_avances_disponible = 0
+            mois_couverts_par_avances = 0
+            progression_avances = {}
+            prochain_mois_paiement = None
+            montant_du_mois_prochain = clean_numeric_value(contrat.loyer_mensuel)
+            montant_avance_utilisee = 0
+            date_expiration_avances = None
+            avances_actives = []
+            
             try:
                 # *** CONSOMMATION AUTOMATIQUE DES AVANCES PASSÉES (PRIORITAIRE) ***
                 from .services_consommation_dynamique import ServiceConsommationDynamique
@@ -359,15 +369,20 @@ def api_contexte_intelligent_contrat(request, contrat_id):
                 
                 # Calculer la date d'expiration des avances
                 date_expiration_avances = ServiceGestionAvance.calculer_date_expiration_avances(contrat)
-                
+
             except Exception as e:
-                # En cas d'erreur, ne pas prendre en compte les avances
-                montant_avances_disponible = 0
-                mois_couverts_par_avances = 0
-                prochain_mois_paiement = date.today().replace(day=1) + relativedelta(months=1)
-                montant_du_mois_prochain = clean_numeric_value(contrat.loyer_mensuel)
-                montant_avance_utilisee = 0
-                date_expiration_avances = None
+                # En cas d'erreur, utiliser les valeurs par défaut déjà initialisées
+                import traceback
+                if settings.DEBUG:
+                    print(f"Erreur dans récupération avances: {str(e)}")
+                    traceback.print_exc()
+                # Utiliser le prochain mois calculé précédemment ou une valeur par défaut
+                if prochain_mois_paiement is None:
+                    if prochain_mois_paiement_avec_avances:
+                        prochain_mois_paiement = prochain_mois_paiement_avec_avances
+                    else:
+                        from datetime import date
+                        prochain_mois_paiement = date.today().replace(day=1) + relativedelta(months=1)
             
             contexte = {
                 'contrat': {
