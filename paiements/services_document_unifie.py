@@ -224,20 +224,52 @@ class DocumentUnifieA5Service:
         Calcule les mois couverts par une avance.
         CORRECTION : Utilise les mois RÉELS de l'avance enregistrée si disponible.
         """
-        """
-        Calcule le nombre de mois couverts par l'avance basé sur le montant et le loyer mensuel.
-        Retourne un dictionnaire avec le nombre de mois et la liste des mois.
-        """
-        logger.info(f"=== CALCUL MOIS COUVERTS AVANCE ===")
+        # *** CORRECTION CRITIQUE : Récupérer l'avance liée au paiement ***
+        avance_loyer = None
+        try:
+            from .models_avance import AvanceLoyer
+            avance_loyer = AvanceLoyer.objects.filter(paiement=paiement).first()
+        except Exception:
+            pass
+        
+        # Si l'avance existe et a des mois définis, utiliser les mois RÉELS
+        if avance_loyer and avance_loyer.mois_debut_couverture and avance_loyer.mois_fin_couverture:
+            try:
+                from dateutil.relativedelta import relativedelta
+                mois_francais = {
+                    1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+                    5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+                    9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
+                }
+                
+                mois_debut = avance_loyer.mois_debut_couverture.replace(day=1)
+                mois_fin = avance_loyer.mois_fin_couverture.replace(day=1)
+                
+                # Construire la liste des mois couverts
+                mois_couverts_liste = []
+                mois_courant = mois_debut
+                while mois_courant <= mois_fin:
+                    mois_nom = mois_francais.get(mois_courant.month, mois_courant.strftime('%B'))
+                    mois_couverts_liste.append(f"{mois_nom} {mois_courant.year}")
+                    mois_courant = mois_courant + relativedelta(months=1)
+                
+                return {
+                    'nombre': avance_loyer.nombre_mois_couverts or len(mois_couverts_liste),
+                    'mois_liste': mois_couverts_liste,
+                    'mois_texte': ', '.join(mois_couverts_liste),
+                    'date_debut': mois_debut,
+                    'date_fin': mois_fin
+                }
+            except Exception as e:
+                # En cas d'erreur, continuer avec le recalcul
+                pass
+        
+        # Fallback : recalculer si l'avance n'existe pas ou n'a pas de mois définis
         try:
             montant_avance = float(paiement.montant)
             loyer_mensuel = float(paiement.contrat.loyer_mensuel)
             
-            logger.info(f"Montant avance: {montant_avance} FCFA")
-            logger.info(f"Loyer mensuel: {loyer_mensuel} FCFA")
-            
             if loyer_mensuel <= 0:
-                logger.warning(f"✗ Loyer mensuel <= 0, retour None")
                 return None
                 
             # Calculer le nombre de mois complets
@@ -253,18 +285,7 @@ class DocumentUnifieA5Service:
             nombre_mois = max(1, mois_entiers)  # Au minimum 1 mois
             
             # Calculer les mois couverts à partir de la date du paiement
-            from datetime import datetime, timedelta
             from dateutil.relativedelta import relativedelta
-            import locale
-            
-            # Définir la locale française pour les mois
-            try:
-                locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
-            except:
-                try:
-                    locale.setlocale(locale.LC_TIME, 'French_France.1252')
-                except:
-                    pass  # Utiliser les noms par défaut si la locale française n'est pas disponible
             
             date_paiement = paiement.date_paiement
             mois_couverts = []
@@ -293,8 +314,6 @@ class DocumentUnifieA5Service:
                 'date_fin': date_fin
             }
             
-            logger.info(f"✓ Résultat calcul: {resultat}")
-            logger.info(f"=== FIN CALCUL MOIS COUVERTS ===")
             return resultat
             
         except (ValueError, TypeError, ZeroDivisionError, ImportError) as e:
