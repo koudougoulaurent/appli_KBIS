@@ -11,7 +11,6 @@ from dateutil.relativedelta import relativedelta
 from contrats.models import Contrat
 from .models_avance import AvanceLoyer, ConsommationAvance
 from .services_consommation_dynamique import ServiceConsommationDynamique
-from .services_monitoring_avance import ServiceMonitoringAvance
 
 
 @login_required
@@ -57,7 +56,7 @@ def diagnostic_avances_contrat(request, contrat_id):
             
             # Calculer les mois qui devraient être consommés
             mois_courant = mois_debut_norm
-            for i in range(avance.nombre_mois_couverts):
+            for _ in range(avance.nombre_mois_couverts):
                 mois_courant_norm = mois_courant.replace(day=1)
                 if mois_courant_norm < mois_actuel:
                     est_consomme = avance.est_mois_consomme(mois_courant_norm)
