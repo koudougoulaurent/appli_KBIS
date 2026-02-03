@@ -325,6 +325,11 @@ def api_contexte_intelligent_contrat(request, contrat_id):
             
             # *** RÉCUPÉRATION DES INFORMATIONS SUR LES AVANCES ***
             try:
+                # *** CONSOMMATION AUTOMATIQUE DES AVANCES PASSÉES (PRIORITAIRE) ***
+                from .services_consommation_dynamique import ServiceConsommationDynamique
+                # Consommer automatiquement toutes les avances du contrat pour les mois écoulés
+                ServiceConsommationDynamique.consommer_avances_automatiquement(contrat)
+                
                 # Récupérer les avances actives (seulement celles qui ont encore du montant restant)
                 avances_actives = AvanceLoyer.objects.filter(
                     contrat=contrat,
@@ -343,22 +348,6 @@ def api_contexte_intelligent_contrat(request, contrat_id):
                 
                 # Analyser la progression des avances
                 progression_avances = ServiceMonitoringAvance.analyser_progression_avances(contrat)
-                
-                # Détecter les avances à consommer automatiquement
-                avances_a_consommer = ServiceMonitoringAvance.detecter_avances_a_consommer(contrat)
-                
-                # Consommer automatiquement les avances manquantes
-                if avances_a_consommer.get('total_mois_a_consommer', 0) > 0:
-                    consommation_auto = ServiceMonitoringAvance.consommer_avances_manquantes(contrat)
-                    if consommation_auto.get('success'):
-                        print(f"Consommation automatique: {consommation_auto['message']}")
-                        # Recharger les avances après consommation
-                        avances_actives = AvanceLoyer.objects.filter(
-                            contrat=contrat,
-                            statut='active'
-                        )
-                        montant_avances_disponible = sum(avance.montant_restant for avance in avances_actives)
-                        mois_couverts_par_avances = sum(avance.nombre_mois_couverts for avance in avances_actives)
                 
                 # Calculer le prochain mois de paiement en tenant compte des avances
                 prochain_mois_paiement = ServiceGestionAvance.calculer_prochain_mois_paiement(contrat)

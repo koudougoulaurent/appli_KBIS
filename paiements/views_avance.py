@@ -23,6 +23,11 @@ from .utils_pdf import generate_historique_pdf
 def dashboard_avances(request):
     """Dashboard principal des avances de loyer"""
     try:
+        # *** CONSOMMATION AUTOMATIQUE DES AVANCES PASSÉES ***
+        from .services_consommation_dynamique import ServiceConsommationDynamique
+        # Consommer automatiquement toutes les avances pour les mois écoulés
+        ServiceConsommationDynamique.consommer_avances_automatiquement()
+        
         # Statistiques générales
         total_avances = AvanceLoyer.objects.filter(statut='active').count()
         montant_total_avances = AvanceLoyer.objects.filter(statut='active').aggregate(
@@ -99,6 +104,11 @@ def liste_avances(request):
     if incohérences:
         # Synchroniser automatiquement les avances incohérentes
         ServiceSynchronisationAvances.synchroniser_toutes_avances()
+    
+    # *** CONSOMMATION AUTOMATIQUE DES AVANCES PASSÉES ***
+    from .services_consommation_dynamique import ServiceConsommationDynamique
+    # Consommer automatiquement toutes les avances pour les mois écoulés
+    ServiceConsommationDynamique.consommer_avances_automatiquement()
     
     # Récupérer les avances synchronisées (sans doublons)
     from .models_avance import AvanceLoyer

@@ -64,18 +64,27 @@ class ServiceConsommationDynamique:
         for mois in mois_a_consommer:
             # Vérifier si ce mois n'est pas déjà consommé
             if not avance.est_mois_consomme(mois):
+                # Calculer le montant restant après cette consommation
+                montant_restant_apres = max(Decimal('0'), avance.montant_restant - avance.loyer_mensuel)
+                
                 # Créer la consommation
                 consommation = ConsommationAvance.objects.create(
                     avance=avance,
                     mois_consomme=mois,
                     montant_consomme=avance.loyer_mensuel,
-                    montant_restant_apres=avance.montant_restant - avance.loyer_mensuel,
+                    montant_restant_apres=montant_restant_apres,
                     paiement=None  # Consommation automatique, pas liée à un paiement
                 )
                 
                 # Mettre à jour l'avance
-                avance.montant_restant = max(0, avance.montant_restant - avance.loyer_mensuel)
-                avance.save()
+                avance.montant_restant = montant_restant_apres
+                
+                # Si l'avance est épuisée, changer le statut
+                if avance.montant_restant <= 0:
+                    avance.statut = 'epuisee'
+                    avance.montant_restant = Decimal('0')
+                
+                avance.save(update_fields=['montant_restant', 'statut'])
                 
                 mois_ajoutes += 1
         
