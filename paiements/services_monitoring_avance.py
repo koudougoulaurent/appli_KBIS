@@ -14,9 +14,15 @@ class ServiceMonitoringAvance:
     def analyser_progression_avances(contrat):
         """
         Analyse la progression de consommation des avances pour un contrat
+        IMPORTANT : Consomme automatiquement les mois passés avant de calculer la progression
         """
         try:
-            # Récupérer toutes les avances du contrat
+            # *** CONSOMMATION AUTOMATIQUE PRIORITAIRE ***
+            from .services_consommation_dynamique import ServiceConsommationDynamique
+            # Consommer automatiquement toutes les avances du contrat pour les mois écoulés
+            ServiceConsommationDynamique.consommer_avances_automatiquement(contrat)
+            
+            # Récupérer toutes les avances du contrat (recharger après consommation)
             avances = AvanceLoyer.objects.filter(contrat=contrat).order_by('date_avance')
             
             if not avances.exists():
@@ -39,7 +45,10 @@ class ServiceMonitoringAvance:
             }
             
             for avance in avances:
-                # Calculer les mois consommés
+                # Recharger l'avance depuis la DB pour avoir les données à jour après consommation
+                avance.refresh_from_db()
+                
+                # Calculer les mois consommés (après consommation automatique)
                 mois_consommes = ConsommationAvance.objects.filter(avance=avance).count()
                 
                 # *** CORRECTION : Calculer le montant réel consommé et restant ***
