@@ -284,17 +284,19 @@ class ServiceLogiqueAvanceUnique:
         """
         Calcule le mois de fin de couverture.
         
-        LOGIQUE :
+        LOGIQUE CORRECTE :
         - mois_fin = mois_debut + (nombre_mois_couverts - 1)
         
         Exemple :
-        - Début : janvier 2026
+        - Dernier mois payé : novembre 2025
+        - Mois début : décembre 2025 (novembre + 1)
         - Nombre de mois : 3
-        - Fin : mars 2026 (janvier + 2 mois)
+        - Mois fin : février 2026 (décembre + 2 mois)
+        - Mois couverts : décembre 2025, janvier 2026, février 2026 (3 mois)
         
         Args:
-            mois_debut: Date de début (1er du mois)
-            nombre_mois_couverts: Nombre de mois couverts
+            mois_debut: Date de début (1er du mois) = Dernier mois payé + 1
+            nombre_mois_couverts: Nombre de mois couverts par l'avance
         
         Returns:
             date: Mois de fin de couverture (1er du mois)

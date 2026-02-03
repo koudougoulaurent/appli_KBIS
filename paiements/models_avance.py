@@ -170,7 +170,17 @@ class AvanceLoyer(models.Model):
         super().save(*args, **kwargs)
     
     def calculer_mois_couverts(self):
-        """Calcule le nombre de mois couverts par l'avance"""
+        """
+        Calcule le nombre de mois couverts par l'avance.
+        
+        LOGIQUE MÉTIER :
+        - Mois début = Dernier mois payé (ou avancé) + 1
+        - Mois fin = Mois début + (nombre_mois - 1)
+        - Exemple : Dernier mois payé = novembre 2025, nombre_mois = 3
+          → Mois début = décembre 2025
+          → Mois fin = décembre 2025 + 2 = février 2026
+          → Couvre : décembre 2025, janvier 2026, février 2026 (3 mois)
+        """
         # Vérifier que le loyer mensuel est valide
         if not self.loyer_mensuel or self.loyer_mensuel <= 0:
             self.nombre_mois_couverts = 0
@@ -184,7 +194,7 @@ class AvanceLoyer(models.Model):
             # Mode manuel : utiliser les mois sélectionnés
             self._calculer_mois_manuels()
         else:
-            # Mode automatique : calculer normalement
+            # Mode automatique : calculer normalement avec la logique centralisée
             self._calculer_mois_automatiques()
         
         # Mettre à jour le statut et le montant restant
@@ -193,8 +203,19 @@ class AvanceLoyer(models.Model):
     
     def _calculer_mois_automatiques(self):
         """Calcule les mois couverts en mode automatique"""
-        # Calculer le nombre de mois complets
-        mois_complets = int(self.montant_avance // self.loyer_mensuel)
+        # Utiliser la méthode centralisée pour calculer le nombre de mois
+        try:
+            from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
+            mois_complets, reste = ServiceLogiqueAvanceUnique.calculer_nombre_mois_couverts(
+                self.montant_avance,
+                self.loyer_mensuel
+            )
+            self.montant_reste = reste
+        except Exception:
+            # Fallback si erreur
+            mois_complets = int(self.montant_avance // self.loyer_mensuel)
+            reste = self.montant_avance % self.loyer_mensuel
+            self.montant_reste = reste
         
         # ⚠️ PROTECTION : Vérifier que le loyer mensuel est cohérent avec le loyer du contrat
         # Si l'avance couvre exactement 1 mois (montant = loyer), s'assurer qu'on compte bien 1 mois
@@ -231,20 +252,23 @@ class AvanceLoyer(models.Model):
         
         self.nombre_mois_couverts = mois_complets
         
-        # *** LOGIQUE INTELLIGENTE : Mois d'effet personnalisé ou automatique ***
+        # *** LOGIQUE CORRECTE : Mois début = Dernier mois payé (ou avancé) + 1 ***
         if self.mois_effet_personnalise:
-            # Utiliser le mois d'effet personnalisé
+            # Utiliser le mois d'effet personnalisé (mode manuel)
             self.mois_debut_couverture = self.mois_effet_personnalise.replace(day=1)
         else:
-            # CORRECTION V10.2 : Utiliser ServiceLogiqueAvanceUnique au lieu de la règle du 15+
+            # MODE AUTOMATIQUE : Utiliser ServiceLogiqueAvanceUnique pour garantir la logique correcte
+            # LOGIQUE : Dernier mois payé (ou avancé) + 1 = mois_debut
             try:
                 from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
                 self.mois_debut_couverture = ServiceLogiqueAvanceUnique.determiner_mois_debut_couverture_nouvelle_avance(
                     self.contrat, 
                     self.date_avance
                 )
-            except Exception:
-                # Fallback : utiliser l'ancienne logique si erreur
+            except Exception as e:
+                # Fallback : utiliser l'ancienne logique si erreur (pour compatibilité)
+                if settings.DEBUG:
+                    print(f"[AVERTISSEMENT] Erreur lors du calcul du mois début avec logique unique: {e}")
                 mois_avance = self.date_avance.replace(day=1)
                 jour_avance = self.date_avance.day
                 if jour_avance > 15:
@@ -310,8 +334,21 @@ class AvanceLoyer(models.Model):
                     print(f"[AVERTISSEMENT] Validation mois manquants échouée: {e}")
         
         # Calculer la fin de couverture
+        # LOGIQUE CORRECTE : mois_fin = mois_debut + (nombre_mois - 1)
+        # Exemple : mois_debut = décembre 2025, nombre_mois = 3
+        # → mois_fin = décembre 2025 + 2 mois = février 2026
+        # Cela couvre : décembre 2025, janvier 2026, février 2026 (3 mois)
         if mois_complets > 0:
-            self.mois_fin_couverture = self.mois_debut_couverture + relativedelta(months=mois_complets - 1)
+            # Utiliser la méthode centralisée pour garantir la cohérence
+            try:
+                from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
+                self.mois_fin_couverture = ServiceLogiqueAvanceUnique.calculer_mois_fin_couverture(
+                    self.mois_debut_couverture,
+                    mois_complets
+                )
+            except Exception:
+                # Fallback si erreur
+                self.mois_fin_couverture = self.mois_debut_couverture + relativedelta(months=mois_complets - 1)
         else:
             self.mois_fin_couverture = self.mois_debut_couverture
     
@@ -409,7 +446,16 @@ class AvanceLoyer(models.Model):
             mois_possibles = int(self.montant_avance // self.loyer_mensuel)
             if mois_possibles > 0:
                 self.nombre_mois_couverts = mois_possibles
-                self.mois_fin_couverture = self.mois_debut_couverture + relativedelta(months=mois_possibles - 1)
+                # Utiliser la méthode centralisée pour garantir la cohérence
+                try:
+                    from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
+                    self.mois_fin_couverture = ServiceLogiqueAvanceUnique.calculer_mois_fin_couverture(
+                        self.mois_debut_couverture,
+                        mois_possibles
+                    )
+                except Exception:
+                    # Fallback si erreur
+                    self.mois_fin_couverture = self.mois_debut_couverture + relativedelta(months=mois_possibles - 1)
                 # Mettre à jour la liste des mois sélectionnés
                 self.mois_couverts_manuels = [mois.strftime('%Y-%m-%d') for mois in mois_dates[:mois_possibles]]
     
