@@ -139,6 +139,13 @@ class AvanceLoyer(models.Model):
         verbose_name = _("Avance de loyer")
         verbose_name_plural = _("Avances de loyer")
         ordering = ['-date_avance']
+        indexes = [
+            models.Index(fields=['contrat', 'statut'], name='avance_ctr_stat_idx'),
+            models.Index(fields=['statut', 'date_avance'], name='avance_stat_date_idx'),
+            models.Index(fields=['date_avance'], name='avance_date_idx'),
+            models.Index(fields=['mois_debut_couverture'], name='avance_mois_deb_idx'),
+            models.Index(fields=['contrat', 'statut', 'montant_restant'], name='avance_ctr_stat_rst_idx'),
+        ]
     
     def get_mois_couverts_liste_original(self):
         """Retourne la liste des mois couverts par l'avance (version originale)"""
@@ -714,6 +721,11 @@ class ConsommationAvance(models.Model):
         verbose_name_plural = _("Consommations d'avance")
         ordering = ['-mois_consomme']
         unique_together = ['avance', 'mois_consomme']
+        indexes = [
+            models.Index(fields=['avance', 'mois_consomme'], name='cons_avance_mois_idx'),
+            models.Index(fields=['mois_consomme'], name='cons_mois_idx'),
+            models.Index(fields=['avance'], name='cons_avance_idx'),
+        ]
     
     def __str__(self):
         return f"Consommation {self.mois_consomme.strftime('%B %Y')} - {self.montant_consomme} F CFA"

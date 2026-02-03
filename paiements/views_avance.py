@@ -21,59 +21,15 @@ from .utils_pdf import generate_historique_pdf
 
 @login_required
 def dashboard_avances(request):
-    """Dashboard principal des avances de loyer"""
+    """Dashboard principal des avances de loyer - OPTIMISÉ"""
     try:
-        # *** CONSOMMATION AUTOMATIQUE DES AVANCES PASSÉES ***
-        from .services_consommation_dynamique import ServiceConsommationDynamique
-        # Consommer automatiquement toutes les avances pour les mois écoulés
-        ServiceConsommationDynamique.consommer_avances_automatiquement()
+        # *** CONSOMMATION AUTOMATIQUE AVEC CACHE ***
+        from .services_optimisation_avances import ServiceOptimisationAvances
+        # Consommer avec cache pour éviter les appels répétés
+        ServiceOptimisationAvances.consommer_avances_avec_cache(force=False)
         
-        # Statistiques générales
-        total_avances = AvanceLoyer.objects.filter(statut='active').count()
-        montant_total_avances = AvanceLoyer.objects.filter(statut='active').aggregate(
-            total=Sum('montant_avance')
-        )['total'] or Decimal('0')
-        
-        avances_epuisees = AvanceLoyer.objects.filter(statut='epuisee').count()
-        avances_actives = AvanceLoyer.objects.filter(statut='active').count()
-        
-        # Calculer les pourcentages
-        total_avances = avances_actives + avances_epuisees
-        pourcentage_actives = round((avances_actives * 100) / total_avances, 1) if total_avances > 0 else 0
-        pourcentage_epuisees = round((avances_epuisees * 100) / total_avances, 1) if total_avances > 0 else 0
-        
-        # Avances récentes
-        avances_recentes = AvanceLoyer.objects.select_related('contrat__locataire', 'contrat__propriete').order_by('-created_at')[:5]
-        
-        # Contrats avec avances
-        contrats_avec_avances = Contrat.objects.filter(
-            avances_loyer__isnull=False
-        ).distinct().count()
-        
-        # Statistiques par mois
-        mois_courant = date.today().replace(day=1)
-        avances_ce_mois = AvanceLoyer.objects.filter(
-            date_avance__year=mois_courant.year,
-            date_avance__month=mois_courant.month
-        ).count()
-        
-        montant_avances_ce_mois = AvanceLoyer.objects.filter(
-            date_avance__year=mois_courant.year,
-            date_avance__month=mois_courant.month
-        ).aggregate(total=Sum('montant_avance'))['total'] or Decimal('0')
-        
-        context = {
-            'total_avances': total_avances,
-            'montant_total_avances': montant_total_avances,
-            'avances_epuisees': avances_epuisees,
-            'avances_actives': avances_actives,
-            'pourcentage_actives': pourcentage_actives,
-            'pourcentage_epuisees': pourcentage_epuisees,
-            'avances_recentes': avances_recentes,
-            'contrats_avec_avances': contrats_avec_avances,
-            'avances_ce_mois': avances_ce_mois,
-            'montant_avances_ce_mois': montant_avances_ce_mois,
-        }
+        # Statistiques optimisées en une seule requête
+        context = ServiceOptimisationAvances.get_dashboard_stats_optimisees()
         
         return render(request, 'paiements/avances/dashboard_avances.html', context)
         
@@ -94,41 +50,64 @@ def dashboard_avances(request):
 @login_required
 def liste_avances(request):
     """
-    Liste des avances de loyer - Synchronisées parfaitement avec les paiements
+    Liste des avances de loyer - OPTIMISÉ avec filtres en base de données
     """
-    # SYNCHRONISATION AUTOMATIQUE : S'assurer que toutes les avances sont synchronisées
-    from .services_synchronisation_avances import ServiceSynchronisationAvances
+    # *** CONSOMMATION AUTOMATIQUE AVEC CACHE ***
+    from .services_optimisation_avances import ServiceOptimisationAvances
+    ServiceOptimisationAvances.consommer_avances_avec_cache(force=False)
     
-    # Vérifier et synchroniser les avances
-    incohérences = ServiceSynchronisationAvances.verifier_coherence_avances()
-    if incohérences:
-        # Synchroniser automatiquement les avances incohérentes
-        ServiceSynchronisationAvances.synchroniser_toutes_avances()
+    # Récupérer les filtres depuis la requête
+    contrat_id = request.GET.get('contrat')
+    statut = request.GET.get('statut')
+    mois_debut = request.GET.get('mois_debut')
+    mois_fin = request.GET.get('mois_fin')
     
-    # *** CONSOMMATION AUTOMATIQUE DES AVANCES PASSÉES ***
-    from .services_consommation_dynamique import ServiceConsommationDynamique
-    # Consommer automatiquement toutes les avances pour les mois écoulés
-    ServiceConsommationDynamique.consommer_avances_automatiquement()
+    # Préparer les filtres pour la base de données
+    filters = {}
+    if contrat_id:
+        try:
+            filters['contrat_id'] = int(contrat_id)
+        except ValueError:
+            pass  # Ignorer si ce n'est pas un ID valide
     
-    # Récupérer les avances synchronisées (sans doublons)
-    from .models_avance import AvanceLoyer
-    avances_queryset = AvanceLoyer.objects.select_related(
-        'contrat__locataire', 
-        'contrat__propriete',
-        'contrat__propriete__bailleur',
-        'paiement'
-    ).distinct().order_by('-date_avance')
+    if statut:
+        filters['statut'] = statut
     
-    # Convertir en format compatible avec le template
+    if mois_debut:
+        try:
+            filters['mois_debut'] = datetime.strptime(mois_debut, '%Y-%m').date()
+        except ValueError:
+            pass
+    
+    if mois_fin:
+        try:
+            filters['mois_fin'] = datetime.strptime(mois_fin, '%Y-%m').date()
+        except ValueError:
+            pass
+    
+    # Récupérer les avances optimisées avec filtres en base de données
+    avances_queryset = ServiceOptimisationAvances.get_avances_optimisees(
+        filters=filters,
+        prefetch_consommations=True
+    )
+    
+    # Si filtre par nom de contrat (pas ID), appliquer après récupération
+    if contrat_id and not filters.get('contrat_id'):
+        # Filtrer par nom de locataire (moins optimal mais nécessaire)
+        avances_queryset = avances_queryset.filter(
+            contrat__locataire__nom__icontains=contrat_id
+        ) | avances_queryset.filter(
+            contrat__locataire__prenom__icontains=contrat_id
+        )
+    
+    # Convertir en format compatible avec le template (seulement les avances nécessaires)
     avances = []
     for avance in avances_queryset:
         # Déterminer l'URL de détail appropriée
         detail_url = None
-        if hasattr(avance, 'paiement') and avance.paiement:
-            # Si l'avance est liée à un paiement, utiliser l'URL du paiement
+        if avance.paiement:
             detail_url = f"/paiements/avances/paiement/{avance.paiement.id}/"
         else:
-            # Sinon, utiliser l'URL de l'avance
             detail_url = f"/paiements/avances/detail/{avance.id}/"
         
         avance_data = {
@@ -144,64 +123,27 @@ def liste_avances(request):
             'updated_at': avance.updated_at,
             'mois_debut_couverture': avance.mois_debut_couverture,
             'mois_fin_couverture': avance.mois_fin_couverture,
-            'loyer_mensuel': float(avance.contrat.loyer_mensuel),  # CORRECTION : Ajouter le loyer mensuel du contrat
+            'loyer_mensuel': float(avance.contrat.loyer_mensuel),
             'detail_url': detail_url,
         }
         avances.append(avance_data)
     
-    # Filtres sur la liste des avances
-    contrat_id = request.GET.get('contrat')
-    statut = request.GET.get('statut')
-    mois_debut = request.GET.get('mois_debut')
-    mois_fin = request.GET.get('mois_fin')
-    
-    # Appliquer les filtres
-    if contrat_id:
-        try:
-            # Si c'est un ID numérique
-            contrat_id_int = int(contrat_id)
-            avances = [a for a in avances if a['contrat'].id == contrat_id_int]
-        except ValueError:
-            # Si c'est un nom de contrat, chercher par nom
-            avances = [a for a in avances if contrat_id.lower() in a['contrat'].locataire.get_nom_complet().lower()]
-    
-    if statut:
-        avances = [a for a in avances if a['statut'] == statut]
-    
-    if mois_debut:
-        try:
-            mois_debut_date = datetime.strptime(mois_debut, '%Y-%m').date()
-            avances = [a for a in avances if a['date_avance'] >= mois_debut_date]
-        except ValueError:
-            pass
-    
-    if mois_fin:
-        try:
-            mois_fin_date = datetime.strptime(mois_fin, '%Y-%m').date()
-            avances = [a for a in avances if a['date_avance'] <= mois_fin_date]
-        except ValueError:
-            pass
-    
-    # Pagination
+    # Pagination (maintenant sur la liste Python, mais beaucoup plus petite)
     from django.core.paginator import Paginator
     paginator = Paginator(avances, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Statistiques
-    stats = {
-        'total_avances': len(avances),
-        'avances_actives': len([a for a in avances if a['statut'] == 'active']),
-        'avances_epuisees': len([a for a in avances if a['statut'] == 'epuisee']),
-        'montant_total_avances': sum(a['montant_avance'] for a in avances),
-        'montant_restant': sum(a['montant_restant'] for a in avances),
-    }
+    # Statistiques optimisées en base de données
+    stats = ServiceOptimisationAvances.calculer_stats_avances_optimisees(filters=filters)
     
-    # Contrats pour le filtre
-    contrats = Contrat.objects.filter(est_actif=True).select_related('locataire', 'propriete')
+    # Contrats pour le filtre (optimisé)
+    contrats = Contrat.objects.filter(est_actif=True).select_related('locataire', 'propriete').only(
+        'id', 'numero_contrat', 'locataire__nom', 'locataire__prenom', 'propriete__titre'
+    )
     
     context = {
-        'avances': page_obj,  # Passer page_obj comme avances pour le template
+        'avances': page_obj,
         'page_obj': page_obj,
         'stats': stats,
         'contrats': contrats,
@@ -219,20 +161,21 @@ def liste_avances(request):
 @login_required
 def detail_avance(request, avance_id):
     """
-    Détail d'une avance de loyer - Compatible avec le système synchronisé
+    Détail d'une avance de loyer - OPTIMISÉ avec préchargement des relations
     """
-    # Essayer d'abord de récupérer l'avance via le modèle AvanceLoyer
+    # Récupérer l'avance avec toutes les relations préchargées
+    from .services_optimisation_avances import ServiceOptimisationAvances
+    from .services_consommation_dynamique import ServiceConsommationDynamique
+    
     try:
-        avance = AvanceLoyer.objects.get(id=avance_id)
+        avance = ServiceOptimisationAvances.get_avance_detail_optimisee(avance_id)
     except AvanceLoyer.DoesNotExist:
         # Si l'avance n'existe pas, essayer de la synchroniser depuis le paiement
         from .services_synchronisation_avances import ServiceSynchronisationAvances
         from .models import Paiement
         
-        # Chercher un paiement d'avance avec cet ID
         try:
-            paiement = Paiement.objects.get(id=avance_id, type_paiement='avance')
-            # Synchroniser l'avance
+            paiement = Paiement.objects.select_related('contrat').get(id=avance_id, type_paiement='avance')
             avance = ServiceSynchronisationAvances.synchroniser_avance_avec_paiement(paiement)
             if not avance:
                 raise Http404("Avance non trouvée et impossible à synchroniser")
@@ -242,23 +185,26 @@ def detail_avance(request, avance_id):
     if not avance:
         raise Http404("Avance non trouvée")
     
-    # *** CONSOMMATION DYNAMIQUE ET RÉELLE ***
-    from .services_consommation_dynamique import ServiceConsommationDynamique
+    # *** CONSOMMATION AVEC CACHE ***
+    ServiceOptimisationAvances.consommer_avances_avec_cache(
+        contrat_id=avance.contrat_id,
+        force=False
+    )
     
     # Synchroniser avec les paiements de loyer
     consommations_ajoutees = ServiceConsommationDynamique.synchroniser_avec_paiements(avance)
     
-    # Consommer automatiquement les mois passés
-    ServiceConsommationDynamique.consommer_avances_automatiquement(avance.contrat)
-    
     # Recalculer la progression dynamique
     progression = ServiceConsommationDynamique.calculer_progression_avance(avance)
     
-    # Récupérer les consommations mises à jour
-    consommations = ConsommationAvance.objects.filter(avance=avance).order_by('-mois_consomme')
+    # Récupérer les consommations (déjà préchargées dans avance.consommations)
+    consommations = list(avance.consommations.all()) if hasattr(avance, 'consommations') else []
+    if not consommations:
+        # Fallback si pas préchargé
+        consommations = ConsommationAvance.objects.filter(avance=avance).select_related('paiement').order_by('-mois_consomme')
     
-    # Récupérer l'historique des paiements du contrat
-    historique = ServiceGestionAvance.get_historique_paiements_contrat(avance.contrat)
+    # Récupérer l'historique optimisé
+    historique = ServiceOptimisationAvances.get_historique_paiements_optimise(avance.contrat_id, limit=12)
     
     # Statistiques dynamiques de l'avance
     stats = {
