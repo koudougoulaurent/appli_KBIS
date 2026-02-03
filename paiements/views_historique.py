@@ -259,6 +259,13 @@ def historique_paiements_contrat_imprimer(request, contrat_id):
     """
     Version imprimable de l'historique des paiements
     """
+    # *** CONSOMMATION AUTOMATIQUE DES AVANCES PASSÉES ***
+    contrat = get_object_or_404(Contrat, id=contrat_id)
+    from .services_consommation_dynamique import ServiceConsommationDynamique
+    ServiceConsommationDynamique.consommer_avances_automatiquement(contrat)
+    """
+    Version imprimable de l'historique des paiements
+    """
     # Vérification des permissions
     permissions = check_group_permissions(request.user, [], 'view')
     if not permissions['allowed']:

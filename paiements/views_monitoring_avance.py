@@ -107,6 +107,14 @@ def detail_progression_avance(request, avance_id):
     try:
         avance = get_object_or_404(AvanceLoyer, id=avance_id)
         
+        # *** CONSOMMATION AUTOMATIQUE DES AVANCES PASSÉES ***
+        from .services_consommation_dynamique import ServiceConsommationDynamique
+        # Consommer automatiquement toutes les avances du contrat pour les mois écoulés
+        ServiceConsommationDynamique.consommer_avances_automatiquement(avance.contrat)
+        
+        # Recharger l'avance après consommation
+        avance.refresh_from_db()
+        
         # Analyser la progression de cette avance
         progression = ServiceMonitoringAvance.analyser_progression_avance(avance)
         

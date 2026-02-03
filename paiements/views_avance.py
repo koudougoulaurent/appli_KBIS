@@ -939,6 +939,11 @@ def historique_paiements_contrat(request, contrat_id):
     
     contrat = get_object_or_404(Contrat, id=contrat_id)
     
+    # *** CONSOMMATION AUTOMATIQUE DES AVANCES PASSÉES ***
+    from .services_consommation_dynamique import ServiceConsommationDynamique
+    # Consommer automatiquement toutes les avances du contrat pour les mois écoulés
+    ServiceConsommationDynamique.consommer_avances_automatiquement(contrat)
+    
     # Filtres de date
     mois_debut = request.GET.get('mois_debut')
     mois_fin = request.GET.get('mois_fin')
