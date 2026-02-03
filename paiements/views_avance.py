@@ -485,6 +485,11 @@ def creer_avance(request):
     """
     Créer une nouvelle avance de loyer avec vérification des avances existantes
     """
+    # *** CONSOMMATION AUTOMATIQUE DES AVANCES PASSÉES (AVANT TOUT) ***
+    # Consommer toutes les avances pour tous les contrats avant de créer une nouvelle avance
+    from .services_consommation_dynamique import ServiceConsommationDynamique
+    ServiceConsommationDynamique.consommer_avances_automatiquement()
+    
     if request.method == 'POST':
         print("=== SOUMISSION FORMULAIRE ===")
         print("POST data:", request.POST)
@@ -512,6 +517,12 @@ def creer_avance(request):
             try:
                 # Utiliser le service au lieu du formulaire pour une gestion robuste
                 contrat = form.cleaned_data['contrat']
+                
+                # *** CONSOMMATION AUTOMATIQUE PRIORITAIRE POUR CE CONTRAT ***
+                from .services_consommation_dynamique import ServiceConsommationDynamique
+                # Consommer automatiquement toutes les avances du contrat pour les mois écoulés
+                ServiceConsommationDynamique.consommer_avances_automatiquement(contrat)
+                
                 montant_avance = form.cleaned_data['montant_avance']
                 date_avance = form.cleaned_data['date_avance']
                 notes = form.cleaned_data.get('notes', '')
