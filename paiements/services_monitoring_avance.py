@@ -2,7 +2,7 @@
 Service de monitoring des avances pour détecter la progression de consommation
 """
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from dateutil.relativedelta import relativedelta
 from .models_avance import AvanceLoyer, ConsommationAvance
 from .models import Paiement
