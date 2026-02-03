@@ -259,13 +259,6 @@ def historique_paiements_contrat_imprimer(request, contrat_id):
     """
     Version imprimable de l'historique des paiements
     """
-    # *** CONSOMMATION AUTOMATIQUE DES AVANCES PASSÉES ***
-    contrat = get_object_or_404(Contrat, id=contrat_id)
-    from .services_consommation_dynamique import ServiceConsommationDynamique
-    ServiceConsommationDynamique.consommer_avances_automatiquement(contrat)
-    """
-    Version imprimable de l'historique des paiements
-    """
     # Vérification des permissions
     permissions = check_group_permissions(request.user, [], 'view')
     if not permissions['allowed']:
@@ -277,6 +270,11 @@ def historique_paiements_contrat_imprimer(request, contrat_id):
             Contrat.objects.select_related('locataire', 'propriete', 'unite_locative'),
             id=contrat_id
         )
+        
+        # *** CONSOMMATION AUTOMATIQUE DES AVANCES PASSÉES ***
+        from .services_consommation_dynamique import ServiceConsommationDynamique
+        # Consommer automatiquement toutes les avances du contrat pour les mois écoulés
+        ServiceConsommationDynamique.consommer_avances_automatiquement(contrat)
     except Exception:
         messages.error(request, 'Contrat non trouvé')
         return redirect('contrats:liste')
@@ -348,6 +346,11 @@ def historique_paiements_ajax(request, contrat_id):
     try:
         contrat = get_object_or_404(Contrat, id=contrat_id)
         
+        # *** CONSOMMATION AUTOMATIQUE DES AVANCES PASSÉES ***
+        from .services_consommation_dynamique import ServiceConsommationDynamique
+        # Consommer automatiquement toutes les avances du contrat pour les mois écoulés
+        ServiceConsommationDynamique.consommer_avances_automatiquement(contrat)
+        
         # Filtres optionnels
         type_paiement = request.GET.get('type_paiement', '')
         statut = request.GET.get('statut', '')
@@ -418,6 +421,13 @@ def historique_paiements_locataire(request, locataire_id):
     try:
         from proprietes.models import Locataire
         locataire = get_object_or_404(Locataire, id=locataire_id)
+        
+        # *** CONSOMMATION AUTOMATIQUE DES AVANCES PASSÉES POUR TOUS LES CONTRATS DU LOCATAIRE ***
+        from .services_consommation_dynamique import ServiceConsommationDynamique
+        # Consommer automatiquement toutes les avances de tous les contrats du locataire
+        contrats = Contrat.objects.filter(locataire=locataire, est_resilie=False)
+        for contrat in contrats:
+            ServiceConsommationDynamique.consommer_avances_automatiquement(contrat)
     except Exception:
         messages.error(request, 'Locataire non trouvé')
         return redirect('contrats:liste')
