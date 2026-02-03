@@ -314,17 +314,18 @@ class RecapMensuel(models.Model):
                     # Les paiements réels sont cohérents, les utiliser
                     total_loyers = total_paiements_reels
             
-            # CRITIQUE : Calculer les charges bailleur pour le mois
-            # Important : On récupère les charges validées qui n'ont pas encore été utilisées dans un retrait
-            # Chaque charge ne doit être comptée qu'une seule fois
-            # Les charges avec statut 'utilise' ont déjà été déduites dans un retrait précédent
+            # CRITIQUE : Calculer les charges bailleur disponibles
+            # IMPORTANT : Une charge enregistrée pour un mois donné reste valable tant que le retrait n'est pas encore payé
+            # On récupère toutes les charges validées qui ne sont pas encore utilisées dans un retrait PAYÉ
+            # Ne pas se limiter au mois du récapitulatif - les charges restent disponibles jusqu'au paiement du retrait
             charges_bailleur_mois = ChargeBailleur.objects.filter(
                 bailleur=self.bailleur,
-                date_charge__year=self.mois_recap.year,
-                date_charge__month=self.mois_recap.month,
-                statut__in=['valide']  # Seulement les charges validées et non encore utilisées
-            ).exclude(
-                retrait_utilise__isnull=False  # Exclure les charges déjà liées à un retrait
+                statut__in=['valide']  # Seulement les charges validées
+            ).filter(
+                # Inclure les charges qui n'ont pas encore de retrait associé
+                # OU les charges dont le retrait associé n'est pas encore payé
+                Q(retrait_utilise__isnull=True) | 
+                Q(retrait_utilise__statut__in=['en_attente', 'valide'])  # Retrait pas encore payé
             )
             
             # Calculer le total des charges en utilisant le montant restant ou le montant total
@@ -437,16 +438,23 @@ class RecapMensuel(models.Model):
         }
     
     def calculer_charges_bailleur_disponibles(self):
-        """Calcule les charges bailleur disponibles pour ce mois."""
+        """
+        Calcule les charges bailleur disponibles.
+        IMPORTANT : Une charge enregistrée pour un mois donné reste valable tant que le retrait n'est pas encore payé.
+        On récupère toutes les charges validées qui ne sont pas encore utilisées dans un retrait PAYÉ.
+        """
         from django.db.models import Sum
         from decimal import Decimal
         
-        # Récupérer les charges validées et non utilisées pour ce mois
+        # Récupérer toutes les charges validées qui ne sont pas encore utilisées dans un retrait payé
         charges_disponibles = ChargeBailleur.objects.filter(
             bailleur=self.bailleur,
-            mois_charge__year=self.mois_recap.year,
-            mois_charge__month=self.mois_recap.month,
             statut='valide'
+        ).filter(
+            # Inclure les charges qui n'ont pas encore de retrait associé
+            # OU les charges dont le retrait associé n'est pas encore payé
+            Q(retrait_utilise__isnull=True) | 
+            Q(retrait_utilise__statut__in=['en_attente', 'valide'])  # Retrait pas encore payé
         ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
         
         return charges_disponibles
@@ -1887,18 +1895,23 @@ class RetraitBailleur(models.Model):
     
     def calculer_charges_bailleur_disponibles(self):
         """
-        Calcule les charges bailleur disponibles pour ce mois
-        LOGIQUE: Charge s'applique UNE SEULE FOIS sur le mois de retrait
+        Calcule les charges bailleur disponibles.
+        IMPORTANT : Une charge enregistrée pour un mois donné reste valable tant que le retrait n'est pas encore payé.
+        On récupère toutes les charges validées qui ne sont pas encore utilisées dans un retrait PAYÉ.
+        LOGIQUE: Charge s'applique UNE SEULE FOIS - uniquement quand le retrait est payé
         """
         from django.db.models import Sum
         
-        # Récupérer les charges pour ce mois (en_attente ou valide)
-        # LOGIQUE: Une charge ne peut être utilisée qu'une seule fois
+        # Récupérer toutes les charges validées qui ne sont pas encore utilisées dans un retrait payé
+        # Ne pas se limiter au mois - les charges restent disponibles jusqu'au paiement du retrait
         charges_disponibles = ChargeBailleur.objects.filter(
             bailleur=self.bailleur,
-            mois_charge__year=self.mois_retrait.year,
-            mois_charge__month=self.mois_retrait.month,
             statut__in=['en_attente', 'valide']  # Charges disponibles
+        ).filter(
+            # Inclure les charges qui n'ont pas encore de retrait associé
+            # OU les charges dont le retrait associé n'est pas encore payé
+            Q(retrait_utilise__isnull=True) | 
+            Q(retrait_utilise__statut__in=['en_attente', 'valide'])  # Retrait pas encore payé
         ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
         
         return charges_disponibles
@@ -1933,7 +1946,10 @@ class RetraitBailleur(models.Model):
         self.save(update_fields=['statut', 'date_validation', 'valide_par', 'updated_at'])
     
     def marquer_paye(self, user):
-        """Marque le retrait comme payé et marque les charges comme utilisées"""
+        """
+        Marque le retrait comme payé et marque les charges comme utilisées.
+        IMPORTANT : Marque toutes les charges disponibles (non encore utilisées dans un retrait payé) comme utilisées.
+        """
         from django.utils import timezone
         
         self.statut = 'paye'
@@ -1941,12 +1957,17 @@ class RetraitBailleur(models.Model):
         self.updated_at = timezone.now()
         
         # Marquer les charges bailleur comme utilisées
+        # IMPORTANT : Récupérer toutes les charges disponibles (pas seulement celles du mois)
+        # qui ne sont pas encore utilisées dans un retrait payé
         from paiements.models import ChargeBailleur
         charges_utilisees = ChargeBailleur.objects.filter(
             bailleur=self.bailleur,
-            mois_charge__year=self.mois_retrait.year,
-            mois_charge__month=self.mois_retrait.month,
             statut__in=['en_attente', 'valide']  # Charges disponibles
+        ).filter(
+            # Inclure les charges qui n'ont pas encore de retrait associé
+            # OU les charges dont le retrait associé n'est pas encore payé
+            Q(retrait_utilise__isnull=True) | 
+            Q(retrait_utilise__statut__in=['en_attente', 'valide'])  # Retrait pas encore payé
         )
         
         # Marquer chaque charge comme utilisée

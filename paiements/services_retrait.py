@@ -4,7 +4,7 @@ from decimal import Decimal
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 from django.contrib import messages
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from .models import RetraitBailleur, RecapMensuel, ChargeDeductible, ChargeBailleur
 from proprietes.models import Bailleur
 
@@ -129,11 +129,16 @@ class ServiceGestionRetrait:
                     charges_propriete += charges_deductibles
                 
                 # Charges bailleur pour cette propriété (via le bailleur)
+                # IMPORTANT : Récupérer toutes les charges validées qui ne sont pas encore utilisées dans un retrait payé
+                # Ne pas se limiter au mois - les charges restent disponibles jusqu'au paiement du retrait
                 charges_bailleur_propriete = ChargeBailleur.objects.filter(
                     bailleur=bailleur,
-                    date_charge__year=mois_retrait.year,
-                    date_charge__month=mois_retrait.month,
                     statut__in=['en_attente', 'valide']
+                ).filter(
+                    # Inclure les charges qui n'ont pas encore de retrait associé
+                    # OU les charges dont le retrait associé n'est pas encore payé
+                    Q(retrait_utilise__isnull=True) | 
+                    Q(retrait_utilise__statut__in=['en_attente', 'valide'])  # Retrait pas encore payé
                 ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
                 
                 # Montant net pour cette propriété
