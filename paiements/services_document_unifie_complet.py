@@ -143,27 +143,48 @@ class DocumentUnifieA5ServiceComplet:
         
         if est_avance and montant_a_afficher and paiement.contrat.loyer_mensuel:
             try:
-                # CORRECTION V10.2: Utiliser la logique unique Option A (dettes prioritaires)
-                from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
                 from dateutil.relativedelta import relativedelta
                 
-                # Déterminer le mois de début avec la logique Option A (dettes prioritaires)
-                mois_debut = ServiceLogiqueAvanceUnique.determiner_mois_debut_couverture_nouvelle_avance(
-                    paiement.contrat, 
-                    paiement.date_paiement
-                )
-                
-                # Calculer le nombre de mois couverts (retourne un tuple: (nombre_mois, reste))
-                nombre_mois, reste = ServiceLogiqueAvanceUnique.calculer_nombre_mois_couverts(
-                    montant_a_afficher,
-                    paiement.contrat.loyer_mensuel
-                )
-                
-                # Calculer le mois de fin
-                mois_fin = ServiceLogiqueAvanceUnique.calculer_mois_fin_couverture(
-                    mois_debut,
-                    nombre_mois
-                )
+                # *** CORRECTION CRITIQUE : Utiliser les mois RÉELS de l'avance enregistrée ***
+                # Ne PAS recalculer, utiliser les données de la base de données
+                if avance_loyer and avance_loyer.mois_debut_couverture and avance_loyer.mois_fin_couverture:
+                    # Utiliser les mois réels de l'avance enregistrée
+                    mois_debut = avance_loyer.mois_debut_couverture.replace(day=1)
+                    mois_fin = avance_loyer.mois_fin_couverture.replace(day=1)
+                    nombre_mois = avance_loyer.nombre_mois_couverts
+                    
+                    if settings.DEBUG:
+                        print(f"[RECU A5] Utilisation mois réels de l'avance #{avance_loyer.id}:")
+                        print(f"  - Mois début: {mois_debut}")
+                        print(f"  - Mois fin: {mois_fin}")
+                        print(f"  - Nombre mois: {nombre_mois}")
+                else:
+                    # Fallback : recalculer seulement si l'avance n'existe pas ou n'a pas de mois définis
+                    from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
+                    
+                    # Déterminer le mois de début avec la logique Option A (dettes prioritaires)
+                    mois_debut = ServiceLogiqueAvanceUnique.determiner_mois_debut_couverture_nouvelle_avance(
+                        paiement.contrat, 
+                        paiement.date_paiement
+                    )
+                    
+                    # Calculer le nombre de mois couverts (retourne un tuple: (nombre_mois, reste))
+                    nombre_mois, reste = ServiceLogiqueAvanceUnique.calculer_nombre_mois_couverts(
+                        montant_a_afficher,
+                        paiement.contrat.loyer_mensuel
+                    )
+                    
+                    # Calculer le mois de fin
+                    mois_fin = ServiceLogiqueAvanceUnique.calculer_mois_fin_couverture(
+                        mois_debut,
+                        nombre_mois
+                    )
+                    
+                    if settings.DEBUG:
+                        print(f"[RECU A5] Recalcul des mois (fallback):")
+                        print(f"  - Mois début: {mois_debut}")
+                        print(f"  - Mois fin: {mois_fin}")
+                        print(f"  - Nombre mois: {nombre_mois}")
                 
                 # Dictionnaire de traduction des mois en français
                 mois_francais = {
@@ -196,7 +217,7 @@ class DocumentUnifieA5ServiceComplet:
                     'date_fin': mois_fin
                 }
                 if settings.DEBUG:
-                    print(f"[V10.2] Mois couverts calculés (Option A): {mois_couverts}")
+                    print(f"[RECU A5] Mois couverts finalisés: {mois_couverts}")
             except Exception as e:
                 # Toujours logger l'erreur même en production pour diagnostiquer
                 import traceback
