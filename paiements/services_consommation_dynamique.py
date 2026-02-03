@@ -4,6 +4,7 @@ Gère la barre de progression et la consommation automatique.
 """
 from django.db import transaction
 from django.utils import timezone
+from django.conf import settings
 from decimal import Decimal
 from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
@@ -33,8 +34,9 @@ class ServiceConsommationDynamique:
                     resultat = cls._consommer_avance_par_temps(avance)
                     if resultat['consommee']:
                         consommees += 1
-                        print(f"OK - Avance {avance.id} consommee automatiquement")
-                    else:
+                        if settings.DEBUG:
+                            print(f"OK - Avance {avance.id} consommee automatiquement ({resultat['mois_ajoutes']} mois)")
+                    elif settings.DEBUG:
                         print(f"INFO - Avance {avance.id} pas encore a consommer")
             except Exception as e:
                 erreurs += 1
@@ -108,12 +110,14 @@ class ServiceConsommationDynamique:
             # Un mois est considéré comme écoulé s'il est strictement antérieur au mois actuel
             if mois_courant < mois_actuel and not avance.est_mois_consomme(mois_courant):
                 mois_a_consommer.append(mois_courant)
-                print(f"[CONSO] Mois à consommer: {mois_courant} (mois actuel: {mois_actuel})")
+                if settings.DEBUG:
+                    print(f"[CONSO] Mois à consommer: {mois_courant} (mois actuel: {mois_actuel})")
             
             # Passer au mois suivant
             mois_courant = mois_courant + relativedelta(months=1)
         
-        print(f"[AVANCE] Avance {avance.id}: {len(mois_a_consommer)} mois à consommer sur {avance.nombre_mois_couverts} total")
+        if settings.DEBUG and mois_a_consommer:
+            print(f"[AVANCE] Avance {avance.id}: {len(mois_a_consommer)} mois à consommer sur {avance.nombre_mois_couverts} total")
         return mois_a_consommer
     
     @classmethod
