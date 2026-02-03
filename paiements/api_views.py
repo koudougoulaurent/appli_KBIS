@@ -72,22 +72,31 @@ def api_recherche_contrats_rapide(request):
         for contrat in contrats:
             # Calculer un score de pertinence
             score = 0
-            if query.lower() in contrat.numero_contrat.lower():
+            query_lower = query.lower()
+            
+            # Vérifier le numéro de contrat
+            if contrat.numero_contrat and query_lower in contrat.numero_contrat.lower():
                 score += 100
-            if query.lower() in contrat.locataire.nom.lower():
+            
+            # Vérifier le nom du locataire
+            if contrat.locataire and contrat.locataire.nom and query_lower in contrat.locataire.nom.lower():
                 score += 80
-            if query.lower() in contrat.locataire.prenom.lower():
+            
+            # Vérifier le prénom du locataire (peut être None)
+            if contrat.locataire and contrat.locataire.prenom and query_lower in contrat.locataire.prenom.lower():
                 score += 80
-            if query.lower() in contrat.propriete.adresse.lower():
+            
+            # Vérifier l'adresse de la propriété
+            if contrat.propriete and contrat.propriete.adresse and query_lower in contrat.propriete.adresse.lower():
                 score += 60
             
             resultats.append({
                 'id': contrat.pk,
-                'numero_contrat': contrat.numero_contrat,
-                'locataire_nom': contrat.locataire.get_nom_complet(),
-                'locataire_id': contrat.locataire.pk,
-                'propriete_adresse': contrat.propriete.adresse,
-                'propriete_titre': contrat.propriete.titre,
+                'numero_contrat': contrat.numero_contrat or '',
+                'locataire_nom': contrat.locataire.get_nom_complet() if contrat.locataire else '',
+                'locataire_id': contrat.locataire.pk if contrat.locataire else None,
+                'propriete_adresse': contrat.propriete.adresse if contrat.propriete and contrat.propriete.adresse else '',
+                'propriete_titre': contrat.propriete.titre if contrat.propriete and contrat.propriete.titre else '',
                 'score': score,
                 'loyer': clean_numeric_value(contrat.loyer_mensuel)
             })
