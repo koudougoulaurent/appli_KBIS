@@ -117,7 +117,39 @@ def forcer_consommation_avances_ajax(request, contrat_id):
     try:
         contrat = get_object_or_404(Contrat, id=contrat_id)
         
-        # Forcer la consommation automatique
+        # D'abord corriger les mois_debut_couverture incorrects
+        avances = AvanceLoyer.objects.filter(contrat=contrat)
+        corrections = []
+        
+        for avance in avances:
+            mois_debut_actuel = avance.mois_debut_couverture
+            date_avance = avance.date_avance
+            mois_actuel = date.today().replace(day=1)
+            
+            if mois_debut_actuel:
+                mois_avance = date_avance.replace(day=1)
+                mois_debut_norm = mois_debut_actuel.replace(day=1)
+                
+                # Calculer le mois début correct
+                from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
+                mois_debut_correct = ServiceLogiqueAvanceUnique.determiner_mois_debut_couverture_nouvelle_avance(
+                    contrat, date_avance
+                )
+                
+                # Si mois début est incorrect (dans le futur alors qu'il devrait être dans le passé)
+                if mois_debut_correct != mois_debut_norm and mois_debut_norm >= mois_actuel and date_avance < date.today() - relativedelta(months=1):
+                    # Corriger le mois début
+                    avance.mois_debut_couverture = mois_debut_correct
+                    if avance.nombre_mois_couverts > 0:
+                        avance.mois_fin_couverture = mois_debut_correct + relativedelta(months=avance.nombre_mois_couverts - 1)
+                    avance.save()
+                    corrections.append({
+                        'id': avance.id,
+                        'ancien_mois': mois_debut_actuel.strftime('%d/%m/%Y'),
+                        'nouveau_mois': mois_debut_correct.strftime('%d/%m/%Y')
+                    })
+        
+        # Ensuite forcer la consommation automatique
         resultat = ServiceConsommationDynamique.consommer_avances_automatiquement(contrat)
         
         # Récupérer les avances après consommation
@@ -135,10 +167,15 @@ def forcer_consommation_avances_ajax(request, contrat_id):
                 'progression': round((consommations_count / avance.nombre_mois_couverts * 100) if avance.nombre_mois_couverts > 0 else 0, 2)
             })
         
+        message = f'Consommation forcée : {resultat["consommees"]} avance(s) consommée(s)'
+        if corrections:
+            message += f' | {len(corrections)} mois_debut_couverture corrigé(s)'
+        
         return JsonResponse({
             'success': True,
-            'message': f'Consommation forcée : {resultat["consommees"]} avance(s) consommée(s)',
+            'message': message,
             'resultat': resultat,
+            'corrections': corrections,
             'details_avances': details_avances
         })
         
