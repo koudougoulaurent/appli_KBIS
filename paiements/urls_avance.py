@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views_avance, views_monitoring_avance
+from . import views_avance, views_monitoring_avance, views_diagnostic_avance
 
 urlpatterns = [
     # Dashboard des avances
@@ -18,6 +18,10 @@ urlpatterns = [
     path('historique/<int:contrat_id>/', views_avance.historique_paiements_contrat, name='historique_contrat'),
     path('rapport-historique-pdf/<int:contrat_id>/', views_avance.generer_rapport_avances_pdf, name='generer_rapport_avances_pdf'),
     path('recu/<int:avance_id>/', views_avance.generer_recu_avance_unifie, name='generer_recu_avance'),
+    
+    # URLs de diagnostic
+    path('diagnostic/<int:contrat_id>/', views_diagnostic_avance.diagnostic_avances_contrat, name='diagnostic_avances_contrat'),
+    path('diagnostic/<int:contrat_id>/forcer-consommation/', views_diagnostic_avance.forcer_consommation_avances_ajax, name='forcer_consommation_avances_ajax'),
     
     # URLs pour le monitoring des avances
     path('monitoring/', views_monitoring_avance.monitoring_avances, name='monitoring_avances'),

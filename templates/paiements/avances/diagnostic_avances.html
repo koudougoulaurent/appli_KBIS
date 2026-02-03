@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Diagnostic Avances - {{ contrat.numero_contrat }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-bug-fill me-2"></i>
+                        Diagnostic des Avances - Contrat {{ contrat.numero_contrat }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Mois actuel :</strong> {{ mois_actuel }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <button id="btn-forcer-consommation" class="btn btn-warning">
+                            <i class="bi bi-arrow-clockwise me-2"></i>
+                            Forcer la Consommation Automatique
+                        </button>
+                        <a href="{% url 'paiements:avances:liste_avances' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>
+                            Retour à la liste
+                        </a>
+                    </div>
+                    
+                    <div id="resultat-forcer" class="alert" style="display: none;"></div>
+                    
+                    {% for info in diagnostic_data %}
+                    <div class="card mb-4">
+                        <div class="card-header {% if info.statut == 'active' %}bg-success{% elif info.statut == 'epuisee' %}bg-danger{% else %}bg-secondary{% endif %} text-white">
+                            <h5 class="mb-0">
+                                Avance #{{ info.id }} - {{ info.statut|upper }}
+                                <span class="badge bg-light text-dark ms-2">{{ info.progression_pourcentage }}% consommé</span>
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Informations de base</h6>
+                                    <ul class="list-unstyled">
+                                        <li><strong>Montant avance :</strong> {{ info.montant_avance|floatformat:0 }} F CFA</li>
+                                        <li><strong>Montant restant :</strong> {{ info.montant_restant|floatformat:0 }} F CFA</li>
+                                        <li><strong>Loyer mensuel :</strong> {{ info.loyer_mensuel|floatformat:0 }} F CFA</li>
+                                        <li><strong>Nombre mois couverts :</strong> {{ info.nombre_mois_couverts }}</li>
+                                        <li><strong>Mois consommés :</strong> {{ info.consommations_count }} / {{ info.nombre_mois_couverts }}</li>
+                                        <li><strong>Date avance :</strong> {{ info.date_avance }}</li>
+                                        <li><strong>Mois début couverture :</strong> {{ info.mois_debut_couverture }}</li>
+                                        <li><strong>Mois fin couverture :</strong> {{ info.mois_fin_couverture|default:"N/A" }}</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    {% if info.problemes %}
+                                    <h6 class="text-danger">⚠️ Problèmes détectés</h6>
+                                    <ul class="list-unstyled">
+                                        {% for probleme in info.problemes %}
+                                        <li class="text-danger">{{ probleme }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                    {% else %}
+                                    <h6 class="text-success">✓ Aucun problème détecté</h6>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            {% if info.mois_a_consommer %}
+                            <div class="alert alert-warning mt-3">
+                                <h6>⚠️ Mois qui DEVRAIENT être consommés mais ne le sont PAS :</h6>
+                                <ul>
+                                    {% for mois in info.mois_a_consommer %}
+                                    <li><strong>{{ mois.mois }}</strong> ({{ mois.date }}) - <span class="text-danger">NON CONSOMMÉ</span></li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                            
+                            {% if info.consommations_existantes %}
+                            <div class="alert alert-success mt-3">
+                                <h6>✓ Consommations existantes :</h6>
+                                <ul>
+                                    {% for conso in info.consommations_existantes %}
+                                    <li>
+                                        <strong>{{ conso.mois }}</strong> ({{ conso.date_consommation }}) - 
+                                        Montant consommé : {{ conso.montant_consomme|floatformat:0 }} F CFA - 
+                                        Restant après : {{ conso.montant_restant_apres|floatformat:0 }} F CFA
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                            
+                            {% if not info.mois_a_consommer and not info.consommations_existantes and info.mois_debut_couverture != 'NON DÉFINI' %}
+                            <div class="alert alert-info mt-3">
+                                <i class="bi bi-info-circle me-2"></i>
+                                Aucun mois à consommer pour le moment (tous les mois sont soit futurs, soit déjà consommés).
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Aucune avance trouvée pour ce contrat.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('btn-forcer-consommation').addEventListener('click', function() {
+    const btn = this;
+    const resultatDiv = document.getElementById('resultat-forcer');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>En cours...';
+    resultatDiv.style.display = 'none';
+    
+    fetch('{% url "paiements:avances:forcer_consommation_avances_ajax" contrat.id %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Forcer la Consommation Automatique';
+        
+        if (data.success) {
+            resultatDiv.className = 'alert alert-success';
+            resultatDiv.innerHTML = `
+                <h6><i class="bi bi-check-circle me-2"></i>${data.message}</h6>
+                <p><strong>Résultat :</strong> ${data.resultat.consommees} avance(s) consommée(s), ${data.resultat.erreurs} erreur(s)</p>
+                <p><strong>Rechargez la page pour voir les résultats mis à jour.</strong></p>
+            `;
+        } else {
+            resultatDiv.className = 'alert alert-danger';
+            resultatDiv.innerHTML = `
+                <h6><i class="bi bi-exclamation-triangle me-2"></i>Erreur</h6>
+                <p>${data.error}</p>
+                ${data.traceback ? '<pre>' + data.traceback + '</pre>' : ''}
+            `;
+        }
+        resultatDiv.style.display = 'block';
+        
+        // Recharger la page après 2 secondes si succès
+        if (data.success) {
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        }
+    })
+    .catch(error => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Forcer la Consommation Automatique';
+        resultatDiv.className = 'alert alert-danger';
+        resultatDiv.innerHTML = `<h6><i class="bi bi-exclamation-triangle me-2"></i>Erreur</h6><p>${error.message}</p>`;
+        resultatDiv.style.display = 'block';
+    });
+});
+</script>
+{% endblock %}
