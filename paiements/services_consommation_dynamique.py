@@ -41,17 +41,37 @@ class ServiceConsommationDynamique:
                     if avance.statut != 'active':
                         continue
                     
+                    # *** DIAGNOSTIC DÉTAILLÉ ***
+                    if settings.DEBUG:
+                        print(f"\n=== DIAGNOSTIC AVANCE {avance.id} ===")
+                        print(f"  - Contrat: {avance.contrat_id}")
+                        print(f"  - Mois début couverture: {avance.mois_debut_couverture}")
+                        print(f"  - Nombre mois couverts: {avance.nombre_mois_couverts}")
+                        print(f"  - Montant restant: {avance.montant_restant}")
+                        print(f"  - Loyer mensuel: {avance.loyer_mensuel}")
+                        mois_actuel = date.today().replace(day=1)
+                        print(f"  - Mois actuel: {mois_actuel}")
+                        if avance.mois_debut_couverture:
+                            mois_debut_norm = avance.mois_debut_couverture.replace(day=1)
+                            print(f"  - Mois début normalisé: {mois_debut_norm}")
+                            print(f"  - Mois début < Mois actuel? {mois_debut_norm < mois_actuel}")
+                            # Vérifier les consommations existantes
+                            consommations_existantes = ConsommationAvance.objects.filter(avance=avance)
+                            print(f"  - Consommations existantes: {consommations_existantes.count()}")
+                            for c in consommations_existantes:
+                                print(f"    * Mois consommé: {c.mois_consomme}")
+                    
                     resultat = cls._consommer_avance_par_temps(avance)
                     if resultat['consommee']:
                         consommees += 1
                         if settings.DEBUG:
-                            print(f"OK - Avance {avance.id} consommee automatiquement ({resultat['mois_ajoutes']} mois)")
+                            print(f"✓ OK - Avance {avance.id} consommee automatiquement ({resultat['mois_ajoutes']} mois)")
                     elif settings.DEBUG:
-                        print(f"INFO - Avance {avance.id} pas encore a consommer")
+                        print(f"ℹ INFO - Avance {avance.id} pas encore a consommer")
             except Exception as e:
                 erreurs += 1
                 if settings.DEBUG:
-                    print(f"ERREUR - Avance {avance.id}: {str(e)}")
+                    print(f"✗ ERREUR - Avance {avance.id}: {str(e)}")
                     import traceback
                     traceback.print_exc()
         
@@ -169,9 +189,21 @@ class ServiceConsommationDynamique:
                 
                 if settings.DEBUG:
                     print(f"  - Mois {mois_courant_normalise}: {'déjà consommé' if est_deja_consomme else 'à consommer'}")
+                    if est_deja_consomme:
+                        # Vérifier pourquoi il est marqué comme consommé
+                        consommations = ConsommationAvance.objects.filter(
+                            avance=avance,
+                            mois_consomme__year=mois_courant_normalise.year,
+                            mois_consomme__month=mois_courant_normalise.month
+                        )
+                        print(f"    → Consommations trouvées: {consommations.count()}")
+                        for c in consommations:
+                            print(f"      * ID: {c.id}, Mois: {c.mois_consomme}, Montant: {c.montant_consomme}")
                 
                 if not est_deja_consomme:
                     mois_a_consommer.append(mois_courant_normalise)
+                    if settings.DEBUG:
+                        print(f"    → Ajouté à la liste des mois à consommer")
             
             # Passer au mois suivant
             mois_courant = mois_courant + relativedelta(months=1)
