@@ -318,20 +318,24 @@
             <div class="totals-header">TOTAUX</div>
             <table class="totals-table">
                 <tr>
-                    <td>total prestation :</td>
-                    <td style="text-align:right;">{{ totaux.total_prestation_tableau|floatformat:0|default:0 }} F</td>
-                </tr>
-                <tr>
-                    <td>Total revenu :</td>
-                    <td style="text-align:right;">{{ totaux.total_revenu_tableau|floatformat:0|default:0 }} F</td>
+                    <td>Total loyers bruts :</td>
+                    <td style="text-align:right;">{{ totaux.total_loyers_bruts|floatformat:0|default:0 }} F</td>
                 </tr>
                 <tr>
                     <td>Total dépense<br>(Charges bailleur) :</td>
                     <td style="text-align:right;">{{ totaux.total_charges_bailleur|floatformat:0|default:0 }} F</td>
                 </tr>
                 <tr>
-                    <td>Net à payer :</td>
-                    <td style="text-align:right;">{{ totaux.net_a_payer_recap|floatformat:0|default:0 }} F</td>
+                    <td>Montant net :</td>
+                    <td style="text-align:right;">{{ totaux.total_net_a_payer|floatformat:0|default:0 }} F</td>
+                </tr>
+                <tr>
+                    <td>Commission agence<br>(10%) :</td>
+                    <td style="text-align:right;">-{{ totaux.commission_agence|floatformat:0|default:0 }} F</td>
+                </tr>
+                <tr style="border-top: 2px solid #000; font-weight: bold;">
+                    <td>Montant réellement payé :</td>
+                    <td style="text-align:right;">{{ totaux.montant_reellement_paye|floatformat:0|default:0 }} F</td>
                 </tr>
             </table>
         </div>
