@@ -263,8 +263,8 @@
                 </div>
                 <div class="col-md-2">
                     <div class="text-center p-3">
-                        <div class="h4 text-success">{{ totaux.total_net_a_payer|floatformat:0 }} F CFA</div>
-                        <div class="text-muted">Montant net</div>
+                        <div class="h4 text-secondary">{{ totaux.total_net_a_payer|floatformat:0 }} F CFA</div>
+                        <div class="text-muted">Loyers bruts − Charges bailleur</div>
                     </div>
                 </div>
                 <div class="col-md-2">
@@ -275,8 +275,9 @@
                 </div>
                 <div class="col-md-2">
                     <div class="text-center p-3">
-                        <div class="h4 text-primary">{{ totaux.montant_reellement_paye|floatformat:0 }} F CFA</div>
-                        <div class="text-muted">Montant réellement payé</div>
+                        <div class="h4 text-success">{{ totaux.montant_reellement_paye|floatformat:0 }} F CFA</div>
+                        <div class="text-muted">Somme finale à payer</div>
+                        <small class="text-muted">(= Loyers attendus − Charges (s'il y en a) − Commission)</small>
                     </div>
                 </div>
             </div>
