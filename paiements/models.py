@@ -318,8 +318,9 @@ class RecapMensuel(models.Model):
             # IMPORTANT : Une charge reste valable tant qu'elle n'a pas été déduite ou payée dans un retrait PAYÉ
             # Les charges apparaissent dans TOUS les récaps tant qu'elles ne sont pas déduites/payées
             # Ne PAS filtrer par date_charge - les charges restent disponibles jusqu'au paiement du retrait
-            # CORRECTION : Utiliser les bons statuts ('en_attente' et 'deduite_retrait' partiellement déduites)
-            charges_bailleur_mois = ChargeBailleur.objects.filter(
+            # CORRECTION : Utiliser ChargesBailleur depuis proprietes.models (pas ChargeBailleur depuis paiements.models)
+            from proprietes.models import ChargesBailleur
+            charges_bailleur_mois = ChargesBailleur.objects.filter(
                 propriete__bailleur=self.bailleur,
                 statut__in=['en_attente', 'deduite_retrait']  # Charges disponibles ou partiellement déduites
             ).filter(
@@ -649,7 +650,7 @@ class RecapMensuel(models.Model):
         """
         from datetime import timedelta
         from decimal import Decimal
-        from django.db.models import Prefetch
+        from django.db.models import Prefetch, Q
         
         proprietes_details = []
         
@@ -665,13 +666,18 @@ class RecapMensuel(models.Model):
             mois_fin = self.mois_recap.replace(month=self.mois_recap.month + 1, day=1) - timedelta(days=1)
         
         # OPTIMISATION: Précharger les charges bailleur pour toutes les propriétés en une seule requête
+        # CORRECTION : Ne pas filtrer par date_charge - les charges restent disponibles jusqu'au paiement
+        # CORRECTION : Utiliser les bons statuts ('en_attente' et 'deduite_retrait' au lieu de 'valide')
         from proprietes.models import ChargesBailleur
         charges_bailleur_dict = {}
         charges_bailleur_qs = ChargesBailleur.objects.filter(
             propriete__bailleur=self.bailleur,
-            date_charge__year=self.mois_recap.year,
-            date_charge__month=self.mois_recap.month,
-            statut__in=['en_attente', 'valide']
+            statut__in=['en_attente', 'deduite_retrait']  # Charges disponibles ou partiellement déduites
+        ).filter(
+            # Inclure les charges qui n'ont pas encore de retrait associé
+            # OU les charges dont le retrait associé n'est pas encore payé
+            Q(retrait_utilise__isnull=True) | 
+            Q(retrait_utilise__statut__in=['en_attente', 'valide'])  # Retrait pas encore payé
         ).select_related('propriete')
         
         for charge in charges_bailleur_qs:
