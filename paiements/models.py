@@ -488,6 +488,45 @@ class RecapMensuel(models.Model):
                     ON CONFLICT DO NOTHING
                 """, [self.id, paiement_ids])
 
+    def get_charges_bailleur_detail_pour_pdf(self):
+        """
+        Retourne la liste des charges bailleur (intitulé + montant) prises en compte
+        dans ce récapitulatif, pour affichage détaillé sur le PDF.
+        Même logique de filtrage que calculer_totaux_bailleur.
+        """
+        from decimal import Decimal
+        from proprietes.models import ChargesBailleur
+
+        if not self.bailleur:
+            return []
+
+        charges_qs = ChargesBailleur.objects.filter(
+            propriete__bailleur=self.bailleur,
+            statut__in=['en_attente', 'deduite_retrait']
+        ).exclude(
+            retraits_lies__retrait_bailleur__statut='paye'
+        ).distinct().select_related('propriete').order_by('date_charge', 'titre')
+
+        result = []
+        for charge in charges_qs:
+            montant = getattr(charge, 'montant_restant', None) or charge.montant
+            if montant and montant > 0:
+                # Intitulé : titre + propriété si utile pour clarté
+                intitule = charge.titre or _("Charge")
+                if charge.propriete and charge.propriete.adresse:
+                    intitule = f"{intitule} ({charge.propriete.adresse})"
+                type_libelle = ''
+                try:
+                    type_libelle = charge.get_type_charge_display()
+                except Exception:
+                    pass
+                result.append({
+                    'intitule': intitule,
+                    'montant': montant,
+                    'type_charge': type_libelle,
+                })
+        return result
+
     def generer_pdf_recapitulatif(self, user=None):
         """Génère le PDF du récapitulatif mensuel.
         
@@ -510,6 +549,9 @@ class RecapMensuel(models.Model):
             # Récupérer les détails des propriétés et contrats (OPTIMISÉ)
             proprietes_details = self.get_proprietes_details()
             
+            # Détail des charges bailleur (intitulés) pour clarté sur le PDF
+            charges_detail = self.get_charges_bailleur_detail_pour_pdf()
+
             # OPTIMISATION: Charger l'image depuis le cache
             from paiements.utils_cache import ImageCache
             entete_base64 = ImageCache.get_entete_base64()
@@ -528,6 +570,7 @@ class RecapMensuel(models.Model):
                     'recapitulatif': self,
                     'totaux': totaux,
                     'proprietes_details': proprietes_details,
+                    'charges_detail': charges_detail,
                     'date_generation': timezone.now(),
                     'entete_base64': entete_base64,
                     'entreprise_config': entreprise_config,
@@ -561,7 +604,8 @@ class RecapMensuel(models.Model):
             
             # Récupérer les détails des propriétés et contrats
             proprietes_details = self.get_proprietes_details()
-            
+            charges_detail = self.get_charges_bailleur_detail_pour_pdf()
+
             # Récupérer la configuration de l'entreprise pour le pied de page
             try:
                 from core.models import ConfigurationEntreprise
@@ -576,6 +620,7 @@ class RecapMensuel(models.Model):
                     'recapitulatif': self,
                     'totaux': totaux,
                     'proprietes_details': proprietes_details,
+                    'charges_detail': charges_detail,
                     'date_generation': timezone.now(),
                     'entreprise_config': entreprise_config,
                 }

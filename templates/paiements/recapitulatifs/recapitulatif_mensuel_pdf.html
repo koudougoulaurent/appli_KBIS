@@ -321,20 +321,36 @@
                     <td>Total loyers bruts :</td>
                     <td style="text-align:right;">{{ totaux.total_loyers_bruts|floatformat:0|default:0 }} F</td>
                 </tr>
+                {% if charges_detail %}
                 <tr>
-                    <td>Total dépense<br>(Charges bailleur) :</td>
+                    <td colspan="2" style="padding: 1px 2px; font-weight: bold;">Charges bailleur (déduites du brut) :</td>
+                </tr>
+                {% for charge in charges_detail %}
+                <tr style="font-size: 6.5px;">
+                    <td style="padding: 1px 2px 1px 6px; word-break: break-word;">• {{ charge.intitule }}</td>
+                    <td style="text-align:right; padding: 1px 2px;">-{{ charge.montant|floatformat:0 }} F</td>
+                </tr>
+                {% endfor %}
+                <tr>
+                    <td><strong>Total charges bailleur :</strong></td>
                     <td style="text-align:right;">{{ totaux.total_charges_bailleur|floatformat:0|default:0 }} F</td>
                 </tr>
+                {% else %}
                 <tr>
-                    <td>Montant net :</td>
+                    <td>Total charges bailleur :</td>
+                    <td style="text-align:right;">{{ totaux.total_charges_bailleur|floatformat:0|default:0 }} F</td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td>Loyers bruts − Charges bailleur :</td>
                     <td style="text-align:right;">{{ totaux.total_net_a_payer|floatformat:0|default:0 }} F</td>
                 </tr>
                 <tr>
-                    <td>Commission agence<br>(10%) :</td>
+                    <td>Commission agence (10 %) :</td>
                     <td style="text-align:right;">-{{ totaux.commission_agence|floatformat:0|default:0 }} F</td>
                 </tr>
                 <tr style="border-top: 2px solid #000; font-weight: bold;">
-                    <td>Montant réellement payé :</td>
+                    <td><strong>Montant net</strong><br><small>(= Loyers bruts − Charges bailleur − Commission)</small> :</td>
                     <td style="text-align:right;">{{ totaux.montant_reellement_paye|floatformat:0|default:0 }} F</td>
                 </tr>
             </table>
