@@ -204,6 +204,7 @@ def liste_recapitulatifs(request):
         'tri_par': tri_par,
         'stats': stats,
         'is_privilege_user': is_privilege_user,
+        'recherche': recherche,  # Variable pour la recherche intelligente
         'filtres': {
             'mois': mois,
             'statut': statut,
