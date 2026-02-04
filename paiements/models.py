@@ -319,16 +319,15 @@ class RecapMensuel(models.Model):
             # Les charges apparaissent dans TOUS les récaps tant qu'elles ne sont pas déduites/payées
             # Ne PAS filtrer par date_charge - les charges restent disponibles jusqu'au paiement du retrait
             # CORRECTION : Utiliser ChargesBailleur depuis proprietes.models (pas ChargeBailleur depuis paiements.models)
+            # CORRECTION : ChargesBailleur utilise retraits_lies (ManyToMany) au lieu de retrait_utilise (ForeignKey)
             from proprietes.models import ChargesBailleur
             charges_bailleur_mois = ChargesBailleur.objects.filter(
                 propriete__bailleur=self.bailleur,
                 statut__in=['en_attente', 'deduite_retrait']  # Charges disponibles ou partiellement déduites
-            ).filter(
-                # Inclure les charges qui n'ont pas encore de retrait associé
-                # OU les charges dont le retrait associé n'est pas encore payé
-                Q(retrait_utilise__isnull=True) | 
-                Q(retrait_utilise__statut__in=['en_attente', 'valide'])  # Retrait pas encore payé
-            )
+            ).exclude(
+                # Exclure les charges qui ont été utilisées dans un retrait PAYÉ
+                retraits_lies__retrait_bailleur__statut='paye'
+            ).distinct()
             
             # Calculer le total des charges en utilisant le montant restant ou le montant total
             for charge in charges_bailleur_mois:
@@ -668,17 +667,16 @@ class RecapMensuel(models.Model):
         # OPTIMISATION: Précharger les charges bailleur pour toutes les propriétés en une seule requête
         # CORRECTION : Ne pas filtrer par date_charge - les charges restent disponibles jusqu'au paiement
         # CORRECTION : Utiliser les bons statuts ('en_attente' et 'deduite_retrait' au lieu de 'valide')
+        # CORRECTION : ChargesBailleur utilise retraits_lies (ManyToMany) au lieu de retrait_utilise
         from proprietes.models import ChargesBailleur
         charges_bailleur_dict = {}
         charges_bailleur_qs = ChargesBailleur.objects.filter(
             propriete__bailleur=self.bailleur,
             statut__in=['en_attente', 'deduite_retrait']  # Charges disponibles ou partiellement déduites
-        ).filter(
-            # Inclure les charges qui n'ont pas encore de retrait associé
-            # OU les charges dont le retrait associé n'est pas encore payé
-            Q(retrait_utilise__isnull=True) | 
-            Q(retrait_utilise__statut__in=['en_attente', 'valide'])  # Retrait pas encore payé
-        ).select_related('propriete')
+        ).exclude(
+            # Exclure les charges qui ont été utilisées dans un retrait PAYÉ
+            retraits_lies__retrait_bailleur__statut='paye'
+        ).distinct().select_related('propriete')
         
         for charge in charges_bailleur_qs:
             prop_id = charge.propriete_id
