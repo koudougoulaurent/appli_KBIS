@@ -31,6 +31,7 @@ def liste_retraits(request):
     statut = request.GET.get('statut', '')
     mois = request.GET.get('mois', '')
     bailleur_id = request.GET.get('bailleur', '')
+    recherche = request.GET.get('q', '').strip()
     
     # Requête de base
     retraits = RetraitBailleur.objects.filter(
@@ -50,6 +51,21 @@ def liste_retraits(request):
     
     if bailleur_id:
         retraits = retraits.filter(bailleur_id=bailleur_id)
+    
+    # Recherche globale multi-champs intelligente
+    if recherche:
+        from django.db.models import Q
+        retraits = retraits.filter(
+            Q(bailleur__nom__icontains=recherche) |
+            Q(bailleur__prenom__icontains=recherche) |
+            Q(bailleur__numero_bailleur__icontains=recherche) |
+            Q(mois_retrait__icontains=recherche) |
+            Q(statut__icontains=recherche) |
+            Q(id__icontains=recherche)  # Recherche par ID
+        )
+        # Ajouter le filtre sur numero_retrait si le champ existe
+        if hasattr(RetraitBailleur, 'numero_retrait'):
+            retraits = retraits.filter(Q(numero_retrait__icontains=recherche))
     
     # Pagination
     paginator = Paginator(retraits, 20)
@@ -76,6 +92,7 @@ def liste_retraits(request):
             'statut': statut,
             'mois': mois,
             'bailleur': bailleur_id,
+            'recherche': recherche,
         }
     }
     

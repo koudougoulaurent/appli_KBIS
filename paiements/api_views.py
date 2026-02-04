@@ -13,10 +13,10 @@ from django.utils.decorators import method_decorator
 from django.views import View
 import re
 
-from .models import Paiement
+from .models import Paiement, RecapMensuel, RetraitBailleur
 from .serializers import PaiementSerializer, PaiementDetailSerializer
 from contrats.models import Contrat
-from proprietes.models import Locataire, Propriete
+from proprietes.models import Locataire, Propriete, Bailleur
 
 def clean_numeric_value(value):
     """Nettoie une valeur numérique en supprimant les caractères non numériques"""
@@ -250,6 +250,165 @@ def api_recherche_bailleur(request):
                 'success': False,
                 'error': f'Erreur lors de la recherche : {str(e)}'
             }, status=500)
+    
+    return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+
+# 🔍 API DE RECHERCHE RAPIDE DES RÉCAPITULATIFS
+@csrf_exempt
+def api_recherche_recaps_rapide(request):
+    """API pour la recherche rapide de récapitulatifs mensuels."""
+    if request.method == 'GET':
+        query = request.GET.get('q', '')
+        
+        if not query or len(query) < 2:
+            return JsonResponse({'resultats': []})
+        
+        # Recherche dans les récapitulatifs par bailleur, mois, statut
+        recaps = RecapMensuel.objects.filter(
+            is_deleted=False
+        ).filter(
+            Q(bailleur__nom__icontains=query) |
+            Q(bailleur__prenom__icontains=query) |
+            Q(bailleur__numero_bailleur__icontains=query) |
+            Q(mois_recap__icontains=query) |
+            Q(statut__icontains=query)
+        ).select_related('bailleur')[:10]
+        
+        resultats = []
+        for recap in recaps:
+            # Calculer un score de pertinence
+            score = 0
+            query_lower = query.lower()
+            
+            # Vérifier le nom du bailleur
+            if recap.bailleur and recap.bailleur.nom and query_lower in recap.bailleur.nom.lower():
+                score += 100
+            
+            # Vérifier le prénom du bailleur
+            if recap.bailleur and recap.bailleur.prenom and query_lower in recap.bailleur.prenom.lower():
+                score += 80
+            
+            # Vérifier le numéro de bailleur
+            if recap.bailleur and recap.bailleur.numero_bailleur and query_lower in str(recap.bailleur.numero_bailleur).lower():
+                score += 90
+            
+            # Vérifier le mois du récapitulatif
+            mois_str = recap.mois_recap.strftime('%B %Y').lower() if recap.mois_recap else ''
+            if query_lower in mois_str:
+                score += 70
+            
+            # Vérifier le statut
+            statut_str = recap.get_statut_display().lower() if hasattr(recap, 'get_statut_display') else ''
+            if query_lower in statut_str:
+                score += 60
+            
+            resultats.append({
+                'id': recap.pk,
+                'bailleur_nom': recap.bailleur.get_nom_complet() if recap.bailleur else '',
+                'bailleur_id': recap.bailleur.pk if recap.bailleur else None,
+                'mois_recap': recap.mois_recap.strftime('%B %Y') if recap.mois_recap else '',
+                'mois_recap_date': recap.mois_recap.strftime('%Y-%m') if recap.mois_recap else '',
+                'statut': recap.get_statut_display() if hasattr(recap, 'get_statut_display') else recap.statut,
+                'statut_code': recap.statut,
+                'total_loyers_bruts': clean_numeric_value(recap.total_loyers_bruts),
+                'total_charges_bailleur': clean_numeric_value(recap.total_charges_bailleur or 0),
+                'total_net_a_payer': clean_numeric_value(recap.total_net_a_payer),
+                'score': score
+            })
+        
+        # Trier par score décroissant
+        resultats.sort(key=lambda x: x['score'], reverse=True)
+        
+        return JsonResponse({
+            'success': True,
+            'data': resultats,
+            'count': len(resultats)
+        })
+    
+    return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+
+# 🔍 API DE RECHERCHE RAPIDE DES RETRAITS
+@csrf_exempt
+def api_recherche_retraits_rapide(request):
+    """API pour la recherche rapide de retraits bailleur."""
+    if request.method == 'GET':
+        query = request.GET.get('q', '')
+        
+        if not query or len(query) < 2:
+            return JsonResponse({'resultats': []})
+        
+        # Recherche dans les retraits par bailleur, mois, statut
+        retraits = RetraitBailleur.objects.filter(
+            is_deleted=False
+        ).filter(
+            Q(bailleur__nom__icontains=query) |
+            Q(bailleur__prenom__icontains=query) |
+            Q(bailleur__numero_bailleur__icontains=query) |
+            Q(mois_retrait__icontains=query) |
+            Q(statut__icontains=query)
+        )
+        
+        # Ajouter le filtre sur numero_retrait si le champ existe
+        if hasattr(RetraitBailleur, 'numero_retrait'):
+            retraits = retraits.filter(Q(numero_retrait__icontains=query))
+        
+        retraits = retraits.select_related('bailleur')[:10]
+        
+        resultats = []
+        for retrait in retraits:
+            # Calculer un score de pertinence
+            score = 0
+            query_lower = query.lower()
+            
+            # Vérifier le nom du bailleur
+            if retrait.bailleur and retrait.bailleur.nom and query_lower in retrait.bailleur.nom.lower():
+                score += 100
+            
+            # Vérifier le prénom du bailleur
+            if retrait.bailleur and retrait.bailleur.prenom and query_lower in retrait.bailleur.prenom.lower():
+                score += 80
+            
+            # Vérifier le numéro de bailleur
+            if retrait.bailleur and retrait.bailleur.numero_bailleur and query_lower in str(retrait.bailleur.numero_bailleur).lower():
+                score += 90
+            
+            # Vérifier le numéro de retrait
+            if hasattr(retrait, 'numero_retrait') and retrait.numero_retrait and query_lower in str(retrait.numero_retrait).lower():
+                score += 95
+            
+            # Vérifier le mois du retrait
+            mois_str = retrait.mois_retrait.strftime('%B %Y').lower() if retrait.mois_retrait else ''
+            if query_lower in mois_str:
+                score += 70
+            
+            # Vérifier le statut
+            statut_str = retrait.get_statut_display().lower() if hasattr(retrait, 'get_statut_display') else ''
+            if query_lower in statut_str:
+                score += 60
+            
+            resultats.append({
+                'id': retrait.pk,
+                'bailleur_nom': retrait.bailleur.get_nom_complet() if retrait.bailleur else '',
+                'bailleur_id': retrait.bailleur.pk if retrait.bailleur else None,
+                'mois_retrait': retrait.mois_retrait.strftime('%B %Y') if retrait.mois_retrait else '',
+                'mois_retrait_date': retrait.mois_retrait.strftime('%Y-%m') if retrait.mois_retrait else '',
+                'statut': retrait.get_statut_display() if hasattr(retrait, 'get_statut_display') else retrait.statut,
+                'statut_code': retrait.statut,
+                'montant_loyers_bruts': clean_numeric_value(retrait.montant_loyers_bruts),
+                'montant_charges_bailleur': clean_numeric_value(retrait.montant_charges_bailleur or 0),
+                'montant_net_a_payer': clean_numeric_value(retrait.montant_net_a_payer),
+                'date_demande': retrait.date_demande.strftime('%d/%m/%Y') if hasattr(retrait, 'date_demande') and retrait.date_demande else '',
+                'score': score
+            })
+        
+        # Trier par score décroissant
+        resultats.sort(key=lambda x: x['score'], reverse=True)
+        
+        return JsonResponse({
+            'success': True,
+            'data': resultats,
+            'count': len(resultats)
+        })
     
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
 

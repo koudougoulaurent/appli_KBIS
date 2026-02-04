@@ -114,14 +114,17 @@ def liste_recapitulatifs(request):
     if statut:
         recapitulatifs = recapitulatifs.filter(statut=statut)
 
-    # Recherche globale multi-champs
+    # Recherche globale multi-champs intelligente
     if recherche:
         from django.db.models import Q
+        # Recherche améliorée avec plus de champs
         recapitulatifs = recapitulatifs.filter(
             Q(bailleur__nom__icontains=recherche) |
             Q(bailleur__prenom__icontains=recherche) |
+            Q(bailleur__numero_bailleur__icontains=recherche) |
             Q(mois_recap__icontains=recherche) |
-            Q(statut__icontains=recherche)
+            Q(statut__icontains=recherche) |
+            Q(id__icontains=recherche)  # Recherche par ID
         )
 
     # Tri dynamique
