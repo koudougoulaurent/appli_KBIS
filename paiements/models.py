@@ -316,11 +316,14 @@ class RecapMensuel(models.Model):
             
             # CRITIQUE : Calculer les charges bailleur disponibles
             # IMPORTANT : Une charge enregistrée pour un mois donné reste valable tant que le retrait n'est pas encore payé
-            # On récupère toutes les charges validées qui ne sont pas encore utilisées dans un retrait PAYÉ
-            # Ne pas se limiter au mois du récapitulatif - les charges restent disponibles jusqu'au paiement du retrait
+            # On récupère toutes les charges disponibles qui ne sont pas encore utilisées dans un retrait PAYÉ
+            # CORRECTION : Filtrer par date_charge du mois du récapitulatif ET par statut correct
+            # Les statuts valides sont : 'en_attente' et 'deduite_retrait' (pas 'valide' qui n'existe pas!)
             charges_bailleur_mois = ChargeBailleur.objects.filter(
-                bailleur=self.bailleur,
-                statut__in=['valide']  # Seulement les charges validées
+                propriete__bailleur=self.bailleur,
+                date_charge__year=self.mois_recap.year,
+                date_charge__month=self.mois_recap.month,
+                statut__in=['en_attente', 'deduite_retrait']  # CORRECTION : Utiliser les bons statuts
             ).filter(
                 # Inclure les charges qui n'ont pas encore de retrait associé
                 # OU les charges dont le retrait associé n'est pas encore payé
