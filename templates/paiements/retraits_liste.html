@@ -38,8 +38,17 @@
             <h5><i class="bi bi-funnel"></i> Filtres et Recherche</h5>
         </div>
         <div class="card-body">
-            <form method="GET" class="row g-3">
-                <div class="col-md-3">
+            <form method="GET" class="row g-3" id="filtresForm">
+                <!-- Recherche intelligente -->
+                <div class="col-md-4">
+                    <label for="q" class="form-label">🔍 Recherche Intelligente</label>
+                    <div class="position-relative">
+                        <input type="text" class="form-control" id="q" name="q" 
+                               value="{{ filters.recherche|default:'' }}" placeholder="Bailleur, mois, statut, ID...">
+                        <div id="suggestions-retraits" class="list-group position-absolute w-100" style="z-index: 1000; display: none; max-height: 300px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+                <div class="col-md-2">
                     <label for="statut" class="form-label">Statut</label>
                     <select name="statut" id="statut" class="form-select">
                         <option value="">Tous les statuts</option>
@@ -371,6 +380,84 @@ document.addEventListener('DOMContentLoaded', function() {
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
+    
+    // 🔍 Recherche intelligente des retraits
+    initRechercheIntelligenteRetraits();
 });
+
+// 🔍 Recherche intelligente des retraits
+function initRechercheIntelligenteRetraits() {
+    const inputRecherche = document.getElementById('q');
+    const suggestionsContainer = document.getElementById('suggestions-retraits');
+    let timeoutRecherche = null;
+    
+    if (!inputRecherche) return;
+    
+    inputRecherche.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        clearTimeout(timeoutRecherche);
+        
+        if (query.length < 2) {
+            suggestionsContainer.style.display = 'none';
+            return;
+        }
+        
+        timeoutRecherche = setTimeout(() => {
+            effectuerRechercheRetraits(query);
+        }, 300);
+    });
+    
+    // Masquer les suggestions au clic ailleurs
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.position-relative')) {
+            suggestionsContainer.style.display = 'none';
+        }
+    });
+}
+
+function effectuerRechercheRetraits(query) {
+    const suggestionsContainer = document.getElementById('suggestions-retraits');
+    
+    fetch(`/paiements/api/recherche-retraits-rapide/?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.data && data.data.length > 0) {
+                afficherSuggestionsRetraits(data.data);
+            } else {
+                suggestionsContainer.style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Erreur recherche retraits:', error);
+            suggestionsContainer.style.display = 'none';
+        });
+}
+
+function afficherSuggestionsRetraits(resultats) {
+    const suggestionsContainer = document.getElementById('suggestions-retraits');
+    suggestionsContainer.innerHTML = '';
+    
+    resultats.slice(0, 5).forEach(retrait => {
+        const item = document.createElement('a');
+        item.href = `/paiements/retraits/${retrait.id}/`;
+        item.className = 'list-group-item list-group-item-action';
+        item.innerHTML = `
+            <div class="d-flex w-100 justify-content-between">
+                <h6 class="mb-1">${retrait.bailleur_nom}</h6>
+                <small>Score: ${retrait.score}</small>
+            </div>
+            <p class="mb-1">${retrait.mois_retrait} - ${retrait.statut}</p>
+            <small>Net: ${retrait.montant_net_a_payer.toLocaleString()} F CFA</small>
+        `;
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = this.href;
+        });
+        suggestionsContainer.appendChild(item);
+    });
+    
+    suggestionsContainer.style.display = 'block';
+}
 </script>
 {% endblock %} 
