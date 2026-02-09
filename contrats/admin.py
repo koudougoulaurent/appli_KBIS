@@ -1,17 +1,15 @@
+
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
-from django.utils import timezone
+from django.urls import reverse
+from django.utils.safestring import mark_safe
 from .models import (
-    Contrat, Quittance, EtatLieux, ResiliationContrat, 
+    Contrat, Quittance, EtatLieux, ResiliationContrat,
     DepenseResiliation, RecuCaution, DocumentContrat
 )
 
-
 @admin.register(Contrat)
-from django.urls import reverse
-from django.utils.safestring import mark_safe
-
 class ContratAdmin(admin.ModelAdmin):
     autocomplete_fields = ['propriete', 'locataire']
     """Interface d'administration pour les contrats."""
@@ -20,15 +18,17 @@ class ContratAdmin(admin.ModelAdmin):
         'numero_contrat', 'propriete', 'locataire', 'date_debut', 
         'date_fin', 'loyer_mensuel', 'statut', 'est_actif', 'bouton_paiement_historique'
     )
-        def bouton_paiement_historique(self, obj):
-            # Affiche le bouton uniquement si le contrat n'a aucun paiement ou est marqué pour migration
-            from paiements.models import Paiement
-            nb_paiements = Paiement.objects.filter(contrat=obj).count()
-            if nb_paiements == 0 or getattr(obj, 'migration_necessaire', False):
-                url = reverse('admin:paiements_paiement_add') + f'?contrat={obj.pk}&historique=1'
-                return mark_safe(f'<a href="{url}" style="background:#ff9800;color:white;padding:6px 12px;border-radius:4px;font-weight:bold;text-decoration:none;">Ajouter paiement historique (migration)</a>')
-            return ''
-        bouton_paiement_historique.short_description = "Migration : Paiement historique"
+
+    def bouton_paiement_historique(self, obj):
+        # Affiche le bouton uniquement si le contrat n'a aucun paiement ou est marqué pour migration
+        from paiements.models import Paiement
+        nb_paiements = Paiement.objects.filter(contrat=obj).count()
+        if nb_paiements == 0 or getattr(obj, 'migration_necessaire', False):
+            url = reverse('admin:paiements_paiement_add') + f'?contrat={obj.pk}&historique=1'
+            return mark_safe(f'<a href="{url}" style="background:#ff9800;color:white;padding:6px 12px;border-radius:4px;font-weight:bold;text-decoration:none;">Ajouter paiement historique (migration)</a>')
+        return ''
+    bouton_paiement_historique.short_description = "Migration : Paiement historique"
+
     list_filter = (
         'est_actif', 'est_resilie', 'mode_paiement', 'date_debut', 
         'date_fin', 'propriete__ville'
@@ -38,7 +38,7 @@ class ContratAdmin(admin.ModelAdmin):
         'locataire__prenom', 'propriete__adresse'
     )
     ordering = ('-date_debut',)
-    
+
     fieldsets = (
         (_('Informations de base'), {
             'fields': ('numero_contrat', 'propriete', 'locataire'),
@@ -62,19 +62,20 @@ class ContratAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
-    
+
     readonly_fields = ('date_creation', 'date_modification')
-        def render_change_form(self, request, context, *args, **kwargs):
-            # Ajoute le bouton sur la fiche contrat (détail)
-            obj = context.get('original')
-            if obj:
-                from paiements.models import Paiement
-                nb_paiements = Paiement.objects.filter(contrat=obj).count()
-                if nb_paiements == 0 or getattr(obj, 'migration_necessaire', False):
-                    url = reverse('admin:paiements_paiement_add') + f'?contrat={obj.pk}&historique=1'
-                    bouton = mark_safe(f'<a href="{url}" style="background:#ff9800;color:white;padding:8px 16px;border-radius:4px;font-weight:bold;text-decoration:none;display:inline-block;margin-bottom:12px;">Ajouter paiement historique (migration)</a>')
-                    context['adminform'].form.fields['numero_contrat'].help_text = (context['adminform'].form.fields['numero_contrat'].help_text or '') + '<br>' + bouton
-            return super().render_change_form(request, context, *args, **kwargs)
+
+    def render_change_form(self, request, context, *args, **kwargs):
+        # Ajoute le bouton sur la fiche contrat (détail)
+        obj = context.get('original')
+        if obj:
+            from paiements.models import Paiement
+            nb_paiements = Paiement.objects.filter(contrat=obj).count()
+            if nb_paiements == 0 or getattr(obj, 'migration_necessaire', False):
+                url = reverse('admin:paiements_paiement_add') + f'?contrat={obj.pk}&historique=1'
+                bouton = mark_safe(f'<a href="{url}" style="background:#ff9800;color:white;padding:8px 16px;border-radius:4px;font-weight:bold;text-decoration:none;display:inline-block;margin-bottom:12px;">Ajouter paiement historique (migration)</a>')
+                context['adminform'].form.fields['numero_contrat'].help_text = (context['adminform'].form.fields['numero_contrat'].help_text or '') + '<br>' + bouton
+        return super().render_change_form(request, context, *args, **kwargs)
     
     actions = ['activer_contrats', 'desactiver_contrats', 'resilier_contrats', 'retablir_contrats_resilies']
     
