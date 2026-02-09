@@ -14,8 +14,8 @@ from .forms import PaiementAdminForm
 
 @admin.register(Paiement)
 class PaiementAdmin(admin.ModelAdmin):
-        # Utilise le formulaire admin qui désactive les validations restrictives
-        form = PaiementAdminForm
+    # Utilise le formulaire admin qui désactive les validations restrictives
+    form = PaiementAdminForm
     """Interface d'administration pour les paiements."""
     
     list_display = (
