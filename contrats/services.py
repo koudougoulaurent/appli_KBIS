@@ -541,20 +541,71 @@ Profession <b>{locataire_profession}</b> adresse : <b>{locataire_adresse}</b> Te
         elements.append(Paragraph(propriete_info, self.styles['CustomBody']))
         elements.append(Spacer(1, 6))
         
-        # Reçu de la caution - CALCUL AUTOMATIQUE DE 3 MOIS
+        # Reçu de la caution - CALCUL BASÉ SUR LES VALEURS RÉELLES
         from decimal import Decimal
         loyer_mensuel = Decimal(str(self.contrat.get_loyer_total()))
-        caution_3_mois = loyer_mensuel * 3
+        
+        # Utiliser le dépôt de garantie réel du contrat
+        if self.contrat.depot_garantie:
+            caution_montant_value = Decimal(str(self.contrat.depot_garantie))
+        else:
+            # Fallback sur 3 mois si non renseigné
+            caution_montant_value = loyer_mensuel * 3
+        
+        # Calculer le nombre de mois de caution
+        if loyer_mensuel > 0:
+            nombre_mois_caution = int(caution_montant_value / loyer_mensuel)
+        else:
+            nombre_mois_caution = 3
+        
+        # Formater le texte du nombre de mois
+        mois_texte_map = {
+            1: "Un (01)", 2: "Deux (02)", 3: "Trois (03)", 4: "Quatre (04)",
+            5: "Cinq (05)", 6: "Six (06)", 7: "Sept (07)", 8: "Huit (08)",
+            9: "Neuf (09)", 10: "Dix (10)", 11: "Onze (11)", 12: "Douze (12)"
+        }
+        mois_caution_texte = mois_texte_map.get(nombre_mois_caution, f"{nombre_mois_caution} ({nombre_mois_caution:02d})")
+        
         from core.utils import format_currency_fcfa
-        caution_montant = format_currency_fcfa(caution_3_mois)
+        caution_montant = format_currency_fcfa(caution_montant_value)
         
         elements.append(Paragraph(f"<b>KBIS IMMOBILIER</b> reconnait avoir reçu la somme <b>{caution_montant}</b>", self.styles['CustomBody']))
-        elements.append(Paragraph("Représentant <b>Trois (03) Mois de caution</b>.", self.styles['CustomBody']))
+        elements.append(Paragraph(f"Représentant <b>{mois_caution_texte} Mois de caution</b>.", self.styles['CustomBody']))
         elements.append(Spacer(1, 6))
         
-        # Conditions de paiement - EN GRAS
-        mois_debut = self.contrat.date_debut.strftime('%B %Y')
-        elements.append(Paragraph(f"Le paiement mensuel du loyer commence à partir de la fin du mois de <b>{mois_debut.upper()}</b>", self.styles['CustomBody']))
+        # Conditions de paiement - CALCUL BASÉ SUR L'AVANCE
+        from dateutil.relativedelta import relativedelta
+        
+        # Calculer le nombre de mois d'avance
+        if self.contrat.avance_loyer:
+            avance_loyer = Decimal(str(self.contrat.avance_loyer))
+            if loyer_mensuel > 0:
+                nombre_mois_avance = int(avance_loyer / loyer_mensuel)
+            else:
+                nombre_mois_avance = 0
+        else:
+            nombre_mois_avance = 0
+        
+        # Le paiement commence après les mois d'avance (sans +1)
+        # Exemple: Début février + 3 mois d'avance (fév, mars, avril) = paiement commence en mai
+        mois_debut_paiement_date = self.contrat.date_debut + relativedelta(months=nombre_mois_avance)
+        
+        # Formater le mois en FRANÇAIS
+        mois_fr = {
+            1: "JANVIER", 2: "FÉVRIER", 3: "MARS", 4: "AVRIL",
+            5: "MAI", 6: "JUIN", 7: "JUILLET", 8: "AOÛT",
+            9: "SEPTEMBRE", 10: "OCTOBRE", 11: "NOVEMBRE", 12: "DÉCEMBRE"
+        }
+        mois_nom = mois_fr.get(mois_debut_paiement_date.month, "")
+        annee = mois_debut_paiement_date.year
+        mois_debut = f"{mois_nom} {annee}"
+        
+        # Formater l'avance pour l'affichage
+        from core.utils import format_currency_fcfa
+        avance_montant_affichage = format_currency_fcfa(avance_loyer) if self.contrat.avance_loyer else "0 F CFA"
+        mois_pluriel = "mois" if nombre_mois_avance > 1 else "mois"
+        
+        elements.append(Paragraph(f"Le paiement mensuel du loyer commence à partir du début du mois de <b>{mois_debut}</b> en fonction de l'avance versée (<b>{avance_montant_affichage}</b> pour <b>{nombre_mois_avance} {mois_pluriel}</b>)", self.styles['CustomBody']))
         elements.append(Paragraph(f"<b>{civilité} {locataire_nom} {locataire_prenom}</b> s'engage à payer au plus tard le <b>03 du mois suivant</b>", self.styles['CustomBody']))
         elements.append(Spacer(1, 6))
         

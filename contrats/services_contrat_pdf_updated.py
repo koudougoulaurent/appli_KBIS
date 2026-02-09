@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 """
 Service de génération PDF pour les contrats avec templates mis à jour
 """
@@ -24,7 +24,7 @@ class ContratPDFServiceUpdated:
         self.contrat = contrat
         self.logger = logger
     
-    def generate_contrat_pdf(self, user=None):
+    def generate_contrat_pdf(self, use_cache=False, user=None):
         """
         Génère un PDF de contrat avec le template mis à jour.
         
@@ -325,4 +325,5 @@ class ContratPDFServiceUpdated:
         self.contrat.save()
         
         return self.contrat
+
 
