@@ -9,31 +9,31 @@ from datetime import date
 
 
 class PaiementForm(forms.ModelForm):
-    """Formulaire pour cr├®er/modifier un paiement."""
+    """Formulaire pour créer/modifier un paiement."""
     
-    # Champ mois_paye SUPPRIM├ë du formulaire - g├®r├® uniquement c├┤t├® template
+    # Champ mois_paye SUPPRIM├ë du formulaire - géré uniquement côté template
     
-    # Champs additionnels pour la gestion des charges d├®ductibles
+    # Champs additionnels pour la gestion des charges déductibles
     appliquer_charges_deductibles = forms.BooleanField(
         required=False,
         initial=False,
-        label=_('Appliquer les charges d├®ductibles'),
-        help_text=_('Cocher pour appliquer automatiquement les charges d├®ductibles valid├®es')
+        label=_('Appliquer les charges déductibles'),
+        help_text=_('Cocher pour appliquer automatiquement les charges déductibles validées')
     )
     
     charges_deductibles = forms.ModelMultipleChoiceField(
         queryset=ChargeDeductible.objects.none(),
         required=False,
         widget=forms.CheckboxSelectMultiple,
-        label=_('Charges d├®ductibles ├á appliquer'),
-        help_text=_('S├®lectionner les charges d├®ductibles ├á appliquer ├á ce paiement')
+        label=_('Charges déductibles à appliquer'),
+        help_text=_('Sélectionner les charges déductibles à appliquer à ce paiement')
     )
     
-    # Champ ann├®e pour le mois pay├® (s├®par├® du mois pour ├®viter les confusions)
+    # Champ année pour le mois payé (séparé du mois pour éviter les confusions)
     annee_paiement = forms.ChoiceField(
         required=False,
-        label=_('Ann├®e'),
-        help_text=_('Ann├®e du paiement (utilis├®e avec le mois)'),
+        label=_('Année'),
+        help_text=_('Année du paiement (utilisée avec le mois)'),
         widget=forms.Select(attrs={
             'class': 'form-select',
             'id': 'id_annee_paiement'
@@ -41,8 +41,8 @@ class PaiementForm(forms.ModelForm):
         choices=[]  # Sera rempli dans __init__
     )
     
-    # Note: Les quittances sont g├®n├®r├®es automatiquement apr├¿s validation du paiement
-    # Aucun document n'est requis lors de la cr├®ation du paiement
+    # Note: Les quittances sont générées automatiquement aprçs validation du paiement
+    # Aucun document n'est requis lors de la création du paiement
     
     class Meta:
         model = Paiement
@@ -53,31 +53,31 @@ class PaiementForm(forms.ModelForm):
         widgets = {
             'date_paiement': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'mois_paye': forms.Select(attrs={'class': 'form-select'}, choices=[
-                ('', '-- S├®lectionner un mois --'),
+                ('', '-- Sélectionner un mois --'),
                 ('janvier', 'Janvier'),
-                ('f├®vrier', 'F├®vrier'),
+                ('février', 'Février'),
                 ('mars', 'Mars'),
                 ('avril', 'Avril'),
                 ('mai', 'Mai'),
                 ('juin', 'Juin'),
                 ('juillet', 'Juillet'),
-                ('ao├╗t', 'Ao├╗t'),
+                ('août', 'Août'),
                 ('septembre', 'Septembre'),
                 ('octobre', 'Octobre'),
                 ('novembre', 'Novembre'),
-                ('d├®cembre', 'D├®cembre'),
+                ('décembre', 'Décembre'),
             ]),
             'montant': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'type_paiement': forms.Select(attrs={'class': 'form-select'}),
             'mode_paiement': forms.Select(attrs={'class': 'form-select'}),
-            # 'reference_paiement': forms.TextInput(attrs={'class': 'form-control'}),  # Champ supprim├®
+            # 'reference_paiement': forms.TextInput(attrs={'class': 'form-control'}),  # Champ supprimé
             'numero_cheque': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': _('Num├®ro de ch├¿que (si applicable)')
+                'placeholder': _('Numéro de chèque (si applicable)')
             }),
             'reference_virement': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': _('R├®f├®rence virement (si applicable)')
+                'placeholder': _('Référence virement (si applicable)')
             }),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'statut': forms.Select(attrs={'class': 'form-select'}),
@@ -89,10 +89,10 @@ class PaiementForm(forms.ModelForm):
             'type_paiement': _('Type de paiement'),
             'mode_paiement': _('Mode de paiement'),
             'date_paiement': _('Date de paiement'),
-            'mois_paye': _('Mois pay├®'),
-            # 'reference_paiement': _('R├®f├®rence de paiement'),  # Champ supprim├®
-            'numero_cheque': _('Num├®ro de ch├¿que'),
-            'reference_virement': _('R├®f├®rence virement'),
+            'mois_paye': _('Mois payé'),
+            # 'reference_paiement': _('Référence de paiement'),  # Champ supprimé
+            'numero_cheque': _('Numéro de chèque'),
+            'reference_virement': _('Référence virement'),
             'notes': _('Notes'),
             'statut': _('Statut'),
         }
@@ -100,7 +100,7 @@ class PaiementForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         contrat_id = kwargs.pop('contrat_id', None)
         mois_suggere = kwargs.pop('mois_suggere', None)
-        mois_autorises = kwargs.pop('mois_autorises', None)  # Liste des mois autoris├®s pour les paiements de loyer
+        mois_autorises = kwargs.pop('mois_autorises', None)  # Liste des mois autorisés pour les paiements de loyer
         type_paiement_initial = kwargs.pop('type_paiement_initial', 'loyer')
         super().__init__(*args, **kwargs)
         
@@ -114,31 +114,31 @@ class PaiementForm(forms.ModelForm):
         # Personnaliser l'affichage des contrats (format enrichi pour recherche)
         self.fields['contrat'].label_from_instance = lambda obj: (
             f"#{obj.id} - {obj.locataire.nom if obj.locataire else 'Sans locataire'} | "
-            f"{obj.propriete.titre if obj.propriete else 'Sans propri├®t├®'} | "
+            f"{obj.propriete.titre if obj.propriete else 'Sans propriété'} | "
             f"{obj.loyer_mensuel} F CFA"
         )
         
-        # Am├®liorer le widget de s├®lection de contrat avec Select2
+        # Améliorer le widget de sélection de contrat avec Select2
         self.fields['contrat'].widget.attrs.update({
             'class': 'form-select form-select-lg select2',  # AJOUT: 'select2'
             'data-toggle': 'select2',
-            'data-placeholder': 'Recherchez un contrat (tapez nom, propri├®t├®, montant)...',
+            'data-placeholder': 'Recherchez un contrat (tapez nom, propriété, montant)...',
             'data-allow-clear': 'true',  # AJOUT: Bouton clear
             'id': 'id_contrat'
         })
         
         # Limiter les choix de mois pour les paiements de loyer
-        # Si mois_autorises est fourni, limiter les choix ├á ces mois uniquement
+        # Si mois_autorises est fourni, limiter les choix à ces mois uniquement
         if mois_autorises and isinstance(mois_autorises, list) and len(mois_autorises) > 0:
-            # Construire les choix avec les mois autoris├®s uniquement
-            mois_choices = [('', '-- S├®lectionner un mois --')]
+            # Construire les choix avec les mois autorisés uniquement
+            mois_choices = [('', '-- Sélectionner un mois --')]
             mois_francais = {
-                'janvier': 'Janvier', 'f├®vrier': 'F├®vrier', 'mars': 'Mars', 'avril': 'Avril',
-                'mai': 'Mai', 'juin': 'Juin', 'juillet': 'Juillet', 'ao├╗t': 'Ao├╗t',
-                'septembre': 'Septembre', 'octobre': 'Octobre', 'novembre': 'Novembre', 'd├®cembre': 'D├®cembre'
+                'janvier': 'Janvier', 'février': 'Février', 'mars': 'Mars', 'avril': 'Avril',
+                'mai': 'Mai', 'juin': 'Juin', 'juillet': 'Juillet', 'août': 'Août',
+                'septembre': 'Septembre', 'octobre': 'Octobre', 'novembre': 'Novembre', 'décembre': 'Décembre'
             }
             
-            # Ajouter les mois autoris├®s avec leur ann├®e si pr├®sente
+            # Ajouter les mois autorisés avec leur année si présente
             for mois_autorise in mois_autorises:
                 if isinstance(mois_autorise, dict):
                     mois_nom = mois_autorise.get('mois_paye', '')
@@ -147,57 +147,57 @@ class PaiementForm(forms.ModelForm):
                     mois_nom = str(mois_autorise)
                     mois_label = mois_nom
                 
-                # Extraire le nom du mois (sans l'ann├®e)
+                # Extraire le nom du mois (sans l'année)
                 mois_sans_annee = mois_nom.split()[0].lower() if mois_nom else ''
                 if mois_sans_annee in mois_francais:
                     mois_choices.append((mois_nom, mois_label))
             
             self.fields['mois_paye'].widget.choices = mois_choices
-        # Sinon, si c'est un paiement de loyer et qu'un contrat est s├®lectionn├®, limiter aux mois attendus
+        # Sinon, si c'est un paiement de loyer et qu'un contrat est sélectionné, limiter aux mois attendus
         elif type_paiement_initial == 'loyer' and contrat_id:
-            # Pour les paiements de loyer, on limitera via JavaScript apr├¿s s├®lection du contrat
-            # Ici on garde tous les mois mais on ajoutera une validation stricte c├┤t├® serveur
+            # Pour les paiements de loyer, on limitera via JavaScript aprçs sélection du contrat
+            # Ici on garde tous les mois mais on ajoutera une validation stricte côté serveur
             pass
         
-        # G├®n├®rer les choix d'ann├®es (ann├®e courante ┬▒ 100 ans)
+        # Générer les choix d'années (année courante ± 100 ans)
         annee_courante = timezone.now().year
-        annees_choices = [('', '-- Ann├®e --')]
+        annees_choices = [('', '-- Année --')]
         for annee in range(annee_courante - 50, annee_courante + 51):  # 100 ans au total
             annees_choices.append((str(annee), str(annee)))
         self.fields['annee_paiement'].choices = annees_choices
         
-        # Valeur par d├®faut pour la date
+        # Valeur par défaut pour la date
         if not self.instance.pk:
             self.fields['date_paiement'].initial = timezone.now().date()
-            # Pr├®-remplir le mois sugg├®r├® si fourni
+            # Pré-remplir le mois suggéré si fourni
             if mois_suggere:
                 self.fields['mois_paye'].initial = mois_suggere
-                # Extraire l'ann├®e du mois sugg├®r├® si pr├®sent
+                # Extraire l'année du mois suggéré si présent
                 import re
                 annee_match = re.search(r'\d{4}', str(mois_suggere))
                 if annee_match:
                     self.fields['annee_paiement'].initial = annee_match.group()
                 else:
-                    # Utiliser l'ann├®e courante par d├®faut
+                    # Utiliser l'année courante par défaut
                     self.fields['annee_paiement'].initial = str(annee_courante)
             else:
-                # Pr├®-remplir avec l'ann├®e courante
+                # Pré-remplir avec l'année courante
                 self.fields['annee_paiement'].initial = str(annee_courante)
         
-        # Si un contrat est sp├®cifi├®, le pr├®-s├®lectionner et charger ses charges
+        # Si un contrat est spécifié, le pré-sélectionner et charger ses charges
         if contrat_id:
             try:
                 contrat = Contrat.objects.get(id=contrat_id, est_actif=True)
                 self.fields['contrat'].initial = contrat
                 self.fields['montant'].initial = contrat.get_loyer_total()
                 
-                # Charger les charges d├®ductibles valid├®es pour ce contrat
+                # Charger les charges déductibles validées pour ce contrat
                 self.fields['charges_deductibles'].queryset = ChargeDeductible.objects.filter(
                     contrat=contrat, 
                     statut='validee'
                 ).order_by('-date_charge')
                 
-                # Si il y a des charges valid├®es, les pr├®-s├®lectionner
+                # Si il y a des charges validées, les pré-sélectionner
                 if self.fields['charges_deductibles'].queryset.exists():
                     self.fields['charges_deductibles'].initial = self.fields['charges_deductibles'].queryset
                     
@@ -234,36 +234,36 @@ class PaiementForm(forms.ModelForm):
         mois_paye = cleaned_data.get('mois_paye')
         annee_paiement = cleaned_data.get('annee_paiement')
         
-        # Combiner mois et ann├®e pour cr├®er le mois_paye complet
+        # Combiner mois et année pour créer le mois_paye complet
         if mois_paye and annee_paiement:
-            # Si le mois_paye contient d├®j├á une ann├®e, la remplacer par celle s├®lectionn├®e
+            # Si le mois_paye contient déjà une année, la remplacer par celle sélectionnée
             import re
             mois_sans_annee = re.sub(r'\s+\d{4}$', '', str(mois_paye)).strip()
             mois_paye_complet = f"{mois_sans_annee} {annee_paiement}"
             cleaned_data['mois_paye'] = mois_paye_complet
         elif mois_paye and not annee_paiement:
-            # Si pas d'ann├®e fournie, utiliser l'ann├®e courante
+            # Si pas d'année fournie, utiliser l'année courante
             import re
             if not re.search(r'\d{4}', str(mois_paye)):
                 mois_sans_annee = str(mois_paye).strip()
                 cleaned_data['mois_paye'] = f"{mois_sans_annee} {timezone.now().year}"
         elif not mois_paye and annee_paiement:
-            # Si seulement l'ann├®e est fournie, erreur
-            self.add_error('mois_paye', _('Veuillez s├®lectionner un mois.'))
+            # Si seulement l'année est fournie, erreur
+            self.add_error('mois_paye', _('Veuillez sélectionner un mois.'))
         
-        # Mettre ├á jour mois_paye dans cleaned_data
+        # Mettre à jour mois_paye dans cleaned_data
         mois_paye = cleaned_data.get('mois_paye')
         
         # Validation des montants - D├ëSACTIV├ëE pour permettre tous les paiements
-        # Les montants sont valid├®s c├┤t├® base de donn├®es et dans les vues
-        # Cette validation ├®tait trop restrictive et bloquait les paiements valides
+        # Les montants sont validés côté base de données et dans les vues
+        # Cette validation était trop restrictive et bloquait les paiements valides
         
         # Validation des informations de paiement selon le mode
         if mode_paiement == 'cheque' and not numero_cheque:
-            raise ValidationError(_('Le num├®ro de ch├¿que est requis pour un paiement par ch├¿que.'))
+            raise ValidationError(_('Le numéro de chçque est requis pour un paiement par chçque.'))
         
         if mode_paiement == 'virement' and not reference_virement:
-            raise ValidationError(_('La r├®f├®rence virement est requise pour un paiement par virement.'))
+            raise ValidationError(_('La référence virement est requise pour un paiement par virement.'))
         
         # Validation des doublons de paiement pour le m├¬me contrat dans le m├¬me mois
         if contrat and mois_paye:
@@ -276,7 +276,7 @@ class PaiementForm(forms.ModelForm):
             if existing_payment.exists():
                 existing = existing_payment.first()
                 self.add_error('mois_paye', 
-                    f"Un paiement existe d├®j├á pour ce contrat au mois de {mois_paye}. "
+                    f"Un paiement existe déjà pour ce contrat au mois de {mois_paye}. "
                     f"Paiement existant du {existing.date_paiement.strftime('%d/%m/%Y')} "
                     f"pour un montant de {existing.montant} F CFA."
                 )
