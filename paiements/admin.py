@@ -16,21 +16,28 @@ class PaiementAdmin(admin.ModelAdmin):
     
     list_display = (
         'id', 'contrat', 'montant', 'montant_charges_deduites', 'montant_net_paye', 
-        'type_paiement', 'mode_paiement', 'date_paiement', 'statut_colore', 'valide_par'
+        'type_paiement', 'mode_paiement', 'date_paiement', 'mois_paye', 'statut_colore', 
+        'est_historique_tag', 'valide_par'
     )
     list_filter = (
         'statut', 'type_paiement', 'mode_paiement', 'date_paiement', 
-        'contrat__propriete__ville'
+        'est_saisie_manuelle_historique', 'contrat__propriete__ville'
     )
     search_fields = (
         'contrat__numero_contrat', 'contrat__locataire__nom', 
-        'contrat__locataire__prenom', 'numero_cheque', 'reference_virement'
+        'contrat__locataire__prenom', 'numero_cheque', 'reference_virement', 'mois_paye'
     )
     ordering = ('-date_paiement',)
     
     fieldsets = (
+        (_('🔴 MIGRATION : Saisie historique'), {
+            'fields': ('est_saisie_manuelle_historique',),
+            'classes': ('collapse',),
+            'description': 'Cocher cette case pour importer un paiement de l\'ancienne plateforme. '
+                          'Cela désactive toutes les validations automatiques et permet la saisie libre du mois payé.'
+        }),
         (_('Informations de base'), {
-            'fields': ('contrat', 'montant', 'type_paiement')
+            'fields': ('contrat', 'montant', 'type_paiement', 'mois_paye')
         }),
         (_('Charges déductibles'), {
             'fields': ('montant_charges_deduites', 'montant_net_paye'),
@@ -58,7 +65,21 @@ class PaiementAdmin(admin.ModelAdmin):
     
     readonly_fields = ('created_at', 'updated_at')
     
-    actions = ['valider_paiements', 'refuser_paiements', 'annuler_paiements', 'completer_reliquats_action', suppression_definitive_conditionnelle]
+    actions = [
+        'valider_paiements', 'refuser_paiements', 'annuler_paiements', 
+        'completer_reliquats_action', 'synchroniser_contrats_action',
+        suppression_definitive_conditionnelle
+    ]
+    
+    def est_historique_tag(self, obj):
+        """Affiche un badge pour les paiements historiques."""
+        if obj.est_saisie_manuelle_historique:
+            return format_html(
+                '<span style="background-color: #ff9800; color: white; padding: 3px 8px; '
+                'border-radius: 3px; font-size: 10px; font-weight: bold;">📦 HISTORIQUE</span>'
+            )
+        return '-'
+    est_historique_tag.short_description = _("Type")
     
     def statut_colore(self, obj):
         """Affiche le statut avec une couleur."""
@@ -172,6 +193,63 @@ class PaiementAdmin(admin.ModelAdmin):
             self.message_user(request, "Aucune modification nécessaire.", level='info')
     
     completer_reliquats_action.short_description = _("💰 Vérifier et compléter les reliquats")
+    
+    def synchroniser_contrats_action(self, request, queryset):
+        """
+        Action pour synchroniser les contrats après l'import de paiements historiques.
+        Recalcule le prochain paiement dû pour chaque contrat concerné.
+        """
+        from paiements.services_avance import ServiceGestionAvance
+        from datetime import date
+        from dateutil.relativedelta import relativedelta
+        
+        # Récupérer tous les contrats concernés par les paiements sélectionnés
+        contrats_ids = queryset.values_list('contrat_id', flat=True).distinct()
+        
+        if not contrats_ids:
+            self.message_user(
+                request,
+                "Aucun contrat trouvé dans la sélection.",
+                level='warning'
+            )
+            return
+        
+        synchronises = 0
+        erreurs = 0
+        
+        for contrat_id in contrats_ids:
+            try:
+                from contrats.models import Contrat
+                contrat = Contrat.objects.get(id=contrat_id)
+                
+                # Calculer le prochain mois de paiement en tenant compte de tous les paiements
+                prochain_mois = ServiceGestionAvance.calculer_prochain_mois_paiement(contrat)
+                
+                # Log pour debug
+                print(f"✅ Contrat {contrat.numero_contrat} synchronisé - Prochain paiement: {prochain_mois.strftime('%B %Y')}")
+                
+                synchronises += 1
+                
+            except Exception as e:
+                print(f"❌ Erreur pour contrat {contrat_id}: {str(e)}")
+                erreurs += 1
+        
+        # Message de résultat
+        if synchronises > 0:
+            self.message_user(
+                request,
+                f"✅ {synchronises} contrat(s) synchronisé(s) avec succès.",
+                level='success'
+            )
+        
+        if erreurs > 0:
+            self.message_user(
+                request,
+                f"⚠️ {erreurs} erreur(s) lors de la synchronisation.",
+                level='error'
+            )
+    
+    synchroniser_contrats_action.short_description = _("🔄 Synchroniser les contrats après import historique")
 
 
 @admin.register(ChargeDeductible)

@@ -1117,6 +1117,14 @@ class Paiement(models.Model):
         verbose_name=_("Données supplémentaires"),
         help_text=_("Données JSON pour les notifications et métadonnées")
     )
+    
+    # MIGRATION : Champ pour les paiements historiques importés
+    est_saisie_manuelle_historique = models.BooleanField(
+        default=False,
+        verbose_name=_("Saisie manuelle historique"),
+        help_text=_("Cocher pour un paiement importé de l'ancienne plateforme (désactive les validations automatiques)")
+    )
+    
     is_deleted = models.BooleanField(default=False)
     deleted_at = models.DateTimeField(null=True, blank=True)
     deleted_by = models.ForeignKey(

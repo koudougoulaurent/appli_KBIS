@@ -33,3 +33,8 @@ class PaiementsConfig(AppConfig):
             from . import signals_paiement_partiel
         except ImportError:
             pass
+        try:
+            # Signal de synchronisation automatique après ajout de paiements historiques
+            from . import signals_paiement_historique
+        except ImportError:
+            pass
