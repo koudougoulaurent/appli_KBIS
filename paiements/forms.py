@@ -351,7 +351,7 @@ class PaiementAdminForm(PaiementForm):
         model = Paiement
         fields = [
             'contrat', 'montant', 'type_paiement', 'mode_paiement',
-            'date_paiement', 'mois_paye', 'numero_cheque', 'reference_virement', 'notes'
+            'date_paiement', 'mois_paye', 'annee_paiement', 'numero_cheque', 'reference_virement', 'notes'
         ]
         widgets = {
             'date_paiement': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
