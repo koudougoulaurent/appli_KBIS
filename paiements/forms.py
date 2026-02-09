@@ -14,7 +14,12 @@ class PaiementForm(forms.ModelForm):
 
 # Formulaire admin : désactive toutes les validations restrictives sur le mois payé et les doublons
 class PaiementAdminForm(PaiementForm):
-    """Formulaire admin : désactive toutes les validations restrictives sur le mois payé et les doublons."""
+    """Formulaire admin : désactive toutes les validations restrictives sur le mois payé et les doublons, et NE TOUCHE PAS au widget 'contrat' pour laisser l'autocomplete natif Django fonctionner."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # On NE modifie PAS le widget ni le label du champ 'contrat' dans l'admin !
+        # On laisse Django gérer l'autocomplete natif.
+
     def clean(self):
         cleaned_data = super(forms.ModelForm, self).clean()  # saute la clean de PaiementForm
         # On laisse passer toutes les valeurs, aucune validation restrictive
