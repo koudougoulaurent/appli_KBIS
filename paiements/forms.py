@@ -10,29 +10,32 @@ from datetime import date
 
 class PaiementForm(forms.ModelForm):
     """Formulaire pour créer/modifier un paiement (usage général/API/front)."""
-    class PaiementAdminForm(PaiementForm):
-        """Formulaire admin : désactive toutes les validations restrictives sur le mois payé et les doublons."""
-        def clean(self):
-            cleaned_data = super(forms.ModelForm, self).clean()  # saute la clean de PaiementForm
-            # On laisse passer toutes les valeurs, aucune validation restrictive
-            # On garde la logique de recombinaison mois/année pour cohérence
-            mois_paye = cleaned_data.get('mois_paye')
-            annee_paiement = cleaned_data.get('annee_paiement')
-            if mois_paye and annee_paiement:
-                import re
-                mois_sans_annee = re.sub(r'\s+\d{4}$', '', str(mois_paye)).strip()
-                mois_paye_complet = f"{mois_sans_annee} {annee_paiement}"
-                cleaned_data['mois_paye'] = mois_paye_complet
-            elif mois_paye and not annee_paiement:
-                import re
-                if not re.search(r'\d{4}', str(mois_paye)):
-                    mois_sans_annee = str(mois_paye).strip()
-                    from django.utils import timezone
-                    cleaned_data['mois_paye'] = f"{mois_sans_annee} {timezone.now().year}"
-            elif not mois_paye and annee_paiement:
-                self.add_error('mois_paye', _('Veuillez sélectionner un mois.'))
-            # Pas de validation de doublon, ni de restriction
-            return cleaned_data
+    # ...existing code...
+
+# Formulaire admin : désactive toutes les validations restrictives sur le mois payé et les doublons
+class PaiementAdminForm(PaiementForm):
+    """Formulaire admin : désactive toutes les validations restrictives sur le mois payé et les doublons."""
+    def clean(self):
+        cleaned_data = super(forms.ModelForm, self).clean()  # saute la clean de PaiementForm
+        # On laisse passer toutes les valeurs, aucune validation restrictive
+        # On garde la logique de recombinaison mois/année pour cohérence
+        mois_paye = cleaned_data.get('mois_paye')
+        annee_paiement = cleaned_data.get('annee_paiement')
+        if mois_paye and annee_paiement:
+            import re
+            mois_sans_annee = re.sub(r'\s+\d{4}$', '', str(mois_paye)).strip()
+            mois_paye_complet = f"{mois_sans_annee} {annee_paiement}"
+            cleaned_data['mois_paye'] = mois_paye_complet
+        elif mois_paye and not annee_paiement:
+            import re
+            if not re.search(r'\d{4}', str(mois_paye)):
+                mois_sans_annee = str(mois_paye).strip()
+                from django.utils import timezone
+                cleaned_data['mois_paye'] = f"{mois_sans_annee} {timezone.now().year}"
+        elif not mois_paye and annee_paiement:
+            self.add_error('mois_paye', _('Veuillez sélectionner un mois.'))
+        # Pas de validation de doublon, ni de restriction
+        return cleaned_data
     
     # Champ mois_paye SUPPRIMÉ du formulaire - géré uniquement côté template
     
