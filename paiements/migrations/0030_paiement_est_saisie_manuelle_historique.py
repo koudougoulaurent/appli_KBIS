@@ -10,9 +10,14 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='paiement',
-            name='est_saisie_manuelle_historique',
-            field=models.BooleanField(default=False, help_text="Cocher pour un paiement importé de l'ancienne plateforme (désactive les validations automatiques)", verbose_name='Saisie manuelle historique'),
+        migrations.RunSQL(
+            sql="""
+            ALTER TABLE paiements_paiement
+            ADD COLUMN IF NOT EXISTS est_saisie_manuelle_historique BOOLEAN DEFAULT FALSE NOT NULL;
+            """,
+            reverse_sql="""
+            ALTER TABLE paiements_paiement
+            DROP COLUMN IF EXISTS est_saisie_manuelle_historique;
+            """
         ),
     ]
