@@ -10,8 +10,12 @@ from .models import (
 from .models_avance import AvanceLoyer, ConsommationAvance, HistoriquePaiement
 
 
+from .forms import PaiementAdminForm
+
 @admin.register(Paiement)
 class PaiementAdmin(admin.ModelAdmin):
+        # Utilise le formulaire admin qui désactive les validations restrictives
+        form = PaiementAdminForm
     """Interface d'administration pour les paiements."""
     
     list_display = (
