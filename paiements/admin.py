@@ -18,6 +18,7 @@ class PaiementAdmin(admin.ModelAdmin):
     form = PaiementAdminForm
     """Interface d'administration pour les paiements."""
     
+    autocomplete_fields = ['contrat']
     list_display = (
         'id', 'contrat', 'montant', 'montant_charges_deduites', 'montant_net_paye', 
         'type_paiement', 'mode_paiement', 'date_paiement', 'mois_paye', 'statut_colore', 
