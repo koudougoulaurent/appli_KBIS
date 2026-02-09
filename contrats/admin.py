@@ -10,6 +10,7 @@ from .models import (
 
 @admin.register(Contrat)
 class ContratAdmin(admin.ModelAdmin):
+    autocomplete_fields = ['propriete', 'locataire']
     """Interface d'administration pour les contrats."""
     
     list_display = (
