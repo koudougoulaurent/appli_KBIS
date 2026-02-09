@@ -1414,7 +1414,10 @@ def ajouter_paiement(request):
                 pass
         
         # Initialiser le formulaire avec les mois autorisés pour les paiements de loyer
-        form = PaiementForm(contrat_id=contrat_id_get, mois_autorises=mois_autorises, type_paiement_initial='loyer')
+        if contrat_id_get:
+            form = PaiementForm(contrat_id=contrat_id_get, mois_autorises=mois_autorises, type_paiement_initial='loyer')
+        else:
+            form = PaiementForm()
     
     # Récupérer tous les contrats pour la sélection
     contrats = Contrat.objects.filter(is_deleted=False).select_related('locataire', 'propriete')
