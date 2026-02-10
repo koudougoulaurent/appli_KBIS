@@ -40,7 +40,7 @@ def statistiques_globales(request):
         date_debut__lte=date_fin_mois
     ).filter(
         Q(date_fin__gte=date_debut_mois) | Q(date_fin__isnull=True)
-    )
+    ).select_related('locataire', 'propriete', 'bailleur')
     
     nombre_contrats_actifs = contrats_actifs.count()
     total_loyers_attendus = sum(
@@ -48,19 +48,18 @@ def statistiques_globales(request):
     )
 
     # Contrats en retard (échéance dépassée, paiement non reçu pour le mois actuel)
-    contrats_retard = []
-    for contrat in contrats_actifs:
-        # Vérifier s'il y a un paiement pour ce mois
-        paiement_mois = Paiement.objects.filter(
-            contrat=contrat,
-            date_paiement__year=annee,
-            date_paiement__month=mois,
-            statut='confirme'
-        ).exists()
-        
-        if not paiement_mois:
-            # Aucun paiement pour ce mois = en retard
-            contrats_retard.append(contrat)
+    # Récupérer les IDs des contrats qui ONT payé ce mois
+    contrats_avec_paiement_ids = Paiement.objects.filter(
+        date_paiement__year=annee,
+        date_paiement__month=mois,
+        statut='confirme',
+        contrat__isnull=False
+    ).values_list('contrat_id', flat=True).distinct()
+    
+    # Contrats actifs SANS paiement = en retard (limité à 50 pour éviter surcharge mémoire)
+    contrats_retard = contrats_actifs.exclude(
+        id__in=contrats_avec_paiement_ids
+    )[:50]
 
     # Total dû aux bailleurs (calculé à partir des récaps mensuels)
     recaps_mois = RecapMensuel.objects.filter(
@@ -93,6 +92,16 @@ def statistiques_globales(request):
     )
     total_charges_bailleur = charges_mois.aggregate(total=Sum('montant'))['total'] or Decimal('0')
 
+    # Compter le nombre total de contrats en retard (avant la limite de 50)
+    nombre_contrats_retard = contrats_actifs.exclude(
+        id__in=Paiement.objects.filter(
+            date_paiement__year=annee,
+            date_paiement__month=mois,
+            statut='confirme',
+            contrat__isnull=False
+        ).values_list('contrat_id', flat=True).distinct()
+    ).count()
+
     context = {
         'mois': mois,
         'annee': annee,
@@ -101,7 +110,7 @@ def statistiques_globales(request):
         'nombre_contrats_actifs': nombre_contrats_actifs,
         'total_loyers_attendus': total_loyers_attendus,
         'contrats_retard': contrats_retard,
-        'nombre_contrats_retard': len(contrats_retard),
+        'nombre_contrats_retard': nombre_contrats_retard,
         'total_du_bailleurs': total_du_bailleurs,
         'total_commissions': total_commissions,
         'total_commissions_recaps': total_commissions_recaps,

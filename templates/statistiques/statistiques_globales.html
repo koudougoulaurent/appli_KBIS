@@ -64,7 +64,12 @@
 
     <div class="card mb-3">
         <div class="card-header bg-warning text-dark">
-            <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Contrats en retard ({{ nombre_contrats_retard }})</h5>
+            <h5 class="mb-0">
+                <i class="bi bi-exclamation-triangle"></i> Contrats en retard ({{ nombre_contrats_retard }})
+                {% if contrats_retard|length >= 50 %}
+                    <small class="text-muted">- Affichage limité aux 50 premiers</small>
+                {% endif %}
+            </h5>
         </div>
         <div class="card-body">
             {% if contrats_retard %}
