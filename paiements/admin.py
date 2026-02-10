@@ -330,7 +330,7 @@ class QuittancePaiementAdmin(admin.ModelAdmin):
         }),
     )
     
-    readonly_fields = ('numero_quittance', 'est_cumulee')
+    readonly_fields = ('numero_quittance', 'est_cumulee', 'date_emission')
     filter_horizontal = ('paiements',)
     
     actions = ['marquer_imprimees', 'marquer_envoyees', 'marquer_archivees']
