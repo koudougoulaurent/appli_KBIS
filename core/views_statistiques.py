@@ -4,7 +4,7 @@ from paiements.models import Paiement, RecapMensuel
 from contrats.models import Contrat
 from proprietes.models import Bailleur
 from proprietes.models import ChargesBailleur
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 import csv
 from django.http import HttpResponse
@@ -214,6 +214,7 @@ def export_statistiques_csv(request):
 def export_statistiques_pdf(request):
     """Export des statistiques globales en PDF"""
     today = date.today()
+    now = datetime.now()
     mois = int(request.GET.get('mois', today.month))
     annee = int(request.GET.get('annee', today.year))
     
@@ -288,7 +289,7 @@ def export_statistiques_pdf(request):
     context = {
         'mois': mois,
         'annee': annee,
-        'date_generation': today,
+        'date_generation': now,
         'nombre_contrats_actifs': nombre_contrats_actifs,
         'total_loyers_attendus': total_loyers_attendus,
         'total_recettes': total_recettes,
