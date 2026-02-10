@@ -9,10 +9,29 @@ from .models import (
     DepenseResiliation, RecuCaution, DocumentContrat
 )
 
+
+class PaiementInline(admin.TabularInline):
+    """Affiche l'historique des paiements du contrat."""
+    from paiements.models import Paiement
+    model = Paiement
+    extra = 0
+    can_delete = False
+    fields = ('date_paiement', 'mois_paye', 'montant', 'type_paiement', 'mode_paiement', 'statut', 'est_saisie_manuelle_historique')
+    readonly_fields = ('date_paiement', 'mois_paye', 'montant', 'type_paiement', 'mode_paiement', 'statut', 'est_saisie_manuelle_historique')
+    ordering = ('-date_paiement',)
+    verbose_name = "Paiement"
+    verbose_name_plural = "Historique des paiements"
+    
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 @admin.register(Contrat)
 class ContratAdmin(admin.ModelAdmin):
     autocomplete_fields = ['propriete', 'locataire']
     """Interface d'administration pour les contrats."""
+    
+    inlines = [PaiementInline]
     
     list_display = (
         'numero_contrat', 'propriete', 'locataire', 'date_debut', 
