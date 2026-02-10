@@ -21,7 +21,12 @@ class PaiementInline(admin.TabularInline):
     ordering = ('-date_paiement',)
     verbose_name = "Paiement"
     verbose_name_plural = "Historique des paiements"
-    show_change_link = True  # Permet de cliquer pour modifier le paiement
+    show_change_link = True
+    
+    def get_queryset(self, request):
+        """Optimise les requêtes avec select_related pour éviter N+1."""
+        qs = super().get_queryset(request)
+        return qs.select_related('contrat', 'contrat__locataire', 'contrat__propriete')
     
     def has_add_permission(self, request, obj=None):
         return False

@@ -1146,7 +1146,15 @@ class Paiement(models.Model):
         ordering = ['-date_paiement']
     
     def __str__(self):
-        return f"Paiement {self.montant} F CFA - {self.contrat.locataire.get_nom_complet()}"
+        try:
+            if self.contrat and self.contrat.locataire:
+                return f"Paiement {self.montant} F CFA - {self.contrat.locataire.get_nom_complet()}"
+            elif self.contrat:
+                return f"Paiement {self.montant} F CFA - Contrat {self.contrat.numero_contrat}"
+            else:
+                return f"Paiement {self.montant} F CFA"
+        except:
+            return f"Paiement {self.montant} F CFA"
     
     def save(self, *args, **kwargs):
         """Sauvegarde personnalisée pour calculer automatiquement les montants"""
