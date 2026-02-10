@@ -40,7 +40,7 @@ def statistiques_globales(request):
         date_debut__lte=date_fin_mois
     ).filter(
         Q(date_fin__gte=date_debut_mois) | Q(date_fin__isnull=True)
-    ).select_related('locataire', 'propriete', 'bailleur')
+    ).select_related('locataire', 'propriete')
     
     nombre_contrats_actifs = contrats_actifs.count()
     total_loyers_attendus = sum(
