@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>Statistiques globales - {{ mois }}/{{ annee }}</h1>
+        <a href="{% url 'core:export_statistiques_csv' %}?mois={{ mois }}&annee={{ annee }}" class="btn btn-outline-primary">
+            <i class="bi bi-download"></i> Exporter en CSV
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-cash-stack"></i> Recettes et Paiements</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>Recettes totales</th>
+                            <td class="text-end"><strong>{{ total_recettes|floatformat:0 }} F CFA</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Montant payé ce mois</th>
+                            <td class="text-end"><strong>{{ total_paye|floatformat:0 }} F CFA</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Nombre de contrats actifs</th>
+                            <td class="text-end"><strong>{{ nombre_contrats_actifs }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Total loyers attendus</th>
+                            <td class="text-end"><strong>{{ total_loyers_attendus|floatformat:0 }} F CFA</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-piggy-bank"></i> Charges et Commissions</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>Total dû aux bailleurs</th>
+                            <td class="text-end"><strong>{{ total_du_bailleurs|floatformat:0 }} F CFA</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Total commissions agence</th>
+                            <td class="text-end"><strong>{{ total_commissions|floatformat:0 }} F CFA</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Total charges bailleur</th>
+                            <td class="text-end"><strong>{{ total_charges_bailleur|floatformat:0 }} F CFA</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Contrats en retard ({{ nombre_contrats_retard }})</h5>
+        </div>
+        <div class="card-body">
+            {% if contrats_retard %}
+                <ul class="list-group">
+                    {% for contrat in contrats_retard %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ contrat }}</strong>
+                                {% if contrat.locataire %}
+                                    - {{ contrat.locataire }}
+                                {% endif %}
+                                {% if contrat.propriete %}
+                                    <br><small class="text-muted">{{ contrat.propriete }}</small>
+                                {% endif %}
+                            </div>
+                            <span class="badge bg-warning text-dark">{{ contrat.loyer_mensuel|floatformat:0 }} F CFA</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-success mb-0">
+                    <i class="bi bi-check-circle"></i> Aucun contrat en retard ce mois-ci.
+                </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
