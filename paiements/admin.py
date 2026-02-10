@@ -42,7 +42,7 @@ class PaiementAdmin(admin.ModelAdmin):
                           'Cela désactive toutes les validations automatiques et permet la saisie libre du mois payé.'
         }),
         (_('Informations de base'), {
-            'fields': ('contrat', 'montant', 'type_paiement', 'mois_paye')
+            'fields': ('contrat', 'montant', 'type_paiement', 'mois_paye', 'annee_paiement')
         }),
         (_('Charges déductibles'), {
             'fields': ('montant_charges_deduites', 'montant_net_paye'),
