@@ -335,23 +335,19 @@ class RecapMensuel(models.Model):
                 montant_a_deduire = getattr(charge, 'montant_restant', None) or charge.montant
                 total_charges_bailleur += montant_a_deduire
             
-            # CRITIQUE : Calculer le total net avec validation
-            # Total net = Loyers bruts - Charges bailleur (PAS les charges déductibles!)
-            total_net = total_loyers - total_charges_bailleur
-            # Validation : le total net ne peut pas être négatif
-            total_net = max(total_net, Decimal('0'))
-            
-            # CRITIQUE : Commission agence = 10% du montant net à payer (obligatoire, comme dans les retraits)
-            # Arrondir à 2 décimales pour éviter les problèmes de précision
-            commission_agence = (total_net * Decimal('0.10')).quantize(Decimal('0.01'))
-            
-            # CRITIQUE : Montant réellement payé = montant net - commission agence
-            # C'est le montant final qui sera payé au bailleur
-            montant_reellement_paye = total_net - commission_agence
+            # Correction : Commission agence = 10% du BRUT (loyers bruts)
+            commission_agence = (total_loyers * Decimal('0.10')).quantize(Decimal('0.01'))
+
+            # Montant réellement payé = brut - charges bailleur - commission
+            montant_reellement_paye = total_loyers - total_charges_bailleur - commission_agence
             # Validation : le montant réellement payé ne peut pas être négatif
             montant_reellement_paye = max(montant_reellement_paye, Decimal('0'))
             # Arrondir à 2 décimales
             montant_reellement_paye = montant_reellement_paye.quantize(Decimal('0.01'))
+
+            # Total net à payer (pour affichage, correspond à brut - charges bailleur)
+            total_net = total_loyers - total_charges_bailleur
+            total_net = max(total_net, Decimal('0'))
             
             # Mettre à jour les champs
             self.total_loyers_bruts = total_loyers
