@@ -17,46 +17,14 @@ class PaiementInline(admin.TabularInline):
     extra = 0
     can_delete = False
     fields = ('date_paiement', 'mois_paye', 'montant', 'type_paiement', 'mode_paiement', 'statut', 'est_saisie_manuelle_historique')
-    readonly_fields = ('date_paiement', 'mois_paye', 'montant', 'type_paiement', 'mode_paiement', 'statut', 'est_saisie_manuelle_historique', 'bouton_migration')
+    readonly_fields = ('date_paiement', 'mois_paye', 'montant', 'type_paiement', 'mode_paiement', 'statut', 'est_saisie_manuelle_historique')
     ordering = ('-date_paiement',)
     verbose_name = "Paiement"
     verbose_name_plural = "Historique des paiements"
+    show_change_link = True  # Permet de cliquer pour modifier le paiement
     
     def has_add_permission(self, request, obj=None):
         return False
-    
-    def bouton_migration(self, obj):
-        """Affiche un bouton pour ajouter un paiement historique."""
-        if obj and obj.pk:
-            return ''  # Si le paiement existe déjà, ne rien afficher
-        # Ce champ ne sera visible que dans le formulaire d'ajout (jamais appelé en pratique)
-        return ''
-    bouton_migration.short_description = ""
-    
-    def get_queryset(self, request):
-        """Retourne les paiements du contrat."""
-        qs = super().get_queryset(request)
-        return qs
-    
-    def get_formset(self, request, obj=None, **kwargs):
-        """Personnalise l'affichage si aucun paiement n'existe."""
-        formset = super().get_formset(request, obj, **kwargs)
-        
-        # Si le contrat n'a aucun paiement, ajouter un message d'aide
-        if obj and not obj.paiements.exists():
-            from django.utils.safestring import mark_safe
-            url = reverse('admin:paiements_paiement_add') + f'?contrat={obj.pk}&historique=1'
-            message = mark_safe(
-                f'<div style="padding:15px;background:#fff3cd;border:1px solid #ffc107;border-radius:4px;margin:10px 0;">'
-                f'<strong>📋 Aucun paiement enregistré pour ce contrat</strong><br><br>'
-                f'<a href="{url}" style="background:#ff9800;color:white;padding:8px 16px;border-radius:4px;'
-                f'font-weight:bold;text-decoration:none;display:inline-block;">➕ Ajouter un paiement historique (migration)</a>'
-                f'<p style="margin-top:10px;color:#666;font-size:13px;">Utilisez ce bouton pour importer des paiements de l\'ancienne plateforme.</p>'
-                f'</div>'
-            )
-            formset.help_text = message
-        
-        return formset
 
 
 @admin.register(Contrat)
@@ -123,9 +91,24 @@ class ContratAdmin(admin.ModelAdmin):
         if obj:
             from paiements.models import Paiement
             nb_paiements = Paiement.objects.filter(contrat=obj).count()
-            if nb_paiements == 0 or getattr(obj, 'migration_necessaire', False):
+            
+            # Stocker le nombre de paiements dans le contexte pour l'inline
+            context['nb_paiements'] = nb_paiements
+            
+            if nb_paiements == 0:
+                # Ajouter un message d'information si aucun paiement
+                from django.contrib import messages
                 url = reverse('admin:paiements_paiement_add') + f'?contrat={obj.pk}&historique=1'
-                bouton = mark_safe(f'<a href="{url}" style="background:#ff9800;color:white;padding:8px 16px;border-radius:4px;font-weight:bold;text-decoration:none;display:inline-block;margin-bottom:12px;">Ajouter paiement historique (migration)</a>')
+                message_html = mark_safe(
+                    f'📋 <strong>Aucun paiement enregistré pour ce contrat.</strong> '
+                    f'<a href="{url}" style="color:#ff9800;font-weight:bold;text-decoration:underline;">'
+                    f'Cliquez ici pour ajouter un paiement historique (migration)</a>'
+                )
+                messages.info(request, message_html)
+                
+                # Ajouter le bouton dans le help_text
+                url = reverse('admin:paiements_paiement_add') + f'?contrat={obj.pk}&historique=1'
+                bouton = mark_safe(f'<a href="{url}" style="background:#ff9800;color:white;padding:8px 16px;border-radius:4px;font-weight:bold;text-decoration:none;display:inline-block;margin-bottom:12px;">➕ Ajouter paiement historique (migration)</a>')
                 context['adminform'].form.fields['numero_contrat'].help_text = (context['adminform'].form.fields['numero_contrat'].help_text or '') + '<br>' + bouton
         return super().render_change_form(request, context, *args, **kwargs)
     
