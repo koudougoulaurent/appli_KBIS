@@ -46,6 +46,8 @@ from .views_ajax_validation import (
     get_suggested_property_number,
     get_suggested_contract_number
 )
+from .views_statistiques import statistiques_globales, export_statistiques_csv
+
 # from .demo_views import demo_kbis_design  # Fichier supprimé
 
 app_name = 'core'
@@ -85,11 +87,15 @@ urlpatterns = [
     # Export sécurisé
     path('export/<str:type_donnees>/', export_donnees_securise, name='export_donnees_securise'),
     
+    # Export CSV des statistiques globales
+    path('statistiques/export/', export_statistiques_csv, name='export_statistiques_csv'),
+    
     # Audit et sécurité
     path('rapports-audit/', rapports_audit, name='rapports_audit'),
     path('detection-anomalies/', detection_anomalies, name='detection_anomalies'),
     path('audit/log/<int:log_id>/', detail_audit_log, name='detail_audit_log'),
     path('audit/statistiques/', audit_statistiques, name='audit_statistiques'),
+    path('statistiques/', statistiques_globales, name='statistiques_globales'),
     
     # API pour les actions rapides et performance
     path('api/quick-actions/', quick_actions_api, name='quick_actions_api'),
