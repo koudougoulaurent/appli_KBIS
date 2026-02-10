@@ -49,7 +49,7 @@ def statistiques_globales(request):
     paiements_mois = Paiement.objects.filter(
         date_paiement__year=annee,
         date_paiement__month=mois,
-        statut='confirme'
+        statut='valide'
     )
     total_paye = paiements_mois.aggregate(total=Sum('montant'))['total'] or Decimal('0')
 
@@ -58,7 +58,7 @@ def statistiques_globales(request):
     contrats_avec_paiement_ids = Paiement.objects.filter(
         date_paiement__year=annee,
         date_paiement__month=mois,
-        statut='confirme',
+        statut='valide',
         contrat__isnull=False
     ).values_list('contrat_id', flat=True).distinct()
     
@@ -155,7 +155,7 @@ def export_statistiques_csv(request):
     paiements_mois = Paiement.objects.filter(
         date_paiement__year=annee,
         date_paiement__month=mois,
-        statut='confirme'
+        statut='valide'
     )
     total_paye = paiements_mois.aggregate(total=Sum('montant'))['total'] or Decimal('0')
     
@@ -163,7 +163,7 @@ def export_statistiques_csv(request):
     contrats_avec_paiement_ids = Paiement.objects.filter(
         date_paiement__year=annee,
         date_paiement__month=mois,
-        statut='confirme',
+        statut='valide',
         contrat__isnull=False
     ).values_list('contrat_id', flat=True).distinct()
     
@@ -248,7 +248,7 @@ def export_statistiques_pdf(request):
     paiements_mois = Paiement.objects.filter(
         date_paiement__year=annee,
         date_paiement__month=mois,
-        statut='confirme'
+        statut='valide'
     )
     total_paye = paiements_mois.aggregate(total=Sum('montant'))['total'] or Decimal('0')
     
@@ -256,7 +256,7 @@ def export_statistiques_pdf(request):
     contrats_avec_paiement_ids = Paiement.objects.filter(
         date_paiement__year=annee,
         date_paiement__month=mois,
-        statut='confirme',
+        statut='valide',
         contrat__isnull=False
     ).values_list('contrat_id', flat=True).distinct()
     
