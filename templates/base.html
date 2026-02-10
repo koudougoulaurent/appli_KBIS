@@ -597,6 +597,13 @@
                                 <span class="d-inline d-lg-none">Config</span>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'statistiques_globales' %}active{% endif %}" href="{% url 'core:statistiques_globales' %}">
+                                <i class="bi bi-bar-chart-line"></i>
+                                <span class="d-none d-lg-inline">Statistiques Globales</span>
+                                <span class="d-inline d-lg-none">Stats</span>
+                            </a>
+                        </li>
                         {% if user.groups.all|length > 0 %}
                             {% for group in user.groups.all %}
                                 {% if group.name == 'PRIVILEGE' or group.name == 'ADMINISTRATION' %}
