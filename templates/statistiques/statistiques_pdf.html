@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Statistiques Globales - {{ mois }}/{{ annee }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        body {
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #333;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #2c3e50;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            font-size: 24pt;
+            margin: 0;
+            font-weight: bold;
+        }
+        
+        .header .subtitle {
+            color: #7f8c8d;
+            font-size: 12pt;
+            margin-top: 5px;
+        }
+        
+        .section {
+            margin-bottom: 25px;
+            page-break-inside: avoid;
+        }
+        
+        .section-title {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 15px;
+            font-size: 14pt;
+            font-weight: bold;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        
+        .section-title.success {
+            background-color: #27ae60;
+        }
+        
+        .section-title.warning {
+            background-color: #f39c12;
+        }
+        
+        .stats-grid {
+            display: table;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .stats-row {
+            display: table-row;
+        }
+        
+        .stats-label, .stats-value {
+            display: table-cell;
+            padding: 10px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .stats-label {
+            font-weight: bold;
+            width: 60%;
+            color: #34495e;
+        }
+        
+        .stats-value {
+            text-align: right;
+            width: 40%;
+            font-size: 12pt;
+            color: #2c3e50;
+        }
+        
+        .stats-value.highlight {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        .retard-list {
+            margin-top: 10px;
+        }
+        
+        .retard-item {
+            padding: 8px;
+            margin-bottom: 5px;
+            background-color: #fff9e6;
+            border-left: 3px solid #f39c12;
+        }
+        
+        .retard-item strong {
+            color: #2c3e50;
+        }
+        
+        .retard-item small {
+            color: #7f8c8d;
+            display: block;
+            margin-top: 3px;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 15px;
+            border-top: 2px solid #ecf0f1;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 9pt;
+        }
+        
+        .summary-box {
+            background-color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-box p {
+            margin: 5px 0;
+            font-size: 10pt;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Statistiques Globales</h1>
+        <div class="subtitle">Mois : {{ mois }}/{{ annee }}</div>
+        <div class="subtitle">Généré le {{ date_generation|date:"d/m/Y à H:i" }}</div>
+    </div>
+
+    <div class="summary-box">
+        <p><strong>Période analysée :</strong> {{ mois }}/{{ annee }}</p>
+        <p><strong>Nombre de contrats actifs :</strong> {{ nombre_contrats_actifs }}</p>
+        <p><strong>Contrats en retard de paiement :</strong> {{ nombre_contrats_retard }}</p>
+    </div>
+
+    <div class="section">
+        <div class="section-title success">💰 Recettes et Paiements</div>
+        <div class="stats-grid">
+            <div class="stats-row">
+                <div class="stats-label">Recettes totales attendues</div>
+                <div class="stats-value">{{ total_recettes|floatformat:0 }} F CFA</div>
+            </div>
+            <div class="stats-row">
+                <div class="stats-label">Montant payé ce mois</div>
+                <div class="stats-value">{{ total_paye|floatformat:0 }} F CFA</div>
+            </div>
+            <div class="stats-row">
+                <div class="stats-label">Total loyers attendus</div>
+                <div class="stats-value">{{ total_loyers_attendus|floatformat:0 }} F CFA</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">🏦 Charges et Commissions</div>
+        <div class="stats-grid">
+            <div class="stats-row">
+                <div class="stats-label">Total dû aux bailleurs</div>
+                <div class="stats-value">{{ total_du_bailleurs|floatformat:0 }} F CFA</div>
+            </div>
+            <div class="stats-row">
+                <div class="stats-label">Total commissions agence (10%)</div>
+                <div class="stats-value">{{ total_commissions|floatformat:0 }} F CFA</div>
+            </div>
+            <div class="stats-row">
+                <div class="stats-label">Total charges bailleur</div>
+                <div class="stats-value">{{ total_charges_bailleur|floatformat:0 }} F CFA</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title warning">⚠️ Contrats en retard ({{ nombre_contrats_retard }})</div>
+        {% if contrats_retard %}
+            <div class="retard-list">
+                {% for contrat in contrats_retard %}
+                    <div class="retard-item">
+                        <strong>{{ contrat }}</strong>
+                        {% if contrat.locataire %}
+                            - {{ contrat.locataire }}
+                        {% endif %}
+                        {% if contrat.propriete %}
+                            <small>{{ contrat.propriete }}</small>
+                        {% endif %}
+                        <small style="float: right; color: #e74c3c; font-weight: bold;">
+                            {{ contrat.loyer_mensuel|floatformat:0 }} F CFA
+                        </small>
+                    </div>
+                {% endfor %}
+                {% if nombre_contrats_retard > 50 %}
+                    <p style="margin-top: 15px; color: #7f8c8d; font-style: italic;">
+                        Note : Affichage limité aux 50 premiers contrats en retard sur un total de {{ nombre_contrats_retard }}.
+                    </p>
+                {% endif %}
+            </div>
+        {% else %}
+            <p style="color: #27ae60; padding: 10px; background-color: #d5f4e6; border-radius: 4px;">
+                ✓ Aucun contrat en retard ce mois-ci.
+            </p>
+        {% endif %}
+    </div>
+
+    <div class="footer">
+        <p>Document généré automatiquement par le système de gestion immobilière</p>
+        <p>© {{ annee }} - Tous droits réservés</p>
+    </div>
+</body>
+</html>

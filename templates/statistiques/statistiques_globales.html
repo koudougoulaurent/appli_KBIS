@@ -3,9 +3,14 @@
 <div class="container-fluid mt-3">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1>Statistiques globales - {{ mois }}/{{ annee }}</h1>
-        <a href="{% url 'core:export_statistiques_csv' %}?mois={{ mois }}&annee={{ annee }}" class="btn btn-outline-primary">
-            <i class="bi bi-download"></i> Exporter en CSV
-        </a>
+        <div class="btn-group">
+            <a href="{% url 'core:export_statistiques_csv' %}?mois={{ mois }}&annee={{ annee }}" class="btn btn-outline-success">
+                <i class="bi bi-file-earmark-spreadsheet"></i> Exporter en CSV
+            </a>
+            <a href="{% url 'core:export_statistiques_pdf' %}?mois={{ mois }}&annee={{ annee }}" class="btn btn-outline-danger">
+                <i class="bi bi-file-earmark-pdf"></i> Exporter en PDF
+            </a>
+        </div>
     </div>
 
     <div class="row">

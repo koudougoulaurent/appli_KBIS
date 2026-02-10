@@ -46,7 +46,7 @@ from .views_ajax_validation import (
     get_suggested_property_number,
     get_suggested_contract_number
 )
-from .views_statistiques import statistiques_globales, export_statistiques_csv
+from .views_statistiques import statistiques_globales, export_statistiques_csv, export_statistiques_pdf
 
 # from .demo_views import demo_kbis_design  # Fichier supprimé
 
@@ -87,8 +87,9 @@ urlpatterns = [
     # Export sécurisé
     path('export/<str:type_donnees>/', export_donnees_securise, name='export_donnees_securise'),
     
-    # Export CSV des statistiques globales
+    # Export CSV et PDF des statistiques globales
     path('statistiques/export/', export_statistiques_csv, name='export_statistiques_csv'),
+    path('statistiques/export/pdf/', export_statistiques_pdf, name='export_statistiques_pdf'),
     
     # Audit et sécurité
     path('rapports-audit/', rapports_audit, name='rapports_audit'),
