@@ -1,37 +1,117 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container-fluid mt-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1>Statistiques globales - {{ mois }}/{{ annee }}</h1>
-        <div class="btn-group">
-            <a href="{% url 'core:export_statistiques_csv' %}?mois={{ mois }}&annee={{ annee }}" class="btn btn-outline-success">
-                <i class="bi bi-file-earmark-spreadsheet"></i> Exporter en CSV
-            </a>
-            <a href="{% url 'core:export_statistiques_pdf' %}?mois={{ mois }}&annee={{ annee }}" class="btn btn-outline-danger">
-                <i class="bi bi-file-earmark-pdf"></i> Exporter en PDF
-            </a>
+    <!-- Sélecteur de période avec navigation -->
+    <div class="card mb-3 shadow-sm">
+        <div class="card-body py-2">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <h1 class="mb-0 h4">📊 Statistiques globales</h1>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="btn-group" role="group">
+                        <a href="?mois={{ mois_precedent }}&annee={{ annee_precedent }}" class="btn btn-outline-primary">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                        <button type="button" class="btn btn-primary" style="min-width: 180px;">
+                            <strong>{{ mois }}/{{ annee }}</strong>
+                        </button>
+                        <a href="?mois={{ mois_suivant }}&annee={{ annee_suivant }}" class="btn btn-outline-primary">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="btn-group">
+                        <a href="{% url 'core:export_statistiques_csv' %}?mois={{ mois }}&annee={{ annee }}" class="btn btn-sm btn-outline-success">
+                            <i class="bi bi-file-earmark-spreadsheet"></i> CSV
+                        </a>
+                        <a href="{% url 'core:export_statistiques_pdf' %}?mois={{ mois }}&annee={{ annee }}" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-file-earmark-pdf"></i> PDF
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Indicateurs de performance -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="card border-success shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">💰 Recettes encaissées</h6>
+                    <h3 class="mb-1 text-success"><strong>{{ total_recettes|floatformat:0 }}</strong> <small>F CFA</small></h3>
+                    {% if evolution_pourcent >= 0 %}
+                        <small class="text-success">
+                            <i class="bi bi-arrow-up"></i> +{{ evolution_pourcent }}% vs mois dernier
+                        </small>
+                    {% else %}
+                        <small class="text-danger">
+                            <i class="bi bi-arrow-down"></i> {{ evolution_pourcent }}% vs mois dernier
+                        </small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-info shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">📈 Taux de recouvrement</h6>
+                    <h3 class="mb-1 {% if taux_recouvrement >= 100 %}text-success{% elif taux_recouvrement >= 80 %}text-info{% else %}text-warning{% endif %}">
+                        <strong>{{ taux_recouvrement }}%</strong>
+                    </h3>
+                    <small class="text-muted">{{ total_recettes|floatformat:0 }} / {{ total_loyers_attendus|floatformat:0 }} F</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-primary shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">🏠 Contrats actifs</h6>
+                    <h3 class="mb-1 text-primary"><strong>{{ nombre_contrats_actifs }}</strong></h3>
+                    {% if nombre_contrats_retard > 0 %}
+                        <small class="text-warning">
+                            <i class="bi bi-exclamation-triangle"></i> {{ nombre_contrats_retard }} en retard
+                        </small>
+                    {% else %}
+                        <small class="text-success">
+                            <i class="bi bi-check-circle"></i> Aucun retard
+                        </small>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
 
     <div class="row">
         <div class="col-md-6 mb-3">
-            <div class="card">
+            <div class="card shadow-sm">
                 <div class="card-header bg-success text-white">
-                    <h5 class="mb-0"><i class="bi bi-cash-stack"></i> Recettes et Paiements</h5>
+                    <h5 class="mb-0"><i class="bi bi-cash-stack"></i> Détail des recettes</h5>
                 </div>
                 <div class="card-body">
-                    <table class="table table-bordered">
+                    <table class="table table-bordered mb-0">
                         <tr class="table-success">
                             <th>💰 RECETTES ENCAISSÉES CE MOIS</th>
                             <td class="text-end"><strong style="font-size: 1.2em; color: #27ae60;">{{ total_recettes|floatformat:0 }} F CFA</strong></td>
                         </tr>
                         <tr>
-                            <th>Nombre de contrats actifs</th>
-                            <td class="text-end"><strong>{{ nombre_contrats_actifs }}</strong></td>
+                            <th>Recettes mois précédent</th>
+                            <td class="text-end">{{ total_paye_mois_precedent|floatformat:0 }} F CFA</td>
+                        </tr>
+                        <tr class="{% if evolution_montant >= 0 %}table-success{% else %}table-danger{% endif %}">
+                            <th>Évolution</th>
+                            <td class="text-end">
+                                <strong>
+                                    {% if evolution_montant >= 0 %}+{% endif %}{{ evolution_montant|floatformat:0 }} F CFA
+                                    ({% if evolution_pourcent >= 0 %}+{% endif %}{{ evolution_pourcent }}%)
+                                </strong>
+                            </td>
                         </tr>
                         <tr>
                             <th>Total loyers attendus (théorique)</th>
-                            <td class="text-end"><strong>{{ total_loyers_attendus|floatformat:0 }} F CFA</strong></td>
+                            <td class="text-end">{{ total_loyers_attendus|floatformat:0 }} F CFA</td>
                         </tr>
                     </table>
                 </div>
@@ -39,31 +119,39 @@
         </div>
 
         <div class="col-md-6 mb-3">
-            <div class="card">
+            <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0"><i class="bi bi-piggy-bank"></i> Charges et Commissions</h5>
                 </div>
                 <div class="card-body">
-                    <table class="table table-bordered">
+                    <table class="table table-bordered mb-0">
                         <tr>
                             <th>Total dû aux bailleurs</th>
                             <td class="text-end"><strong>{{ total_du_bailleurs|floatformat:0 }} F CFA</strong></td>
                         </tr>
                         <tr>
-                            <th>Total commissions agence</th>
+                            <th>Total commissions agence (10%)</th>
                             <td class="text-end"><strong>{{ total_commissions|floatformat:0 }} F CFA</strong></td>
                         </tr>
                         <tr>
                             <th>Total charges bailleur</th>
                             <td class="text-end"><strong>{{ total_charges_bailleur|floatformat:0 }} F CFA</strong></td>
                         </tr>
+                        <tr class="table-info">
+                            <th>Net à reverser aux bailleurs</th>
+                            <td class="text-end">
+                                <strong style="font-size: 1.1em;">
+                                    {{ total_du_bailleurs|floatformat:0 }} F CFA
+                                </strong>
+                            </td>
+                        </tr>
                     </table>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card mb-3">
+    <div class="card mb-3 shadow-sm">
         <div class="card-header bg-info text-white">
             <h5 class="mb-0"><i class="bi bi-calendar2-check"></i> Recettes encaissées par jour</h5>
         </div>
@@ -106,7 +194,7 @@
         </div>
     </div>
 
-    <div class="card mb-3">
+    <div class="card mb-3 shadow-sm">
         <div class="card-header bg-warning text-dark">
             <h5 class="mb-0">
                 <i class="bi bi-exclamation-triangle"></i> Contrats en retard ({{ nombre_contrats_retard }})

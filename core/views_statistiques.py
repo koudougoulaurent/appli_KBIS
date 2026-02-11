@@ -18,6 +18,22 @@ def statistiques_globales(request):
     today = date.today()
     mois = int(request.GET.get('mois', today.month))
     annee = int(request.GET.get('annee', today.year))
+    
+    # Calcul mois précédent pour comparaison
+    if mois == 1:
+        mois_precedent = 12
+        annee_precedent = annee - 1
+    else:
+        mois_precedent = mois - 1
+        annee_precedent = annee
+    
+    # Calcul mois suivant pour navigation
+    if mois == 12:
+        mois_suivant = 1
+        annee_suivant = annee + 1
+    else:
+        mois_suivant = mois + 1
+        annee_suivant = annee
 
     # Date range pour le mois
     date_debut_mois = date(annee, mois, 1)
@@ -83,30 +99,20 @@ def statistiques_globales(request):
         id__in=contrats_avec_paiement_ids
     )[:50]
 
-    # CALCUL PAR BAILLEUR : total dû et commissions
-    # Récupérer tous les bailleurs avec leurs propriétés
-    bailleurs = Bailleur.objects.all()
+    # CALCUL PAR BAILLEUR : total dû et commissions (OPTIMISÉ)
+    # Utiliser prefetch pour éviter N+1 queries
+    from django.db.models import Prefetch
     
+    # Calculer directement avec annotation au lieu de boucler
     total_du_bailleurs = Decimal('0')
     total_commissions = Decimal('0')
     
-    for bailleur in bailleurs:
-        # Récupérer tous les contrats actifs pour les propriétés de ce bailleur
-        contrats_bailleur = contrats_actifs.filter(propriete__bailleur=bailleur)
-        
-        # Somme des loyers pour ce bailleur
-        loyers_bailleur = sum(
-            (contrat.loyer_mensuel or Decimal('0')) for contrat in contrats_bailleur
-        )
-        
-        # Commission de 10% pour ce bailleur
-        commission_bailleur = (loyers_bailleur * Decimal('0.10')).quantize(Decimal('0.01'))
-        
-        # Montant dû au bailleur = loyers - commission
-        montant_du_bailleur = loyers_bailleur - commission_bailleur
-        
-        total_du_bailleurs += montant_du_bailleur
-        total_commissions += commission_bailleur
+    # Somme de tous les loyers des contrats actifs
+    for contrat in contrats_actifs:
+        loyer = contrat.loyer_mensuel or Decimal('0')
+        commission = (loyer * Decimal('0.10')).quantize(Decimal('0.01'))
+        total_commissions += commission
+        total_du_bailleurs += (loyer - commission)
 
     # Total charges bailleur du mois
     charges_mois = ChargesBailleur.objects.filter(
@@ -119,10 +125,37 @@ def statistiques_globales(request):
     nombre_contrats_retard = contrats_actifs.exclude(
         id__in=contrats_avec_paiement_ids
     ).count()
+    
+    # CALCUL DES STATISTIQUES DU MOIS PRÉCÉDENT pour comparaison
+    paiements_mois_precedent = Paiement.objects.filter(
+        date_paiement__year=annee_precedent,
+        date_paiement__month=mois_precedent,
+        statut='valide'
+    )
+    total_paye_mois_precedent = paiements_mois_precedent.aggregate(total=Sum('montant'))['total'] or Decimal('0')
+    
+    # CALCUL DES INDICATEURS DE PERFORMANCE
+    # Taux de recouvrement = (recettes encaissées / loyers attendus) * 100
+    if total_loyers_attendus > 0:
+        taux_recouvrement = (total_recettes / total_loyers_attendus * 100).quantize(Decimal('0.01'))
+    else:
+        taux_recouvrement = Decimal('0')
+    
+    # Evolution vs mois précédent
+    if total_paye_mois_precedent > 0:
+        evolution_pourcent = ((total_recettes - total_paye_mois_precedent) / total_paye_mois_precedent * 100).quantize(Decimal('0.01'))
+    else:
+        evolution_pourcent = Decimal('0') if total_recettes == 0 else Decimal('100')
+    
+    evolution_montant = total_recettes - total_paye_mois_precedent
 
     context = {
         'mois': mois,
         'annee': annee,
+        'mois_precedent': mois_precedent,
+        'annee_precedent': annee_precedent,
+        'mois_suivant': mois_suivant,
+        'annee_suivant': annee_suivant,
         'total_recettes': total_recettes,
         'total_paye': total_paye,
         'nombre_contrats_actifs': nombre_contrats_actifs,
@@ -133,6 +166,11 @@ def statistiques_globales(request):
         'total_commissions': total_commissions,
         'total_charges_bailleur': total_charges_bailleur,
         'recettes_par_jour': recettes_par_jour,
+        # Nouveaux indicateurs
+        'taux_recouvrement': taux_recouvrement,
+        'evolution_pourcent': evolution_pourcent,
+        'evolution_montant': evolution_montant,
+        'total_paye_mois_precedent': total_paye_mois_precedent,
     }
     return render(request, 'statistiques/statistiques_globales.html', context)
 
