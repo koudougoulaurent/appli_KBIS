@@ -21,20 +21,16 @@
                 </div>
                 <div class="card-body">
                     <table class="table table-bordered">
-                        <tr>
-                            <th>Recettes totales</th>
-                            <td class="text-end"><strong>{{ total_recettes|floatformat:0 }} F CFA</strong></td>
-                        </tr>
-                        <tr>
-                            <th>Montant payé ce mois</th>
-                            <td class="text-end"><strong>{{ total_paye|floatformat:0 }} F CFA</strong></td>
+                        <tr class="table-success">
+                            <th>💰 RECETTES ENCAISSÉES CE MOIS</th>
+                            <td class="text-end"><strong style="font-size: 1.2em; color: #27ae60;">{{ total_recettes|floatformat:0 }} F CFA</strong></td>
                         </tr>
                         <tr>
                             <th>Nombre de contrats actifs</th>
                             <td class="text-end"><strong>{{ nombre_contrats_actifs }}</strong></td>
                         </tr>
                         <tr>
-                            <th>Total loyers attendus</th>
+                            <th>Total loyers attendus (théorique)</th>
                             <td class="text-end"><strong>{{ total_loyers_attendus|floatformat:0 }} F CFA</strong></td>
                         </tr>
                     </table>

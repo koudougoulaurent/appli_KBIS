@@ -152,16 +152,16 @@
         <div class="section-title success">💰 Recettes et Paiements</div>
         <div class="stats-grid">
             <div class="stats-row">
-                <div class="stats-label">Recettes totales attendues</div>
-                <div class="stats-value">{{ total_recettes|floatformat:0 }} F CFA</div>
+                <div class="stats-label"><strong>RECETTES ENCAISSÉES CE MOIS</strong></div>
+                <div class="stats-value" style="font-size: 14pt; color: #27ae60; font-weight: bold;">{{ total_recettes|floatformat:0 }} F CFA</div>
             </div>
             <div class="stats-row">
-                <div class="stats-label">Montant payé ce mois</div>
-                <div class="stats-value">{{ total_paye|floatformat:0 }} F CFA</div>
-            </div>
-            <div class="stats-row">
-                <div class="stats-label">Total loyers attendus</div>
+                <div class="stats-label">Total loyers attendus (théorique)</div>
                 <div class="stats-value">{{ total_loyers_attendus|floatformat:0 }} F CFA</div>
+            </div>
+            <div class="stats-row">
+                <div class="stats-label">Nombre de contrats actifs</div>
+                <div class="stats-value">{{ nombre_contrats_actifs }}</div>
             </div>
         </div>
     </div>

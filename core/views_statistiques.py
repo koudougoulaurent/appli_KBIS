@@ -41,9 +41,6 @@ def statistiques_globales(request):
     total_loyers_attendus = sum(
         (contrat.loyer_mensuel or Decimal('0')) for contrat in contrats_actifs
     )
-    
-    # RECETTES TOTALES = loyers attendus des contrats actifs du mois
-    total_recettes = total_loyers_attendus
 
     # MONTANT PAYÉ ce mois = paiements réellement confirmés durant ce mois
     paiements_mois = Paiement.objects.filter(
@@ -52,6 +49,10 @@ def statistiques_globales(request):
         statut='valide'
     )
     total_paye = paiements_mois.aggregate(total=Sum('montant'))['total'] or Decimal('0')
+    
+    # RECETTES TOTALES = TOTAL RÉELLEMENT ENCAISSÉ ce mois (même valeur que montant payé)
+    # C'est le montant critique pour la production : ce qui entre réellement en caisse
+    total_recettes = total_paye
     
     # RECETTES ENCAISSÉES PAR JOUR - Compatible SQLite et PostgreSQL
     from collections import defaultdict
@@ -164,9 +165,6 @@ def export_statistiques_csv(request):
         (contrat.loyer_mensuel or Decimal('0')) for contrat in contrats_actifs
     )
     
-    # Recettes totales = loyers attendus
-    total_recettes = total_loyers_attendus
-    
     # Montant payé ce mois
     paiements_mois = Paiement.objects.filter(
         date_paiement__year=annee,
@@ -174,6 +172,9 @@ def export_statistiques_csv(request):
         statut='valide'
     )
     total_paye = paiements_mois.aggregate(total=Sum('montant'))['total'] or Decimal('0')
+    
+    # RECETTES TOTALES = TOTAL RÉELLEMENT ENCAISSÉ ce mois (même valeur que montant payé)
+    total_recettes = total_paye
     
     # RECETTES ENCAISSÉES PAR JOUR - Compatible SQLite et PostgreSQL
     from collections import defaultdict
@@ -277,9 +278,6 @@ def export_statistiques_pdf(request):
         (contrat.loyer_mensuel or Decimal('0')) for contrat in contrats_actifs
     )
     
-    # Recettes totales = loyers attendus
-    total_recettes = total_loyers_attendus
-    
     # Montant payé ce mois
     paiements_mois = Paiement.objects.filter(
         date_paiement__year=annee,
@@ -287,6 +285,9 @@ def export_statistiques_pdf(request):
         statut='valide'
     )
     total_paye = paiements_mois.aggregate(total=Sum('montant'))['total'] or Decimal('0')
+    
+    # RECETTES TOTALES = TOTAL RÉELLEMENT ENCAISSÉ ce mois (même valeur que montant payé)
+    total_recettes = total_paye
     
     # RECETTES ENCAISSÉES PAR JOUR - Compatible SQLite et PostgreSQL
     from collections import defaultdict
