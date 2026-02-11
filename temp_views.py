@@ -173,21 +173,22 @@ def ajouter_paiement_partiel(request):
             
             # *** VALIDATION STRICTE : V├®rifier que le mois est le mois suivant le dernier paiement ***
             mois_paye_nom = request.POST.get('mois_paye', '')
+            annee_selectionnee = request.POST.get('annee_paiement', '')
+            
             if mois_paye_nom:
                 # Si le mois n'a pas d'ann├®e, construire le format complet
                 import re
                 if not re.search(r'\d{4}', mois_paye_nom):
-                    # Pas d'ann├®e dans le mois - d├®terminer l'ann├®e intelligemment
+                    # Pas d'ann├®e dans le mois - utiliser l'ann├®e s├®lectionn├®e ou l'ann├®e courante
                     from datetime import datetime
-                    mois_francais = {
-                        'janvier': 1, 'f├®vrier': 2, 'mars': 3, 'avril': 4,
-                        'mai': 5, 'juin': 6, 'juillet': 7, 'ao├╗t': 8,
-                        'septembre': 9, 'octobre': 10, 'novembre': 11, 'd├®cembre': 12
-                    }
-                    annee_actuelle = datetime.now().year
                     
-                    # Utiliser TOUJOURS l'ann├®e courante r├®elle
-                    mois_paye_nom = f"{mois_paye_nom} {annee_actuelle}"
+                    if annee_selectionnee:
+                        # Utiliser l'ann├®e s├®lectionn├®e par l'utilisateur
+                        mois_paye_nom = f"{mois_paye_nom} {annee_selectionnee}"
+                    else:
+                        # Fallback: utiliser l'ann├®e courante
+                        annee_actuelle = datetime.now().year
+                        mois_paye_nom = f"{mois_paye_nom} {annee_actuelle}"
                 
                 # VALIDATION STRICTE pour les paiements partiels (toujours de type loyer)
                 validation = ServicePaiementPartiel.valider_mois_a_regler(
@@ -1163,13 +1164,19 @@ def ajouter_paiement(request):
                 elif request.POST.get('mois_paye', ''):
                     # Pour les autres types de paiement (avance, caution), utiliser le mois tel quel
                     mois_paye_nom = request.POST.get('mois_paye', '')
+                    annee_selectionnee = request.POST.get('annee_paiement', '')
                     from datetime import datetime
                     import re
                     
-                    # Si le mois n'a pas d'ann├®e, construire le format complet avec l'ann├®e courante r├®elle
+                    # Si le mois n'a pas d'ann├®e, construire le format complet
                     if not re.search(r'\d{4}', mois_paye_nom):
-                        annee_actuelle = datetime.now().year
-                        paiement.mois_paye = f"{mois_paye_nom} {annee_actuelle}"
+                        if annee_selectionnee:
+                            # Utiliser l'ann├®e s├®lectionn├®e par l'utilisateur
+                            paiement.mois_paye = f"{mois_paye_nom} {annee_selectionnee}"
+                        else:
+                            # Fallback: utiliser l'ann├®e courante
+                            annee_actuelle = datetime.now().year
+                            paiement.mois_paye = f"{mois_paye_nom} {annee_actuelle}"
                     else:
                         paiement.mois_paye = mois_paye_nom
                 # NOTE: Pour les paiements de loyer, le mois_paye est d├®j├á d├®fini par la validation stricte ci-dessus
