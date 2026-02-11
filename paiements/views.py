@@ -4723,3 +4723,5 @@ class SupprimerPaiementView(SuppressionGeneriqueView):
         return f"Paiement #{obj.id} supprimé avec succès."
 
 
+
+# Force commit
