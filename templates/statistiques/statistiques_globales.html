@@ -274,26 +274,28 @@
             
             {% if contrats_retard %}
                 <ul class="list-group">
+                    {% comment %} Afficher d'abord les contrats critiques {% endcomment %}
                     {% for contrat in contrats_retard %}
-                        {% for critique in contrats_retard_critique %}
-                            {% if critique.contrat.id == contrat.id %}
-                                <li class="list-group-item d-flex justify-content-between align-items-center border-danger bg-danger bg-opacity-10">
-                                    <div>
-                                        <strong class="text-danger">🚨 {{ contrat }}</strong>
-                                        {% if contrat.locataire %}
-                                            - {{ contrat.locataire }}
-                                        {% endif %}
-                                        {% if contrat.propriete %}
-                                            <br><small class="text-muted">{{ contrat.propriete }}</small>
-                                        {% endif %}
-                                        <br><small class="text-danger"><strong>Aucun paiement depuis 3+ mois</strong></small>
-                                    </div>
-                                    <span class="badge bg-danger">{{ contrat.loyer_mensuel|floatformat:0 }} F CFA</span>
-                                </li>
-                            {% endfor %}
-                        {% endfor %}
-                        
-                        {% if not contrat in contrats_retard_critique|map:attribute:'contrat' %}
+                        {% if contrat.id in contrats_critiques_ids %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center border-danger bg-danger bg-opacity-10">
+                                <div>
+                                    <strong class="text-danger">🚨 {{ contrat }}</strong>
+                                    {% if contrat.locataire %}
+                                        - {{ contrat.locataire }}
+                                    {% endif %}
+                                    {% if contrat.propriete %}
+                                        <br><small class="text-muted">{{ contrat.propriete }}</small>
+                                    {% endif %}
+                                    <br><small class="text-danger"><strong>Aucun paiement depuis 3+ mois</strong></small>
+                                </div>
+                                <span class="badge bg-danger">{{ contrat.loyer_mensuel|floatformat:0 }} F CFA</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% comment %} Puis les retards normaux {% endcomment %}
+                    {% for contrat in contrats_retard %}
+                        {% if contrat.id not in contrats_critiques_ids %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">
                                 <div>
                                     <strong>{{ contrat }}</strong>

@@ -102,6 +102,7 @@ def statistiques_globales(request):
     # IDENTIFIER LES RETARDS CRITIQUES (> 2 mois)
     # Compter combien de mois payés manquent pour chaque contrat en retard
     contrats_retard_critique = []
+    contrats_critiques_ids = set()  # Set pour vérification rapide dans template
     for contrat in contrats_retard:
         # Calculer les paiements des 3 derniers mois
         date_il_y_a_3_mois = date_debut_mois - timedelta(days=90)
@@ -118,6 +119,7 @@ def statistiques_globales(request):
                 'contrat': contrat,
                 'nb_mois_impaye': 3
             })
+            contrats_critiques_ids.add(contrat.id)
 
     # CALCUL PAR BAILLEUR : total dû et commissions (OPTIMISÉ)
     # Utiliser prefetch pour éviter N+1 queries
@@ -205,6 +207,7 @@ def statistiques_globales(request):
         'recettes_par_type': recettes_par_type,
         'analyse_par_type': analyse_par_type,
         'contrats_retard_critique': contrats_retard_critique,
+        'contrats_critiques_ids': contrats_critiques_ids,  # Pour vérification rapide dans template
     }
     return render(request, 'statistiques/statistiques_globales.html', context)
 
