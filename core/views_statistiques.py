@@ -53,14 +53,20 @@ def statistiques_globales(request):
     )
     total_paye = paiements_mois.aggregate(total=Sum('montant'))['total'] or Decimal('0')
     
-    # RECETTES ENCAISSÉES PAR JOUR
-    from django.db.models.functions import TruncDate
-    recettes_par_jour = paiements_mois.annotate(
-        jour=TruncDate('date_paiement')
-    ).values('jour').annotate(
-        total=Sum('montant'),
-        nombre_paiements=Count('id')
-    ).order_by('jour')
+    # RECETTES ENCAISSÉES PAR JOUR - Compatible SQLite et PostgreSQL
+    from collections import defaultdict
+    recettes_dict = defaultdict(lambda: {'total': Decimal('0'), 'nombre_paiements': 0})
+    
+    for paiement in paiements_mois:
+        jour = paiement.date_paiement.date() if hasattr(paiement.date_paiement, 'date') else paiement.date_paiement
+        recettes_dict[jour]['total'] += paiement.montant
+        recettes_dict[jour]['nombre_paiements'] += 1
+    
+    # Convertir en liste triée
+    recettes_par_jour = [
+        {'jour': jour, 'total': data['total'], 'nombre_paiements': data['nombre_paiements']}
+        for jour, data in sorted(recettes_dict.items())
+    ]
 
     # Contrats en retard (échéance dépassée, paiement non reçu pour le mois actuel)
     # Récupérer les IDs des contrats qui ONT payé ce mois
@@ -169,6 +175,21 @@ def export_statistiques_csv(request):
     )
     total_paye = paiements_mois.aggregate(total=Sum('montant'))['total'] or Decimal('0')
     
+    # RECETTES ENCAISSÉES PAR JOUR - Compatible SQLite et PostgreSQL
+    from collections import defaultdict
+    recettes_dict = defaultdict(lambda: {'total': Decimal('0'), 'nombre_paiements': 0})
+    
+    for paiement in paiements_mois:
+        jour = paiement.date_paiement.date() if hasattr(paiement.date_paiement, 'date') else paiement.date_paiement
+        recettes_dict[jour]['total'] += paiement.montant
+        recettes_dict[jour]['nombre_paiements'] += 1
+    
+    # Convertir en liste triée
+    recettes_par_jour = [
+        {'jour': jour, 'total': data['total'], 'nombre_paiements': data['nombre_paiements']}
+        for jour, data in sorted(recettes_dict.items())
+    ]
+    
     # Contrats en retard
     contrats_avec_paiement_ids = Paiement.objects.filter(
         date_paiement__year=annee,
@@ -214,11 +235,6 @@ def export_statistiques_csv(request):
     writer.writerow(['Total dû aux bailleurs', total_du_bailleurs])
     writer.writerow(['Total commissions agence', total_commissions])
     writer.writerow(['Total charges bailleur', total_charges_bailleur])
-    writer.writerow([])
-    writer.writerow(['RECETTES ENCAISSÉES PAR JOUR'])
-    writer.writerow(['Date', 'Montant', 'Nombre de paiements'])
-    for recette in recettes_par_jour:
-        writer.writerow([recette['jour'].strftime('%d/%m/%Y'), recette['total'], recette['nombre_paiements']])
     writer.writerow([])
     writer.writerow(['RECETTES ENCAISSÉES PAR JOUR'])
     writer.writerow(['Date', 'Montant', 'Nombre de paiements'])
@@ -271,6 +287,21 @@ def export_statistiques_pdf(request):
         statut='valide'
     )
     total_paye = paiements_mois.aggregate(total=Sum('montant'))['total'] or Decimal('0')
+    
+    # RECETTES ENCAISSÉES PAR JOUR - Compatible SQLite et PostgreSQL
+    from collections import defaultdict
+    recettes_dict = defaultdict(lambda: {'total': Decimal('0'), 'nombre_paiements': 0})
+    
+    for paiement in paiements_mois:
+        jour = paiement.date_paiement.date() if hasattr(paiement.date_paiement, 'date') else paiement.date_paiement
+        recettes_dict[jour]['total'] += paiement.montant
+        recettes_dict[jour]['nombre_paiements'] += 1
+    
+    # Convertir en liste triée
+    recettes_par_jour = [
+        {'jour': jour, 'total': data['total'], 'nombre_paiements': data['nombre_paiements']}
+        for jour, data in sorted(recettes_dict.items())
+    ]
     
     # Contrats en retard
     contrats_avec_paiement_ids = Paiement.objects.filter(
