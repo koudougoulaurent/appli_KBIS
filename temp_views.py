@@ -299,11 +299,19 @@ def ajouter_paiement_partiel(request):
             
             return redirect('paiements:liste_contrats_paiements_partiels')
     else:
-        # Pr├®-remplir le formulaire avec le mois attendu si un contrat est s├®lectionn├®
+        # Pré-remplir le formulaire avec le mois attendu si un contrat est sélectionné
         initial_data = {'contrat': contrat_id} if contrat_id else {}
         if contrat_obj:
             mois_a_regler = ServicePaiementPartiel.determiner_mois_a_regler(contrat_obj)
-            initial_data['mois_paye'] = mois_a_regler['mois_paye']
+            # Séparer le mois et l'année pour remplir les deux champs du formulaire
+            mois_complet = mois_a_regler['mois_paye']  # Ex: "Novembre 2025"
+            if mois_complet and ' ' in mois_complet:
+                parties = mois_complet.split(' ')
+                if len(parties) == 2:
+                    initial_data['mois_paye'] = parties[0]  # "Novembre"
+                    initial_data['annee_paiement'] = parties[1]  # "2025"
+            else:
+                initial_data['mois_paye'] = mois_complet
         form = PaiementForm(initial=initial_data)
     
     # Obtenir les contrats avec paiements partiels pour le contexte
