@@ -4722,3 +4722,4 @@ class SupprimerPaiementView(SuppressionGeneriqueView):
     def get_success_message(self, obj):
         return f"Paiement #{obj.id} supprimé avec succès."
 
+
