@@ -68,6 +68,49 @@
     </div>
 
     <div class="card mb-3">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="bi bi-calendar2-check"></i> Recettes encaissées par jour</h5>
+        </div>
+        <div class="card-body">
+            {% if recettes_par_jour %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th class="text-center">Nombre de paiements</th>
+                                <th class="text-end">Montant encaissé</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for recette in recettes_par_jour %}
+                            <tr>
+                                <td><strong>{{ recette.jour|date:"d/m/Y (l)" }}</strong></td>
+                                <td class="text-center">
+                                    <span class="badge bg-primary">{{ recette.nombre_paiements }}</span>
+                                </td>
+                                <td class="text-end"><strong>{{ recette.total|floatformat:0 }} F CFA</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-secondary">
+                            <tr>
+                                <th>TOTAL MOIS</th>
+                                <th class="text-center">-</th>
+                                <th class="text-end"><strong>{{ total_paye|floatformat:0 }} F CFA</strong></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted mb-0">
+                    <i class="bi bi-info-circle"></i> Aucune recette encaissée ce mois-ci.
+                </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card mb-3">
         <div class="card-header bg-warning text-dark">
             <h5 class="mb-0">
                 <i class="bi bi-exclamation-triangle"></i> Contrats en retard ({{ nombre_contrats_retard }})

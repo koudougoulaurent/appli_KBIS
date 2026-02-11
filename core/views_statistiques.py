@@ -52,6 +52,15 @@ def statistiques_globales(request):
         statut='valide'
     )
     total_paye = paiements_mois.aggregate(total=Sum('montant'))['total'] or Decimal('0')
+    
+    # RECETTES ENCAISSÉES PAR JOUR
+    from django.db.models.functions import TruncDate
+    recettes_par_jour = paiements_mois.annotate(
+        jour=TruncDate('date_paiement')
+    ).values('jour').annotate(
+        total=Sum('montant'),
+        nombre_paiements=Count('id')
+    ).order_by('jour')
 
     # Contrats en retard (échéance dépassée, paiement non reçu pour le mois actuel)
     # Récupérer les IDs des contrats qui ONT payé ce mois
@@ -116,6 +125,7 @@ def statistiques_globales(request):
         'total_du_bailleurs': total_du_bailleurs,
         'total_commissions': total_commissions,
         'total_charges_bailleur': total_charges_bailleur,
+        'recettes_par_jour': recettes_par_jour,
     }
     return render(request, 'statistiques/statistiques_globales.html', context)
 
@@ -204,6 +214,16 @@ def export_statistiques_csv(request):
     writer.writerow(['Total dû aux bailleurs', total_du_bailleurs])
     writer.writerow(['Total commissions agence', total_commissions])
     writer.writerow(['Total charges bailleur', total_charges_bailleur])
+    writer.writerow([])
+    writer.writerow(['RECETTES ENCAISSÉES PAR JOUR'])
+    writer.writerow(['Date', 'Montant', 'Nombre de paiements'])
+    for recette in recettes_par_jour:
+        writer.writerow([recette['jour'].strftime('%d/%m/%Y'), recette['total'], recette['nombre_paiements']])
+    writer.writerow([])
+    writer.writerow(['RECETTES ENCAISSÉES PAR JOUR'])
+    writer.writerow(['Date', 'Montant', 'Nombre de paiements'])
+    for recette in recettes_par_jour:
+        writer.writerow([recette['jour'].strftime('%d/%m/%Y'), recette['total'], recette['nombre_paiements']])
     writer.writerow([])
     writer.writerow(['Contrats en retard', contrats_retard.count()])
     for contrat in contrats_retard[:100]:  # Limité à 100 pour CSV
@@ -299,6 +319,7 @@ def export_statistiques_pdf(request):
         'total_charges_bailleur': total_charges_bailleur,
         'contrats_retard': contrats_retard,
         'nombre_contrats_retard': nombre_contrats_retard,
+        'recettes_par_jour': recettes_par_jour,
     }
     
     # Générer le HTML à partir du template

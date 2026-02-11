@@ -186,6 +186,41 @@
     </div>
 
     <div class="section">
+        <div class="section-title" style="background-color: #17a2b8;">📅 Recettes encaissées par jour</div>
+        {% if recettes_par_jour %}
+            <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                <thead>
+                    <tr style="background-color: #ecf0f1; font-weight: bold;">
+                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #bdc3c7;">Date</th>
+                        <th style="padding: 10px; text-align: center; border-bottom: 2px solid #bdc3c7;">Nb paiements</th>
+                        <th style="padding: 10px; text-align: right; border-bottom: 2px solid #bdc3c7;">Montant encaissé</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for recette in recettes_par_jour %}
+                    <tr style="border-bottom: 1px solid #ecf0f1;">
+                        <td style="padding: 8px;">{{ recette.jour|date:"d/m/Y (l)" }}</td>
+                        <td style="padding: 8px; text-align: center;"><strong>{{ recette.nombre_paiements }}</strong></td>
+                        <td style="padding: 8px; text-align: right;"><strong>{{ recette.total|floatformat:0 }} F CFA</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr style="background-color: #d5f4e6; font-weight: bold; border-top: 2px solid #27ae60;">
+                        <td style="padding: 10px;">TOTAL MOIS</td>
+                        <td style="padding: 10px; text-align: center;">-</td>
+                        <td style="padding: 10px; text-align: right; color: #27ae60;">{{ total_paye|floatformat:0 }} F CFA</td>
+                    </tr>
+                </tfoot>
+            </table>
+        {% else %}
+            <p style="color: #7f8c8d; padding: 10px; background-color: #ecf0f1; border-radius: 4px;">
+                ℹ️ Aucune recette encaissée ce mois-ci.
+            </p>
+        {% endif %}
+    </div>
+
+    <div class="section">
         <div class="section-title warning">⚠️ Contrats en retard ({{ nombre_contrats_retard }})</div>
         {% if contrats_retard %}
             <div class="retard-list">
