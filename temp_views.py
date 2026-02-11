@@ -172,24 +172,12 @@ def ajouter_paiement_partiel(request):
                     return render(request, 'paiements/ajouter_paiement_partiel.html', context_post)
             
             # *** VALIDATION STRICTE : V├®rifier que le mois est le mois suivant le dernier paiement ***
-            mois_paye_nom = request.POST.get('mois_paye', '')
-            annee_selectionnee = request.POST.get('annee_paiement', '')
+            # IMPORTANT : Utiliser les valeurs nettoy├®es par le formulaire (cleaned_data)
+            # Le formulaire combine d├®j├á mois_paye + annee_paiement dans sa m├®thode clean()
+            mois_paye_nom = form.cleaned_data.get('mois_paye', '')
             
             if mois_paye_nom:
-                # Si le mois n'a pas d'ann├®e, construire le format complet
-                import re
-                if not re.search(r'\d{4}', mois_paye_nom):
-                    # Pas d'ann├®e dans le mois - utiliser l'ann├®e s├®lectionn├®e ou l'ann├®e courante
-                    from datetime import datetime
-                    
-                    if annee_selectionnee:
-                        # Utiliser l'ann├®e s├®lectionn├®e par l'utilisateur
-                        mois_paye_nom = f"{mois_paye_nom} {annee_selectionnee}"
-                    else:
-                        # Fallback: utiliser l'ann├®e courante
-                        annee_actuelle = datetime.now().year
-                        mois_paye_nom = f"{mois_paye_nom} {annee_actuelle}"
-                
+                # La valeur est d├®j├á au bon format "mois ann├®e" gr├óce au clean() du formulaire
                 # VALIDATION STRICTE pour les paiements partiels (toujours de type loyer)
                 validation = ServicePaiementPartiel.valider_mois_a_regler(
                     paiement.contrat, mois_paye_nom, paiement.type_paiement or 'loyer'

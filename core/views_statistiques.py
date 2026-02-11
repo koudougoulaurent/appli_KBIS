@@ -142,6 +142,9 @@ def statistiques_globales(request):
         date_charge__month=mois
     )
     total_charges_bailleur = charges_mois.aggregate(total=Sum('montant'))['total'] or Decimal('0')
+    
+    # NET À REVERSER AUX BAILLEURS = Total dû - Charges bailleur
+    net_a_reverser_bailleurs = total_du_bailleurs - total_charges_bailleur
 
     # Compter le nombre total de contrats en retard (avant la limite de 50)
     nombre_contrats_retard = contrats_actifs.exclude(
@@ -198,6 +201,7 @@ def statistiques_globales(request):
         'total_du_bailleurs': total_du_bailleurs,
         'total_commissions': total_commissions,
         'total_charges_bailleur': total_charges_bailleur,
+        'net_a_reverser_bailleurs': net_a_reverser_bailleurs,
         'recettes_par_jour': recettes_par_jour,
         # Nouveaux indicateurs
         'taux_recouvrement': taux_recouvrement,
