@@ -129,12 +129,12 @@ def statistiques_globales(request):
     total_du_bailleurs = Decimal('0')
     total_commissions = Decimal('0')
     
-    # Somme de tous les loyers des contrats actifs
+    # Somme de tous les loyers des contrats actifs (MONTANT BRUT)
     for contrat in contrats_actifs:
         loyer = contrat.loyer_mensuel or Decimal('0')
         commission = (loyer * Decimal('0.10')).quantize(Decimal('0.01'))
         total_commissions += commission
-        total_du_bailleurs += (loyer - commission)
+        total_du_bailleurs += loyer  # Total BRUT (sans soustraire les commissions)
 
     # Total charges bailleur du mois
     charges_mois = ChargesBailleur.objects.filter(
@@ -143,8 +143,8 @@ def statistiques_globales(request):
     )
     total_charges_bailleur = charges_mois.aggregate(total=Sum('montant'))['total'] or Decimal('0')
     
-    # NET À REVERSER AUX BAILLEURS = Total dû - Charges bailleur
-    net_a_reverser_bailleurs = total_du_bailleurs - total_charges_bailleur
+    # NET À REVERSER AUX BAILLEURS = Total dû - Commissions - Charges bailleur
+    net_a_reverser_bailleurs = total_du_bailleurs - total_commissions - total_charges_bailleur
 
     # Compter le nombre total de contrats en retard (avant la limite de 50)
     nombre_contrats_retard = contrats_actifs.exclude(
