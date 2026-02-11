@@ -20,6 +20,11 @@
                             <i class="bi bi-chevron-right"></i>
                         </a>
                     </div>
+                    <div class="mt-2">
+                        <a href="?" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-calendar-today"></i> Aujourd'hui
+                        </a>
+                    </div>
                 </div>
                 <div class="col-md-4 text-end">
                     <div class="btn-group">
@@ -78,6 +83,62 @@
                         <small class="text-success">
                             <i class="bi bi-check-circle"></i> Aucun retard
                         </small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analyse détaillée des recettes -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Composition des recettes encaissées</h5>
+                </div>
+                <div class="card-body">
+                    {% if analyse_par_type %}
+                        <div class="row">
+                            {% for item in analyse_par_type %}
+                                <div class="col-md-3 mb-3">
+                                    <div class="border rounded p-3 h-100">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <span class="badge bg-secondary">{{ item.nombre }} paiement{{ item.nombre|pluralize }}</span>
+                                            {% if item.type_paiement == 'loyer' %}
+                                                <i class="bi bi-house-door text-primary" style="font-size: 1.5em;"></i>
+                                            {% elif item.type_paiement == 'avance' %}
+                                                <i class="bi bi-calendar-plus text-success" style="font-size: 1.5em;"></i>
+                                            {% elif item.type_paiement == 'caution' %}
+                                                <i class="bi bi-shield-check text-warning" style="font-size: 1.5em;"></i>
+                                            {% else %}
+                                                <i class="bi bi-cash text-info" style="font-size: 1.5em;"></i>
+                                            {% endif %}
+                                        </div>
+                                        <h6 class="text-muted mb-1">
+                                            {% if item.type_paiement == 'loyer' %}
+                                                Loyers
+                                            {% elif item.type_paiement == 'avance' %}
+                                                Avances
+                                            {% elif item.type_paiement == 'caution' %}
+                                                Cautions
+                                            {% elif item.type_paiement == 'charges' %}
+                                                Charges
+                                            {% elif item.type_paiement == 'regularisation' %}
+                                                Régularisations
+                                            {% else %}
+                                                {{ item.type_paiement|title }}
+                                            {% endif %}
+                                        </h6>
+                                        <h4 class="mb-0">{{ item.total|floatformat:0 }} F</h4>
+                                        <small class="text-muted">
+                                            {% widthratio item.total total_recettes 100 %}% du total
+                                        </small>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">Aucune donnée disponible pour ce mois.</p>
                     {% endif %}
                 </div>
             </div>
@@ -204,21 +265,48 @@
             </h5>
         </div>
         <div class="card-body">
+            {% if contrats_retard_critique %}
+                <div class="alert alert-danger mb-3">
+                    <strong><i class="bi bi-exclamation-octagon"></i> Alerte critique !</strong>
+                    {{ contrats_retard_critique|length }} contrat{{ contrats_retard_critique|length|pluralize }} sans paiement depuis plus de 2 mois
+                </div>
+            {% endif %}
+            
             {% if contrats_retard %}
                 <ul class="list-group">
                     {% for contrat in contrats_retard %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <strong>{{ contrat }}</strong>
-                                {% if contrat.locataire %}
-                                    - {{ contrat.locataire }}
-                                {% endif %}
-                                {% if contrat.propriete %}
-                                    <br><small class="text-muted">{{ contrat.propriete }}</small>
-                                {% endif %}
-                            </div>
-                            <span class="badge bg-warning text-dark">{{ contrat.loyer_mensuel|floatformat:0 }} F CFA</span>
-                        </li>
+                        {% for critique in contrats_retard_critique %}
+                            {% if critique.contrat.id == contrat.id %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center border-danger bg-danger bg-opacity-10">
+                                    <div>
+                                        <strong class="text-danger">🚨 {{ contrat }}</strong>
+                                        {% if contrat.locataire %}
+                                            - {{ contrat.locataire }}
+                                        {% endif %}
+                                        {% if contrat.propriete %}
+                                            <br><small class="text-muted">{{ contrat.propriete }}</small>
+                                        {% endif %}
+                                        <br><small class="text-danger"><strong>Aucun paiement depuis 3+ mois</strong></small>
+                                    </div>
+                                    <span class="badge bg-danger">{{ contrat.loyer_mensuel|floatformat:0 }} F CFA</span>
+                                </li>
+                            {% endfor %}
+                        {% endfor %}
+                        
+                        {% if not contrat in contrats_retard_critique|map:attribute:'contrat' %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ contrat }}</strong>
+                                    {% if contrat.locataire %}
+                                        - {{ contrat.locataire }}
+                                    {% endif %}
+                                    {% if contrat.propriete %}
+                                        <br><small class="text-muted">{{ contrat.propriete }}</small>
+                                    {% endif %}
+                                </div>
+                                <span class="badge bg-warning text-dark">{{ contrat.loyer_mensuel|floatformat:0 }} F CFA</span>
+                            </li>
+                        {% endif %}
                     {% endfor %}
                 </ul>
             {% else %}

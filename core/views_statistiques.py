@@ -98,6 +98,26 @@ def statistiques_globales(request):
     contrats_retard = contrats_actifs.exclude(
         id__in=contrats_avec_paiement_ids
     )[:50]
+    
+    # IDENTIFIER LES RETARDS CRITIQUES (> 2 mois)
+    # Compter combien de mois payés manquent pour chaque contrat en retard
+    contrats_retard_critique = []
+    for contrat in contrats_retard:
+        # Calculer les paiements des 3 derniers mois
+        date_il_y_a_3_mois = date_debut_mois - timedelta(days=90)
+        paiements_recents = Paiement.objects.filter(
+            contrat=contrat,
+            statut='valide',
+            date_paiement__gte=date_il_y_a_3_mois,
+            date_paiement__lte=date_fin_mois
+        ).count()
+        
+        # Si moins de 1 paiement sur 3 mois = critique
+        if paiements_recents == 0:
+            contrats_retard_critique.append({
+                'contrat': contrat,
+                'nb_mois_impaye': 3
+            })
 
     # CALCUL PAR BAILLEUR : total dû et commissions (OPTIMISÉ)
     # Utiliser prefetch pour éviter N+1 queries
@@ -149,6 +169,17 @@ def statistiques_globales(request):
     
     evolution_montant = total_recettes - total_paye_mois_precedent
 
+    # ANALYSE DÉTAILLÉE DES RECETTES PAR TYPE
+    from django.db.models import Case, When, Value, CharField
+    
+    analyse_par_type = paiements_mois.values('type_paiement').annotate(
+        total=Sum('montant'),
+        nombre=Count('id')
+    ).order_by('-total')
+    
+    # Transformer en dict pour accès facile
+    recettes_par_type = {item['type_paiement']: item for item in analyse_par_type}
+
     context = {
         'mois': mois,
         'annee': annee,
@@ -171,6 +202,9 @@ def statistiques_globales(request):
         'evolution_pourcent': evolution_pourcent,
         'evolution_montant': evolution_montant,
         'total_paye_mois_precedent': total_paye_mois_precedent,
+        'recettes_par_type': recettes_par_type,
+        'analyse_par_type': analyse_par_type,
+        'contrats_retard_critique': contrats_retard_critique,
     }
     return render(request, 'statistiques/statistiques_globales.html', context)
 
