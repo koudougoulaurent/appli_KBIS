@@ -194,7 +194,7 @@ class PaiementForm(forms.ModelForm):
                 # Charger les charges déductibles validées pour ce contrat
                 self.fields['charges_deductibles'].queryset = ChargeDeductible.objects.filter(
                     contrat=contrat, 
-                    statut='validee'
+                    est_valide=True
                 ).order_by('-date_charge')
                 
                 # Si il y a des charges validées, les pré-sélectionner
@@ -497,7 +497,7 @@ class PaiementAdminForm(PaiementForm):
                 # Charger les charges déductibles validées pour ce contrat
                 self.fields['charges_deductibles'].queryset = ChargeDeductible.objects.filter(
                     contrat=contrat, 
-                    statut='validee'
+                    est_valide=True
                 ).order_by('-date_charge')
                 
                 # Si il y a des charges validées, les pré-sélectionner
