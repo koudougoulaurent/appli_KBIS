@@ -1081,15 +1081,10 @@ def ajouter_paiement(request):
                                 annee_actuelle = datetime.now().year
                                 mois_paye_nom = f"{mois_paye_nom} {annee_actuelle}"
                         else:
-                            # Le mois contient déjà une année, mais on peut la remplacer par celle du champ annee_paiement si fournie
-                            if annee_paiement:
-                                try:
-                                    annee = int(annee_paiement)
-                                    # Remplacer l'année existante par celle du champ
-                                    mois_sans_annee = re.sub(r'\s+\d{4}$', '', mois_paye_nom).strip()
-                                    mois_paye_nom = f"{mois_sans_annee} {annee}"
-                                except ValueError:
-                                    pass  # Garder l'année existante si l'année fournie n'est pas valide
+                            # Le mois contient déjà une année (ex: "octobre 2025" depuis mois_autorises)
+                            # GARDER cette année - ne pas la remplacer par annee_paiement
+                            # (l'année dans mois_paye est prioritaire car le dropdown mois est pré-rempli avec les mois autorisés)
+                            pass
                     
                     # VALIDATION STRICTE pour les paiements de loyer
                     from .services_paiement_partiel import ServicePaiementPartiel
@@ -1415,7 +1410,12 @@ def ajouter_paiement(request):
         
         # Initialiser le formulaire avec les mois autorisés pour les paiements de loyer
         if contrat_id_get:
-            form = PaiementForm(contrat_id=contrat_id_get, mois_autorises=mois_autorises, type_paiement_initial='loyer')
+            form = PaiementForm(
+                contrat_id=contrat_id_get,
+                mois_autorises=mois_autorises,
+                mois_suggere=mois_attendu if mois_autorises else None,
+                type_paiement_initial='loyer'
+            )
         else:
             form = PaiementForm()
     
