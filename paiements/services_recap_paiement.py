@@ -213,63 +213,35 @@ class ServiceRecapPaiementMensuel:
                 'details': 'Loyer mensuel non défini'
             }
         
-        # 1. Récupérer TOUS les paiements validés (dans l'ordre chronologique)
-        # Un paiement >= loyer_mensuel est considéré comme une avance (même si type='loyer')
-        tous_paiements = Paiement.objects.filter(
+        # 1. Récupérer TOUS les paiements validés
+        tous_paiements = list(Paiement.objects.filter(
             contrat=contrat,
             statut='valide'
         ).filter(
             Q(type_paiement='loyer') | 
             Q(type_paiement='paiement_partiel') |
             Q(type_paiement='avance')
-        ).order_by('date_paiement')
+        ).order_by('date_paiement'))
         
-        # 2. Simuler l'application des paiements mois par mois
-        # pour déterminer si ce mois est couvert
+        # 2. Construire les mois payés (utilise mois_paye quand disponible)
+        mois_fin_ref = mois_fin
+        mois_payes, montant_restant_seq = ServiceRecapPaiementMensuel._construire_mois_payes(
+            contrat, tous_paiements, mois_fin_ref, loyer_mensuel, retourner_montant_restant=True
+        )
+        
         mois_debut_contrat = contrat.date_debut.replace(day=1)
+        mois_ref_key = (mois_debut.year, mois_debut.month)
+        mois_trouve = mois_ref_key in mois_payes
+        
+        # Trouver le premier mois non payé (mois_courant) et le dernier paiement utilisé
         mois_courant = mois_debut_contrat
-        montant_restant = Decimal('0')
-        dernier_paiement_utilise = None
-        mois_trouve = False
-        
-        for paiement in tous_paiements:
-            montant_paiement = paiement.montant_net_paye or paiement.montant or Decimal('0')
-            
-            # Ajouter le montant restant précédent
-            montant_total = montant_restant + montant_paiement
-            
-            # Si le montant total >= loyer_mensuel, on peut payer des mois
-            while montant_total >= loyer_mensuel:
-                # Avancer au mois suivant (qui sera payé)
-                mois_suivant = mois_courant + relativedelta(months=1)
-                
-                # Si ce mois suivant est exactement le mois à vérifier, il est payé
-                if mois_suivant == mois_debut:
-                    # Ce mois est couvert par une avance
-                    mois_trouve = True
-                    dernier_paiement_utilise = paiement
-                elif mois_suivant > mois_debut:
-                    # On a dépassé le mois, donc il était payé avant
-                    mois_trouve = True
-                    if not dernier_paiement_utilise:
-                        dernier_paiement_utilise = paiement
-                
-                # Payer ce mois
-                mois_courant = mois_suivant
-                montant_total = montant_total - loyer_mensuel
-                
-                # Si on a dépassé le mois à vérifier, on peut arrêter
-                if mois_courant > mois_debut and mois_trouve:
-                    break
-            
-            # Conserver le reste pour le prochain paiement
-            montant_restant = montant_total
-            
-            # Si le mois est trouvé, sortir de la boucle
-            if mois_trouve and mois_courant > mois_debut:
+        dernier_paiement_utilise = tous_paiements[-1] if tous_paiements else None
+        while mois_courant <= mois_debut:
+            if (mois_courant.year, mois_courant.month) not in mois_payes:
                 break
+            mois_courant = mois_courant + relativedelta(months=1)
         
-        # Si le mois est trouvé dans les avances, il est réglé
+        # Si le mois de référence est payé, il est réglé
         if mois_trouve or mois_courant > mois_debut:
             montant_total_paye = loyer_mensuel
             
@@ -296,7 +268,23 @@ class ServiceRecapPaiementMensuel:
             }
         
         # Si on arrive ici, le mois n'est pas encore couvert
-        # Vérifier s'il y a des paiements partiels pour ce mois spécifique
+        # Calculer le montant payé pour ce mois (paiements avec mois_paye exact + date dans le mois + reste séquentiel)
+        mois_ref_str = formater_mois_francais(mois_debut)
+        paiements_mois_paye = Paiement.objects.filter(
+            contrat=contrat,
+            statut='valide',
+            mois_paye__iexact=mois_ref_str
+        ).filter(
+            Q(type_paiement='loyer') | 
+            Q(type_paiement='paiement_partiel')
+        )
+        montant_partiel = paiements_mois_paye.aggregate(
+            total=Sum('montant_net_paye')
+        )['total'] or Decimal('0')
+        if montant_partiel == Decimal('0'):
+            montant_partiel = paiements_mois_paye.aggregate(total=Sum('montant'))['total'] or Decimal('0')
+        
+        # Paiements avec date dans le mois mais sans mois_paye (ou mois_paye différent)
         paiements_mois = Paiement.objects.filter(
             contrat=contrat,
             statut='valide',
@@ -305,25 +293,23 @@ class ServiceRecapPaiementMensuel:
         ).filter(
             Q(type_paiement='loyer') | 
             Q(type_paiement='paiement_partiel')
-        )
+        ).exclude(mois_paye__iexact=mois_ref_str)
+        montant_date_mois = paiements_mois.aggregate(total=Sum('montant_net_paye'))['total'] or Decimal('0')
+        if montant_date_mois == Decimal('0'):
+            montant_date_mois = paiements_mois.aggregate(total=Sum('montant'))['total'] or Decimal('0')
+        montant_partiel += montant_date_mois
         
-        montant_partiel = paiements_mois.aggregate(
-            total=Sum('montant_net_paye')
-        )['total'] or Decimal('0')
-        
-        if montant_partiel == Decimal('0'):
-            montant_partiel = paiements_mois.aggregate(
-                total=Sum('montant')
-            )['total'] or Decimal('0')
-        
-        # Ajouter le reste éventuel
-        if mois_courant == mois_debut and montant_restant > 0:
-            montant_partiel += montant_restant
+        # Ajouter le reste éventuel des paiements sans mois_paye (application séquentielle)
+        if mois_courant == mois_debut and montant_restant_seq > 0:
+            montant_partiel += montant_restant_seq
         
         montant_total_paye = montant_partiel
         
         if montant_total_paye >= loyer_mensuel:
-            dernier_paiement = paiements_mois.order_by('-date_paiement').first()
+            dernier_paiement = (
+                paiements_mois_paye.order_by('-date_paiement').first() or
+                paiements_mois.order_by('-date_paiement').first()
+            )
             return {
                 'statut': 'regle',
                 'statut_display': 'RÉGLÉ',
@@ -334,12 +320,10 @@ class ServiceRecapPaiementMensuel:
             }
         else:
             # Le loyer est en retard - calculer le nombre de mois de retard
-            # Le dernier mois réglé est mois_courant (le dernier mois qui a été payé)
-            dernier_mois_regle = mois_courant
+            # mois_courant = premier mois NON payé (on a avancé jusqu'ici après les derniers paiements)
+            # Les mois en retard vont de mois_courant jusqu'au mois de référence (mois_debut)
             mois_en_retard = []
-            
-            # Calculer tous les mois en retard depuis le dernier mois réglé jusqu'au mois vérifié
-            mois_retard = dernier_mois_regle + relativedelta(months=1)
+            mois_retard = mois_courant  # Premier mois non payé
             while mois_retard <= mois_debut:
                 mois_en_retard.append(mois_retard)
                 mois_retard = mois_retard + relativedelta(months=1)
@@ -451,6 +435,63 @@ class ServiceRecapPaiementMensuel:
         return None
     
     @staticmethod
+    def _construire_mois_payes(contrat, tous_paiements, mois_fin_ref, loyer_mensuel, retourner_montant_restant=False):
+        """
+        Construit l'ensemble des mois payés pour un contrat.
+        Utilise mois_paye quand disponible pour une attribution correcte, sinon application séquentielle.
+        
+        Args:
+            retourner_montant_restant: Si True, retourne (mois_payes, montant_restant)
+        
+        Returns:
+            set ou tuple: Ensemble des mois payés, ou (mois_payes, montant_restant) si retourner_montant_restant
+        """
+        from .services_paiement_partiel import ServicePaiementPartiel
+        
+        mois_debut_contrat = contrat.date_debut.replace(day=1)
+        mois_payes = set()
+        montant_par_mois = {}  # (year, month) -> Decimal
+        
+        # 1. Paiements avec mois_paye explicite : attribuer au mois indiqué
+        for paiement in tous_paiements:
+            if not paiement.mois_paye:
+                continue
+            date_mois = ServicePaiementPartiel.convertir_mois_paye_en_date(paiement.mois_paye)
+            if not date_mois or date_mois > mois_fin_ref:
+                continue
+            try:
+                montant_du = ServicePaiementPartiel.calculer_montant_du_mois(
+                    contrat, paiement.mois_paye, date_mois
+                )
+            except Exception:
+                montant_du = loyer_mensuel
+            montant_paye = paiement.montant_net_paye or paiement.montant or Decimal('0')
+            key = (date_mois.year, date_mois.month)
+            montant_par_mois[key] = montant_par_mois.get(key, Decimal('0')) + montant_paye
+            if montant_par_mois[key] >= montant_du:
+                mois_payes.add(key)
+        
+        # 2. Paiements sans mois_paye : application séquentielle
+        mois_courant = mois_debut_contrat
+        montant_restant = Decimal('0')
+        for paiement in tous_paiements:
+            if paiement.mois_paye:
+                continue
+            montant_paiement = paiement.montant_net_paye or paiement.montant or Decimal('0')
+            montant_total = montant_restant + montant_paiement
+            while montant_total >= loyer_mensuel and mois_courant <= mois_fin_ref:
+                key = (mois_courant.year, mois_courant.month)
+                if key not in mois_payes:
+                    mois_payes.add(key)
+                montant_total -= loyer_mensuel
+                mois_courant = mois_courant + relativedelta(months=1)
+            montant_restant = montant_total
+        
+        if retourner_montant_restant:
+            return mois_payes, montant_restant
+        return mois_payes
+    
+    @staticmethod
     def _calculer_mois_retard(contrat, mois_reference):
         """
         Calcule le nombre de mois de retard pour un contrat donné.
@@ -483,29 +524,10 @@ class ServiceRecapPaiementMensuel:
             Q(type_paiement='avance')
         ).order_by('date_paiement')
         
-        # Simuler l'application des paiements pour déterminer quels mois sont payés
-        mois_debut_contrat = contrat.date_debut.replace(day=1)
-        mois_courant = mois_debut_contrat
-        montant_restant = Decimal('0')
-        mois_payes = set()  # Ensemble des mois payés (format: (année, mois))
-        
-        for paiement in tous_paiements:
-            montant_paiement = paiement.montant_net_paye or paiement.montant or Decimal('0')
-            montant_total = montant_restant + montant_paiement
-            
-            # Appliquer les paiements mois par mois
-            while montant_total >= loyer_mensuel and mois_courant <= mois_fin_ref:
-                # Ce mois est payé
-                mois_payes.add((mois_courant.year, mois_courant.month))
-                montant_total -= loyer_mensuel
-                
-                # Passer au mois suivant
-                if mois_courant.month == 12:
-                    mois_courant = mois_courant.replace(year=mois_courant.year + 1, month=1, day=1)
-                else:
-                    mois_courant = mois_courant.replace(month=mois_courant.month + 1, day=1)
-            
-            montant_restant = montant_total
+        # Construire mois_payes en tenant compte de mois_paye quand disponible
+        mois_payes = ServiceRecapPaiementMensuel._construire_mois_payes(
+            contrat, tous_paiements, mois_fin_ref, loyer_mensuel
+        )
         
         # Compter les mois de retard depuis le mois de référence
         mois_retard = 0
