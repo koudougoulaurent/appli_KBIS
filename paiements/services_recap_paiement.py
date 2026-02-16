@@ -241,8 +241,9 @@ class ServiceRecapPaiementMensuel:
                 break
             mois_courant = mois_courant + relativedelta(months=1)
         
-        # Si le mois de référence est payé, il est réglé
-        if mois_trouve or mois_courant > mois_debut:
+        # RÉGLÉ uniquement si TOUS les mois (depuis début contrat jusqu'au mois de référence) sont payés.
+        # Ne pas considérer "réglé" si le mois de référence est payé mais des mois antérieurs sont en retard.
+        if mois_trouve and mois_courant > mois_debut:
             montant_total_paye = loyer_mensuel
             
             # Détecter si c'est une avance multi-mois
@@ -305,7 +306,9 @@ class ServiceRecapPaiementMensuel:
         
         montant_total_paye = montant_partiel
         
-        if montant_total_paye >= loyer_mensuel:
+        # Ne considérer "réglé" que si TOUS les mois antérieurs sont payés (mois_courant > mois_debut).
+        # Un paiement partiel sur le mois de référence ne suffit pas si des mois précédents sont en retard.
+        if montant_total_paye >= loyer_mensuel and mois_courant > mois_debut:
             dernier_paiement = (
                 paiements_mois_paye.order_by('-date_paiement').first() or
                 paiements_mois.order_by('-date_paiement').first()
@@ -335,21 +338,28 @@ class ServiceRecapPaiementMensuel:
             
             nombre_mois_retard = len(mois_en_retard)
             
-            montant_manquant = loyer_mensuel - montant_total_paye
+            # Montant total dû pour tous les mois en retard
+            montant_total_du_retard = nombre_mois_retard * loyer_mensuel
+            # Total payé au global (somme des paiements) pour calculer le manque réel
+            total_paye_global = sum(
+                p.montant_net_paye or p.montant or Decimal('0')
+                for p in tous_paiements
+            )
+            montant_manquant = max(Decimal('0'), montant_total_du_retard - total_paye_global)
             
             # Préparer le message de détails avec les mois en retard
             if nombre_mois_retard > 0:
                 details_retard = f'Retard de {nombre_mois_retard} mois'
                 if mois_liste_str:
                     details_retard += f' : {", ".join(mois_liste_str)}'
-                details_retard += f' - Manque {montant_manquant:.0f} F CFA sur {loyer_mensuel:.0f} F CFA'
+                details_retard += f' - Manque {montant_manquant:.0f} F CFA sur {montant_total_du_retard:.0f} F CFA'
             else:
                 details_retard = f'Manque {montant_manquant:.0f} F CFA sur {loyer_mensuel:.0f} F CFA'
             
             return {
                 'statut': 'en_retard',
                 'statut_display': 'EN RETARD',
-                'montant_paye': montant_total_paye,
+                'montant_paye': total_paye_global,  # Total payé au global (pas seulement le mois de référence)
                 'montant_attendu': loyer_mensuel,
                 'montant_manquant': montant_manquant,
                 'nombre_mois_retard': nombre_mois_retard,
