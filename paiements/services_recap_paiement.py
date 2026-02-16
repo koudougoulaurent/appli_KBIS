@@ -269,7 +269,8 @@ class ServiceRecapPaiementMensuel:
             }
         
         # Si on arrive ici, le mois n'est pas encore couvert
-        # Calculer le montant payé pour ce mois (paiements avec mois_paye exact + date dans le mois + reste séquentiel)
+        # IMPORTANT: mois_paye = mois de loyer couvert | date_paiement = date d'encaissement (sans lien avec le mois)
+        # On utilise UNIQUEMENT mois_paye pour attribuer un paiement à un mois, jamais date_paiement.
         mois_ref_str = formater_mois_francais(mois_debut)
         paiements_mois_paye = Paiement.objects.filter(
             contrat=contrat,
@@ -285,22 +286,7 @@ class ServiceRecapPaiementMensuel:
         if montant_partiel == Decimal('0'):
             montant_partiel = paiements_mois_paye.aggregate(total=Sum('montant'))['total'] or Decimal('0')
         
-        # Paiements avec date dans le mois mais sans mois_paye (ou mois_paye différent)
-        paiements_mois = Paiement.objects.filter(
-            contrat=contrat,
-            statut='valide',
-            date_paiement__gte=mois_debut,
-            date_paiement__lte=mois_fin
-        ).filter(
-            Q(type_paiement='loyer') | 
-            Q(type_paiement='paiement_partiel')
-        ).exclude(mois_paye__iexact=mois_ref_str)
-        montant_date_mois = paiements_mois.aggregate(total=Sum('montant_net_paye'))['total'] or Decimal('0')
-        if montant_date_mois == Decimal('0'):
-            montant_date_mois = paiements_mois.aggregate(total=Sum('montant'))['total'] or Decimal('0')
-        montant_partiel += montant_date_mois
-        
-        # Ajouter le reste éventuel des paiements sans mois_paye (application séquentielle)
+        # Reste des paiements SANS mois_paye : appliqué séquentiellement (montant_restant_seq)
         if mois_courant == mois_debut and montant_restant_seq > 0:
             montant_partiel += montant_restant_seq
         
@@ -311,14 +297,14 @@ class ServiceRecapPaiementMensuel:
         if montant_total_paye >= loyer_mensuel and mois_courant > mois_debut:
             dernier_paiement = (
                 paiements_mois_paye.order_by('-date_paiement').first() or
-                paiements_mois.order_by('-date_paiement').first()
+                (tous_paiements[-1] if tous_paiements else None)
             )
             return {
                 'statut': 'regle',
                 'statut_display': 'RÉGLÉ',
                 'montant_paye': montant_total_paye,
                 'montant_attendu': loyer_mensuel,
-                'date_paiement': dernier_paiement.date_paiement if dernier_paiement else None,
+                'date_paiement': dernier_paiement.date_paiement if dernier_paiement else None,  # date d'encaissement
                 'details': f'Loyer payé ({montant_total_paye:.0f} F CFA)'
             }
         else:
@@ -448,7 +434,9 @@ class ServiceRecapPaiementMensuel:
     def _construire_mois_payes(contrat, tous_paiements, mois_fin_ref, loyer_mensuel, retourner_montant_restant=False):
         """
         Construit l'ensemble des mois payés pour un contrat.
-        Utilise mois_paye quand disponible pour une attribution correcte, sinon application séquentielle.
+        - mois_paye (champ) = mois de loyer couvert par le paiement
+        - date_paiement = date d'encaissement (ordre chronologique uniquement, pas d'attribution)
+        Utilise mois_paye quand disponible pour l'attribution, sinon application séquentielle.
         
         Args:
             retourner_montant_restant: Si True, retourne (mois_payes, montant_restant)
