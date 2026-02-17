@@ -1130,16 +1130,20 @@ def generer_recapitulatif_automatique(request):
 
 
 def _generer_pdf_recap_locataires_batch(bailleur, mois_recap, locataires_batch, page_num, total_pages, entete_base64):
-    """Génère un PDF pour un lot de locataires (pagination)."""
+    """Génère un PDF pour un lot de locataires (pagination). Données primitives uniquement (évite OOM)."""
     import datetime
     from django.template.loader import render_to_string
     from io import BytesIO
     from xhtml2pdf import pisa
     from .services_recap_paiement import MOIS_FRANCAIS
-    
+
+    LOCATAIRES_PAR_PAGE = 10
     mois_display = f"{MOIS_FRANCAIS.get(mois_recap.month, '')} {mois_recap.year}" if hasattr(mois_recap, 'month') else str(mois_recap)
     recap_data = {
-        'bailleur': bailleur,
+        'bailleur_nom': bailleur.get_nom_complet() if hasattr(bailleur, 'get_nom_complet') else str(bailleur),
+        'bailleur_telephone': getattr(bailleur, 'telephone', None) or 'Non renseigné',
+        'bailleur_email': getattr(bailleur, 'email', None) or 'Non renseigné',
+        'bailleur_adresse': getattr(bailleur, 'adresse', None) or 'Non renseignée',
         'mois_recap': mois_recap,
         'mois_display': mois_display,
         'locataires': locataires_batch,
@@ -1149,7 +1153,7 @@ def _generer_pdf_recap_locataires_batch(bailleur, mois_recap, locataires_batch, 
         'limit_truncated': False,
         'page_num': page_num,
         'total_pages': total_pages,
-        'page_offset': (page_num - 1) * 15,  # Pour numérotation continue (1, 2... 16, 17...)
+        'page_offset': (page_num - 1) * LOCATAIRES_PAR_PAGE,
     }
     date_generation = datetime.datetime.now()
     html_content = render_to_string(
@@ -1157,7 +1161,13 @@ def _generer_pdf_recap_locataires_batch(bailleur, mois_recap, locataires_batch, 
         {'recap': recap_data, 'date_generation': date_generation, 'entete_base64': entete_base64}
     )
     pdf_buffer = BytesIO()
-    pisa.CreatePDF(html_content, dest=pdf_buffer, encoding='UTF-8', link_callback=None)
+    pisa.CreatePDF(
+        html_content,
+        dest=pdf_buffer,
+        encoding='UTF-8',
+        link_callback=None,
+        capacity=50 * 1024,  # Buffer 50KB → temp files pour gros docs, réduit OOM
+    )
     return pdf_buffer.getvalue()
 
 
@@ -1173,7 +1183,7 @@ def generer_recap_paiement_mensuel(request, bailleur_id):
     from io import BytesIO
     from core.utils import check_group_permissions_with_fallback
     
-    LOCATAIRES_PAR_PAGE = 15  # Évite OOM xhtml2pdf sur Render
+    LOCATAIRES_PAR_PAGE = 10  # Évite OOM xhtml2pdf sur Render (mémoire limitée)
     
     # Vérification des permissions
     permissions = check_group_permissions_with_fallback(
@@ -1268,18 +1278,32 @@ def generer_recap_paiement_mensuel(request, bailleur_id):
             recap_data['locataires'] = []
             recap_data['limit_truncated'] = False
         
-        # Charger l'image en Base64 (une seule fois)
+        # Charger l'image en Base64 (redimensionnée pour réduire mémoire PDF)
         import os
         import base64
+        from io import BytesIO
         from django.conf import settings
         entete_base64 = ""
         image_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'enteteEnImage.png')
         if os.path.exists(image_path):
             try:
-                with open(image_path, "rb") as image_file:
-                    entete_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+                from PIL import Image
+                img = Image.open(image_path)
+                max_w = 1200  # Réduit taille pour éviter OOM sur Render
+                if img.width > max_w:
+                    ratio = max_w / img.width
+                    new_h = int(img.height * ratio)
+                    img = img.resize((max_w, new_h), Image.Resampling.LANCZOS)
+                buf = BytesIO()
+                img.save(buf, format='PNG', optimize=True)
+                entete_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
             except Exception as e:
-                logger.warning(f"Impossible de charger l'image d'en-tête: {e}")
+                logger.warning(f"Image en-tête (fallback brut): {e}")
+                try:
+                    with open(image_path, "rb") as f:
+                        entete_base64 = base64.b64encode(f.read()).decode('utf-8')
+                except Exception:
+                    pass
         
         # Pagination: générer un PDF par lot de 15 locataires
         locataires_list = recap_data['locataires']

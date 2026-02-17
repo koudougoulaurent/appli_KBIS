@@ -5,284 +5,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>État des Paiements Locataires - {{ recap.bailleur.get_nom_complet }} - {{ recap.mois_display }}</title>
+    <title>État des Paiements Locataires - {{ recap.bailleur_nom }} - {{ recap.mois_display }}</title>
     <style>
-        @page {
-            size: A4 landscape;
-            margin: 1.5cm;
-        }
-        
-        body {
-            font-family: 'Arial', sans-serif;
-            font-size: 8pt;
-            line-height: 1.2;
-            color: #333;
-            margin: 0;
-            padding: 0;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 1cm;
-            border-bottom: 2px solid #2c3e50;
-            padding-bottom: 0.5cm;
-        }
-        
-        .entreprise-logo {
-            max-width: 120px;
-            max-height: 60px;
-            margin-bottom: 0.3cm;
-        }
-        
-        .entreprise-name {
-            font-size: 12pt;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 0.2cm;
-        }
-        
-        .document-info {
-            font-size: 7pt;
-            color: #666;
-        }
-        .page-info {
-            font-size: 8pt;
-            font-weight: bold;
-            color: #3498db;
-            margin-top: 0.2cm;
-        }
-        
-        .title {
-            font-size: 16pt;
-            font-weight: bold;
-            color: #2c3e50;
-            text-align: center;
-            margin: 0.5cm 0;
-            text-transform: uppercase;
-        }
-        
-        .bailleur-info {
-            background-color: #f8f9fa;
-            padding: 0.3cm;
-            margin-bottom: 0.5cm;
-            border-radius: 3px;
-            border-left: 3px solid #3498db;
-        }
-        
-        .bailleur-info h3 {
-            margin: 0 0 0.2cm 0;
-            font-size: 10pt;
-            color: #2c3e50;
-        }
-        
-        .info-grid {
-            display: table;
-            width: 25cm;
-            table-layout: fixed;
-            font-size: 7pt;
-        }
-        
-        .info-item {
-            display: table-cell;
-            width: 25%;
-            padding: 0.1cm;
-            vertical-align: middle;
-        }
-        
-        .info-label {
-            font-weight: bold;
-            color: #555;
-            display: inline-block;
-            min-width: 80px;
-        }
-        
-        .info-value {
-            color: #333;
-            font-weight: bold;
-        }
-        
-        .tenants-section {
-            margin-bottom: 0.5cm;
-        }
-        
-        .section-title {
-            font-size: 10pt;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 0.3cm;
-            padding: 0.2cm;
-            background-color: #ecf0f1;
-            border-left: 3px solid #3498db;
-        }
-        
-        .tenants-table {
-            width: 25cm;
-            border-collapse: collapse;
-            font-size: 7pt;
-            margin-bottom: 0.3cm;
-            table-layout: fixed;
-            word-wrap: break-word;
-        }
-        
-        .tenants-table th {
-            background-color: #34495e;
-            color: white;
-            padding: 0.15cm;
-            text-align: center;
-            font-weight: bold;
-            border: 1px solid #2c3e50;
-        }
-        
-        .tenants-table td {
-            padding: 0.1cm;
-            border: 1px solid #bdc3c7;
-            text-align: center;
-            vertical-align: top;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            font-weight: bold;
-        }
-        
-        .tenants-table td * {
-            font-weight: bold;
-        }
-        
-        .tenants-table td small {
-            font-weight: bold;
-        }
-        
-        .tenants-table tr:nth-child(even) {
-            background-color: #f8f9fa;
-        }
-        
-        .tenants-table tr:hover {
-            background-color: #e3f2fd;
-        }
-        
-        .tenant-info {
-            text-align: left;
-            font-size: 6pt;
-        }
-        
-        .tenant-name {
-            font-weight: bold;
-            color: #2980b9;
-        }
-        
-        .tenant-contact {
-            color: #7f8c8d;
-            font-size: 5pt;
-        }
-        
-        .property-info {
-            text-align: left;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        
-        .amount {
-            font-weight: bold;
-            color: #27ae60;
-        }
-        
-        .amount-negative {
-            color: #e74c3c;
-        }
-        
-        .status-regle {
-            background-color: #d4edda;
-            color: #155724;
-            padding: 0.05cm 0.1cm;
-            border-radius: 2px;
-            font-size: 6pt;
-            font-weight: bold;
-        }
-        
-        .status-retard {
-            background-color: #f8d7da;
-            color: #721c24;
-            padding: 0.05cm 0.1cm;
-            border-radius: 2px;
-            font-size: 6pt;
-            font-weight: bold;
-        }
-        
-        .status-non-applicable {
-            background-color: #e9ecef;
-            color: #666;
-            padding: 0.05cm 0.1cm;
-            border-radius: 2px;
-            font-size: 6pt;
-        }
-        
-        .details-retard {
-            font-size: 5pt;
-            color: #e74c3c;
-            font-style: italic;
-            text-align: left;
-            padding-left: 0.2cm;
-        }
-        
-        .footer {
-            margin-top: 0.5cm;
-            padding-top: 0.3cm;
-            border-top: 1px solid #bdc3c7;
-            font-size: 6pt;
-            color: #7f8c8d;
-            text-align: center;
-        }
-        
-        .page-break {
-            page-break-before: always;
-        }
-        
-        .no-data {
-            text-align: center;
-            color: #7f8c8d;
-            font-style: italic;
-            padding: 0.5cm;
-        }
-        
-        .contrat-info {
-            font-size: 5pt;
-            color: #7f8c8d;
-            text-align: left;
-        }
-        
-        .contrat-info strong {
-            font-weight: bold;
-        }
-        
-        .contrat-info small {
-            font-weight: bold;
-        }
-        
-        .details-retard {
-            font-weight: bold;
-        }
-        
-        .tenant-info {
-            font-weight: bold;
-        }
-        
-        .code-locataire {
-            font-size: 5pt;
-            line-height: 1.2;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            font-weight: bold;
-        }
-        
-        .tenants-table td.code-locataire {
-            width: 3cm;
-            text-align: left;
-            padding: 0.06cm 0.04cm;
-            vertical-align: middle;
-            font-size: 5pt;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
+        @page { size: A4 landscape; margin: 1.5cm; }
+        body { font-family: Arial, sans-serif; font-size: 8pt; line-height: 1.2; color: #333; margin: 0; padding: 0; }
+        .header { text-align: center; margin-bottom: 1cm; border-bottom: 2px solid #2c3e50; padding-bottom: 0.5cm; }
+        .document-info { font-size: 7pt; color: #666; }
+        .page-info { font-size: 8pt; font-weight: bold; color: #3498db; margin-top: 0.2cm; }
+        .title { font-size: 16pt; font-weight: bold; color: #2c3e50; text-align: center; margin: 0.5cm 0; text-transform: uppercase; }
+        .bailleur-info { background-color: #f8f9fa; padding: 0.3cm; margin-bottom: 0.5cm; border-left: 3px solid #3498db; }
+        .bailleur-info h3 { margin: 0 0 0.2cm 0; font-size: 10pt; color: #2c3e50; }
+        .info-tbl { width: 100%; font-size: 7pt; border-collapse: collapse; }
+        .info-tbl td { padding: 0.1cm; vertical-align: middle; }
+        .info-label { font-weight: bold; color: #555; }
+        .info-value { color: #333; font-weight: bold; }
+        .tenants-section { margin-bottom: 0.5cm; }
+        .section-title { font-size: 10pt; font-weight: bold; color: #2c3e50; margin-bottom: 0.3cm; padding: 0.2cm; background-color: #ecf0f1; border-left: 3px solid #3498db; }
+        .tenants-table { width: 25cm; border-collapse: collapse; font-size: 7pt; margin-bottom: 0.3cm; table-layout: fixed; }
+        .tenants-table th { background-color: #34495e; color: white; padding: 0.15cm; text-align: center; font-weight: bold; border: 1px solid #2c3e50; }
+        .tenants-table td { padding: 0.1cm; border: 1px solid #bdc3c7; text-align: center; vertical-align: top; font-weight: bold; }
+        .tenant-info { text-align: left; font-size: 6pt; font-weight: bold; }
+        .tenant-name { font-weight: bold; color: #2980b9; }
+        .property-info { text-align: left; font-weight: bold; color: #2c3e50; }
+        .amount { font-weight: bold; color: #27ae60; }
+        .status-regle { background-color: #d4edda; color: #155724; padding: 0.05cm 0.1cm; font-size: 6pt; font-weight: bold; }
+        .status-retard { background-color: #f8d7da; color: #721c24; padding: 0.05cm 0.1cm; font-size: 6pt; font-weight: bold; }
+        .status-non-applicable { background-color: #e9ecef; color: #666; padding: 0.05cm 0.1cm; font-size: 6pt; }
+        .details-retard { font-size: 5pt; color: #e74c3c; font-style: italic; text-align: left; padding-left: 0.2cm; font-weight: bold; }
+        .footer { margin-top: 0.5cm; padding-top: 0.3cm; border-top: 1px solid #bdc3c7; font-size: 6pt; color: #7f8c8d; text-align: center; }
+        .no-data { text-align: center; color: #7f8c8d; font-style: italic; padding: 0.5cm; }
+        .contrat-info { font-size: 5pt; color: #7f8c8d; text-align: left; font-weight: bold; }
+        .code-locataire { font-size: 5pt; font-weight: bold; text-align: left; }
     </style>
 </head>
 <body>
@@ -316,24 +69,14 @@
     <!-- Informations du bailleur -->
     <div class="bailleur-info">
         <h3>INFORMATIONS DU BAILLEUR</h3>
-        <div class="info-grid">
-            <div class="info-item">
-                <span class="info-label">Nom complet:</span>
-                <span class="info-value">{{ recap.bailleur.get_nom_complet }}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Téléphone:</span>
-                <span class="info-value">{{ recap.bailleur.telephone|default:"Non renseigné" }}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Email:</span>
-                <span class="info-value">{{ recap.bailleur.email|default:"Non renseigné" }}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Adresse:</span>
-                <span class="info-value">{{ recap.bailleur.adresse|default:"Non renseignée" }}</span>
-            </div>
-        </div>
+        <table class="info-tbl">
+            <tr>
+                <td><span class="info-label">Nom complet:</span> <span class="info-value">{{ recap.bailleur_nom }}</span></td>
+                <td><span class="info-label">Téléphone:</span> <span class="info-value">{{ recap.bailleur_telephone }}</span></td>
+                <td><span class="info-label">Email:</span> <span class="info-value">{{ recap.bailleur_email }}</span></td>
+                <td><span class="info-label">Adresse:</span> <span class="info-value">{{ recap.bailleur_adresse }}</span></td>
+            </tr>
+        </table>
     </div>
 
     <!-- Détail des locataires avec statut de paiement -->
