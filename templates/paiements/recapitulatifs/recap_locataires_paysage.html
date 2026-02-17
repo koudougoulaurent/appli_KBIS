@@ -45,6 +45,12 @@
             font-size: 7pt;
             color: #666;
         }
+        .page-info {
+            font-size: 8pt;
+            font-weight: bold;
+            color: #3498db;
+            margin-top: 0.2cm;
+        }
         
         .title {
             font-size: 16pt;
@@ -295,6 +301,9 @@
         <div class="document-info">
             État des Paiements Locataires - {{ recap.mois_display|upper }} | 
             Généré le {{ date_generation|date:"d/m/Y à H:i" }}
+            {% if recap.total_pages and recap.total_pages > 1 %}
+            <span class="page-info">| Page {{ recap.page_num }} sur {{ recap.total_pages }}</span>
+            {% endif %}
         </div>
     </div>
 
@@ -355,16 +364,12 @@
                         {% for contrat_data in locataire_data.contrats %}
                             <tr>
                                 {% if forloop.first %}
-                                    <td rowspan="{{ locataire_data.contrats|length }}">{{ forloop.parentloop.counter }}</td>
+                                    <td rowspan="{{ locataire_data.contrats|length }}">{% if recap.page_offset %}{{ forloop.parentloop.counter|add:recap.page_offset }}{% else %}{{ forloop.parentloop.counter }}{% endif %}</td>
                                     <td rowspan="{{ locataire_data.contrats|length }}" class="code-locataire">
-                                        {% if locataire_data.locataire.numero_locataire %}
-                                            {{ locataire_data.locataire.numero_locataire|truncatechars:30 }}
-                                        {% else %}
-                                            {{ locataire_data.locataire.id|stringformat:"04d" }}
-                                        {% endif %}
+                                        {{ locataire_data.locataire_numero }}
                                     </td>
                                     <td rowspan="{{ locataire_data.contrats|length }}" class="tenant-info">
-                                        <div class="tenant-name">{{ locataire_data.locataire.get_nom_complet }}</div>
+                                        <div class="tenant-name">{{ locataire_data.locataire_nom }}</div>
                                         {% if locataire_data.statut_global == 'en_retard' and locataire_data.mois_retard_global and locataire_data.mois_retard_global > 0 %}
                                             <small style="color: #e74c3c; font-size: 4.5pt; display: block; margin-top: 2px;">
                                                 ⚠ Retard: {{ locataire_data.mois_retard_global }} mois
@@ -372,20 +377,20 @@
                                         {% endif %}
                                     </td>
                                     <td rowspan="{{ locataire_data.contrats|length }}" class="tenant-info">
-                                        {% if locataire_data.locataire.telephone %}
-                                            {{ locataire_data.locataire.telephone }}
+                                        {% if locataire_data.locataire_telephone %}
+                                            {{ locataire_data.locataire_telephone }}
                                         {% else %}
                                             <span style="color: #999;">-</span>
                                         {% endif %}
                                     </td>
                                 {% endif %}
                                 <td class="property-info">
-                                    {{ contrat_data.propriete_titre_truncated|default:contrat_data.propriete.titre|default:"Sans titre" }}<br>
-                                    <small style="color: #7f8c8d;">ID: {{ contrat_data.propriete.id }}</small>
+                                    {{ contrat_data.propriete_titre_truncated|default:"Sans titre" }}<br>
+                                    <small style="color: #7f8c8d;">ID: {{ contrat_data.propriete_id }}</small>
                                 </td>
                                 <td class="property-info">
-                                    {{ contrat_data.propriete_adresse_truncated|default:contrat_data.propriete.adresse|default:"Non renseignée" }}<br>
-                                    <small style="color: #7f8c8d;">{{ contrat_data.propriete.ville|default:""|truncatechars:20 }}</small>
+                                    {{ contrat_data.propriete_adresse_truncated|default:"Non renseignée" }}<br>
+                                    <small style="color: #7f8c8d;">{{ contrat_data.propriete_ville|default:"" }}</small>
                                 </td>
                                 <td class="contrat-info">
                                     <strong>{{ contrat_data.numero_contrat|default:"N/A" }}</strong><br>

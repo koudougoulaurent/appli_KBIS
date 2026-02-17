@@ -655,7 +655,10 @@ class ServiceRecapPaiementMensuel:
                         mois_retard_global = 0
                 
                 locataires_dict[locataire.id] = {
-                    'locataire': locataire,
+                    'locataire_id': locataire.id,
+                    'locataire_nom': locataire.get_nom_complet() if hasattr(locataire, 'get_nom_complet') else f"{locataire.nom or ''} {locataire.prenom or ''}".strip(),
+                    'locataire_numero': (locataire.numero_locataire or str(locataire.id).zfill(4))[:30],
+                    'locataire_telephone': (locataire.telephone or '')[:20],
                     'contrats': [],
                     'statut_global': statut_paiement['statut'],
                     'statut_global_display': statut_paiement['statut_display'],
@@ -685,10 +688,10 @@ class ServiceRecapPaiementMensuel:
                 loyer_mensuel = Decimal(str(contrat.loyer_mensuel)) if contrat.loyer_mensuel else Decimal('0')
                 charges_mensuelles = Decimal(str(contrat.charges_mensuelles)) if contrat.charges_mensuelles else Decimal('0')
                 
-                # Tronquer les détails de paiement pour éviter les problèmes de mémoire
+                # Tronquer les détails de paiement (PDF Render: limite mémoire)
                 details_paiement = str(statut_paiement.get('details', ''))
-                if len(details_paiement) > 100:
-                    details_paiement = details_paiement[:100] + "..."
+                if len(details_paiement) > 80:
+                    details_paiement = details_paiement[:80] + "..."
                 
                 # Tronquer les adresses et titres de propriété
                 propriete_titre = contrat.propriete.titre if contrat.propriete and contrat.propriete.titre else "Sans titre"
@@ -698,6 +701,7 @@ class ServiceRecapPaiementMensuel:
                 propriete_adresse = contrat.propriete.adresse if contrat.propriete and contrat.propriete.adresse else "Non renseignée"
                 if len(propriete_adresse) > 60:
                     propriete_adresse = propriete_adresse[:60] + "..."
+                propriete_ville = (contrat.propriete.ville or "")[:20] if contrat.propriete else ""
                 
                 # Calculer le nombre de mois de retard si le statut est en retard
                 mois_retard = 0
@@ -708,12 +712,9 @@ class ServiceRecapPaiementMensuel:
                         logger.warning(f"Erreur lors du calcul des mois de retard pour le contrat {contrat.id}: {e}")
                         mois_retard = 0
                 
-                # Créer un dictionnaire avec les valeurs nécessaires
-                # Garder les objets Django pour le template mais s'assurer qu'ils sont accessibles
+                # Créer un dictionnaire avec valeurs primitives uniquement (évite OOM PDF sur Render)
                 contrat_dict = {
-                    'contrat': contrat,  # Objet complet pour compatibilité
                     'contrat_id': contrat.id,
-                    'propriete': contrat.propriete,  # Objet complet
                     'propriete_id': contrat.propriete.id if contrat.propriete else None,
                     'numero_contrat': numero_contrat,
                     'date_debut_contrat': date_debut_contrat,
@@ -728,6 +729,7 @@ class ServiceRecapPaiementMensuel:
                     'charges_mensuelles': charges_mensuelles,
                     'propriete_titre_truncated': propriete_titre,
                     'propriete_adresse_truncated': propriete_adresse,
+                    'propriete_ville': propriete_ville,
                     'mois_retard': mois_retard,
                 }
                 locataires_dict[locataire.id]['contrats'].append(contrat_dict)

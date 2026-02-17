@@ -1129,19 +1129,51 @@ def generer_recapitulatif_automatique(request):
         })
 
 
-@login_required
-def generer_recap_paiement_mensuel(request, bailleur_id):
-    """
-    Génère un récapitulatif PDF A4 paysage des locataires avec leur statut de paiement mensuel pour un bailleur.
-    Affiche tous les locataires avec leurs contrats et le statut de paiement du mois.
-    Utilise le format paysage avec l'image KBIS statique.
-    """
+def _generer_pdf_recap_locataires_batch(bailleur, mois_recap, locataires_batch, page_num, total_pages, entete_base64):
+    """Génère un PDF pour un lot de locataires (pagination)."""
     import datetime
-    from dateutil.relativedelta import relativedelta
     from django.template.loader import render_to_string
     from io import BytesIO
     from xhtml2pdf import pisa
+    from .services_recap_paiement import MOIS_FRANCAIS
+    
+    mois_display = f"{MOIS_FRANCAIS.get(mois_recap.month, '')} {mois_recap.year}" if hasattr(mois_recap, 'month') else str(mois_recap)
+    recap_data = {
+        'bailleur': bailleur,
+        'mois_recap': mois_recap,
+        'mois_display': mois_display,
+        'locataires': locataires_batch,
+        'total_locataires': len(locataires_batch),
+        'total_reglees': sum(1 for l in locataires_batch if l.get('statut_global') == 'regle'),
+        'total_en_retard': sum(1 for l in locataires_batch if l.get('statut_global') == 'en_retard'),
+        'limit_truncated': False,
+        'page_num': page_num,
+        'total_pages': total_pages,
+        'page_offset': (page_num - 1) * 15,  # Pour numérotation continue (1, 2... 16, 17...)
+    }
+    date_generation = datetime.datetime.now()
+    html_content = render_to_string(
+        'paiements/recapitulatifs/recap_locataires_paysage.html',
+        {'recap': recap_data, 'date_generation': date_generation, 'entete_base64': entete_base64}
+    )
+    pdf_buffer = BytesIO()
+    pisa.CreatePDF(html_content, dest=pdf_buffer, encoding='UTF-8', link_callback=None)
+    return pdf_buffer.getvalue()
+
+
+@login_required
+def generer_recap_paiement_mensuel(request, bailleur_id):
+    """
+    Génère un récapitulatif PDF des locataires. Pagination: si >15 locataires,
+    génère plusieurs PDFs dans un ZIP pour éviter OOM sur Render.
+    """
+    import datetime
+    import zipfile
+    from dateutil.relativedelta import relativedelta
+    from io import BytesIO
     from core.utils import check_group_permissions_with_fallback
+    
+    LOCATAIRES_PAR_PAGE = 15  # Évite OOM xhtml2pdf sur Render
     
     # Vérification des permissions
     permissions = check_group_permissions_with_fallback(
@@ -1230,79 +1262,61 @@ def generer_recap_paiement_mensuel(request, bailleur_id):
                 locataires_list.append(locataire_data)
             
             recap_data['locataires'] = locataires_list
+            recap_data['limit_truncated'] = False
         except Exception as e:
             logger.error(f"Erreur lors du nettoyage des locataires: {e}", exc_info=True)
             recap_data['locataires'] = []
+            recap_data['limit_truncated'] = False
         
-        # Charger l'image en Base64 pour l'en-tête si pas déjà fait
-        if 'entete_base64' not in locals():
-            import os
-            import base64
-            from django.conf import settings
-            image_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'enteteEnImage.png')
-            entete_base64 = ""
-            if os.path.exists(image_path):
-                try:
-                    with open(image_path, "rb") as image_file:
-                        entete_base64 = base64.b64encode(image_file.read()).decode('utf-8')
-                except Exception as e:
-                    logger.warning(f"Impossible de charger l'image d'en-tête: {e}")
-                    entete_base64 = ""
+        # Charger l'image en Base64 (une seule fois)
+        import os
+        import base64
+        from django.conf import settings
+        entete_base64 = ""
+        image_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'enteteEnImage.png')
+        if os.path.exists(image_path):
+            try:
+                with open(image_path, "rb") as image_file:
+                    entete_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+            except Exception as e:
+                logger.warning(f"Impossible de charger l'image d'en-tête: {e}")
         
-        try:
-            html_content = render_to_string(
-                'paiements/recapitulatifs/recap_locataires_paysage.html',
-                {
-                    'recap': recap_data,
-                    'date_generation': date_generation,
-                    'entete_base64': entete_base64,
-                }
-            )
-        except Exception as template_error:
-            logger.error(f"Erreur lors du rendu du template: {template_error}", exc_info=True)
-            logger.error(f"Type de recap_data: {type(recap_data)}")
-            logger.error(f"Type de recap_data['locataires']: {type(recap_data.get('locataires'))}")
-            if recap_data.get('locataires'):
-                logger.error(f"Premier élément de locataires: {type(recap_data['locataires'][0]) if len(recap_data['locataires']) > 0 else 'vide'}")
-            raise
+        # Pagination: générer un PDF par lot de 15 locataires
+        locataires_list = recap_data['locataires']
+        total_loc = len(locataires_list)
+        total_pages = (total_loc + LOCATAIRES_PAR_PAGE - 1) // LOCATAIRES_PAR_PAGE if total_loc > 0 else 1
         
-        # Générer le PDF avec gestion mémoire optimisée
-        pdf_buffer = BytesIO()
-        try:
-            pisa_status = pisa.CreatePDF(
-                html_content,
-                dest=pdf_buffer,
-                encoding='UTF-8',
-                link_callback=None
-            )
-            
-            if pisa_status.err:
-                logger.error(f"Erreur lors de la génération PDF locataires: {pisa_status.err}")
-                messages.error(request, f"Erreur lors de la génération du PDF: {pisa_status.err}")
-                pdf_buffer.close()
+        pdfs_generes = []
+        base_filename = f"recap_paiement_{bailleur.get_nom_complet().replace(' ', '_')}_{mois_recap.strftime('%Y_%m')}"
+        
+        for page in range(total_pages):
+            debut = page * LOCATAIRES_PAR_PAGE
+            fin = min(debut + LOCATAIRES_PAR_PAGE, total_loc)
+            batch = locataires_list[debut:fin]
+            try:
+                pdf_content = _generer_pdf_recap_locataires_batch(
+                    bailleur, mois_recap, batch, page + 1, total_pages, entete_base64
+                )
+                pdfs_generes.append((f"{base_filename}_page{page + 1}.pdf", pdf_content))
+            except Exception as pdf_err:
+                logger.error(f"Erreur PDF page {page + 1}: {pdf_err}", exc_info=True)
+                messages.error(request, f"Erreur lors de la génération du PDF (page {page + 1}): {str(pdf_err)}")
                 return redirect('paiements:dashboard')
-            
-            # Préparer la réponse
-            pdf_content = pdf_buffer.getvalue()
-            pdf_buffer.close()
-        except MemoryError:
-            logger.error("Erreur de mémoire lors de la génération du PDF")
-            pdf_buffer.close()
-            messages.error(request, "Erreur de mémoire lors de la génération du PDF. Veuillez réessayer avec moins de données.")
-            return redirect('paiements:dashboard')
-        except Exception as pdf_error:
-            logger.error(f"Erreur inattendue lors de la génération PDF: {pdf_error}", exc_info=True)
-            pdf_buffer.close()
-            messages.error(request, f"Erreur lors de la génération du PDF: {str(pdf_error)}")
-            return redirect('paiements:dashboard')
+            import gc
+            gc.collect()
         
-        response = HttpResponse(pdf_content, content_type='application/pdf')
-        filename = (
-            f"recap_paiement_{bailleur.get_nom_complet().replace(' ', '_')}_"
-            f"{mois_recap.strftime('%Y_%m')}.pdf"
-        )
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        if total_pages == 1:
+            response = HttpResponse(pdfs_generes[0][1], content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{base_filename}.pdf"'
+            return response
         
+        zip_buffer = BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for nom_fichier, contenu in pdfs_generes:
+                zf.writestr(nom_fichier, contenu)
+        zip_buffer.seek(0)
+        response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="{base_filename}_pages.zip"'
         return response
         
     except Exception as e:
@@ -1404,179 +1418,8 @@ def generer_pdf_recap_paiement_mensuel_paysage(request, bailleur_id):
 @login_required
 def generer_pdf_recap_locataires_paysage(request, bailleur_id):
     """
-    Génère un récapitulatif PDF A4 paysage des locataires avec leur statut de paiement mensuel pour un bailleur.
-    Affiche tous les locataires avec leurs contrats et le statut de paiement du mois.
+    Alias: même logique que generer_recap_paiement_mensuel (pagination par 15 locataires).
     """
-    import datetime
-    from dateutil.relativedelta import relativedelta
-    from django.template.loader import render_to_string
-    from io import BytesIO
-    from xhtml2pdf import pisa
-    from core.utils import check_group_permissions_with_fallback
-    
-    # Vérification des permissions
-    permissions = check_group_permissions_with_fallback(
-        request.user, 
-        ['PRIVILEGE', 'ADMINISTRATION', 'COMPTABILITE', 'CAISSE'], 
-        'view'
-    )
-    if not permissions['allowed']:
-        messages.error(request, permissions['message'])
-        return redirect('paiements:dashboard')
-    
-    bailleur = get_object_or_404(Bailleur, pk=bailleur_id)
-    
-    # Récupérer le mois depuis les paramètres GET (par défaut mois précédent)
-    mois_str = request.GET.get('mois')
-    if mois_str:
-        try:
-            mois_recap = datetime.datetime.strptime(mois_str, '%Y-%m').date().replace(day=1)
-        except ValueError:
-            mois_recap = datetime.date.today().replace(day=1) - relativedelta(months=1)
-    else:
-        # Par défaut, mois précédent
-        mois_recap = datetime.date.today().replace(day=1) - relativedelta(months=1)
-    
-    try:
-        # Préparer les données du récapitulatif par locataire
-        recap_data = ServiceRecapPaiementMensuel.preparer_donnees_recap_locataires(
-            bailleur, mois_recap
-        )
-        
-        # Forcer les données à être des listes Python standard pour éviter les erreurs NotImplementedType
-        if not isinstance(recap_data, dict):
-            logger.error(f"recap_data n'est pas un dictionnaire: {type(recap_data)}")
-            raise ValueError("Les données du récapitulatif sont invalides")
-        
-        if 'locataires' in recap_data:
-            recap_data['locataires'] = _force_list_safe(recap_data['locataires'])
-            # Pour chaque locataire, forcer les contrats à être une liste
-            for locataire_data in recap_data['locataires']:
-                if not isinstance(locataire_data, dict):
-                    logger.warning(f"locataire_data n'est pas un dictionnaire: {type(locataire_data)}")
-                    continue
-                if 'contrats' in locataire_data:
-                    locataire_data['contrats'] = _force_list_safe(locataire_data['contrats'])
-                else:
-                    locataire_data['contrats'] = []
-        else:
-            recap_data['locataires'] = []
-        
-        # S'assurer que tous les champs nécessaires existent
-        if 'total_locataires' not in recap_data:
-            recap_data['total_locataires'] = 0
-        if 'total_reglees' not in recap_data:
-            recap_data['total_reglees'] = 0
-        if 'total_en_retard' not in recap_data:
-            recap_data['total_en_retard'] = 0
-        
-        # Générer le HTML du récapitulatif avec date correcte
-        date_generation = datetime.datetime.now()
-        
-        # S'assurer que recap_data['locataires'] est une liste itérable
-        # et que chaque élément a une liste de contrats
-        locataires_list = []
-        try:
-            locataires_raw = recap_data.get('locataires', [])
-            # Forcer en liste si ce n'est pas déjà une liste
-            if not isinstance(locataires_raw, list):
-                locataires_raw = _force_list_safe(locataires_raw)
-            
-            for locataire_data in locataires_raw:
-                if not isinstance(locataire_data, dict):
-                    logger.warning(f"locataire_data n'est pas un dict: {type(locataire_data)}")
-                    continue
-                
-                # S'assurer que 'contrats' est une liste
-                contrats_list = []
-                contrats_raw = locataire_data.get('contrats', [])
-                if not isinstance(contrats_raw, list):
-                    contrats_raw = _force_list_safe(contrats_raw)
-                
-                for contrat_data in contrats_raw:
-                    if isinstance(contrat_data, dict):
-                        contrats_list.append(contrat_data)
-                
-                locataire_data['contrats'] = contrats_list
-                locataires_list.append(locataire_data)
-            
-            recap_data['locataires'] = locataires_list
-        except Exception as e:
-            logger.error(f"Erreur lors du nettoyage des locataires: {e}", exc_info=True)
-            recap_data['locataires'] = []
-        
-        # Charger l'image en Base64 pour l'en-tête si pas déjà fait
-        if 'entete_base64' not in locals():
-            import os
-            import base64
-            from django.conf import settings
-            image_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'enteteEnImage.png')
-            entete_base64 = ""
-            if os.path.exists(image_path):
-                try:
-                    with open(image_path, "rb") as image_file:
-                        entete_base64 = base64.b64encode(image_file.read()).decode('utf-8')
-                except Exception as e:
-                    logger.warning(f"Impossible de charger l'image d'en-tête: {e}")
-                    entete_base64 = ""
-        
-        try:
-            html_content = render_to_string(
-                'paiements/recapitulatifs/recap_locataires_paysage.html',
-                {
-                    'recap': recap_data,
-                    'date_generation': date_generation,
-                    'entete_base64': entete_base64,
-                }
-            )
-        except Exception as template_error:
-            logger.error(f"Erreur lors du rendu du template: {template_error}", exc_info=True)
-            logger.error(f"Type de recap_data: {type(recap_data)}")
-            logger.error(f"Type de recap_data['locataires']: {type(recap_data.get('locataires'))}")
-            if recap_data.get('locataires'):
-                logger.error(f"Premier élément de locataires: {type(recap_data['locataires'][0]) if len(recap_data['locataires']) > 0 else 'vide'}")
-            raise
-        
-        # Générer le PDF avec gestion mémoire optimisée
-        pdf_buffer = BytesIO()
-        try:
-            pisa_status = pisa.CreatePDF(
-                html_content,
-                dest=pdf_buffer,
-                encoding='UTF-8',
-                link_callback=None
-            )
-            
-            if pisa_status.err:
-                logger.error(f"Erreur lors de la génération PDF locataires: {pisa_status.err}")
-                messages.error(request, f"Erreur lors de la génération du PDF: {pisa_status.err}")
-                pdf_buffer.close()
-                return redirect('paiements:dashboard')
-            
-            # Préparer la réponse
-            pdf_content = pdf_buffer.getvalue()
-            pdf_buffer.close()
-        except MemoryError:
-            logger.error("Erreur de mémoire lors de la génération du PDF")
-            pdf_buffer.close()
-            messages.error(request, "Erreur de mémoire lors de la génération du PDF. Veuillez réessayer avec moins de données.")
-            return redirect('paiements:dashboard')
-        except Exception as pdf_error:
-            logger.error(f"Erreur inattendue lors de la génération PDF: {pdf_error}", exc_info=True)
-            pdf_buffer.close()
-            messages.error(request, f"Erreur lors de la génération du PDF: {str(pdf_error)}")
-            return redirect('paiements:dashboard')
-        
-        response = HttpResponse(pdf_content, content_type='application/pdf')
-        filename = (
-            f"recap_locataires_{bailleur.get_nom_complet().replace(' ', '_')}_"
-            f"{mois_recap.strftime('%Y_%m')}.pdf"
-        )
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        
-        return response
-        
-    except Exception as e:
-        logger.error(f"Erreur lors de la génération du récapitulatif locataires: {str(e)}", exc_info=True)
-        messages.error(request, f"Erreur lors de la génération: {str(e)}")
-        return redirect('paiements:dashboard')
+    return generer_recap_paiement_mensuel(request, bailleur_id)
+
+
