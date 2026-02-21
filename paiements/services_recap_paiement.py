@@ -204,16 +204,12 @@ class ServiceRecapPaiementMensuel:
     def _verifier_statut_paiement(contrat, mois_debut, mois_fin):
         """
         Vérifie le statut de paiement du loyer pour un contrat donné.
-        Prend en compte les avances (détecte automatiquement si montant >= loyer mensuel)
-        et marque tous les mois couverts comme réglés, y compris les mois futurs.
-        
-        Args:
-            contrat: Instance de Contrat
-            mois_debut: Date de début du mois à vérifier
-            mois_fin: Date de fin du mois à vérifier
-        
-        Returns:
-            dict: Dictionnaire avec le statut et les détails
+
+        Logique simplifiée ancrée sur le DERNIER MOIS RÉGLÉ en base :
+        - RÉGLÉ   : le mois de référence est couvert dans mois_payes
+        - EN RETARD : retard = (dernier_mois_réglé + 1) → mois_debut (aujourd'hui)
+                      Pas de recherche de trous dans l'historique ; on part du dernier
+                      mois effectivement payé pour calculer les mois en souffrance.
         """
         loyer_mensuel = contrat.loyer_mensuel or Decimal('0')
         if loyer_mensuel <= 0:
@@ -222,150 +218,105 @@ class ServiceRecapPaiementMensuel:
                 'statut_display': 'NON APPLICABLE',
                 'montant_paye': Decimal('0'),
                 'montant_attendu': Decimal('0'),
-                'details': 'Loyer mensuel non défini'
+                'details': 'Loyer mensuel non défini',
+                'nombre_mois_retard': 0,
+                'mois_en_retard': [],
             }
-        
-        # 1. Récupérer TOUS les paiements validés
+
+        # 1. Récupérer tous les paiements validés
         tous_paiements = list(Paiement.objects.filter(
             contrat=contrat,
             statut='valide'
         ).filter(
-            Q(type_paiement='loyer') | 
+            Q(type_paiement='loyer') |
             Q(type_paiement='paiement_partiel') |
             Q(type_paiement='avance')
         ).order_by('date_paiement'))
-        
-        # 2. Construire les mois payés (utilise mois_paye quand disponible)
-        mois_fin_ref = mois_fin
+
+        # 2. Construire l'ensemble des mois couverts par les paiements
         mois_payes, montant_restant_seq = ServiceRecapPaiementMensuel._construire_mois_payes(
-            contrat, tous_paiements, mois_fin_ref, loyer_mensuel, retourner_montant_restant=True
+            contrat, tous_paiements, mois_fin, loyer_mensuel, retourner_montant_restant=True
         )
-        
+
+        # 3. Filtrer : ignorer les mois antérieurs au début du contrat (mois_paye erronés)
         mois_debut_contrat = contrat.date_debut.replace(day=1)
+        mois_debut_contrat_key = (mois_debut_contrat.year, mois_debut_contrat.month)
+        mois_payes_valides = {m for m in mois_payes if m >= mois_debut_contrat_key}
+
         mois_ref_key = (mois_debut.year, mois_debut.month)
-        mois_trouve = mois_ref_key in mois_payes
-        
-        # Trouver le premier mois non payé (mois_courant) et le dernier paiement utilisé
-        mois_courant = mois_debut_contrat
         dernier_paiement_utilise = tous_paiements[-1] if tous_paiements else None
-        while mois_courant <= mois_debut:
-            if (mois_courant.year, mois_courant.month) not in mois_payes:
-                break
-            mois_courant = mois_courant + relativedelta(months=1)
-        
-        # RÉGLÉ uniquement si TOUS les mois (depuis début contrat jusqu'au mois de référence) sont payés.
-        # Ne pas considérer "réglé" si le mois de référence est payé mais des mois antérieurs sont en retard.
-        if mois_trouve and mois_courant > mois_debut:
+
+        # ── RÉGLÉ : le mois de référence est couvert ──────────────────────────
+        if mois_ref_key in mois_payes_valides:
             montant_total_paye = loyer_mensuel
-            
-            # Détecter si c'est une avance multi-mois
             details_parts = []
             if dernier_paiement_utilise:
-                montant_paiement_ref = dernier_paiement_utilise.montant_net_paye or dernier_paiement_utilise.montant or Decimal('0')
-                if montant_paiement_ref >= loyer_mensuel:
-                    nombre_mois = int(montant_paiement_ref // loyer_mensuel)
-                    if nombre_mois > 1:
-                        details_parts.append(f'Avance de {nombre_mois} mois ({montant_paiement_ref:.0f} F CFA)')
-            
+                montant_ref = (
+                    dernier_paiement_utilise.montant_net_paye or
+                    dernier_paiement_utilise.montant or Decimal('0')
+                )
+                if montant_ref >= loyer_mensuel:
+                    nb_mois = int(montant_ref // loyer_mensuel)
+                    if nb_mois > 1:
+                        details_parts.append(f'Avance de {nb_mois} mois ({montant_ref:.0f} F CFA)')
             details = f'Loyer payé ({montant_total_paye:.0f} F CFA)'
             if details_parts:
                 details += ' - ' + ' '.join(details_parts)
-            
             return {
                 'statut': 'regle',
                 'statut_display': 'RÉGLÉ',
                 'montant_paye': montant_total_paye,
                 'montant_attendu': loyer_mensuel,
                 'date_paiement': dernier_paiement_utilise.date_paiement if dernier_paiement_utilise else None,
-                'details': details
+                'details': details,
+                'nombre_mois_retard': 0,
+                'mois_en_retard': [],
             }
-        
-        # Si on arrive ici, le mois n'est pas encore couvert
-        # IMPORTANT: mois_paye = mois de loyer couvert | date_paiement = date d'encaissement (sans lien avec le mois)
-        # On utilise UNIQUEMENT mois_paye pour attribuer un paiement à un mois, jamais date_paiement.
-        mois_ref_str = formater_mois_francais(mois_debut)
-        paiements_mois_paye = Paiement.objects.filter(
-            contrat=contrat,
-            statut='valide',
-            mois_paye__iexact=mois_ref_str
-        ).filter(
-            Q(type_paiement='loyer') | 
-            Q(type_paiement='paiement_partiel')
+
+        # ── EN RETARD ──────────────────────────────────────────────────────────
+        # Ancre = dernier mois réglé en base. Le retard commence au mois suivant.
+        # Pas de recherche de trous ; les mois entre l'ancre et aujourd'hui sont tous en retard.
+        total_paye_global = sum(
+            p.montant_net_paye or p.montant or Decimal('0')
+            for p in tous_paiements
         )
-        montant_partiel = paiements_mois_paye.aggregate(
-            total=Sum('montant_net_paye')
-        )['total'] or Decimal('0')
-        if montant_partiel == Decimal('0'):
-            montant_partiel = paiements_mois_paye.aggregate(total=Sum('montant'))['total'] or Decimal('0')
-        
-        # Reste des paiements SANS mois_paye : appliqué séquentiellement (montant_restant_seq)
-        if mois_courant == mois_debut and montant_restant_seq > 0:
-            montant_partiel += montant_restant_seq
-        
-        montant_total_paye = montant_partiel
-        
-        # Ne considérer "réglé" que si TOUS les mois antérieurs sont payés (mois_courant > mois_debut).
-        # Un paiement partiel sur le mois de référence ne suffit pas si des mois précédents sont en retard.
-        if montant_total_paye >= loyer_mensuel and mois_courant > mois_debut:
-            dernier_paiement = (
-                paiements_mois_paye.order_by('-date_paiement').first() or
-                (tous_paiements[-1] if tous_paiements else None)
-            )
-            return {
-                'statut': 'regle',
-                'statut_display': 'RÉGLÉ',
-                'montant_paye': montant_total_paye,
-                'montant_attendu': loyer_mensuel,
-                'date_paiement': dernier_paiement.date_paiement if dernier_paiement else None,  # date d'encaissement
-                'details': f'Loyer payé ({montant_total_paye:.0f} F CFA)'
-            }
+
+        if mois_payes_valides:
+            dernier_key = max(mois_payes_valides)
+            mois_depuis = datetime.date(dernier_key[0], dernier_key[1], 1) + relativedelta(months=1)
         else:
-            # Le loyer est en retard.
-            # On parcourt de mois_courant (premier mois non payé en séquence) jusqu'au mois
-            # de référence, mais on n'inclut QUE les mois réellement non couverts dans mois_payes
-            # (certains mois intermédiaires peuvent être payés par avance/saut de mois_paye).
-            mois_en_retard = []
-            mois_retard = mois_courant
-            while mois_retard <= mois_debut:
-                key = (mois_retard.year, mois_retard.month)
-                if key not in mois_payes:
-                    mois_en_retard.append(mois_retard)
-                mois_retard = mois_retard + relativedelta(months=1)
+            # Aucun paiement valide : retard depuis le début du contrat
+            mois_depuis = mois_debut_contrat
 
-            # Formater les mois en français
-            mois_liste_str = [formater_mois_francais(m) for m in mois_en_retard]
+        mois_en_retard = []
+        mois_iter = mois_depuis
+        while mois_iter <= mois_debut:
+            mois_en_retard.append(mois_iter)
+            mois_iter = mois_iter + relativedelta(months=1)
 
-            nombre_mois_retard = len(mois_en_retard)
+        mois_liste_str = [formater_mois_francais(m) for m in mois_en_retard]
+        nombre_mois_retard = len(mois_en_retard)
+        montant_total_du_retard = nombre_mois_retard * loyer_mensuel
+        montant_manquant = max(Decimal('0'), montant_total_du_retard - montant_restant_seq)
 
-            # Montant total dû uniquement pour les mois réellement non payés
-            montant_total_du_retard = nombre_mois_retard * loyer_mensuel
-            # Total payé au global (pour l'affichage "Montant Payé" dans le tableau)
-            total_paye_global = sum(
-                p.montant_net_paye or p.montant or Decimal('0')
-                for p in tous_paiements
-            )
-            # Le montant restant non alloué (séquentiel) peut couvrir partiellement les mois en retard.
-            montant_manquant = max(Decimal('0'), montant_total_du_retard - montant_restant_seq)
-            
-            # Préparer le message de détails avec les mois en retard
-            if nombre_mois_retard > 0:
-                details_retard = f'Retard de {nombre_mois_retard} mois'
-                if mois_liste_str:
-                    details_retard += f' : {", ".join(mois_liste_str)}'
-                details_retard += f' - Manque {montant_manquant:.0f} F CFA sur {montant_total_du_retard:.0f} F CFA'
-            else:
-                details_retard = f'Manque {montant_manquant:.0f} F CFA sur {loyer_mensuel:.0f} F CFA'
-            
-            return {
-                'statut': 'en_retard',
-                'statut_display': 'EN RETARD',
-                'montant_paye': total_paye_global,  # Total payé au global (pas seulement le mois de référence)
-                'montant_attendu': loyer_mensuel,
-                'montant_manquant': montant_manquant,
-                'nombre_mois_retard': nombre_mois_retard,
-                'mois_en_retard': mois_liste_str,
-                'details': details_retard
-            }
+        if nombre_mois_retard > 0:
+            details_retard = f'Retard de {nombre_mois_retard} mois'
+            if mois_liste_str:
+                details_retard += f' : {", ".join(mois_liste_str)}'
+            details_retard += f' - Manque {montant_manquant:.0f} F CFA sur {montant_total_du_retard:.0f} F CFA'
+        else:
+            details_retard = f'Manque {montant_manquant:.0f} F CFA sur {loyer_mensuel:.0f} F CFA'
+
+        return {
+            'statut': 'en_retard',
+            'statut_display': 'EN RETARD',
+            'montant_paye': total_paye_global,
+            'montant_attendu': loyer_mensuel,
+            'montant_manquant': montant_manquant,
+            'nombre_mois_retard': nombre_mois_retard,
+            'mois_en_retard': mois_liste_str,
+            'details': details_retard,
+        }
     
     @staticmethod
     def _avance_couvre_mois(avance_paiement, mois_debut):
@@ -699,16 +650,11 @@ class ServiceRecapPaiementMensuel:
                 }
             
             # Créer ou mettre à jour l'entrée du locataire
+            # Utiliser nombre_mois_retard de statut_paiement (même source que les détails)
+            # pour garantir la cohérence entre badge et texte.
+            mois_retard_statut = statut_paiement.get('nombre_mois_retard', 0) if contrat_couvre_mois else 0
+
             if locataire.id not in locataires_dict:
-                # Calculer le nombre de mois de retard global pour ce locataire
-                mois_retard_global = 0
-                if statut_paiement['statut'] == 'en_retard' and contrat_couvre_mois:
-                    try:
-                        mois_retard_global = ServiceRecapPaiementMensuel._calculer_mois_retard(contrat, mois_recap)
-                    except Exception as e:
-                        logger.warning(f"Erreur lors du calcul des mois de retard global pour le locataire {locataire.id}: {e}")
-                        mois_retard_global = 0
-                
                 locataires_dict[locataire.id] = {
                     'locataire_id': locataire.id,
                     'locataire_nom': locataire.get_nom_complet() if hasattr(locataire, 'get_nom_complet') else f"{locataire.nom or ''} {locataire.prenom or ''}".strip(),
@@ -719,17 +665,12 @@ class ServiceRecapPaiementMensuel:
                     'statut_global_display': statut_paiement['statut_display'],
                     'total_montant_paye': Decimal('0'),
                     'total_montant_attendu': Decimal('0'),
-                    'mois_retard_global': mois_retard_global,
+                    'mois_retard_global': mois_retard_statut,
                 }
             else:
-                # Mettre à jour le mois de retard global si ce contrat a plus de retard
-                if statut_paiement['statut'] == 'en_retard' and contrat_couvre_mois:
-                    try:
-                        mois_retard_contrat = ServiceRecapPaiementMensuel._calculer_mois_retard(contrat, mois_recap)
-                        if mois_retard_contrat > locataires_dict[locataire.id].get('mois_retard_global', 0):
-                            locataires_dict[locataire.id]['mois_retard_global'] = mois_retard_contrat
-                    except Exception as e:
-                        logger.warning(f"Erreur lors de la mise à jour des mois de retard global: {e}")
+                # Garder le pire retard (le plus grand nombre de mois)
+                if mois_retard_statut > locataires_dict[locataire.id].get('mois_retard_global', 0):
+                    locataires_dict[locataire.id]['mois_retard_global'] = mois_retard_statut
             
             # Ajouter le contrat - S'assurer que tous les attributs sont des valeurs Python simples
             # Tronquer les chaînes longues pour éviter les problèmes de mémoire lors de la génération PDF
@@ -758,14 +699,8 @@ class ServiceRecapPaiementMensuel:
                     propriete_adresse = propriete_adresse[:60] + "..."
                 propriete_ville = (contrat.propriete.ville or "")[:20] if contrat.propriete else ""
                 
-                # Calculer le nombre de mois de retard si le statut est en retard
-                mois_retard = 0
-                if statut_paiement['statut'] == 'en_retard' and contrat_couvre_mois:
-                    try:
-                        mois_retard = ServiceRecapPaiementMensuel._calculer_mois_retard(contrat, mois_recap)
-                    except Exception as e:
-                        logger.warning(f"Erreur lors du calcul des mois de retard pour le contrat {contrat.id}: {e}")
-                        mois_retard = 0
+                # Utiliser nombre_mois_retard de statut_paiement (cohérent avec les détails)
+                mois_retard = statut_paiement.get('nombre_mois_retard', 0) if contrat_couvre_mois else 0
 
                 # Trouver le dernier mois réellement réglé en base pour ce contrat
                 try:
