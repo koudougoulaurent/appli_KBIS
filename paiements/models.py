@@ -321,11 +321,15 @@ class RecapMensuel(models.Model):
             # CORRECTION : Utiliser ChargesBailleur depuis proprietes.models (pas ChargeBailleur depuis paiements.models)
             # CORRECTION : ChargesBailleur utilise retraits_lies (ManyToMany) au lieu de retrait_utilise (ForeignKey)
             from proprietes.models import ChargesBailleur
-            # Charges en attente ou partiellement déduites, non encore soldées dans un retrait payé.
-            # Statuts 'payee' et 'remboursee' indiquent que la charge est entièrement réglée → exclues.
+            # Règle métier : les retraits se font du 25 au 5 du mois suivant.
+            # Seules les charges enregistrées AVANT le 25 du mois du récap sont éligibles.
+            # Les charges créées après le 25 sont reportées au retrait du mois suivant.
+            date_limite_retrait = self.mois_recap.replace(day=25)
+
             charges_bailleur_mois = ChargesBailleur.objects.filter(
                 propriete__bailleur=self.bailleur,
-                statut__in=['en_attente', 'deduite_retrait']
+                statut__in=['en_attente', 'deduite_retrait'],
+                date_charge__lte=date_limite_retrait,
             ).exclude(
                 retraits_lies__retrait_bailleur__statut='paye'
             ).distinct()
@@ -2048,11 +2052,15 @@ class RetraitBailleur(models.Model):
         try:
             from proprietes.models import ChargesBailleur as ChargesPropr, ChargesBailleurRetrait
 
+            # Règle métier : retrait du 25 au 5 du mois suivant.
+            # On ne solde que les charges enregistrées au plus tard le 25 du mois du retrait.
+            date_limite_retrait = self.mois_retrait.replace(day=25)
+
             charges_disponibles = ChargesPropr.objects.filter(
                 propriete__bailleur=self.bailleur,
-                statut__in=['en_attente', 'deduite_retrait']
+                statut__in=['en_attente', 'deduite_retrait'],
+                date_charge__lte=date_limite_retrait,
             ).exclude(
-                # Ignorer les charges déjà liées à un retrait payé
                 retraits_lies__retrait_bailleur__statut='paye'
             ).distinct()
 

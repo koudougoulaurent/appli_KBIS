@@ -23,23 +23,33 @@ class ServiceChargesBailleurIntelligent:
     @staticmethod
     def calculer_charges_bailleur_pour_mois(bailleur: Bailleur, mois: date) -> Dict:
         """
-        Calcule toutes les charges bailleur pour un mois donné.
-        
+        Calcule toutes les charges bailleur éligibles pour le retrait du mois donné.
+
+        Règle métier : les retraits se font du 25 au 5 du mois suivant.
+        - Charges éligibles : date_charge <= 25 du mois (créées avant l'ouverture du retrait)
+        - Charges après le 25 → reportées au retrait du mois suivant
+        - Les charges accumulées des mois précédents non encore réglées sont incluses
+          (filtrées par .exclude(retraits_lies__retrait_bailleur__statut='paye'))
+
         Args:
             bailleur: Instance du bailleur
             mois: Date du mois (premier jour du mois)
-            
+
         Returns:
             Dict contenant les détails des charges calculées
         """
         try:
-            # Récupérer toutes les charges du bailleur pour le mois
+            # Date limite : le 25 du mois (ouverture de la fenêtre de retrait)
+            date_limite_retrait = date(mois.year, mois.month, 25)
+
+            # Toutes les charges disponibles jusqu'au 25, non encore soldées dans un retrait payé
             charges = ChargesBailleur.objects.filter(
                 propriete__bailleur=bailleur,
-                date_charge__year=mois.year,
-                date_charge__month=mois.month,
-                statut__in=['en_attente', 'deduite_retrait']
-            ).select_related('propriete')
+                statut__in=['en_attente', 'deduite_retrait'],
+                date_charge__lte=date_limite_retrait,
+            ).exclude(
+                retraits_lies__retrait_bailleur__statut='paye'
+            ).distinct().select_related('propriete')
             
             total_charges = Decimal('0')
             charges_details = []
