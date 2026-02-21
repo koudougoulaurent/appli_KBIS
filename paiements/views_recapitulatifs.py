@@ -1197,17 +1197,19 @@ def generer_recap_paiement_mensuel(request, bailleur_id):
     
     bailleur = get_object_or_404(Bailleur, pk=bailleur_id)
     
-    # Récupérer le mois depuis les paramètres GET (par défaut mois précédent)
+    # Récupérer le mois depuis les paramètres GET (par défaut mois courant)
+    # Le mois courant reflète l'état réel : on part du dernier mois réglé en base
+    # pour chaque locataire, jusqu'à aujourd'hui.
     mois_str = request.GET.get('mois')
     if mois_str:
         try:
             mois_recap = datetime.datetime.strptime(mois_str, '%Y-%m').date().replace(day=1)
         except ValueError:
-            mois_recap = datetime.date.today().replace(day=1) - relativedelta(months=1)
+            mois_recap = datetime.date.today().replace(day=1)
     else:
-        # Par défaut, mois précédent
-        mois_recap = datetime.date.today().replace(day=1) - relativedelta(months=1)
-    
+        # Par défaut, mois courant (situation réelle à la date d'aujourd'hui)
+        mois_recap = datetime.date.today().replace(day=1)
+
     try:
         # Préparer les données du récapitulatif par locataire
         recap_data = ServiceRecapPaiementMensuel.preparer_donnees_recap_locataires(
@@ -1374,17 +1376,19 @@ def generer_pdf_recap_paiement_mensuel_paysage(request, bailleur_id):
     
     bailleur = get_object_or_404(Bailleur, pk=bailleur_id)
     
-    # Récupérer le mois depuis les paramètres GET (par défaut mois précédent)
+    # Récupérer le mois depuis les paramètres GET (par défaut mois courant)
+    # Le mois courant reflète l'état réel : on part du dernier mois réglé en base
+    # pour chaque locataire, jusqu'à aujourd'hui.
     mois_str = request.GET.get('mois')
     if mois_str:
         try:
             mois_recap = datetime.datetime.strptime(mois_str, '%Y-%m').date().replace(day=1)
         except ValueError:
-            mois_recap = datetime.date.today().replace(day=1) - relativedelta(months=1)
+            mois_recap = datetime.date.today().replace(day=1)
     else:
-        # Par défaut, mois précédent
-        mois_recap = datetime.date.today().replace(day=1) - relativedelta(months=1)
-    
+        # Par défaut, mois courant (situation réelle à la date d'aujourd'hui)
+        mois_recap = datetime.date.today().replace(day=1)
+
     try:
         # Préparer les données du récapitulatif avec les données réelles
         recap_data = ServiceRecapPaiementMensuel.preparer_donnees_recap_paiement(

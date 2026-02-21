@@ -5,6 +5,7 @@ pour chaque bailleur
 """
 
 import logging
+import datetime
 from dateutil.relativedelta import relativedelta
 from decimal import Decimal
 from django.utils import timezone
@@ -139,6 +140,15 @@ class ServiceRecapPaiementMensuel:
                         'details': f'Contrat du {date_debut_str} au {date_fin_str}'
                     }
                 
+                # Trouver le dernier mois réellement réglé en base pour ce contrat
+                try:
+                    dernier_mois_regle = ServiceRecapPaiementMensuel._get_dernier_mois_regle(contrat_actif)
+                    dernier_mois_regle_display = formater_mois_francais(dernier_mois_regle) if dernier_mois_regle else "Aucun"
+                except Exception as e:
+                    logger.warning(f"Erreur _get_dernier_mois_regle contrat {contrat_actif.id}: {e}")
+                    dernier_mois_regle = None
+                    dernier_mois_regle_display = "Aucun"
+
                 # Préparer les données de la propriété avec tous les détails du contrat
                 donnees_propriete = {
                     'propriete': propriete,
@@ -156,7 +166,9 @@ class ServiceRecapPaiementMensuel:
                     'montant_paye': statut_paiement['montant_paye'],
                     'montant_attendu': statut_paiement['montant_attendu'],
                     'date_paiement': statut_paiement.get('date_paiement'),
-                    'details_paiement': statut_paiement.get('details', '')
+                    'details_paiement': statut_paiement.get('details', ''),
+                    'dernier_mois_regle': dernier_mois_regle,
+                    'dernier_mois_regle_display': dernier_mois_regle_display,
                 }
                 
                 proprietes_avec_statut.append(donnees_propriete)
@@ -308,30 +320,32 @@ class ServiceRecapPaiementMensuel:
                 'details': f'Loyer payé ({montant_total_paye:.0f} F CFA)'
             }
         else:
-            # Le loyer est en retard - calculer le nombre de mois de retard
-            # mois_courant = premier mois NON payé (on a avancé jusqu'ici après les derniers paiements)
-            # Les mois en retard vont de mois_courant jusqu'au mois de référence (mois_debut)
+            # Le loyer est en retard.
+            # On parcourt de mois_courant (premier mois non payé en séquence) jusqu'au mois
+            # de référence, mais on n'inclut QUE les mois réellement non couverts dans mois_payes
+            # (certains mois intermédiaires peuvent être payés par avance/saut de mois_paye).
             mois_en_retard = []
-            mois_retard = mois_courant  # Premier mois non payé
+            mois_retard = mois_courant
             while mois_retard <= mois_debut:
-                mois_en_retard.append(mois_retard)
+                key = (mois_retard.year, mois_retard.month)
+                if key not in mois_payes:
+                    mois_en_retard.append(mois_retard)
                 mois_retard = mois_retard + relativedelta(months=1)
-            
+
             # Formater les mois en français
-            mois_liste_str = []
-            for mois in mois_en_retard:
-                mois_liste_str.append(formater_mois_francais(mois))
-            
+            mois_liste_str = [formater_mois_francais(m) for m in mois_en_retard]
+
             nombre_mois_retard = len(mois_en_retard)
-            
-            # Montant total dû pour tous les mois en retard
+
+            # Montant total dû uniquement pour les mois réellement non payés
             montant_total_du_retard = nombre_mois_retard * loyer_mensuel
-            # Total payé au global (somme des paiements) pour calculer le manque réel
+            # Total payé au global (pour l'affichage "Montant Payé" dans le tableau)
             total_paye_global = sum(
                 p.montant_net_paye or p.montant or Decimal('0')
                 for p in tous_paiements
             )
-            montant_manquant = max(Decimal('0'), montant_total_du_retard - total_paye_global)
+            # Le montant restant non alloué (séquentiel) peut couvrir partiellement les mois en retard.
+            montant_manquant = max(Decimal('0'), montant_total_du_retard - montant_restant_seq)
             
             # Préparer le message de détails avec les mois en retard
             if nombre_mois_retard > 0:
@@ -527,11 +541,13 @@ class ServiceRecapPaiementMensuel:
             contrat, tous_paiements, mois_fin_ref, loyer_mensuel
         )
         
-        # Compter les mois de retard depuis le mois de référence
+        # Borne inférieure : ne pas remonter avant le début du contrat
+        mois_debut_contrat = contrat.date_debut.replace(day=1)
+
+        # Compter les mois de retard consécutifs en remontant depuis le mois de référence
         mois_retard = 0
         mois_verifie = mois_reference
-        
-        # Ne pas remonter avant le début du contrat
+
         while mois_verifie >= mois_debut_contrat:
             # Vérifier si ce mois est payé
             mois_key = (mois_verifie.year, mois_verifie.month)
@@ -560,6 +576,45 @@ class ServiceRecapPaiementMensuel:
         
         return mois_retard
     
+    @staticmethod
+    def _get_dernier_mois_regle(contrat):
+        """
+        Trouve le dernier mois effectivement réglé en base pour un contrat donné.
+        Se base sur l'ensemble des mois réellement couverts par les paiements validés,
+        en utilisant la même logique que _construire_mois_payes.
+
+        Returns:
+            date | None: Premier jour du dernier mois réglé, ou None si aucun paiement.
+        """
+        loyer_mensuel = contrat.loyer_mensuel or Decimal('0')
+        if loyer_mensuel <= 0:
+            return None
+
+        tous_paiements = list(Paiement.objects.filter(
+            contrat=contrat,
+            statut='valide'
+        ).filter(
+            Q(type_paiement='loyer') |
+            Q(type_paiement='paiement_partiel') |
+            Q(type_paiement='avance')
+        ).order_by('date_paiement'))
+
+        if not tous_paiements:
+            return None
+
+        # Construire tous les mois couverts jusqu'à aujourd'hui
+        mois_fin_ref = datetime.date.today().replace(day=1)
+        mois_payes = ServiceRecapPaiementMensuel._construire_mois_payes(
+            contrat, tous_paiements, mois_fin_ref, loyer_mensuel
+        )
+
+        if not mois_payes:
+            return None
+
+        # Trouver le mois le plus récent couvert (year, month) → date
+        dernier = max(mois_payes)
+        return datetime.date(dernier[0], dernier[1], 1)
+
     @staticmethod
     def preparer_donnees_recap_locataires(bailleur, mois_recap):
         """
@@ -711,7 +766,16 @@ class ServiceRecapPaiementMensuel:
                     except Exception as e:
                         logger.warning(f"Erreur lors du calcul des mois de retard pour le contrat {contrat.id}: {e}")
                         mois_retard = 0
-                
+
+                # Trouver le dernier mois réellement réglé en base pour ce contrat
+                try:
+                    dernier_mois_regle = ServiceRecapPaiementMensuel._get_dernier_mois_regle(contrat)
+                    dernier_mois_regle_display = formater_mois_francais(dernier_mois_regle) if dernier_mois_regle else "Aucun"
+                except Exception as e:
+                    logger.warning(f"Erreur _get_dernier_mois_regle contrat {contrat.id}: {e}")
+                    dernier_mois_regle = None
+                    dernier_mois_regle_display = "Aucun"
+
                 # Créer un dictionnaire avec valeurs primitives uniquement (évite OOM PDF sur Render)
                 contrat_dict = {
                     'contrat_id': contrat.id,
@@ -731,6 +795,8 @@ class ServiceRecapPaiementMensuel:
                     'propriete_adresse_truncated': propriete_adresse,
                     'propriete_ville': propriete_ville,
                     'mois_retard': mois_retard,
+                    'dernier_mois_regle': dernier_mois_regle,
+                    'dernier_mois_regle_display': dernier_mois_regle_display,
                 }
                 locataires_dict[locataire.id]['contrats'].append(contrat_dict)
             except Exception as e:

@@ -321,18 +321,21 @@ class RecapMensuel(models.Model):
             # CORRECTION : Utiliser ChargesBailleur depuis proprietes.models (pas ChargeBailleur depuis paiements.models)
             # CORRECTION : ChargesBailleur utilise retraits_lies (ManyToMany) au lieu de retrait_utilise (ForeignKey)
             from proprietes.models import ChargesBailleur
+            # Charges en attente ou partiellement déduites, non encore soldées dans un retrait payé.
+            # Statuts 'payee' et 'remboursee' indiquent que la charge est entièrement réglée → exclues.
             charges_bailleur_mois = ChargesBailleur.objects.filter(
                 propriete__bailleur=self.bailleur,
-                statut__in=['en_attente', 'deduite_retrait']  # Charges disponibles ou partiellement déduites
+                statut__in=['en_attente', 'deduite_retrait']
             ).exclude(
-                # Exclure les charges qui ont été utilisées dans un retrait PAYÉ
                 retraits_lies__retrait_bailleur__statut='paye'
             ).distinct()
-            
-            # Calculer le total des charges en utilisant le montant restant ou le montant total
+
             for charge in charges_bailleur_mois:
-                # Utiliser montant_restant s'il existe, sinon le montant complet
-                montant_a_deduire = getattr(charge, 'montant_restant', None) or charge.montant
+                montant_a_deduire = (
+                    charge.montant_restant
+                    if charge.montant_restant and charge.montant_restant > 0
+                    else charge.montant
+                )
                 total_charges_bailleur += montant_a_deduire
             
             # Correction : Commission agence = 10% du BRUT (loyers bruts)
@@ -2009,33 +2012,72 @@ class RetraitBailleur(models.Model):
     
     def marquer_paye(self, user):
         """
-        Marque le retrait comme payé et marque les charges comme utilisées.
-        IMPORTANT : Marque toutes les charges disponibles (non encore utilisées dans un retrait payé) comme utilisées.
+        Marque le retrait comme payé et solde les charges bailleur associées.
+
+        Deux modèles de charges coexistent :
+        - ChargeBailleur (paiements.models) : ancien modèle, ForeignKey vers retrait
+        - ChargesBailleur (proprietes.models) : nouveau modèle, ManyToMany via ChargesBailleurRetrait
+        Les deux sont mis à jour ici pour garantir la cohérence.
         """
         from django.utils import timezone
-        
+        import logging
+        logger = logging.getLogger(__name__)
+
         self.statut = 'paye'
         self.date_paiement = date.today()
         self.updated_at = timezone.now()
-        
-        # Marquer les charges bailleur comme utilisées
-        # IMPORTANT : Récupérer toutes les charges disponibles (pas seulement celles du mois)
-        # qui ne sont pas encore utilisées dans un retrait payé
-        from paiements.models import ChargeBailleur
-        charges_utilisees = ChargeBailleur.objects.filter(
-            bailleur=self.bailleur,
-            statut__in=['en_attente', 'valide']  # Charges disponibles
-        ).filter(
-            # Inclure les charges qui n'ont pas encore de retrait associé
-            # OU les charges dont le retrait associé n'est pas encore payé
-            Q(retrait_utilise__isnull=True) | 
-            Q(retrait_utilise__statut__in=['en_attente', 'valide'])  # Retrait pas encore payé
-        )
-        
-        # Marquer chaque charge comme utilisée
-        for charge in charges_utilisees:
-            charge.marquer_utilise(self)
-        
+
+        # ── 1. Ancien modèle ChargeBailleur (paiements) ─────────────────────────
+        try:
+            from paiements.models import ChargeBailleur
+            charges_legacy = ChargeBailleur.objects.filter(
+                bailleur=self.bailleur,
+                statut__in=['en_attente', 'valide']
+            ).filter(
+                Q(retrait_utilise__isnull=True) |
+                Q(retrait_utilise__statut__in=['en_attente', 'valide'])
+            )
+            for charge in charges_legacy:
+                charge.marquer_utilise(self)
+        except Exception as e:
+            logger.warning(f"marquer_paye: erreur ChargeBailleur (legacy) : {e}")
+
+        # ── 2. Nouveau modèle ChargesBailleur (proprietes) ───────────────────────
+        # C'est ce modèle qui est utilisé par RecapMensuel.calculer_totaux_bailleur().
+        # La liaison ChargesBailleurRetrait doit exister pour que le .exclude() fonctionne.
+        try:
+            from proprietes.models import ChargesBailleur as ChargesPropr, ChargesBailleurRetrait
+
+            charges_disponibles = ChargesPropr.objects.filter(
+                propriete__bailleur=self.bailleur,
+                statut__in=['en_attente', 'deduite_retrait']
+            ).exclude(
+                # Ignorer les charges déjà liées à un retrait payé
+                retraits_lies__retrait_bailleur__statut='paye'
+            ).distinct()
+
+            for charge in charges_disponibles:
+                montant_a_deduire = (
+                    charge.montant_restant
+                    if charge.montant_restant and charge.montant_restant > 0
+                    else charge.montant
+                )
+                # Créer la liaison si elle n'existe pas déjà
+                liaison, created = ChargesBailleurRetrait.objects.get_or_create(
+                    charge_bailleur=charge,
+                    retrait_bailleur=self,
+                    defaults={'montant_deduit': montant_a_deduire}
+                )
+                if created:
+                    # Mettre à jour montant_deja_deduit et statut de la charge
+                    charge.marquer_comme_deduit(montant_a_deduire)
+                    logger.debug(
+                        f"marquer_paye: charge {charge.pk} liée au retrait {self.pk} "
+                        f"({montant_a_deduire} F CFA déduit)"
+                    )
+        except Exception as e:
+            logger.error(f"marquer_paye: erreur ChargesBailleur (proprietes) : {e}", exc_info=True)
+
         # Sauvegarder seulement les champs modifiés
         self.save(update_fields=['statut', 'date_paiement', 'updated_at'])
     

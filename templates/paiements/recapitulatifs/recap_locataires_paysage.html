@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>État des Paiements Locataires - {{ recap.bailleur_nom }} - {{ recap.mois_display }}</title>
+    <title>État des Paiements Locataires - {{ recap.bailleur_nom }} - Situation au {{ recap.mois_display }}</title>
     <style>
         @page { size: A4 landscape; margin: 1.5cm; }
         body { font-family: Arial, sans-serif; font-size: 8pt; line-height: 1.2; color: #333; margin: 0; padding: 0; }
@@ -36,6 +36,9 @@
         .no-data { text-align: center; color: #7f8c8d; font-style: italic; padding: 0.5cm; }
         .contrat-info { font-size: 5pt; color: #7f8c8d; text-align: left; font-weight: bold; }
         .code-locataire { font-size: 5pt; font-weight: bold; text-align: left; }
+        .dernier-regle { font-size: 5.5pt; font-weight: bold; text-align: center; }
+        .dernier-regle-ok { color: #155724; }
+        .dernier-regle-absent { color: #999; font-style: italic; }
     </style>
 </head>
 <body>
@@ -52,7 +55,7 @@
         {% endif %}
         
         <div class="document-info">
-            État des Paiements Locataires - {{ recap.mois_display|upper }} | 
+            État des Paiements Locataires — Situation au {{ recap.mois_display|upper }} | 
             Généré le {{ date_generation|date:"d/m/Y à H:i" }}
             {% if recap.total_pages and recap.total_pages > 1 %}
             <span class="page-info">| Page {{ recap.page_num }} sur {{ recap.total_pages }}</span>
@@ -63,7 +66,7 @@
     <!-- Titre principal -->
     <div class="title">
         ÉTAT DES PAIEMENTS DES LOCATAIRES<br>
-        {{ recap.mois_display|upper }}
+        <span style="font-size: 11pt;">Situation au {{ recap.mois_display|upper }}</span>
     </div>
 
     <!-- Informations du bailleur -->
@@ -88,18 +91,19 @@
                 <thead>
                     <tr>
                         <th style="width: 3%;">N°</th>
-                        <th style="width: 12%;">Code</th>
-                        <th style="width: 10%;">Locataire</th>
-                        <th style="width: 8%;">Contact</th>
-                        <th style="width: 8%;">Propriété</th>
-                        <th style="width: 8%;">Adresse</th>
-                        <th style="width: 7%;">Contrat</th>
-                        <th style="width: 6%;">Loyer Mensuel</th>
-                        <th style="width: 6%;">Montant Payé</th>
-                        <th style="width: 6%;">Montant Attendu</th>
+                        <th style="width: 10%;">Code</th>
+                        <th style="width: 9%;">Locataire</th>
+                        <th style="width: 7%;">Contact</th>
+                        <th style="width: 7%;">Propriété</th>
+                        <th style="width: 7%;">Adresse</th>
+                        <th style="width: 6%;">Contrat</th>
+                        <th style="width: 5%;">Loyer</th>
+                        <th style="width: 5%;">Payé</th>
+                        <th style="width: 5%;">Attendu</th>
                         <th style="width: 6%;">Statut</th>
-                        <th style="width: 8%;">Date Paiement</th>
-                        <th style="width: 18%;">Détails</th>
+                        <th style="width: 8%;">Dernier Mois Réglé</th>
+                        <th style="width: 7%;">Date Paiem.</th>
+                        <th style="width: 15%;">Détails</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -163,6 +167,13 @@
                                         <span class="status-non-applicable">{{ contrat_data.statut_display }}</span>
                                     {% endif %}
                                 </td>
+                                <td class="dernier-regle">
+                                    {% if contrat_data.dernier_mois_regle_display and contrat_data.dernier_mois_regle_display != "Aucun" %}
+                                        <span class="dernier-regle-ok">{{ contrat_data.dernier_mois_regle_display }}</span>
+                                    {% else %}
+                                        <span class="dernier-regle-absent">Aucun</span>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     {% if contrat_data.date_paiement %}
                                         {{ contrat_data.date_paiement|date:"d/m/Y" }}
@@ -193,7 +204,8 @@
     <div class="footer">
         <p>
             <strong>Document généré le:</strong> {{ date_generation|date:"d/m/Y à H:i" }} | 
-            <strong>Mois de référence:</strong> {{ recap.mois_display }}
+            <strong>Situation au:</strong> {{ recap.mois_display }} |
+            <em>Le statut de chaque locataire est calculé à partir du dernier mois réglé en base jusqu'à ce mois de référence.</em>
         </p>
     </div>
 </body>
