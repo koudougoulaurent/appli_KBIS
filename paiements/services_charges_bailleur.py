@@ -39,14 +39,12 @@ class ServiceChargesBailleurIntelligent:
             Dict contenant les détails des charges calculées
         """
         try:
-            # Date limite : le 25 du mois (ouverture de la fenêtre de retrait)
-            date_limite_retrait = date(mois.year, mois.month, 25)
-
-            # Toutes les charges disponibles jusqu'au 25, non encore soldées dans un retrait payé
+            # Règle métier : une charge est éligible pour le retrait du mois courant
+            # tant que ce retrait n'a pas été payé. Pas de coupure par date fixe.
+            # Seules les charges déjà liées à un retrait PAYÉ sont exclues.
             charges = ChargesBailleur.objects.filter(
                 propriete__bailleur=bailleur,
                 statut__in=['en_attente', 'deduite_retrait'],
-                date_charge__lte=date_limite_retrait,
             ).exclude(
                 retraits_lies__retrait_bailleur__statut='paye'
             ).distinct().select_related('propriete')
