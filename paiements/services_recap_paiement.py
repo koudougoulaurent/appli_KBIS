@@ -238,10 +238,10 @@ class ServiceRecapPaiementMensuel:
             contrat, tous_paiements, mois_fin, loyer_mensuel, retourner_montant_restant=True
         )
 
-        # 3. Filtrer : ignorer les mois antérieurs au début du contrat (mois_paye erronés)
+        # L'ancre est le DERNIER MOIS PAYÉ en base, sans restriction de date de début
+        # de contrat. La date_debut sert uniquement de repli lorsqu'aucun paiement n'existe.
         mois_debut_contrat = contrat.date_debut.replace(day=1)
-        mois_debut_contrat_key = (mois_debut_contrat.year, mois_debut_contrat.month)
-        mois_payes_valides = {m for m in mois_payes if m >= mois_debut_contrat_key}
+        mois_payes_valides = mois_payes  # tous les mois couverts, peu importe l'année
 
         mois_ref_key = (mois_debut.year, mois_debut.month)
         dernier_paiement_utilise = tous_paiements[-1] if tous_paiements else None

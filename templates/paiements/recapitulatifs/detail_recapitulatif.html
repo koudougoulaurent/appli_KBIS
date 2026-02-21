@@ -98,7 +98,7 @@
                     {% if recapitulatif.bailleur %}
                     <li><hr class="dropdown-divider"></li>
                     <li>
-                        <a class="dropdown-item" href="{% url 'paiements:generer_recap_paiement_mensuel' recapitulatif.bailleur.pk %}?mois={{ recapitulatif.mois_recap|date:'Y-m' }}" 
+                        <a class="dropdown-item" href="{% url 'paiements:generer_recap_paiement_mensuel' recapitulatif.bailleur.pk %}" 
                            target="_blank">
                             <i class="bi bi-cash-stack"></i> État de paiement mensuel
                         </a>
