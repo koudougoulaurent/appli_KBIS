@@ -1137,7 +1137,7 @@ def _generer_pdf_recap_locataires_batch(bailleur, mois_recap, locataires_batch, 
     from xhtml2pdf import pisa
     from .services_recap_paiement import MOIS_FRANCAIS
 
-    LOCATAIRES_PAR_PAGE = 10
+    LOCATAIRES_PAR_PAGE = 5
     mois_display = f"{MOIS_FRANCAIS.get(mois_recap.month, '')} {mois_recap.year}" if hasattr(mois_recap, 'month') else str(mois_recap)
     recap_data = {
         'bailleur_nom': bailleur.get_nom_complet() if hasattr(bailleur, 'get_nom_complet') else str(bailleur),
@@ -1183,7 +1183,7 @@ def generer_recap_paiement_mensuel(request, bailleur_id):
     from io import BytesIO
     from core.utils import check_group_permissions_with_fallback
     
-    LOCATAIRES_PAR_PAGE = 10  # Évite OOM xhtml2pdf sur Render (mémoire limitée)
+    LOCATAIRES_PAR_PAGE = 5  # Évite OOM xhtml2pdf sur Render (mémoire limitée)
     
     # Vérification des permissions
     permissions = check_group_permissions_with_fallback(
