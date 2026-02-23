@@ -6,131 +6,93 @@
 <title>Etat Paiements - {{ recap.bailleur_nom }}</title>
 <style>@page { size: A4 landscape; margin: 1cm; }</style>
 </head>
-<body style="font-family:Arial,sans-serif;font-size:8pt;color:#333;margin:0;padding:0;">
+<body style="font-family:Arial,sans-serif;font-size:7pt;color:#333;margin:0;padding:0;">
 
-<!-- En-tête -->
-<div style="text-align:center;margin-bottom:8px;border-bottom:2px solid #2c3e50;padding-bottom:6px;">
+<div style="text-align:center;margin-bottom:6px;border-bottom:2px solid #2c3e50;padding-bottom:4px;">
     {% if entete_base64 %}
-        <img src="data:image/{{ entete_mime|default:'jpeg' }};base64,{{ entete_base64 }}" alt="KBIS" style="width:25cm;max-width:25cm;height:auto;display:block;margin-bottom:6px;">
+    <img src="data:image/{{ entete_mime|default:'jpeg' }};base64,{{ entete_base64 }}" alt="" style="width:24cm;height:auto;display:block;margin-bottom:4px;">
     {% endif %}
-    <div style="font-size:7pt;color:#666;">
-        Etat des Paiements — Situation au {{ recap.mois_display|upper }} | Genere le {{ date_generation|date:"d/m/Y" }}
-        {% if recap.total_pages and recap.total_pages > 1 %} | Page {{ recap.page_num }}/{{ recap.total_pages }}{% endif %}
-    </div>
+    <span style="font-size:7pt;color:#666;">Etat Paiements — {{ recap.mois_display|upper }} | {{ date_generation|date:"d/m/Y" }}{% if recap.total_pages and recap.total_pages > 1 %} | Page {{ recap.page_num }}/{{ recap.total_pages }}{% endif %}</span>
 </div>
 
-<!-- Titre -->
-<div style="font-size:14pt;font-weight:bold;color:#2c3e50;text-align:center;margin:4px 0;text-transform:uppercase;">
-    ETAT DES PAIEMENTS DES LOCATAIRES<br>
-    <span style="font-size:10pt;">Situation au {{ recap.mois_display|upper }}</span>
+<div style="font-size:13pt;font-weight:bold;color:#2c3e50;text-align:center;margin:3px 0;">ETAT DES PAIEMENTS — {{ recap.mois_display|upper }}</div>
+
+<div style="background:#f0f0f0;padding:3px 5px;margin-bottom:5px;font-size:7pt;">
+    <strong>{{ recap.bailleur_nom }}</strong> | Tel: {{ recap.bailleur_telephone }} | {{ recap.bailleur_adresse }}
 </div>
 
-<!-- Bailleur -->
-<div style="background:#f8f9fa;padding:4px 6px;margin-bottom:6px;border-left:3px solid #3498db;">
-    <strong style="font-size:9pt;color:#2c3e50;">{{ recap.bailleur_nom }}</strong>
-    <span style="font-size:7pt;color:#555;margin-left:12px;">Tel: {{ recap.bailleur_telephone }}</span>
-    <span style="font-size:7pt;color:#555;margin-left:12px;">Adr: {{ recap.bailleur_adresse }}</span>
-</div>
-
-<!-- Tableau locataires -->
 {% if recap.locataires %}
-<table style="width:25cm;border-collapse:collapse;font-size:7pt;table-layout:fixed;">
+<table style="width:100%;border-collapse:collapse;font-size:6.5pt;">
     <thead>
         <tr style="background:#34495e;color:#fff;">
-            <th style="width:3%;padding:3px;border:1px solid #2c3e50;text-align:center;">N°</th>
-            <th style="width:9%;padding:3px;border:1px solid #2c3e50;text-align:center;">Code</th>
-            <th style="width:9%;padding:3px;border:1px solid #2c3e50;text-align:center;">Locataire</th>
-            <th style="width:7%;padding:3px;border:1px solid #2c3e50;text-align:center;">Contact</th>
-            <th style="width:7%;padding:3px;border:1px solid #2c3e50;text-align:center;">Propriete</th>
-            <th style="width:7%;padding:3px;border:1px solid #2c3e50;text-align:center;">Adresse</th>
-            <th style="width:6%;padding:3px;border:1px solid #2c3e50;text-align:center;">Contrat</th>
-            <th style="width:5%;padding:3px;border:1px solid #2c3e50;text-align:center;">Loyer</th>
-            <th style="width:5%;padding:3px;border:1px solid #2c3e50;text-align:center;">Paye</th>
-            <th style="width:5%;padding:3px;border:1px solid #2c3e50;text-align:center;">Attendu</th>
-            <th style="width:6%;padding:3px;border:1px solid #2c3e50;text-align:center;">Statut</th>
-            <th style="width:8%;padding:3px;border:1px solid #2c3e50;text-align:center;">Dernier Mois Regle</th>
-            <th style="width:7%;padding:3px;border:1px solid #2c3e50;text-align:center;">Date Paiem.</th>
-            <th style="width:16%;padding:3px;border:1px solid #2c3e50;text-align:center;">Details</th>
+            <th style="padding:2px 3px;border:1px solid #2c3e50;width:3%;">N</th>
+            <th style="padding:2px 3px;border:1px solid #2c3e50;width:8%;">Code</th>
+            <th style="padding:2px 3px;border:1px solid #2c3e50;width:10%;">Locataire</th>
+            <th style="padding:2px 3px;border:1px solid #2c3e50;width:7%;">Tel</th>
+            <th style="padding:2px 3px;border:1px solid #2c3e50;width:7%;">Propriete</th>
+            <th style="padding:2px 3px;border:1px solid #2c3e50;width:8%;">Adresse</th>
+            <th style="padding:2px 3px;border:1px solid #2c3e50;width:6%;">Contrat</th>
+            <th style="padding:2px 3px;border:1px solid #2c3e50;width:6%;">Loyer</th>
+            <th style="padding:2px 3px;border:1px solid #2c3e50;width:6%;">Paye</th>
+            <th style="padding:2px 3px;border:1px solid #2c3e50;width:6%;">Attendu</th>
+            <th style="padding:2px 3px;border:1px solid #2c3e50;width:7%;">Statut</th>
+            <th style="padding:2px 3px;border:1px solid #2c3e50;width:8%;">Der. Mois Regle</th>
+            <th style="padding:2px 3px;border:1px solid #2c3e50;width:6%;">Date Paiem.</th>
+            <th style="padding:2px 3px;border:1px solid #2c3e50;width:12%;">Details</th>
         </tr>
     </thead>
     <tbody>
-        {% for locataire_data in recap.locataires %}
-            {% for contrat_data in locataire_data.contrats %}
-                <tr>
+        {% for loc in recap.locataires %}
+            {% for c in loc.contrats %}
+            <tr style="{% cycle 'background:#fff;' 'background:#f9f9f9;' %}">
+                <td style="padding:2px 3px;border:1px solid #ddd;text-align:center;">
+                    {% if forloop.first %}{% if recap.page_offset %}{{ forloop.parentloop.counter|add:recap.page_offset }}{% else %}{{ forloop.parentloop.counter }}{% endif %}{% endif %}
+                </td>
+                <td style="padding:2px 3px;border:1px solid #ddd;font-size:5.5pt;">{% if forloop.first %}{{ loc.locataire_numero }}{% endif %}</td>
+                <td style="padding:2px 3px;border:1px solid #ddd;font-size:6pt;">
                     {% if forloop.first %}
-                        <td rowspan="{{ locataire_data.contrats|length }}" style="padding:3px;border:1px solid #bdc3c7;text-align:center;vertical-align:top;font-weight:bold;">
-                            {% if recap.page_offset %}{{ forloop.parentloop.counter|add:recap.page_offset }}{% else %}{{ forloop.parentloop.counter }}{% endif %}
-                        </td>
-                        <td rowspan="{{ locataire_data.contrats|length }}" style="padding:3px;border:1px solid #bdc3c7;text-align:left;vertical-align:top;font-size:6pt;font-weight:bold;">
-                            {{ locataire_data.locataire_numero }}
-                        </td>
-                        <td rowspan="{{ locataire_data.contrats|length }}" style="padding:3px;border:1px solid #bdc3c7;text-align:left;vertical-align:top;">
-                            <span style="font-weight:bold;color:#2980b9;font-size:7pt;">{{ locataire_data.locataire_nom }}</span>
-                            {% if locataire_data.statut_global == 'en_retard' and locataire_data.mois_retard_global and locataire_data.mois_retard_global > 0 %}
-                                <br><span style="color:#e74c3c;font-size:5pt;">Retard: {{ locataire_data.mois_retard_global }} mois</span>
-                            {% endif %}
-                        </td>
-                        <td rowspan="{{ locataire_data.contrats|length }}" style="padding:3px;border:1px solid #bdc3c7;text-align:left;vertical-align:top;font-size:6pt;">
-                            {{ locataire_data.locataire_telephone|default:"-" }}
-                        </td>
+                    <span style="font-weight:bold;color:#2980b9;">{{ loc.locataire_nom }}</span>
+                    {% if loc.statut_global == 'en_retard' and loc.mois_retard_global and loc.mois_retard_global > 0 %}
+                    <br><span style="color:#e74c3c;font-size:5pt;">Retard:{{ loc.mois_retard_global }}m</span>
                     {% endif %}
-                    <td style="padding:3px;border:1px solid #bdc3c7;text-align:left;vertical-align:top;font-size:6pt;font-weight:bold;color:#2c3e50;">
-                        {{ contrat_data.propriete_titre_truncated|default:"Sans titre" }}<br>
-                        <span style="color:#7f8c8d;">ID: {{ contrat_data.propriete_id }}</span>
-                    </td>
-                    <td style="padding:3px;border:1px solid #bdc3c7;text-align:left;vertical-align:top;font-size:6pt;font-weight:bold;color:#2c3e50;">
-                        {{ contrat_data.propriete_adresse_truncated|default:"Non renseignee" }}<br>
-                        <span style="color:#7f8c8d;">{{ contrat_data.propriete_ville|default:"" }}</span>
-                    </td>
-                    <td style="padding:3px;border:1px solid #bdc3c7;text-align:left;vertical-align:top;font-size:5pt;color:#555;">
-                        <strong>{{ contrat_data.numero_contrat|default:"N/A" }}</strong><br>
-                        Debut: {{ contrat_data.date_debut_contrat|date:"d/m/Y" }}<br>
-                        {% if contrat_data.date_fin_contrat %}Fin: {{ contrat_data.date_fin_contrat|date:"d/m/Y" }}{% else %}Fin: Indefini{% endif %}
-                    </td>
-                    <td style="padding:3px;border:1px solid #bdc3c7;text-align:center;font-weight:bold;color:#27ae60;">
-                        {{ contrat_data.loyer_mensuel|floatformat:0|intcomma }} F CFA
-                    </td>
-                    <td style="padding:3px;border:1px solid #bdc3c7;text-align:center;font-weight:bold;color:#27ae60;">
-                        {{ contrat_data.montant_paye|floatformat:0|intcomma }} F CFA
-                    </td>
-                    <td style="padding:3px;border:1px solid #bdc3c7;text-align:center;font-weight:bold;color:#27ae60;">
-                        {{ contrat_data.montant_attendu|floatformat:0|intcomma }} F CFA
-                    </td>
-                    <td style="padding:3px;border:1px solid #bdc3c7;text-align:center;vertical-align:top;">
-                        {% if contrat_data.statut == 'regle' %}
-                            <span style="background:#d4edda;color:#155724;padding:1px 3px;font-size:6pt;font-weight:bold;">REGLE</span>
-                        {% elif contrat_data.statut == 'en_retard' %}
-                            <span style="background:#f8d7da;color:#721c24;padding:1px 3px;font-size:6pt;font-weight:bold;">EN RETARD{% if contrat_data.mois_retard and contrat_data.mois_retard > 0 %}<br><span style="font-size:4pt;">({{ contrat_data.mois_retard }} mois)</span>{% endif %}</span>
-                        {% else %}
-                            <span style="background:#e9ecef;color:#666;padding:1px 3px;font-size:6pt;">{{ contrat_data.statut_display }}</span>
-                        {% endif %}
-                    </td>
-                    <td style="padding:3px;border:1px solid #bdc3c7;text-align:center;font-size:6pt;font-weight:bold;">
-                        {% if contrat_data.dernier_mois_regle_display and contrat_data.dernier_mois_regle_display != "Aucun" %}
-                            <span style="color:#155724;">{{ contrat_data.dernier_mois_regle_display }}</span>
-                        {% else %}
-                            <span style="color:#999;font-style:italic;">Aucun</span>
-                        {% endif %}
-                    </td>
-                    <td style="padding:3px;border:1px solid #bdc3c7;text-align:center;font-size:6pt;">
-                        {% if contrat_data.date_paiement %}{{ contrat_data.date_paiement|date:"d/m/Y" }}{% else %}<span style="color:#999;">-</span>{% endif %}
-                    </td>
-                    <td style="padding:3px;border:1px solid #bdc3c7;text-align:left;font-size:5pt;{% if contrat_data.statut == 'en_retard' %}color:#e74c3c;font-style:italic;{% else %}color:#27ae60;{% endif %}font-weight:bold;">
-                        {{ contrat_data.details_paiement|default:"-" }}
-                    </td>
-                </tr>
+                    {% endif %}
+                </td>
+                <td style="padding:2px 3px;border:1px solid #ddd;font-size:5.5pt;">{% if forloop.first %}{{ loc.locataire_telephone|default:"-" }}{% endif %}</td>
+                <td style="padding:2px 3px;border:1px solid #ddd;font-size:6pt;color:#2c3e50;font-weight:bold;">{{ c.propriete_titre_truncated|default:"-" }}</td>
+                <td style="padding:2px 3px;border:1px solid #ddd;font-size:5.5pt;">{{ c.propriete_adresse_truncated|default:"-" }}</td>
+                <td style="padding:2px 3px;border:1px solid #ddd;font-size:5pt;color:#555;">{{ c.numero_contrat|default:"N/A" }}<br>{{ c.date_debut_contrat|date:"d/m/Y" }}</td>
+                <td style="padding:2px 3px;border:1px solid #ddd;text-align:right;font-weight:bold;color:#27ae60;">{{ c.loyer_mensuel|floatformat:0|intcomma }}</td>
+                <td style="padding:2px 3px;border:1px solid #ddd;text-align:right;font-weight:bold;color:#27ae60;">{{ c.montant_paye|floatformat:0|intcomma }}</td>
+                <td style="padding:2px 3px;border:1px solid #ddd;text-align:right;font-weight:bold;color:#27ae60;">{{ c.montant_attendu|floatformat:0|intcomma }}</td>
+                <td style="padding:2px 3px;border:1px solid #ddd;text-align:center;">
+                    {% if c.statut == 'regle' %}
+                    <span style="background:#d4edda;color:#155724;padding:1px 2px;font-size:5.5pt;font-weight:bold;">REGLE</span>
+                    {% elif c.statut == 'en_retard' %}
+                    <span style="background:#f8d7da;color:#721c24;padding:1px 2px;font-size:5.5pt;font-weight:bold;">RETARD{% if c.mois_retard and c.mois_retard > 0 %} ({{ c.mois_retard }}m){% endif %}</span>
+                    {% else %}
+                    <span style="background:#e9ecef;color:#666;padding:1px 2px;font-size:5.5pt;">{{ c.statut_display }}</span>
+                    {% endif %}
+                </td>
+                <td style="padding:2px 3px;border:1px solid #ddd;text-align:center;font-size:5.5pt;font-weight:bold;">
+                    {% if c.dernier_mois_regle_display and c.dernier_mois_regle_display != "Aucun" %}
+                    <span style="color:#155724;">{{ c.dernier_mois_regle_display }}</span>
+                    {% else %}<span style="color:#aaa;">-</span>{% endif %}
+                </td>
+                <td style="padding:2px 3px;border:1px solid #ddd;text-align:center;font-size:5.5pt;">
+                    {% if c.date_paiement %}{{ c.date_paiement|date:"d/m/Y" }}{% else %}-{% endif %}
+                </td>
+                <td style="padding:2px 3px;border:1px solid #ddd;font-size:5pt;{% if c.statut == 'en_retard' %}color:#c0392b;font-style:italic;{% else %}color:#27ae60;{% endif %}">{{ c.details_paiement|default:"-" }}</td>
+            </tr>
             {% endfor %}
         {% endfor %}
     </tbody>
 </table>
 {% else %}
-<p style="text-align:center;color:#7f8c8d;font-style:italic;">Aucun locataire trouve pour ce bailleur ce mois-ci.</p>
+<p style="text-align:center;color:#999;">Aucun locataire pour ce bailleur.</p>
 {% endif %}
 
-<!-- Pied de page -->
-<div style="margin-top:6px;padding-top:4px;border-top:1px solid #bdc3c7;font-size:6pt;color:#7f8c8d;text-align:center;">
-    Document genere le: {{ date_generation|date:"d/m/Y a H:i" }} | Situation au: {{ recap.mois_display }} | Le statut de chaque locataire est calcule a partir du dernier mois regle en base jusqu'a ce mois de reference.
+<div style="margin-top:5px;border-top:1px solid #ccc;padding-top:3px;font-size:5.5pt;color:#999;text-align:center;">
+    {{ date_generation|date:"d/m/Y H:i" }} | Situation: {{ recap.mois_display }} | Statut calcule a partir du dernier mois regle en base.
 </div>
-
 </body>
 </html>
