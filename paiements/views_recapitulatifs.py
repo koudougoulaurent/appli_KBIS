@@ -1130,14 +1130,15 @@ def generer_recapitulatif_automatique(request):
 
 
 def _generer_pdf_recap_locataires_batch(bailleur, mois_recap, locataires_batch, page_num, total_pages, entete_base64, entete_mime="jpeg"):
-    """Génère un PDF pour un lot de locataires (pagination). Données primitives uniquement (évite OOM)."""
+    """
+    Génère un PDF via WeasyPrint (supporte rowspan/CSS complexe, bien plus léger que xhtml2pdf).
+    """
     import datetime
     from django.template.loader import render_to_string
-    from io import BytesIO
-    from xhtml2pdf import pisa
+    from weasyprint import HTML
     from .services_recap_paiement import MOIS_FRANCAIS
 
-    LOCATAIRES_PAR_PAGE = 3
+    LOCATAIRES_PAR_PAGE = 15
     mois_display = f"{MOIS_FRANCAIS.get(mois_recap.month, '')} {mois_recap.year}" if hasattr(mois_recap, 'month') else str(mois_recap)
     recap_data = {
         'bailleur_nom': bailleur.get_nom_complet() if hasattr(bailleur, 'get_nom_complet') else str(bailleur),
@@ -1160,15 +1161,7 @@ def _generer_pdf_recap_locataires_batch(bailleur, mois_recap, locataires_batch, 
         'paiements/recapitulatifs/recap_locataires_paysage.html',
         {'recap': recap_data, 'date_generation': date_generation, 'entete_base64': entete_base64, 'entete_mime': entete_mime}
     )
-    pdf_buffer = BytesIO()
-    pisa.CreatePDF(
-        html_content,
-        dest=pdf_buffer,
-        encoding='UTF-8',
-        link_callback=None,
-        capacity=50 * 1024,  # Buffer 50KB → temp files pour gros docs, réduit OOM
-    )
-    return pdf_buffer.getvalue()
+    return HTML(string=html_content, base_url=None).write_pdf()
 
 
 @login_required
@@ -1183,7 +1176,7 @@ def generer_recap_paiement_mensuel(request, bailleur_id):
     from io import BytesIO
     from core.utils import check_group_permissions_with_fallback
     
-    LOCATAIRES_PAR_PAGE = 3  # Évite OOM xhtml2pdf sur Render (mémoire limitée)
+    LOCATAIRES_PAR_PAGE = 15  # WeasyPrint gère bien les grandes pages
     
     # Vérification des permissions
     permissions = check_group_permissions_with_fallback(
@@ -1341,18 +1334,22 @@ def generer_recap_paiement_mensuel(request, bailleur_id):
             import gc
             gc.collect()
         
+        # Fusionner tous les PDFs en un seul fichier (fin du ZIP multi-pages)
         if total_pages == 1:
-            response = HttpResponse(pdfs_generes[0][1], content_type='application/pdf')
-            response['Content-Disposition'] = f'attachment; filename="{base_filename}.pdf"'
-            return response
-        
-        zip_buffer = BytesIO()
-        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-            for nom_fichier, contenu in pdfs_generes:
-                zf.writestr(nom_fichier, contenu)
-        zip_buffer.seek(0)
-        response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
-        response['Content-Disposition'] = f'attachment; filename="{base_filename}_pages.zip"'
+            pdf_final = pdfs_generes[0][1]
+        else:
+            from pypdf import PdfWriter, PdfReader
+            writer = PdfWriter()
+            for _, contenu in pdfs_generes:
+                reader = PdfReader(BytesIO(contenu))
+                for page in reader.pages:
+                    writer.add_page(page)
+            merged_buf = BytesIO()
+            writer.write(merged_buf)
+            pdf_final = merged_buf.getvalue()
+
+        response = HttpResponse(pdf_final, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{base_filename}.pdf"'
         return response
         
     except Exception as e:
