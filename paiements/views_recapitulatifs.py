@@ -1161,7 +1161,17 @@ def _generer_pdf_recap_locataires_batch(bailleur, mois_recap, locataires_batch, 
         'paiements/recapitulatifs/recap_locataires_paysage.html',
         {'recap': recap_data, 'date_generation': date_generation, 'entete_base64': entete_base64, 'entete_mime': entete_mime}
     )
-    return HTML(string=html_content, base_url=None).write_pdf()
+    # WeasyPrint (Linux/Render) — beaucoup plus léger que xhtml2pdf pour les grandes tables
+    # Fallback automatique vers xhtml2pdf sur Windows (dev local, sans GTK)
+    try:
+        from weasyprint import HTML
+        return HTML(string=html_content, base_url=None).write_pdf()
+    except (ImportError, OSError):
+        from io import BytesIO
+        from xhtml2pdf import pisa
+        pdf_buffer = BytesIO()
+        pisa.CreatePDF(html_content, dest=pdf_buffer, encoding='UTF-8', link_callback=None)
+        return pdf_buffer.getvalue()
 
 
 @login_required
