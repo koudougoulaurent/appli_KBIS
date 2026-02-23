@@ -1135,7 +1135,6 @@ def _generer_pdf_recap_locataires_batch(bailleur, mois_recap, locataires_batch, 
     """
     import datetime
     from django.template.loader import render_to_string
-    from weasyprint import HTML
     from .services_recap_paiement import MOIS_FRANCAIS
 
     LOCATAIRES_PAR_PAGE = 15
