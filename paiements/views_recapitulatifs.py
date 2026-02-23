@@ -1131,52 +1131,215 @@ def generer_recapitulatif_automatique(request):
 
 def _generer_pdf_recap_locataires_batch(bailleur, mois_recap, locataires_batch, page_num, total_pages, entete_base64, entete_mime="jpeg"):
     """
-    Génère un PDF via WeasyPrint (supporte rowspan/CSS complexe, bien plus léger que xhtml2pdf).
+    Génère le PDF en pur ReportLab (sans HTML) — seule approche stable sur Render 512MB.
+    Zéro parsing HTML/CSS, zéro DOM, directement des objets Python → PDF.
     """
     import datetime
-    from django.template.loader import render_to_string
+    import base64
+    from io import BytesIO
+    from decimal import Decimal
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.units import cm
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+    from reportlab.platypus import (
+        SimpleDocTemplate, Table, TableStyle, Paragraph,
+        Spacer, Image, HRFlowable
+    )
     from .services_recap_paiement import MOIS_FRANCAIS
 
-    LOCATAIRES_PAR_PAGE = 8
-    mois_display = f"{MOIS_FRANCAIS.get(mois_recap.month, '')} {mois_recap.year}" if hasattr(mois_recap, 'month') else str(mois_recap)
-    recap_data = {
-        'bailleur_nom': bailleur.get_nom_complet() if hasattr(bailleur, 'get_nom_complet') else str(bailleur),
-        'bailleur_telephone': getattr(bailleur, 'telephone', None) or 'Non renseigné',
-        'bailleur_email': getattr(bailleur, 'email', None) or 'Non renseigné',
-        'bailleur_adresse': getattr(bailleur, 'adresse', None) or 'Non renseignée',
-        'mois_recap': mois_recap,
-        'mois_display': mois_display,
-        'locataires': locataires_batch,
-        'total_locataires': len(locataires_batch),
-        'total_reglees': sum(1 for l in locataires_batch if l.get('statut_global') == 'regle'),
-        'total_en_retard': sum(1 for l in locataires_batch if l.get('statut_global') == 'en_retard'),
-        'limit_truncated': False,
-        'page_num': page_num,
-        'total_pages': total_pages,
-        'page_offset': (page_num - 1) * LOCATAIRES_PAR_PAGE,
-    }
-    date_generation = datetime.datetime.now()
-    html_content = render_to_string(
-        'paiements/recapitulatifs/recap_locataires_paysage.html',
-        {'recap': recap_data, 'date_generation': date_generation, 'entete_base64': entete_base64, 'entete_mime': entete_mime}
-    )
-    # WeasyPrint sur Linux/Render (gère rowspan/CSS, très léger en mémoire).
-    # Sur Windows dev, les libs GTK sont absentes → fallback xhtml2pdf.
-    import sys
-    _use_weasyprint = sys.platform != 'win32'
-    if _use_weasyprint:
-        try:
-            from weasyprint import HTML
-            return HTML(string=html_content, base_url=None).write_pdf()
-        except Exception:
-            _use_weasyprint = False
+    LOCATAIRES_PAR_PAGE = 15
+    page_offset = (page_num - 1) * LOCATAIRES_PAR_PAGE
 
-    # Fallback xhtml2pdf (dev Windows ou si WeasyPrint échoue)
-    from io import BytesIO
-    from xhtml2pdf import pisa
-    pdf_buffer = BytesIO()
-    pisa.CreatePDF(html_content, dest=pdf_buffer, encoding='UTF-8', link_callback=None)
-    return pdf_buffer.getvalue()
+    buf = BytesIO()
+    mois_display = f"{MOIS_FRANCAIS.get(mois_recap.month, '')} {mois_recap.year}" if hasattr(mois_recap, 'month') else str(mois_recap)
+    date_gen = datetime.datetime.now().strftime("%d/%m/%Y à %H:%M")
+    bailleur_nom = bailleur.get_nom_complet() if hasattr(bailleur, 'get_nom_complet') else str(bailleur)
+    bailleur_tel = getattr(bailleur, 'telephone', None) or 'Non renseigné'
+    bailleur_email = getattr(bailleur, 'email', None) or 'Non renseigné'
+    bailleur_adresse = getattr(bailleur, 'adresse', None) or 'Non renseignée'
+
+    doc = SimpleDocTemplate(
+        buf, pagesize=landscape(A4),
+        leftMargin=1.5*cm, rightMargin=1.5*cm,
+        topMargin=1.5*cm, bottomMargin=1.5*cm,
+    )
+    styles = getSampleStyleSheet()
+
+    def sty(size=7, bold=False, align=TA_LEFT, color=None, name=None):
+        return ParagraphStyle(
+            name or f'_s{size}{bold}{align}',
+            parent=styles['Normal'],
+            fontSize=size,
+            fontName='Helvetica-Bold' if bold else 'Helvetica',
+            alignment=align,
+            textColor=color or colors.black,
+            leading=size + 2,
+        )
+
+    story = []
+
+    # ── En-tête image ────────────────────────────────────────────────────────
+    if entete_base64:
+        try:
+            img_buf = BytesIO(base64.b64decode(entete_base64))
+            story.append(Image(img_buf, width=25*cm, height=2.5*cm))
+            story.append(Spacer(1, 0.15*cm))
+        except Exception:
+            pass
+
+    # ── Méta / titre ─────────────────────────────────────────────────────────
+    page_label = f" | Page {page_num}/{total_pages}" if total_pages > 1 else ""
+    story.append(Paragraph(
+        f"État des Paiements — Situation au {mois_display.upper()} | Généré le {date_gen}{page_label}",
+        sty(6, color=colors.HexColor('#666666'), align=TA_CENTER)
+    ))
+    story.append(Spacer(1, 0.15*cm))
+    story.append(Paragraph("ÉTAT DES PAIEMENTS DES LOCATAIRES", sty(14, bold=True, align=TA_CENTER)))
+    story.append(Paragraph(f"Situation au {mois_display.upper()}", sty(10, align=TA_CENTER)))
+    story.append(Spacer(1, 0.25*cm))
+
+    # ── Bloc bailleur ─────────────────────────────────────────────────────────
+    binfo = Table(
+        [[
+            Paragraph(f'<b>Nom:</b> {bailleur_nom}', sty(7)),
+            Paragraph(f'<b>Tél:</b> {bailleur_tel}', sty(7)),
+            Paragraph(f'<b>Email:</b> {bailleur_email}', sty(7)),
+            Paragraph(f'<b>Adresse:</b> {bailleur_adresse}', sty(7)),
+        ]],
+        colWidths=['25%', '20%', '30%', '25%']
+    )
+    binfo.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8f9fa')),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6), ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 4), ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#3498db')),
+    ]))
+    story.append(binfo)
+    story.append(Spacer(1, 0.25*cm))
+    story.append(Paragraph("DÉTAIL DES LOCATAIRES ET STATUT DE PAIEMENT",
+                            sty(9, bold=True, color=colors.HexColor('#2c3e50'))))
+    story.append(Spacer(1, 0.1*cm))
+
+    # ── Tableau locataires ────────────────────────────────────────────────────
+    pw = landscape(A4)[0] - 3*cm   # largeur utile
+    col_w = [
+        pw*0.03, pw*0.07, pw*0.09, pw*0.07,
+        pw*0.07, pw*0.07, pw*0.07, pw*0.055,
+        pw*0.055, pw*0.055, pw*0.07, pw*0.08,
+        pw*0.065, pw*0.135,
+    ]
+    th = sty(6.5, bold=True, align=TA_CENTER, color=colors.white)
+    headers = ['N°', 'Code', 'Locataire', 'Contact', 'Propriété',
+               'Adresse', 'Contrat', 'Loyer', 'Payé', 'Attendu',
+               'Statut', 'Dernier Mois Réglé', 'Date Paiem.', 'Détails']
+    table_data = [[Paragraph(h, th) for h in headers]]
+
+    style_cmds = [
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#34495e')),
+        ('GRID', (0, 0), (-1, -1), 0.3, colors.HexColor('#bdc3c7')),
+        ('FONTSIZE', (0, 0), (-1, -1), 6),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 2), ('RIGHTPADDING', (0, 0), (-1, -1), 2),
+        ('TOPPADDING', (0, 0), (-1, -1), 2), ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8f9fa')]),
+    ]
+
+    def fmt(val):
+        try:
+            return f"{int(Decimal(str(val))):,}".replace(',', '\u202f') + " F"
+        except Exception:
+            return str(val) if val is not None else '-'
+
+    row_idx = 1
+    for loc_i, loc in enumerate(locataires_batch):
+        contrats = loc.get('contrats', [])
+        n = len(contrats)
+        for c_i, c in enumerate(contrats):
+            first = (c_i == 0)
+            statut = c.get('statut', '')
+            if statut == 'regle':
+                s_txt = 'RÉGLÉ'; s_bg = colors.HexColor('#d4edda'); s_fg = colors.HexColor('#155724')
+            elif statut == 'en_retard':
+                nb = c.get('mois_retard', 0)
+                s_txt = f'EN RETARD\n({nb} mois)' if nb else 'EN RETARD'
+                s_bg = colors.HexColor('#f8d7da'); s_fg = colors.HexColor('#721c24')
+            else:
+                s_txt = c.get('statut_display', statut)
+                s_bg = colors.HexColor('#e9ecef'); s_fg = colors.HexColor('#666666')
+
+            dmr = c.get('dernier_mois_regle_display', '') or ''
+            dmr_ok = dmr and dmr != 'Aucun'
+            dmr_col = colors.HexColor('#155724') if dmr_ok else colors.HexColor('#999999')
+
+            details = str(c.get('details_paiement', '') or '-')
+            if len(details) > 110:
+                details = details[:110] + '…'
+
+            date_p = ''
+            try:
+                if c.get('date_paiement'):
+                    date_p = c['date_paiement'].strftime('%d/%m/%Y')
+            except Exception:
+                pass
+
+            try:
+                d_debut = c['date_debut_contrat'].strftime('%d/%m/%Y')
+            except Exception:
+                d_debut = ''
+            try:
+                d_fin = c['date_fin_contrat'].strftime('%d/%m/%Y') if c.get('date_fin_contrat') else 'Indéfini'
+            except Exception:
+                d_fin = 'Indéfini'
+
+            det_col = colors.HexColor('#c0392b') if statut == 'en_retard' else colors.HexColor('#27ae60')
+
+            row = [
+                Paragraph(str(loc_i + 1 + page_offset) if first else '', sty(6, align=TA_CENTER)),
+                Paragraph(str(loc.get('locataire_numero', '') or '') if first else '', sty(5.5, bold=True)),
+                Paragraph(str(loc.get('locataire_nom', '') or '') if first else '',
+                          sty(6, bold=True, color=colors.HexColor('#2980b9'))),
+                Paragraph(str(loc.get('locataire_telephone', '') or '') if first else '', sty(6)),
+                Paragraph(str(c.get('propriete_titre_truncated', '') or ''), sty(6)),
+                Paragraph(str(c.get('propriete_adresse_truncated', '') or ''), sty(6)),
+                Paragraph(f"{c.get('numero_contrat','N/A')}\n{d_debut}\n{d_fin}", sty(5.5, color=colors.HexColor('#555555'))),
+                Paragraph(fmt(c.get('loyer_mensuel', 0)), sty(6, bold=True, align=TA_CENTER, color=colors.HexColor('#27ae60'))),
+                Paragraph(fmt(c.get('montant_paye', 0)), sty(6, bold=True, align=TA_CENTER, color=colors.HexColor('#27ae60'))),
+                Paragraph(fmt(c.get('montant_attendu', 0)), sty(6, bold=True, align=TA_CENTER, color=colors.HexColor('#27ae60'))),
+                Paragraph(s_txt, sty(6, bold=True, align=TA_CENTER, color=s_fg)),
+                Paragraph(dmr if dmr_ok else 'Aucun', sty(6, bold=dmr_ok, align=TA_CENTER, color=dmr_col)),
+                Paragraph(date_p, sty(6, align=TA_CENTER)),
+                Paragraph(details, sty(5.5, color=det_col)),
+            ]
+            table_data.append(row)
+
+            # Fusionner les colonnes locataire sur plusieurs contrats
+            if n > 1 and first:
+                end = row_idx + n - 1
+                for col in range(4):  # N°, Code, Locataire, Contact
+                    style_cmds.append(('SPAN', (col, row_idx), (col, end)))
+                    style_cmds.append(('VALIGN', (col, row_idx), (col, end), 'TOP'))
+
+            style_cmds.append(('BACKGROUND', (10, row_idx), (10, row_idx), s_bg))
+            row_idx += 1
+
+    t = Table(table_data, colWidths=col_w, repeatRows=1, splitByRow=True)
+    t.setStyle(TableStyle(style_cmds))
+    story.append(t)
+
+    # ── Pied de page ─────────────────────────────────────────────────────────
+    story.append(Spacer(1, 0.25*cm))
+    story.append(HRFlowable(width='100%', thickness=0.5, color=colors.HexColor('#bdc3c7')))
+    story.append(Paragraph(
+        f"Document généré le {date_gen} | Situation au {mois_display} | "
+        "Statut calculé à partir du dernier mois réglé en base jusqu'au mois de référence.",
+        sty(5.5, align=TA_CENTER, color=colors.HexColor('#7f8c8d'))
+    ))
+
+    doc.build(story)
+    return buf.getvalue()
 
 
 @login_required
@@ -1191,7 +1354,7 @@ def generer_recap_paiement_mensuel(request, bailleur_id):
     from io import BytesIO
     from core.utils import check_group_permissions_with_fallback
     
-    LOCATAIRES_PAR_PAGE = 8  # Limite mémoire Render 512MB (1 worker)
+    LOCATAIRES_PAR_PAGE = 15  # Pure ReportLab, pas de HTML parsing
     
     # Vérification des permissions
     permissions = check_group_permissions_with_fallback(
