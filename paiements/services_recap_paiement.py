@@ -294,7 +294,24 @@ class ServiceRecapPaiementMensuel:
             mois_en_retard.append(mois_iter)
             mois_iter = mois_iter + relativedelta(months=1)
 
-        mois_liste_str = [formater_mois_francais(m) for m in mois_en_retard]
+        # Détecter les paiements partiels sur les mois en retard
+        from .services_paiement_partiel import ServicePaiementPartiel
+        montant_partiel_par_mois = {}
+        for p in tous_paiements:
+            if p.mois_paye:
+                d = ServicePaiementPartiel.convertir_mois_paye_en_date(p.mois_paye)
+                if d:
+                    key = (d.year, d.month)
+                    montant_partiel_par_mois[key] = montant_partiel_par_mois.get(key, Decimal('0')) + (p.montant_net_paye or p.montant or Decimal('0'))
+
+        mois_liste_str = []
+        for m in mois_en_retard:
+            key = (m.year, m.month)
+            label = formater_mois_francais(m)
+            partiel = montant_partiel_par_mois.get(key, Decimal('0'))
+            if Decimal('0') < partiel < loyer_mensuel:
+                label += f" (partiel: {partiel:.0f} F)"
+            mois_liste_str.append(label)
         nombre_mois_retard = len(mois_en_retard)
         montant_total_du_retard = nombre_mois_retard * loyer_mensuel
         montant_manquant = max(Decimal('0'), montant_total_du_retard - montant_restant_seq)
@@ -546,17 +563,28 @@ class ServiceRecapPaiementMensuel:
         filtre_type = Q(type_paiement='loyer') | Q(type_paiement='paiement_partiel') | Q(type_paiement='avance')
 
         # ── 1. Paiements avec mois_paye explicite ────────────────────────────
-        dernier_avec_mois = None
+        # On vérifie que le total cumulé pour ce mois >= loyer_mensuel,
+        # exactement comme _construire_mois_payes, pour garantir la cohérence.
+        montant_par_mois_explicite = {}
         paiements_avec = Paiement.objects.filter(
             contrat=contrat, statut='valide'
         ).filter(filtre_type).exclude(
             Q(mois_paye='') | Q(mois_paye__isnull=True)
-        ).values_list('mois_paye', flat=True)
+        ).values_list('mois_paye', 'montant_net_paye', 'montant')
 
-        for mois_paye_str in paiements_avec:
+        for mois_paye_str, montant_net, montant_brut in paiements_avec:
             d = ServicePaiementPartiel.convertir_mois_paye_en_date(mois_paye_str)
-            if d and (dernier_avec_mois is None or d > dernier_avec_mois):
-                dernier_avec_mois = d
+            if d:
+                m = montant_net or montant_brut or Decimal('0')
+                key = (d.year, d.month)
+                montant_par_mois_explicite[key] = montant_par_mois_explicite.get(key, Decimal('0')) + m
+
+        dernier_avec_mois = None
+        for (y, mo), total in montant_par_mois_explicite.items():
+            if total >= loyer_mensuel:
+                d = datetime.date(y, mo, 1)
+                if dernier_avec_mois is None or d > dernier_avec_mois:
+                    dernier_avec_mois = d
 
         # ── 2. Paiements sans mois_paye : séquentiel READ-ONLY ───────────────
         paiements_sans = list(Paiement.objects.filter(
