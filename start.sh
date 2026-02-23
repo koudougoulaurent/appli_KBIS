@@ -11,8 +11,9 @@ python manage.py corriger_statuts_disponibilite &
 # Démarrer Gunicorn immédiatement
 exec gunicorn gestion_immobiliere.wsgi:application \
     --bind 0.0.0.0:$PORT \
-    --timeout 120 \
-    --workers 2 \
+    --timeout 300 \
+    --workers 1 \
+    --worker-class sync \
     --access-logfile - \
     --error-logfile -
 
