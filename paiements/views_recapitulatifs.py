@@ -1129,7 +1129,7 @@ def generer_recapitulatif_automatique(request):
         })
 
 
-def _generer_pdf_recap_locataires_batch(bailleur, mois_recap, locataires_batch, page_num, total_pages, entete_base64):
+def _generer_pdf_recap_locataires_batch(bailleur, mois_recap, locataires_batch, page_num, total_pages, entete_base64, entete_mime="jpeg"):
     """Génère un PDF pour un lot de locataires (pagination). Données primitives uniquement (évite OOM)."""
     import datetime
     from django.template.loader import render_to_string
@@ -1158,7 +1158,7 @@ def _generer_pdf_recap_locataires_batch(bailleur, mois_recap, locataires_batch, 
     date_generation = datetime.datetime.now()
     html_content = render_to_string(
         'paiements/recapitulatifs/recap_locataires_paysage.html',
-        {'recap': recap_data, 'date_generation': date_generation, 'entete_base64': entete_base64}
+        {'recap': recap_data, 'date_generation': date_generation, 'entete_base64': entete_base64, 'entete_mime': entete_mime}
     )
     pdf_buffer = BytesIO()
     pisa.CreatePDF(
@@ -1280,32 +1280,42 @@ def generer_recap_paiement_mensuel(request, bailleur_id):
             recap_data['locataires'] = []
             recap_data['limit_truncated'] = False
         
-        # Charger l'image en Base64 (redimensionnée pour réduire mémoire PDF)
+        # Charger l'image en Base64 — convertie en JPEG RGB (pas d'alpha) pour éviter OOM
+        # xhtml2pdf/PIL plantent sur canal alpha (RGBA PNG) avec peu de RAM (Render free tier)
         import os
         import base64
         from io import BytesIO
         from django.conf import settings
         entete_base64 = ""
+        entete_mime = "jpeg"
         image_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'enteteEnImage.png')
         if os.path.exists(image_path):
             try:
                 from PIL import Image
                 img = Image.open(image_path)
-                max_w = 1200  # Réduit taille pour éviter OOM sur Render
+                # Réduire la taille : 800px max de large
+                max_w = 800
                 if img.width > max_w:
                     ratio = max_w / img.width
-                    new_h = int(img.height * ratio)
-                    img = img.resize((max_w, new_h), Image.Resampling.LANCZOS)
+                    img = img.resize((max_w, int(img.height * ratio)), Image.Resampling.LANCZOS)
+                # Convertir en RGB (supprime canal alpha qui cause le crash PIL/xhtml2pdf)
+                if img.mode in ('RGBA', 'LA', 'P', 'PA'):
+                    background = Image.new('RGB', img.size, (255, 255, 255))
+                    if img.mode == 'P':
+                        img = img.convert('RGBA')
+                    background.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
+                    img = background
+                elif img.mode != 'RGB':
+                    img = img.convert('RGB')
                 buf = BytesIO()
-                img.save(buf, format='PNG', optimize=True)
+                img.save(buf, format='JPEG', quality=70, optimize=True)
                 entete_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+                entete_mime = "jpeg"
+                buf.close()
+                del img
             except Exception as e:
-                logger.warning(f"Image en-tête (fallback brut): {e}")
-                try:
-                    with open(image_path, "rb") as f:
-                        entete_base64 = base64.b64encode(f.read()).decode('utf-8')
-                except Exception:
-                    pass
+                logger.warning(f"Image en-tête ignorée (erreur PIL): {e}")
+                entete_base64 = ""
         
         # Pagination: générer un PDF par lot de 15 locataires
         locataires_list = recap_data['locataires']
@@ -1321,7 +1331,7 @@ def generer_recap_paiement_mensuel(request, bailleur_id):
             batch = locataires_list[debut:fin]
             try:
                 pdf_content = _generer_pdf_recap_locataires_batch(
-                    bailleur, mois_recap, batch, page + 1, total_pages, entete_base64
+                    bailleur, mois_recap, batch, page + 1, total_pages, entete_base64, entete_mime
                 )
                 pdfs_generes.append((f"{base_filename}_page{page + 1}.pdf", pdf_content))
             except Exception as pdf_err:

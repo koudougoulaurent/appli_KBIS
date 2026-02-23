@@ -11,7 +11,7 @@
 <!-- En-tête -->
 <div style="text-align:center;margin-bottom:8px;border-bottom:2px solid #2c3e50;padding-bottom:6px;">
     {% if entete_base64 %}
-        <img src="data:image/png;base64,{{ entete_base64 }}" alt="KBIS" style="width:25cm;max-width:25cm;height:auto;display:block;margin-bottom:6px;">
+        <img src="data:image/{{ entete_mime|default:'jpeg' }};base64,{{ entete_base64 }}" alt="KBIS" style="width:25cm;max-width:25cm;height:auto;display:block;margin-bottom:6px;">
     {% endif %}
     <div style="font-size:7pt;color:#666;">
         Etat des Paiements — Situation au {{ recap.mois_display|upper }} | Genere le {{ date_generation|date:"d/m/Y" }}
