@@ -416,22 +416,18 @@ class ServiceRecapPaiementMensuel:
         montant_par_mois = {}  # (year, month) -> Decimal
         
         # 1. Paiements avec mois_paye explicite : attribuer au mois indiqué
+        # Utilise loyer_mensuel directement comme montant dû (pas de calculer_montant_du_mois
+        # qui déclenche des écritures DB via consommer_avance_pour_mois — opération READ-ONLY ici).
         for paiement in tous_paiements:
             if not paiement.mois_paye:
                 continue
             date_mois = ServicePaiementPartiel.convertir_mois_paye_en_date(paiement.mois_paye)
             if not date_mois or date_mois > mois_fin_ref:
                 continue
-            try:
-                montant_du = ServicePaiementPartiel.calculer_montant_du_mois(
-                    contrat, paiement.mois_paye, date_mois
-                )
-            except Exception:
-                montant_du = loyer_mensuel
             montant_paye = paiement.montant_net_paye or paiement.montant or Decimal('0')
             key = (date_mois.year, date_mois.month)
             montant_par_mois[key] = montant_par_mois.get(key, Decimal('0')) + montant_paye
-            if montant_par_mois[key] >= montant_du:
+            if montant_par_mois[key] >= loyer_mensuel:
                 mois_payes.add(key)
         
         # 2. Paiements sans mois_paye : application séquentielle
@@ -531,40 +527,58 @@ class ServiceRecapPaiementMensuel:
     def _get_dernier_mois_regle(contrat):
         """
         Trouve le dernier mois effectivement réglé en base pour un contrat donné.
-        Se base sur l'ensemble des mois réellement couverts par les paiements validés,
-        en utilisant la même logique que _construire_mois_payes.
+        Opération READ-ONLY : aucune écriture DB (pas de consommer_avance_pour_mois).
+
+        Logique :
+        - Paiements avec mois_paye explicite → max(dates converties)
+        - Paiements sans mois_paye → affectation séquentielle simple (loyer_mensuel)
+        Le dernier mois réglé est le max des deux résultats.
 
         Returns:
             date | None: Premier jour du dernier mois réglé, ou None si aucun paiement.
         """
+        from .services_paiement_partiel import ServicePaiementPartiel
+
         loyer_mensuel = contrat.loyer_mensuel or Decimal('0')
         if loyer_mensuel <= 0:
             return None
 
-        tous_paiements = list(Paiement.objects.filter(
-            contrat=contrat,
-            statut='valide'
-        ).filter(
-            Q(type_paiement='loyer') |
-            Q(type_paiement='paiement_partiel') |
-            Q(type_paiement='avance')
+        filtre_type = Q(type_paiement='loyer') | Q(type_paiement='paiement_partiel') | Q(type_paiement='avance')
+
+        # ── 1. Paiements avec mois_paye explicite ────────────────────────────
+        dernier_avec_mois = None
+        paiements_avec = Paiement.objects.filter(
+            contrat=contrat, statut='valide'
+        ).filter(filtre_type).exclude(
+            Q(mois_paye='') | Q(mois_paye__isnull=True)
+        ).values_list('mois_paye', flat=True)
+
+        for mois_paye_str in paiements_avec:
+            d = ServicePaiementPartiel.convertir_mois_paye_en_date(mois_paye_str)
+            if d and (dernier_avec_mois is None or d > dernier_avec_mois):
+                dernier_avec_mois = d
+
+        # ── 2. Paiements sans mois_paye : séquentiel READ-ONLY ───────────────
+        paiements_sans = list(Paiement.objects.filter(
+            contrat=contrat, statut='valide'
+        ).filter(filtre_type).filter(
+            Q(mois_paye='') | Q(mois_paye__isnull=True)
         ).order_by('date_paiement'))
 
-        if not tous_paiements:
-            return None
+        dernier_sequentiel = None
+        if paiements_sans:
+            mois_courant = contrat.date_debut.replace(day=1)
+            montant_cumule = Decimal('0')
+            for paiement in paiements_sans:
+                montant = paiement.montant_net_paye or paiement.montant or Decimal('0')
+                montant_cumule += montant
+                while montant_cumule >= loyer_mensuel:
+                    dernier_sequentiel = mois_courant
+                    montant_cumule -= loyer_mensuel
+                    mois_courant = mois_courant + relativedelta(months=1)
 
-        # Construire tous les mois couverts jusqu'à aujourd'hui
-        mois_fin_ref = datetime.date.today().replace(day=1)
-        mois_payes = ServiceRecapPaiementMensuel._construire_mois_payes(
-            contrat, tous_paiements, mois_fin_ref, loyer_mensuel
-        )
-
-        if not mois_payes:
-            return None
-
-        # Trouver le mois le plus récent couvert (year, month) → date
-        dernier = max(mois_payes)
-        return datetime.date(dernier[0], dernier[1], 1)
+        candidats = [d for d in [dernier_avec_mois, dernier_sequentiel] if d is not None]
+        return max(candidats) if candidats else None
 
     @staticmethod
     def preparer_donnees_recap_locataires(bailleur, mois_recap):
