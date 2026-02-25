@@ -572,7 +572,7 @@ class ChargesBailleurAdmin(admin.ModelAdmin):
             'fields': ('statut',)
         }),
         (_('Déduction'), {
-            'fields': ('motif_deduction', 'retrait_utilise', 'notes_deduction'),
+            'fields': ('motif_deduction', 'notes_deduction'),
             'classes': ('collapse',)
         }),
         (_('Métadonnées'), {
@@ -581,7 +581,7 @@ class ChargesBailleurAdmin(admin.ModelAdmin):
         }),
     )
     
-    readonly_fields = ('date_creation', 'date_modification', 'numero_charge')
+    readonly_fields = ('date_creation', 'date_modification', 'numero_charge', 'montant_deja_deduit', 'montant_restant')
     
     actions = ['marquer_payees', 'marquer_remboursees', 'annuler_charges']
     
@@ -618,10 +618,25 @@ class ChargesBailleurAdmin(admin.ModelAdmin):
         updated = queryset.update(statut='annulee')
         self.message_user(request, f'{updated} charge(s) annulée(s).')
     annuler_charges.short_description = _("Annuler les charges")
-    
+
+    def has_module_permission(self, request):
+        return True
+
+    def has_view_permission(self, request, obj=None):
+        return True
+
+    def has_add_permission(self, request):
+        return True
+
+    def has_change_permission(self, request, obj=None):
+        return True
+
+    def has_delete_permission(self, request, obj=None):
+        return True
+
     def get_queryset(self, request):
         """Optimiser les requêtes."""
-        return super().get_queryset(request).select_related('propriete', 'retrait_utilise')
+        return super().get_queryset(request).select_related('propriete', 'cree_par')
 
 
 @admin.register(ChargesBailleurRetrait)
@@ -652,6 +667,21 @@ class ChargesBailleurRetraitAdmin(admin.ModelAdmin):
     
     readonly_fields = ('date_deduction',)
     
+    def has_module_permission(self, request):
+        return True
+
+    def has_view_permission(self, request, obj=None):
+        return True
+
+    def has_add_permission(self, request):
+        return True
+
+    def has_change_permission(self, request, obj=None):
+        return True
+
+    def has_delete_permission(self, request, obj=None):
+        return True
+
     def get_queryset(self, request):
         """Optimiser les requêtes."""
         return super().get_queryset(request).select_related(
