@@ -490,6 +490,26 @@ class RetraitBailleurAdmin(admin.ModelAdmin):
         )
     annuler_retraits.short_description = "Annuler les retraits sélectionnés"
     
+    def has_module_permission(self, request):
+        """Permet l'accès au module."""
+        return True
+
+    def has_view_permission(self, request, obj=None):
+        """Permet la visualisation."""
+        return True
+
+    def has_add_permission(self, request):
+        """Permet l'ajout."""
+        return True
+
+    def has_change_permission(self, request, obj=None):
+        """Permet la modification."""
+        return True
+
+    def has_delete_permission(self, request, obj=None):
+        """Permet la suppression."""
+        return True
+
     def get_queryset(self, request):
         """Optimiser les requêtes avec select_related."""
         return super().get_queryset(request).select_related(
@@ -528,6 +548,21 @@ class RetraitQuittanceAdmin(admin.ModelAdmin):
         return obj.retrait.bailleur.get_nom_complet() if obj.retrait else '-'
     get_bailleur.short_description = _("Bailleur")
     
+    def has_module_permission(self, request):
+        return True
+
+    def has_view_permission(self, request, obj=None):
+        return True
+
+    def has_add_permission(self, request):
+        return True
+
+    def has_change_permission(self, request, obj=None):
+        return True
+
+    def has_delete_permission(self, request, obj=None):
+        return True
+
     def get_queryset(self, request):
         """Optimiser les requêtes."""
         return super().get_queryset(request).select_related(
@@ -571,7 +606,7 @@ class RecapMensuelAdmin(admin.ModelAdmin):
         }),
     )
     
-    readonly_fields = ('date_creation', 'total_net_a_payer')
+    readonly_fields = ('date_creation', 'total_net_a_payer', 'date_validation', 'date_envoi', 'date_paiement')
     
     actions = ['valider_recaps', 'marquer_envoyes', 'marquer_payes', 'recalculer_totaux', suppression_definitive_conditionnelle]
     
@@ -660,12 +695,12 @@ class RecapMensuelAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         """Optimise les requêtes avec select_related et prefetch_related."""
         return super().get_queryset(request).select_related(
-            'bailleur', 'cree_par', 'valide_par'
+            'bailleur', 'cree_par', 'valide_par', 'modifie_par'
         )
     
     def save_model(self, request, obj, form, change):
         """Sauvegarde le modèle avec l'utilisateur créateur."""
-        if not change:  # Nouvelle création
+        if not change:
             obj.cree_par = request.user
         super().save_model(request, obj, form, change)
 
@@ -1202,7 +1237,22 @@ class ChargeBailleurAdmin(admin.ModelAdmin):
         )
     statut_colore.short_description = _("Statut")
     statut_colore.admin_order_field = 'statut'
-    
+
+    def has_module_permission(self, request):
+        return True
+
+    def has_view_permission(self, request, obj=None):
+        return True
+
+    def has_add_permission(self, request):
+        return True
+
+    def has_change_permission(self, request, obj=None):
+        return True
+
+    def has_delete_permission(self, request, obj=None):
+        return True
+
     def get_queryset(self, request):
         """Optimise les requêtes."""
         return super().get_queryset(request).select_related(
@@ -1211,6 +1261,6 @@ class ChargeBailleurAdmin(admin.ModelAdmin):
     
     def save_model(self, request, obj, form, change):
         """Sauvegarde le modèle avec l'utilisateur créateur."""
-        if not change:  # Nouvelle création
+        if not change:
             obj.cree_par = request.user
         super().save_model(request, obj, form, change)

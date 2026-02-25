@@ -61,9 +61,15 @@ class RecapMensuel(models.Model):
     # Statut et workflow
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='brouillon', verbose_name=_("Statut"))
     
+    # Dates de workflow
+    date_validation = models.DateField(null=True, blank=True, verbose_name=_("Date de validation"))
+    date_envoi = models.DateField(null=True, blank=True, verbose_name=_("Date d'envoi au bailleur"))
+    date_paiement = models.DateField(null=True, blank=True, verbose_name=_("Date de paiement au bailleur"))
+    
     # Métadonnées
     date_creation = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de création"))
     cree_par = models.ForeignKey('utilisateurs.Utilisateur', on_delete=models.SET_NULL, null=True, blank=True, related_name='recaps_mensuels_crees', verbose_name=_("Créé par"))
+    valide_par = models.ForeignKey('utilisateurs.Utilisateur', on_delete=models.SET_NULL, null=True, blank=True, related_name='recaps_mensuels_valides', verbose_name=_("Validé par"))
     date_modification = models.DateTimeField(auto_now=True, verbose_name=_("Date de modification"))
     modifie_par = models.ForeignKey('utilisateurs.Utilisateur', on_delete=models.SET_NULL, null=True, blank=True, related_name='recaps_mensuels_modifies', verbose_name=_("Modifié par"))
     
@@ -98,6 +104,28 @@ class RecapMensuel(models.Model):
         bailleur_nom = self.bailleur.get_nom_complet() if self.bailleur else "Bailleur supprimé"
         return f"Récapitulatif {bailleur_nom} - {self.mois_recap.strftime('%B %Y')}"
     
+    def valider_recap(self, user):
+        """Valide le récapitulatif mensuel."""
+        from datetime import date
+        self.statut = 'valide'
+        self.date_validation = date.today()
+        self.valide_par = user
+        self.save(update_fields=['statut', 'date_validation', 'valide_par'])
+    
+    def marquer_envoye(self, user):
+        """Marque le récapitulatif comme envoyé au bailleur."""
+        from datetime import date
+        self.statut = 'envoye'
+        self.date_envoi = date.today()
+        self.save(update_fields=['statut', 'date_envoi'])
+    
+    def marquer_paye(self, user):
+        """Marque le récapitulatif comme payé au bailleur."""
+        from datetime import date
+        self.statut = 'paye'
+        self.date_paiement = date.today()
+        self.save(update_fields=['statut', 'date_paiement'])
+
     def get_absolute_url(self):
         return reverse('paiements:detail_recap_mensuel_auto', kwargs={'recap_id': self.pk})
     
