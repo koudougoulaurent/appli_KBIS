@@ -1,8 +1,7 @@
 from django.urls import path, include
+from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges, views_retrait_ameliore, views_avance, views_document_unifie, views_document_unifie_complet, views_avance_corrige, views_retraits_temporels, views_validation_paiements, views_ajax_historique, views_correction_avances, views_debug_charges, views_verification_paiements
-from . import views_paiements_partiels_crud as views_crud
-from .api_recherche_contrats import api_recherche_contrats
+from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges, views_retrait_ameliore, views_avance, views_document_unifie, views_document_unifie_complet, views_avance_corrige, views_retraits_temporels, views_validation_paiements, views_ajax_historique, views_correction_avances, views_verification_paiements
 # from . import views_locataire_paiements
 
 app_name = 'paiements'
@@ -62,6 +61,7 @@ urlpatterns = [
     path('admin/corriger-avances/api/corriger-tout/', views_correction_avances.api_corriger_toutes_avances, name='api_corriger_toutes_avances'),
     path('admin/corriger-avances/api/diagnostic-contrat/<int:contrat_id>/', views_correction_avances.api_diagnostic_contrat, name='api_diagnostic_contrat'),
     path('admin/corriger-avances/api/corriger-contrat/<int:contrat_id>/', views_correction_avances.api_corriger_contrat, name='api_corriger_contrat'),
+    path('admin/corriger-avances/api/corriger-mois-couverture/', views_correction_avances.api_corriger_mois_couverture, name='api_corriger_mois_couverture'),
     
     path('recaps-mensuels/creer/', views_recapitulatifs.creer_recapitulatif, name='creer_recap_mensuel'),
     path('recaps-mensuels/<int:recapitulatif_id>/', views_recapitulatifs.detail_recapitulatif, name='detail_recap_mensuel'),
@@ -193,9 +193,6 @@ urlpatterns = [
     path('recapitulatifs/statistiques/', views_recapitulatifs.statistiques_recapitulatifs, name='statistiques_recapitulatifs'),
     path('recapitulatifs/generer-automatique/', views_recapitulatifs.generer_recapitulatif_automatique, name='generer_recapitulatif_automatique'),
     
-    # URL de débogage pour les charges bailleur (temporaire)
-    path('debug-charges-recap/<int:recap_id>/', views_debug_charges.debug_charges_recap, name='debug_charges_recap'),
-    
     # URLs pour les reçus de récapitulatifs
     path('recus-recapitulatifs/', views_recus.liste_recus_recapitulatifs, name='liste_recus_recapitulatifs'),
     path('recus-recapitulatifs/statistiques/', views_recus.statistiques_recus_recapitulatifs, name='statistiques_recus_recapitulatifs'),
@@ -228,11 +225,8 @@ urlpatterns = [
     path('paiement/<int:pk>/refuser/', views.refuser_paiement, name='refuser_paiement'),
     
     # 🔍 API DE RECHERCHE INTELLIGENTE
-    path('api/recherche-contrats/', api_recherche_contrats, name='api_recherche_contrats'),  # NOUVEAU: Widget de recherche
     path('api/recherche-rapide/', api_views.api_recherche_contrats_rapide, name='api_recherche_rapide'),
     path('api/recherche-bailleur/', api_views.api_recherche_bailleur, name='api_recherche_bailleur'),
-    path('api/recherche-recaps-rapide/', api_views.api_recherche_recaps_rapide, name='api_recherche_recaps_rapide'),
-    path('api/recherche-retraits-rapide/', api_views.api_recherche_retraits_rapide, name='api_recherche_retraits_rapide'),
     path('api/contexte-intelligent/contrat/<int:contrat_id>/', api_views.api_contexte_intelligent_contrat, name='api_contexte_intelligent'),
     path('api/creer-avance-rapide/', api_views.api_creer_avance_rapide, name='api_creer_avance_rapide'),
     path('api/convertir-avances-existantes/', api_views.api_convertir_avances_existantes, name='api_convertir_avances_existantes'),
@@ -276,11 +270,6 @@ urlpatterns = [
     path('paiements-partiels/contrats/', views.liste_contrats_paiements_partiels, name='liste_contrats_paiements_partiels'),
     path('paiements-partiels/<int:paiement_id>/completer/', views.completer_reliquat, name='completer_reliquat'),
     path('historique-partiel/<int:contrat_id>/<int:mois>/<int:annee>/', views.historique_paiements_partiels, name='historique_paiements_partiels'),
-    
-    # 🔧 CRUD Paiements partiels (PRIVILEGE)
-    path('paiements-partiels/<int:paiement_id>/detail/', views_crud.detail_paiement_partiel, name='detail_paiement_partiel'),
-    path('paiements-partiels/<int:paiement_id>/modifier/', views_crud.modifier_paiement_partiel, name='modifier_paiement_partiel'),
-    path('paiements-partiels/<int:paiement_id>/supprimer/', views_crud.supprimer_paiement_partiel, name='supprimer_paiement_partiel'),
     
     # 📄 GÉNÉRATION PDF DES RETRAITS AVEC TEMPLATES
     path('retraits/<int:retrait_id>/pdf/', views_retrait_ameliore.generer_pdf_retrait, name='generer_pdf_retrait'),
@@ -327,9 +316,9 @@ urlpatterns = [
         # 🔄 AJAX POUR HISTORIQUE DYNAMIQUE
         path('ajax/contrats-actifs/', views_ajax_historique.get_contrats_actifs_ajax, name='ajax_contrats_actifs'),
         path('ajax/locataires-actifs/', views_ajax_historique.get_locataires_actifs_ajax, name='ajax_locataires_actifs'),
-        
-        # 🔍 VÉRIFICATION ET CORRECTION DES PAIEMENTS
-        path('verification-mois-paye/', views_verification_paiements.verification_mois_paye, name='verification_mois_paye'),
-        path('lancer-correction-mois-paye/', views_verification_paiements.lancer_correction_mois_paye, name='lancer_correction_mois_paye'),
-        path('logs-correction-mois-paye/', views_verification_paiements.afficher_logs_correction, name='afficher_logs_correction'),
+    
+    # 🔍 VÉRIFICATION DES PAIEMENTS
+    path('verification-mois-paye/', views_verification_paiements.verification_mois_paye, name='verification_mois_paye'),
+    path('lancer-correction-mois-paye/', views_verification_paiements.lancer_correction_mois_paye, name='lancer_correction_mois_paye'),
+    path('logs-correction-mois-paye/', views_verification_paiements.afficher_logs_correction, name='logs_correction_mois_paye'),
 ]

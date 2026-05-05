@@ -366,3 +366,69 @@ def api_corriger_contrat(request, contrat_id):
         return JsonResponse({'success': False, 'error': 'Contrat introuvable'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_corriger_mois_couverture(request):
+    """Corrige le mois_debut_couverture des avances créées avec la mauvaise logique.
+    Utilise ServiceLogiqueAvanceUnique pour recalculer le bon mois de début.
+    Traite les avances par ordre chronologique pour éviter les effets de cascade.
+    """
+    try:
+        from paiements.services_logique_avance_unique import ServiceLogiqueAvanceUnique
+
+        avances = AvanceLoyer.objects.filter(
+            statut='active'
+        ).select_related('contrat').order_by('contrat_id', 'date_avance')
+
+        corrections = []
+        erreurs = []
+
+        for avance in avances:
+            try:
+                # Calculer le mois attendu en excluant cette avance du calcul
+                mois_debut_attendu = ServiceLogiqueAvanceUnique.determiner_mois_debut_couverture_nouvelle_avance(
+                    avance.contrat,
+                    date_avance=avance.date_avance,
+                    avance_a_exclure=avance
+                )
+
+                mois_debut_actuel = avance.mois_debut_couverture
+
+                if mois_debut_attendu != mois_debut_actuel:
+                    ancien_debut = mois_debut_actuel
+                    ancienne_fin = avance.mois_fin_couverture
+
+                    nombre_mois = avance.nombre_mois_couverts
+                    if nombre_mois > 0:
+                        nouvelle_fin = mois_debut_attendu + relativedelta(months=nombre_mois - 1)
+                    else:
+                        nouvelle_fin = mois_debut_attendu
+
+                    avance.mois_debut_couverture = mois_debut_attendu
+                    avance.mois_fin_couverture = nouvelle_fin
+                    avance.save()
+
+                    corrections.append({
+                        'avance_id': avance.id,
+                        'contrat': str(avance.contrat),
+                        'contrat_id': avance.contrat.id,
+                        'ancien_debut': ancien_debut.strftime('%B %Y'),
+                        'nouveau_debut': mois_debut_attendu.strftime('%B %Y'),
+                        'ancienne_fin': ancienne_fin.strftime('%B %Y') if ancienne_fin else None,
+                        'nouvelle_fin': nouvelle_fin.strftime('%B %Y'),
+                    })
+            except Exception as e:
+                erreurs.append({'avance_id': avance.id, 'erreur': str(e)})
+
+        return JsonResponse({
+            'success': True,
+            'total_avances_analysees': avances.count(),
+            'corrections_appliquees': len(corrections),
+            'corrections': corrections,
+            'erreurs': erreurs
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

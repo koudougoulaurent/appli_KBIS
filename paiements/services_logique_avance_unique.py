@@ -273,8 +273,8 @@ class ServiceLogiqueAvanceUnique:
         if reste > (loyer_mensuel * Decimal('0.5')):
             mois_complets += 1
         
-        # Au minimum 1 mois
-        nombre_mois = max(1, mois_complets)
+        # Autoriser 0 mois pour les paiements partiels (montant < loyer mensuel)
+        nombre_mois = mois_complets
         
         if settings.DEBUG:
             print(f"\nCALCUL MOIS COUVERTS:")
@@ -414,9 +414,14 @@ class ServiceLogiqueAvanceUnique:
             )
             
             # 3. Calculer le mois de fin
-            mois_fin = ServiceLogiqueAvanceUnique.calculer_mois_fin_couverture(
-                mois_debut, nombre_mois
-            )
+            if nombre_mois > 0:
+                mois_fin = ServiceLogiqueAvanceUnique.calculer_mois_fin_couverture(
+                    mois_debut, nombre_mois
+                )
+            else:
+                # Paiement partiel : aucun mois complet couvert
+                # mois_fin_couverture = None pour ne pas fausser le calcul du prochain mois
+                mois_fin = None
             
             # 4. Créer l'avance
             avance = AvanceLoyer.objects.create(

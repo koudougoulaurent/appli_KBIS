@@ -98,12 +98,6 @@ class AvanceLoyerForm(forms.ModelForm):
             if not contrat.loyer_mensuel or loyer_mensuel <= 0:
                 raise ValidationError("Le contrat sélectionné n'a pas de loyer mensuel défini.")
             
-            # Vérifier que l'avance est suffisante pour au moins un mois
-            if montant_avance < loyer_mensuel:
-                raise ValidationError(
-                    f"L'avance doit être au moins égale au loyer mensuel ({loyer_mensuel} F CFA)."
-                )
-            
             # *** NOUVELLE VALIDATION : Mode de sélection manuelle ***
             if mode_selection == 'manuel':
                 if not mois_couverts_manuels:
