@@ -799,6 +799,27 @@ def get_contrat_details_ajax(request):
                 print(f"Erreur lors de la vérification des avances: {e}")
                 # En cas d'erreur, on continue sans les informations d'avances
             
+            # *** CALCUL DU PROCHAIN MOIS SUGGÉRÉ (logique unique centralisée) ***
+            prochain_mois_suggere = None
+            prochain_mois_suggere_formate = None
+            try:
+                from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
+                mois_debut = ServiceLogiqueAvanceUnique.determiner_mois_debut_couverture_nouvelle_avance(contrat)
+                prochain_mois_suggere = mois_debut.strftime('%Y-%m-%d')
+                # Formatage en français
+                mois_fr = {
+                    1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+                    5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+                    9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
+                }
+                prochain_mois_suggere_formate = f"{mois_fr[mois_debut.month]} {mois_debut.year}"
+                prochain_mois_num = mois_debut.month
+                prochain_mois_annee = mois_debut.year
+            except Exception as e:
+                print(f"Erreur lors du calcul du prochain mois suggéré: {e}")
+                prochain_mois_num = None
+                prochain_mois_annee = None
+            
             return JsonResponse({
                 'success': True,
                 'loyer_mensuel': float(contrat.loyer_mensuel or 0),
@@ -811,7 +832,12 @@ def get_contrat_details_ajax(request):
                 'date_debut': contrat.date_debut.strftime('%Y-%m-%d') if contrat.date_debut else None,
                 'date_fin': contrat.date_fin.strftime('%Y-%m-%d') if contrat.date_fin else None,
                 # *** NOUVELLES DONNÉES : Informations sur les avances existantes ***
-                'avances_existantes': avances_info
+                'avances_existantes': avances_info,
+                # *** PROCHAIN MOIS SUGGÉRÉ (basé sur paiements ET avances existantes) ***
+                'prochain_mois_suggere': prochain_mois_suggere,
+                'prochain_mois_suggere_formate': prochain_mois_suggere_formate,
+                'prochain_mois_num': prochain_mois_num,
+                'prochain_mois_annee': prochain_mois_annee,
             })
             
         except Contrat.DoesNotExist:

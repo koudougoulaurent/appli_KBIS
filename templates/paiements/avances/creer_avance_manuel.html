@@ -164,6 +164,14 @@
                                             </div>
                                         </div>
                                     </div>
+                                    <!-- Mois suggéré (mode automatique) -->
+                                    <div id="mois-suggere-display" class="mt-2" style="display: none;">
+                                        <div class="alert alert-primary py-2">
+                                            <i class="bi bi-calendar-check me-2"></i>
+                                            <strong>Prochain mois à couvrir :</strong>
+                                            <span id="mois-suggere-texte" class="ms-1 fw-bold"></span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -290,6 +298,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const montantAvance = document.getElementById('id_montant_avance');
     const contratSelect = document.getElementById('id_contrat_avance');
     
+    // Variables globales
+    let loyerMensuelGlobal = 0;
+    let prochainMoisNum = null;
+    let prochainMoisAnnee = null;
+    
     // Gestion du mode de sélection
     function toggleModeSelection() {
         if (modeManuel.checked) {
@@ -353,11 +366,65 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.loyer_mensuel) {
+                    // Stocker le loyer mensuel globalement
+                    loyerMensuelGlobal = parseFloat(data.loyer_mensuel);
+                    
                     // Afficher le loyer mensuel
                     const loyerDisplay = document.getElementById('loyer-mensuel-display');
                     const loyerMontant = document.getElementById('loyer-mensuel-montant');
-                    loyerMontant.textContent = parseFloat(data.loyer_mensuel).toLocaleString('fr-FR');
+                    loyerMontant.textContent = loyerMensuelGlobal.toLocaleString('fr-FR');
                     loyerDisplay.style.display = 'block';
+                    
+                    // *** PROCHAIN MOIS SUGGÉRÉ : basé sur paiements ET avances existantes ***
+                    if (data.prochain_mois_suggere_formate) {
+                        prochainMoisNum = data.prochain_mois_num;
+                        prochainMoisAnnee = data.prochain_mois_annee;
+                        
+                        // Afficher le mois suggéré en mode automatique
+                        const moisSuggerDisplay = document.getElementById('mois-suggere-display');
+                        const moisSuggerTexte = document.getElementById('mois-suggere-texte');
+                        if (moisSuggerTexte) {
+                            moisSuggerTexte.textContent = data.prochain_mois_suggere_formate;
+                        }
+                        if (moisSuggerDisplay) {
+                            moisSuggerDisplay.style.display = 'block';
+                        }
+                        
+                        // Pré-sélectionner le bon mois et la bonne année dans la grille manuelle
+                        if (prochainMoisNum && prochainMoisAnnee) {
+                            // Changer l'année dans le sélecteur
+                            if (anneeSelection) {
+                                // Ajouter l'année si elle n'existe pas
+                                let optionExiste = false;
+                                for (let opt of anneeSelection.options) {
+                                    if (parseInt(opt.value) === prochainMoisAnnee) {
+                                        optionExiste = true;
+                                        break;
+                                    }
+                                }
+                                if (!optionExiste) {
+                                    const newOpt = document.createElement('option');
+                                    newOpt.value = prochainMoisAnnee;
+                                    newOpt.textContent = prochainMoisAnnee;
+                                    anneeSelection.appendChild(newOpt);
+                                }
+                                anneeSelection.value = prochainMoisAnnee;
+                            }
+                            
+                            // Décocher tous les mois d'abord
+                            moisCheckboxes.forEach(cb => { cb.checked = false; });
+                            
+                            // Cocher le mois suggéré
+                            const moisPadded = String(prochainMoisNum).padStart(2, '0');
+                            const checkboxMois = document.getElementById(`mois-${moisPadded}`);
+                            if (checkboxMois) {
+                                checkboxMois.checked = true;
+                            }
+                            
+                            // Mettre à jour l'affichage de la sélection
+                            updateSelectedMonths();
+                        }
+                    }
                     
                     // Vérifier les avances existantes seulement si la vérification n'est pas désactivée
                     if (!window.verificationAvancesDesactivee) {
@@ -411,7 +478,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function updateCalculsAutomatiques() {
         const montantAvance = parseFloat(document.getElementById('id_montant_avance').value) || 0;
-        const loyerMensuel = parseFloat(document.getElementById('loyer-mensuel-montant').textContent.replace(/\s/g, '')) || 0;
+        const loyerMensuel = loyerMensuelGlobal || parseFloat(document.getElementById('loyer-mensuel-montant').textContent.replace(/\s/g, '').replace(/\u00a0/g, '')) || 0;
         
         if (montantAvance > 0 && loyerMensuel > 0) {
             const moisCouverts = Math.floor(montantAvance / loyerMensuel);
