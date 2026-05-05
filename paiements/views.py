@@ -141,7 +141,9 @@ def ajouter_paiement_partiel(request):
             reliquats = []
     
     if request.method == 'POST':
+        from .debug_paiement_partiel import log_paiement_partiel_post
         form = PaiementForm(request.POST)
+        log_paiement_partiel_post(request, form)
         if form.is_valid():
             paiement = form.save(commit=False)
             paiement.cree_par = request.user
@@ -172,21 +174,17 @@ def ajouter_paiement_partiel(request):
                     return render(request, 'paiements/ajouter_paiement_partiel.html', context_post)
             
             # *** VALIDATION STRICTE : Vérifier que le mois est le mois suivant le dernier paiement ***
-            mois_paye_nom = request.POST.get('mois_paye', '')
-            annee_paiement = request.POST.get('annee_paiement', '')
+            # IMPORTANT : Utiliser les valeurs nettoyées par le formulaire (cleaned_data)
+            # Le formulaire combine déjà mois_paye + annee_paiement dans sa méthode clean()
+            mois_paye_nom = form.cleaned_data.get('mois_paye', '')
+            
+            # DEBUG : Afficher ce qui est reçu
+            print(f"🔍 [PAIEMENT PARTIEL DEBUG] POST mois_paye: {request.POST.get('mois_paye')}")
+            print(f"🔍 [PAIEMENT PARTIEL DEBUG] POST annee_paiement: {request.POST.get('annee_paiement')}")
+            print(f"🔍 [PAIEMENT PARTIEL DEBUG] CLEANED mois_paye: {mois_paye_nom}")
+            
             if mois_paye_nom:
-                # Si le mois n'a pas d'année, utiliser annee_paiement (priorité) ou année courante
-                import re
-                if not re.search(r'\d{4}', mois_paye_nom):
-                    if annee_paiement:
-                        try:
-                            mois_paye_nom = f"{mois_paye_nom} {int(annee_paiement)}"
-                        except ValueError:
-                            mois_paye_nom = f"{mois_paye_nom} {timezone.now().year}"
-                    else:
-                        mois_paye_nom = f"{mois_paye_nom} {timezone.now().year}"
-                # Si le mois contient déjà une année, la garder (ne pas remplacer par annee_paiement)
-                
+                # La valeur est déjà au bon format "mois année" grâce au clean() du formulaire
                 # VALIDATION STRICTE pour les paiements partiels (toujours de type loyer)
                 validation = ServicePaiementPartiel.valider_mois_a_regler(
                     paiement.contrat, mois_paye_nom, paiement.type_paiement or 'loyer'
@@ -308,50 +306,20 @@ def ajouter_paiement_partiel(request):
             
             return redirect('paiements:liste_contrats_paiements_partiels')
     else:
-        # Pré-remplir le formulaire avec le mois attendu + mois en retard (mois_autorises)
+        # Pré-remplir le formulaire avec le mois attendu si un contrat est sélectionné
         initial_data = {'contrat': contrat_id} if contrat_id else {}
-        mois_autorises = []
         if contrat_obj:
             mois_a_regler = ServicePaiementPartiel.determiner_mois_a_regler(contrat_obj)
-            initial_data['mois_paye'] = mois_a_regler['mois_paye']
-            # Construire mois_autorises (mois attendu + mois en retard) comme dans ajouter
-            from dateutil.relativedelta import relativedelta
-            mois_francais = [
-                'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
-                'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
-            ]
-            mois_autorises = [{'mois_paye': mois_a_regler['mois_paye'], 'mois_label': f"{mois_a_regler['mois_paye']} (Mois attendu)"}]
-            dernier_paiement = Paiement.objects.filter(
-                contrat=contrat_obj, type_paiement='loyer', statut='valide', is_deleted=False
-            ).order_by('-date_paiement').first()
-            dernier_mois_paye_date = None
-            if dernier_paiement and dernier_paiement.mois_paye:
-                dernier_mois_paye_date = ServicePaiementPartiel.convertir_mois_paye_en_date(dernier_paiement.mois_paye)
-            if not dernier_mois_paye_date and dernier_paiement:
-                dernier_mois_paye_date = dernier_paiement.date_paiement.replace(day=1)
-            if not dernier_mois_paye_date and contrat_obj.date_debut:
-                dernier_mois_paye_date = contrat_obj.date_debut.replace(day=1)
-            if dernier_mois_paye_date:
-                mois_en_retard = dernier_mois_paye_date + relativedelta(months=1)
-                date_mois_attendu = mois_a_regler['date_mois']
-                while mois_en_retard < date_mois_attendu:
-                    mois_str = f"{mois_francais[mois_en_retard.month - 1]} {mois_en_retard.year}"
-                    paiements_mois = Paiement.objects.filter(
-                        contrat=contrat_obj, mois_paye=mois_str, type_paiement='loyer',
-                        is_deleted=False, statut='valide'
-                    )
-                    total_paye = sum(p.montant for p in paiements_mois)
-                    montant_du_mois = ServicePaiementPartiel.calculer_montant_du_mois(contrat_obj, mois_str)
-                    if total_paye < montant_du_mois:
-                        mois_autorises.append({'mois_paye': mois_str, 'mois_label': f"{mois_str} (Rattrapage)"})
-                    mois_en_retard = mois_en_retard + relativedelta(months=1)
-        form = PaiementForm(
-            initial=initial_data,
-            contrat_id=contrat_id,
-            mois_autorises=mois_autorises if mois_autorises else None,
-            mois_suggere=(mois_a_regler or {}).get('mois_paye') if contrat_obj else None,
-            type_paiement_initial='paiement_partiel'
-        )
+            # Séparer le mois et l'année pour remplir les deux champs du formulaire
+            mois_complet = mois_a_regler['mois_paye']  # Ex: "Novembre 2025"
+            if mois_complet and ' ' in mois_complet:
+                parties = mois_complet.split(' ')
+                if len(parties) == 2:
+                    initial_data['mois_paye'] = parties[0]  # "Novembre"
+                    initial_data['annee_paiement'] = parties[1]  # "2025"
+            else:
+                initial_data['mois_paye'] = mois_complet
+        form = PaiementForm(initial=initial_data)
     
     # Obtenir les contrats avec paiements partiels pour le contexte
     contrats_avec_partiels = ServicePaiementPartiel.detecter_contrats_avec_paiements_partiels()
@@ -977,21 +945,18 @@ def ajouter_paiement(request):
     # Vérification des permissions
     from core.utils import check_group_permissions
     
-    # 🔍 DEBUG : Afficher les infos utilisateur et permissions (uniquement en mode DEBUG)
-    if settings.DEBUG:
-        print(f"🔍 DEBUG ajouter_paiement:")
-        print(f"   User: {request.user.username}")
-        print(f"   Authenticated: {request.user.is_authenticated}")
-        print(f"   Groupe: {getattr(request.user, 'groupe_travail', None)}")
+    # 🔍 DEBUG : Afficher les infos utilisateur et permissions
+    print(f"🔍 DEBUG ajouter_paiement:")
+    print(f"   User: {request.user.username}")
+    print(f"   Authenticated: {request.user.is_authenticated}")
+    print(f"   Groupe: {getattr(request.user, 'groupe_travail', None)}")
     
     permissions = check_group_permissions(request.user, [], 'add')
-    if settings.DEBUG:
-        print(f"   Permissions: {permissions}")
+    print(f"   Permissions: {permissions}")
     
     if not permissions['allowed']:
         messages.error(request, permissions['message'])
-        if settings.DEBUG:
-            print(f"   ❌ ACCÈS REFUSÉ: {permissions['message']}")
+        print(f"   ❌ ACCÈS REFUSÉ: {permissions['message']}")
         return redirect('paiements:liste')
     
     # Initialiser les variables pour le contexte (utilisées dans GET et POST)
@@ -1003,12 +968,10 @@ def ajouter_paiement(request):
     
     if request.method == 'POST':
         form = PaiementForm(request.POST)
-        if settings.DEBUG:
-            print(f"Données POST: {request.POST}")
-            print(f"Formulaire valide: {form.is_valid()}")
+        print(f"Données POST: {request.POST}")
+        print(f"Formulaire valide: {form.is_valid()}")
         if not form.is_valid():
-            if settings.DEBUG:
-                print(f"Erreurs du formulaire: {form.errors}")
+            print(f"Erreurs du formulaire: {form.errors}")
             # Si le formulaire n'est pas valide, récupérer le contrat depuis les données POST
             try:
                 contrat_id_from_form = request.POST.get('contrat')
@@ -1047,6 +1010,23 @@ def ajouter_paiement(request):
             try:
                 paiement = form.save(commit=False)
                 paiement.cree_par = request.user
+                
+                # *** REDIRECTION AVANCE VERS MODULE DÉDIÉ ***
+                # Le formulaire intelligent n'est pas conçu pour créer des avances.
+                # On redirige systématiquement vers le module dédié qui utilise
+                # ServiceLogiqueAvanceUnique (logique centralisée et validée).
+                if paiement.type_paiement == 'avance':
+                    from django.urls import reverse
+                    contrat_id = request.POST.get('contrat', '')
+                    messages.info(
+                        request,
+                        "Pour créer une avance de loyer, veuillez utiliser le module dédié. "
+                        "Il calcule automatiquement les bons mois de couverture et valide la cohérence des paiements."
+                    )
+                    avance_url = reverse('paiements:avances:ajouter_avance')
+                    if contrat_id:
+                        avance_url = f"{avance_url}?contrat_id={contrat_id}"
+                    return redirect(avance_url)
                 
                 # *** NOUVEAU : VÉRIFICATION DES RELIQUATS EN COURS ***
                 # Vérifier s'il y a des paiements partiels non complétés pour ce contrat
@@ -1117,10 +1097,15 @@ def ajouter_paiement(request):
                                 annee_actuelle = datetime.now().year
                                 mois_paye_nom = f"{mois_paye_nom} {annee_actuelle}"
                         else:
-                            # Le mois contient déjà une année (ex: "octobre 2025" depuis mois_autorises)
-                            # GARDER cette année - ne pas la remplacer par annee_paiement
-                            # (l'année dans mois_paye est prioritaire car le dropdown mois est pré-rempli avec les mois autorisés)
-                            pass
+                            # Le mois contient déjà une année, mais on peut la remplacer par celle du champ annee_paiement si fournie
+                            if annee_paiement:
+                                try:
+                                    annee = int(annee_paiement)
+                                    # Remplacer l'année existante par celle du champ
+                                    mois_sans_annee = re.sub(r'\s+\d{4}$', '', mois_paye_nom).strip()
+                                    mois_paye_nom = f"{mois_sans_annee} {annee}"
+                                except ValueError:
+                                    pass  # Garder l'année existante si l'année fournie n'est pas valide
                     
                     # VALIDATION STRICTE pour les paiements de loyer
                     from .services_paiement_partiel import ServicePaiementPartiel
@@ -1194,13 +1179,19 @@ def ajouter_paiement(request):
                 elif request.POST.get('mois_paye', ''):
                     # Pour les autres types de paiement (avance, caution), utiliser le mois tel quel
                     mois_paye_nom = request.POST.get('mois_paye', '')
+                    annee_selectionnee = request.POST.get('annee_paiement', '')
                     from datetime import datetime
                     import re
                     
-                    # Si le mois n'a pas d'année, construire le format complet avec l'année courante réelle
+                    # Si le mois n'a pas d'année, construire le format complet
                     if not re.search(r'\d{4}', mois_paye_nom):
-                        annee_actuelle = datetime.now().year
-                        paiement.mois_paye = f"{mois_paye_nom} {annee_actuelle}"
+                        if annee_selectionnee:
+                            # Utiliser l'année sélectionnée par l'utilisateur
+                            paiement.mois_paye = f"{mois_paye_nom} {annee_selectionnee}"
+                        else:
+                            # Fallback: utiliser l'année courante
+                            annee_actuelle = datetime.now().year
+                            paiement.mois_paye = f"{mois_paye_nom} {annee_actuelle}"
                     else:
                         paiement.mois_paye = mois_paye_nom
                 # NOTE: Pour les paiements de loyer, le mois_paye est déjà défini par la validation stricte ci-dessus
@@ -1359,7 +1350,13 @@ def ajouter_paiement(request):
                 messages.error(request, f'Erreur lors de la validation du paiement: {str(e)}')
     else:
         # Vérifier s'il y a un contrat sélectionné dans le GET pour afficher les reliquats
+        # Correction 2026-02-09: Initialisation des variables pour éviter erreur 500
         contrat_id_get = request.GET.get('contrat_id')
+        mois_autorises = []
+        reliquats = []
+        total_reliquat = 0
+        contrat_obj_get = None
+        mois_attendu = None
         
         if contrat_id_get:
             try:
@@ -1444,15 +1441,12 @@ def ajouter_paiement(request):
             except Contrat.DoesNotExist:
                 pass
         
-        # Initialiser le formulaire avec les mois autorisés pour les paiements de loyer
+        # Initialiser le formulaire (avec vérification contrat_id)
+        # Correction: vérifier si contrat_id_get existe avant de le passer au formulaire
         if contrat_id_get:
-            form = PaiementForm(
-                contrat_id=contrat_id_get,
-                mois_autorises=mois_autorises,
-                mois_suggere=mois_attendu if mois_autorises else None,
-                type_paiement_initial='loyer'
-            )
+            form = PaiementForm(contrat_id=contrat_id_get, mois_autorises=mois_autorises, type_paiement_initial='loyer')
         else:
+            # Si pas de contrat_id, créer un formulaire sans pré-sélection
             form = PaiementForm()
     
     # Récupérer tous les contrats pour la sélection
@@ -4758,6 +4752,3 @@ class SupprimerPaiementView(SuppressionGeneriqueView):
     def get_success_message(self, obj):
         return f"Paiement #{obj.id} supprimé avec succès."
 
-
-
-# Force commit

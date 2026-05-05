@@ -634,44 +634,23 @@ def api_contexte_intelligent_contrat(request, contrat_id):
 # 🚀 API POUR CRÉER UNE AVANCE RAPIDEMENT
 @csrf_exempt
 def api_creer_avance_rapide(request):
-    """API pour créer une avance rapidement depuis le formulaire de paiement"""
+    """
+    Redirige vers le module dédié de création d'avances.
+    L'ancienne logique utilisait ServiceGestionAvance (système obsolète).
+    Désormais on renvoie l'URL du module dédié qui utilise ServiceLogiqueAvanceUnique.
+    """
     if request.method == 'POST':
-        try:
-            from .services_avance import ServiceGestionAvance
-            from .models_avance import AvanceLoyer
-            from contrats.models import Contrat
-            from decimal import Decimal
-            
-            contrat_id = request.POST.get('contrat_id')
-            montant_avance = request.POST.get('montant_avance')
-            notes = request.POST.get('notes', '')
-            
-            if not contrat_id or not montant_avance:
-                return JsonResponse({'success': False, 'error': 'Paramètres manquants'})
-            
-            # Récupérer le contrat
-            contrat = Contrat.objects.get(pk=contrat_id, is_deleted=False)
-            
-            # Créer l'avance
-            avance = ServiceGestionAvance.creer_avance_loyer(
-                contrat=contrat,
-                montant_avance=Decimal(montant_avance),
-                date_avance=timezone.now().date(),
-                notes=notes
-            )
-            
-            return JsonResponse({
-                'success': True,
-                'avance_id': avance.id,
-                'mois_couverts': avance.nombre_mois_couverts,
-                'montant_restant': float(avance.montant_restant),
-                'statut': avance.statut
-            })
-            
-        except Contrat.DoesNotExist:
-            return JsonResponse({'success': False, 'error': 'Contrat non trouvé'})
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
+        from django.urls import reverse
+        contrat_id = request.POST.get('contrat_id', '')
+        avance_url = reverse('paiements:avances:ajouter_avance')
+        if contrat_id:
+            avance_url = f"{avance_url}?contrat_id={contrat_id}"
+        return JsonResponse({
+            'success': False,
+            'redirect': True,
+            'redirect_url': avance_url,
+            'message': "Veuillez utiliser le module dédié pour créer une avance."
+        })
     
     return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
 

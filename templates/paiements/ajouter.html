@@ -695,6 +695,39 @@ function systemeTempsReel() {
             reinitialiserContexte();
         }
     });
+    
+    // Détecter la sélection du type "avance" et rediriger vers le module dédié
+    $('#id_type_paiement').on('change', function() {
+        const typePaiement = $(this).val();
+        if (typePaiement === 'avance') {
+            const contratId = $('#id_contrat').val();
+            let avanceUrl = '/paiements/avances/ajouter/';
+            if (contratId) {
+                avanceUrl += '?contrat_id=' + contratId;
+            }
+            // Afficher une bannière informative
+            const banniereHtml = `
+                <div class="alert alert-info alert-dismissible mt-3" id="alerte-avance" role="alert">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <strong>Avance de loyer</strong> — Ce formulaire est réservé aux paiements de loyer, caution et charges.
+                    Pour créer une avance, utilisez le <strong>module dédié</strong> qui calcule automatiquement les bons mois de couverture.
+                    <div class="mt-2">
+                        <a href="${avanceUrl}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-arrow-right-circle"></i> Aller au module avances
+                        </a>
+                        <button type="button" class="btn btn-outline-secondary btn-sm ms-2" onclick="$('#id_type_paiement').val('loyer'); $('#alerte-avance').remove();">
+                            Revenir à loyer
+                        </button>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            // Insérer la bannière au-dessus du bouton submit
+            $('button[type="submit"]').closest('.d-grid').before(banniereHtml);
+        } else {
+            $('#alerte-avance').remove();
+        }
+    });
 }
 
 // Charger le contexte intelligent depuis l'API
@@ -1455,6 +1488,7 @@ if (datePaiementInput) {
 }
 
 // Fonction pour créer une avance rapidement
+// → Redirige vers le module dédié (ServiceLogiqueAvanceUnique) au lieu d'une ancienne API
 function creerAvanceRapide() {
     const contratId = $('#id_contrat').val();
     if (!contratId) {
@@ -1462,37 +1496,13 @@ function creerAvanceRapide() {
         return;
     }
     
-    const montant = prompt('Montant de l\'avance (F CFA):');
-    if (!montant || isNaN(montant) || parseFloat(montant) <= 0) {
-        alert('Montant invalide');
-        return;
+    // Rediriger directement vers le module dédié de création d'avances
+    // Ce module utilise ServiceLogiqueAvanceUnique : calcul correct des mois + validation
+    let avanceUrl = '/paiements/avances/ajouter/';
+    if (contratId) {
+        avanceUrl += '?contrat_id=' + contratId;
     }
-    
-    const notes = prompt('Notes (optionnel):') || '';
-    
-    // Créer l'avance via AJAX
-    $.ajax({
-        url: '/paiements/api/creer-avance-rapide/',
-        method: 'POST',
-        data: {
-            'contrat_id': contratId,
-            'montant_avance': montant,
-            'notes': notes,
-            'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
-        },
-        success: function(response) {
-            if (response.success) {
-                alert(`Avance créée avec succès !\nMois couverts: ${response.mois_couverts}\nMontant restant: ${response.montant_restant} F CFA`);
-                // Recharger les données du contrat
-                chargerContexteIntelligent(contratId);
-            } else {
-                alert('Erreur: ' + response.error);
-            }
-        },
-        error: function(xhr, status, error) {
-            alert('Erreur lors de la création de l\'avance: ' + error);
-        }
-    });
+    window.location.href = avanceUrl;
 }
 
 // Fonction pour convertir les avances existantes

@@ -681,6 +681,24 @@ document.addEventListener('DOMContentLoaded', function() {
     toggleModeSelection();
     updateSelectedMonths();
     
+    // *** Pré-sélection du contrat depuis l'URL (ex: ?contrat_id=12) ***
+    // Utilisé quand on arrive depuis "paiement intelligent" ou un lien direct
+    (function() {
+        const params = new URLSearchParams(window.location.search);
+        const contratIdParam = params.get('contrat_id');
+        if (contratIdParam && contratSelect) {
+            contratSelect.value = contratIdParam;
+            // Déclencher l'événement change pour charger le loyer et le mois suggéré
+            contratSelect.dispatchEvent(new Event('change'));
+            // Si Select2 est utilisé, notifier aussi Select2
+            setTimeout(function() {
+                if (typeof jQuery !== 'undefined' && typeof jQuery.fn.select2 !== 'undefined') {
+                    $('#id_contrat_avance').val(contratIdParam).trigger('change.select2');
+                }
+            }, 400);
+        }
+    })();
+    
     // Configurer les boutons d'avertissement au chargement
     configurerBoutonsAvertissement();
     

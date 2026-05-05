@@ -1237,6 +1237,7 @@ if (datePaiementInput) {
 }
 
 // Fonction pour créer une avance rapidement
+// → Redirige vers le module dédié (ServiceLogiqueAvanceUnique) au lieu d'une ancienne API
 function creerAvanceRapide() {
     const contratId = $('#id_contrat').val();
     if (!contratId) {
@@ -1244,37 +1245,12 @@ function creerAvanceRapide() {
         return;
     }
     
-    const montant = prompt('Montant de l\'avance (F CFA):');
-    if (!montant || isNaN(montant) || parseFloat(montant) <= 0) {
-        alert('Montant invalide');
-        return;
+    // Rediriger directement vers le module dédié de création d'avances
+    let avanceUrl = '/paiements/avances/ajouter/';
+    if (contratId) {
+        avanceUrl += '?contrat_id=' + contratId;
     }
-    
-    const notes = prompt('Notes (optionnel):') || '';
-    
-    // Créer l'avance via AJAX
-    $.ajax({
-        url: '/paiements/api/creer-avance-rapide/',
-        method: 'POST',
-        data: {
-            'contrat_id': contratId,
-            'montant_avance': montant,
-            'notes': notes,
-            'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
-        },
-        success: function(response) {
-            if (response.success) {
-                alert(`Avance créée avec succès !\nMois couverts: ${response.mois_couverts}\nMontant restant: ${response.montant_restant} F CFA`);
-                // Recharger les données du contrat
-                chargerContexteIntelligent(contratId);
-            } else {
-                alert('Erreur: ' + response.error);
-            }
-        },
-        error: function(xhr, status, error) {
-            alert('Erreur lors de la création de l\'avance: ' + error);
-        }
-    });
+    window.location.href = avanceUrl;
 }
 
 // Fonction pour convertir les avances existantes
