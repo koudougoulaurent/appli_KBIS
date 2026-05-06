@@ -1,7 +1,6 @@
 from django.urls import path, include
-from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges, views_retrait_ameliore, views_avance, views_document_unifie, views_document_unifie_complet, views_avance_corrige, views_retraits_temporels, views_validation_paiements, views_ajax_historique, views_correction_avances, views_verification_paiements
+from . import views, api_views, views_retraits, views_recapitulatifs, views_recus, api_intelligente_retraits, views_charges_avancees, views_validation, views_unites_locatives, views_quick_actions, views_kbis_recus, views_retraits_charges, views_retrait_ameliore, views_avance, views_document_unifie, views_document_unifie_complet, views_avance_corrige, views_retraits_temporels, views_validation_paiements, views_ajax_historique, views_correction_avances, views_verification_paiements, views_paiements_partiels_crud
 # from . import views_locataire_paiements
 
 app_name = 'paiements'
@@ -269,6 +268,7 @@ urlpatterns = [
     path('paiements-partiels/ajouter/', views.ajouter_paiement_partiel, name='ajouter_paiement_partiel'),
     path('paiements-partiels/contrats/', views.liste_contrats_paiements_partiels, name='liste_contrats_paiements_partiels'),
     path('paiements-partiels/<int:paiement_id>/completer/', views.completer_reliquat, name='completer_reliquat'),
+    path('paiements-partiels/<int:paiement_id>/detail/', views_paiements_partiels_crud.detail_paiement_partiel, name='detail_paiement_partiel'),
     path('historique-partiel/<int:contrat_id>/<int:mois>/<int:annee>/', views.historique_paiements_partiels, name='historique_paiements_partiels'),
     
     # 📄 GÉNÉRATION PDF DES RETRAITS AVEC TEMPLATES
