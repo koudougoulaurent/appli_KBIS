@@ -1132,8 +1132,7 @@ class RecapMensuelForm(forms.ModelForm):
             'mois_recap': forms.DateInput(attrs={
                 'class': 'form-control',
                 'type': 'date',
-                'required': True,
-                'max': date.today().replace(day=1).strftime('%Y-%m-%d')
+                'required': True
             })
         }
         labels = {
@@ -1172,19 +1171,6 @@ class RecapMensuelForm(forms.ModelForm):
             raise forms.ValidationError({
                 'bailleur': _('Le bailleur est obligatoire pour créer un récapitulatif.')
             })
-        
-        if mois_recap:
-            # Interdire les mois futurs
-            mois_courant = date.today().replace(day=1)
-            mois_recap_premier = mois_recap.replace(day=1) if hasattr(mois_recap, 'replace') else mois_recap
-            if mois_recap_premier > mois_courant:
-                raise forms.ValidationError({
-                    'mois_recap': _(
-                        f"Impossible de créer un récapitulatif pour un mois futur "
-                        f"({mois_recap.strftime('%B %Y')}). "
-                        f"Seuls le mois en cours et les mois passés sont autorisés."
-                    )
-                })
 
         if bailleur and mois_recap:
             # Vérifier s'il existe déjà un récapitulatif pour cette combinaison
