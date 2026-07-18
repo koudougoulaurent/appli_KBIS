@@ -226,37 +226,40 @@ class ServiceGestionAvance:
             
             # Calculer le nombre de mois que peut couvrir cette avance
             mois_complets_possibles = int(montant_avance // loyer_mensuel)
-            
+
             # Générer les suggestions de mois
             suggestions = []
-            
-            # Option 1: Mois suivant le dernier paiement
-            if paiements_recents.exists():
-                dernier_paiement = paiements_recents.first()
-                mois_suivant = dernier_paiement.date_paiement.replace(day=1) + relativedelta(months=1)
-                
-                for i in range(min(mois_complets_possibles, 12)):  # Limiter à 12 mois max
-                    mois_suggestion = mois_suivant + relativedelta(months=i)
-                    suggestions.append({
-                        'mois': mois_suggestion,
-                        'mois_formate': mois_suggestion.strftime('%B %Y'),
-                        'mois_formate_fr': ServiceGestionAvance._convertir_mois_francais(mois_suggestion.strftime('%B %Y')),
-                        'description': f"Mois suivant le dernier paiement + {i} mois" if i > 0 else "Mois suivant le dernier paiement",
-                        'recommandé': i == 0
-                    })
-            else:
-                # Si pas de paiements récents, commencer à partir du mois actuel
-                mois_actuel = date_actuelle.replace(day=1)
-                
-                for i in range(min(mois_complets_possibles, 12)):
-                    mois_suggestion = mois_actuel + relativedelta(months=i)
-                    suggestions.append({
-                        'mois': mois_suggestion,
-                        'mois_formate': mois_suggestion.strftime('%B %Y'),
-                        'mois_formate_fr': ServiceGestionAvance._convertir_mois_francais(mois_suggestion.strftime('%B %Y')),
-                        'description': f"Mois actuel + {i} mois" if i > 0 else "Mois actuel",
-                        'recommandé': i == 0
-                    })
+
+            # *** CORRECTION CRITIQUE : Utiliser la LOGIQUE UNIQUE centralisée ***
+            # L'ancien code ignorait les avances existantes (il ne regardait que les
+            # paiements de loyer, voire le mois actuel) : après une première avance,
+            # les suggestions revenaient au mois présent au lieu de continuer après
+            # le dernier mois couvert.
+            premier_mois = None
+            try:
+                from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
+                premier_mois = ServiceLogiqueAvanceUnique.determiner_mois_debut_couverture_nouvelle_avance(contrat)
+            except Exception as e:
+                if settings.DEBUG:
+                    print(f"Erreur logique unique dans get_suggestions_mois_couverts: {e}")
+
+            if premier_mois is None:
+                # Fallback : mois suivant le dernier paiement, sinon mois actuel
+                if paiements_recents.exists():
+                    dernier_paiement = paiements_recents.first()
+                    premier_mois = dernier_paiement.date_paiement.replace(day=1) + relativedelta(months=1)
+                else:
+                    premier_mois = date_actuelle.replace(day=1)
+
+            for i in range(min(mois_complets_possibles, 12)):  # Limiter à 12 mois max
+                mois_suggestion = premier_mois + relativedelta(months=i)
+                suggestions.append({
+                    'mois': mois_suggestion,
+                    'mois_formate': mois_suggestion.strftime('%B %Y'),
+                    'mois_formate_fr': ServiceGestionAvance._convertir_mois_francais(mois_suggestion.strftime('%B %Y')),
+                    'description': f"Premier mois non couvert + {i} mois" if i > 0 else "Premier mois non couvert (paiements et avances pris en compte)",
+                    'recommandé': i == 0
+                })
             
             return {
                 'suggestions': suggestions,

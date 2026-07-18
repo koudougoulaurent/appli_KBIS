@@ -66,15 +66,16 @@ class ServiceSynchronisationAvances:
                 )
                 
                 if not created:
-                    # Mettre à jour l'avance existante
-                    avance.montant_avance = montant_avance
-                    avance.loyer_mensuel = loyer_mensuel
-                    avance.nombre_mois_couverts = nombre_mois_couverts
-                    avance.montant_restant = montant_avance
-                    avance.mois_debut_couverture = mois_debut
-                    avance.mois_fin_couverture = mois_fin
-                    avance.statut = 'active'
-                    avance.save()
+                    # *** CORRECTION CRITIQUE (bug "avances non permanentes") ***
+                    # Ne JAMAIS écraser la couverture d'une avance existante.
+                    # L'ancien code recalculait mois_debut/mois_fin (en incluant
+                    # l'avance elle-même dans le calcul), remettait le statut à
+                    # 'active' et réinitialisait montant_restant au montant total.
+                    # Résultat : à chaque affichage/synchronisation, la couverture
+                    # "glissait" et la consommation était effacée — l'avance ne
+                    # restait donc jamais enregistrée définitivement.
+                    # → On conserve l'avance telle qu'elle a été créée.
+                    pass
                 
                 # Mettre à jour le contrat pour refléter l'avance
                 # IMPORTANT: Utiliser update_fields pour éviter de déclencher toutes les validations
@@ -114,11 +115,20 @@ class ServiceSynchronisationAvances:
                         if loyer_mensuel > 0:
                             nombre_mois = cls._calculer_mois_couverts_precis(montant_avance, loyer_mensuel)
                             montant_reste = montant_avance % loyer_mensuel
-                            
+
+                            # *** CORRECTION : Ne PAS réinitialiser montant_restant au montant total ***
+                            # L'ancien code effaçait la consommation déjà enregistrée à chaque
+                            # synchronisation. On recalcule le restant à partir des consommations réelles.
+                            from django.db.models import Sum
+                            from .models_avance import ConsommationAvance
+                            total_consomme = ConsommationAvance.objects.filter(
+                                avance=avance
+                            ).aggregate(total=Sum('montant_consomme'))['total'] or Decimal('0')
+
                             # Mettre à jour l'avance
                             avance.nombre_mois_couverts = nombre_mois
                             avance.montant_reste = montant_reste
-                            avance.montant_restant = montant_avance  # Réinitialiser
+                            avance.montant_restant = max(Decimal('0'), montant_avance - total_consomme)
                             avance.save()
                             
                             avances_sync += 1

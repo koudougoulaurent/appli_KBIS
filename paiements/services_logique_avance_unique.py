@@ -146,24 +146,46 @@ class ServiceLogiqueAvanceUnique:
             print(f"  - Date: {dernier_paiement_loyer.date_paiement}")
             print(f"  - Mois payé: {dernier_mois_paiement}")
         
-        # 2. Chercher la dernière avance active (en excluant l'avance à corriger si fournie)
+        # 2. Chercher la dernière avance (en excluant l'avance à corriger si fournie)
+        # *** CORRECTION CRITIQUE (bug "le paiement revient au mois présent") ***
+        # On prend aussi en compte les avances ÉPUISÉES : une avance entièrement
+        # consommée a bien couvert ses mois — l'ignorer faisait "oublier" la
+        # couverture et le calcul retombait sur le mois actuel / la date du contrat.
+        # Seules les avances ANNULÉES sont exclues.
         queryset_avances = AvanceLoyer.objects.filter(
             contrat=contrat,
-            statut='active',
+            statut__in=['active', 'epuisee'],
             mois_fin_couverture__isnull=False
         )
         if avance_a_exclure:
             queryset_avances = queryset_avances.exclude(id=avance_a_exclure.id)
         derniere_avance = queryset_avances.order_by('-mois_fin_couverture').first()
-        
+
         dernier_mois_avance = None
         if derniere_avance:
             dernier_mois_avance = derniere_avance.mois_fin_couverture
             if settings.DEBUG:
-                print(f"✓ Dernière avance active trouvée:")
+                print(f"✓ Dernière avance (active/épuisée) trouvée:")
                 print(f"  - ID: {derniere_avance.id}")
                 print(f"  - Montant: {derniere_avance.montant_avance} F CFA")
                 print(f"  - Mois fin couverture: {dernier_mois_avance}")
+
+        # 2bis. Prendre aussi en compte les mois déjà CONSOMMÉS (trace permanente)
+        # Les enregistrements ConsommationAvance survivent aux changements de statut
+        # des avances : ils garantissent que la couverture reste enregistrée définitivement.
+        from .models_avance import ConsommationAvance
+        queryset_consommations = ConsommationAvance.objects.filter(
+            avance__contrat=contrat
+        ).exclude(avance__statut='annulee')
+        if avance_a_exclure:
+            queryset_consommations = queryset_consommations.exclude(avance=avance_a_exclure)
+        derniere_consommation = queryset_consommations.order_by('-mois_consomme').first()
+        if derniere_consommation:
+            mois_consomme = derniere_consommation.mois_consomme.replace(day=1)
+            if not dernier_mois_avance or mois_consomme > dernier_mois_avance:
+                dernier_mois_avance = mois_consomme
+                if settings.DEBUG:
+                    print(f"✓ Dernier mois consommé (ConsommationAvance): {mois_consomme}")
         
         # 3. Prendre le plus récent
         dernier_mois_couvert = None
@@ -729,17 +751,27 @@ class ServiceLogiqueAvanceUnique:
             if mois_paye_date == mois_date:
                 return True
         
-        # Vérifier si le mois est couvert par une avance active
+        # Vérifier si le mois est couvert par une avance (active OU épuisée)
+        # *** CORRECTION : Une avance épuisée a bien couvert ses mois ***
         avances_couvrantes = AvanceLoyer.objects.filter(
             contrat=contrat,
-            statut='active',
+            statut__in=['active', 'epuisee'],
             mois_debut_couverture__lte=mois_date,
             mois_fin_couverture__gte=mois_date
         )
-        
+
         if avances_couvrantes.exists():
             return True
-        
+
+        # Vérifier si le mois a été consommé par une avance (trace permanente)
+        from .models_avance import ConsommationAvance
+        if ConsommationAvance.objects.filter(
+            avance__contrat=contrat,
+            mois_consomme__year=mois_date.year,
+            mois_consomme__month=mois_date.month
+        ).exclude(avance__statut='annulee').exists():
+            return True
+
         return False
     
     @staticmethod

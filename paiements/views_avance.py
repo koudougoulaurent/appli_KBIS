@@ -589,7 +589,21 @@ def creer_avance(request):
                 
                 # Générer un numéro de paiement unique
                 numero_paiement = IDGenerator.generate_id('paiement', date_paiement=date_avance)
-                
+
+                # *** CORRECTION : Enregistrer le DERNIER MOIS COUVERT dans mois_paye ***
+                # Sans cela, le paiement d'avance ne gardait aucune trace des mois
+                # couverts : une fois l'avance épuisée, le système "oubliait" la
+                # couverture et revenait au mois présent.
+                mois_fr_noms = {
+                    1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+                    5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+                    9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
+                }
+                mois_reference_avance = avance.mois_fin_couverture or avance.mois_debut_couverture
+                mois_paye_avance = ''
+                if mois_reference_avance:
+                    mois_paye_avance = f"{mois_fr_noms[mois_reference_avance.month]} {mois_reference_avance.year}"
+
                 # Créer le paiement d'avance (EN ATTENTE - validation manuelle requise)
                 paiement = Paiement.objects.create(
                     contrat=contrat,
@@ -598,6 +612,7 @@ def creer_avance(request):
                     type_paiement='avance',
                     statut='en_attente',  # ← CORRIGÉ : Validation manuelle requise
                     numero_paiement=numero_paiement,
+                    mois_paye=mois_paye_avance,
                     notes=f"Paiement d'avance créé automatiquement - {avance.nombre_mois_couverts} mois couverts - VALIDATION REQUISE"
                 )
                 
@@ -624,12 +639,15 @@ def creer_avance(request):
                 total_montant_restant = sum(avance.montant_restant for avance in avances_contrat)
                 
                 # Message de confirmation détaillé
-                if avances_contrat.count() > 1:
-                    messages.success(request, 
+                # CORRECTION : avances_contrat est une liste → len(), pas .count()
+                # (.count() sans argument levait TypeError après CHAQUE création :
+                # l'avance était créée mais l'utilisateur voyait une erreur)
+                if len(avances_contrat) > 1:
+                    messages.success(request,
                         f"SUCCES - AVANCE DE PROLONGATION CREE AVEC SUCCES !\n\n"
                         f"Montant : {avance.montant_avance:,.0f} F CFA\n"
                         f"Mois couverts par cette avance : {avance.nombre_mois_couverts}\n"
-                        f"TOTAL CONTRAT : {avances_contrat.count()} avances actives\n"
+                        f"TOTAL CONTRAT : {len(avances_contrat)} avances actives\n"
                         f"TOTAL MOIS COUVERTS : {total_mois_couverts} mois\n"
                         f"MONTANT RESTANT TOTAL : {total_montant_restant:,.0f} F CFA\n\n"
                         f"Synchronisation automatique effectuee !"
