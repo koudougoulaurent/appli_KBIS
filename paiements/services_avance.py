@@ -335,31 +335,64 @@ class ServiceGestionAvance:
         Vérifie si une avance couvre un mois donné et retourne le montant
         """
         try:
-            # Trouver les avances actives qui couvrent ce mois
-            avances_actives = AvanceLoyer.objects.filter(
+            mois = mois.replace(day=1)
+
+            # Trouver les avances (actives OU épuisées) qui couvrent ce mois.
+            # *** CORRECTION V11 : on ne filtre plus sur statut='active' seul. ***
+            # Une avance épuisée a bel et bien couvert ses mois : l'ignorer faisait
+            # re-facturer un mois déjà réglé par l'avance.
+            avances_couvrantes = AvanceLoyer.objects.filter(
                 contrat=contrat,
-                statut='active',
+                statut__in=['active', 'epuisee'],
                 mois_debut_couverture__lte=mois,
                 mois_fin_couverture__gte=mois
             ).order_by('date_avance')
-            
-            if not avances_actives.exists():
+
+            if not avances_couvrantes.exists():
                 return False, Decimal('0')
-            
-            # Vérifier si ce mois n'a pas déjà été consommé
-            for avance in avances_actives:
+
+            for avance in avances_couvrantes:
                 deja_consomme = ConsommationAvance.objects.filter(
                     avance=avance,
-                    mois_consomme=mois
+                    mois_consomme__year=mois.year,
+                    mois_consomme__month=mois.month
                 ).exists()
-                
-                if not deja_consomme:
-                    return True, avance.loyer_mensuel
-            
+
+                if deja_consomme:
+                    # Le mois est déjà réglé par cette avance : rien à imputer,
+                    # mais il ne doit surtout pas être redemandé au locataire.
+                    continue
+
+                # Il reste-t-il de quoi imputer un mois complet sur cette avance ?
+                loyer_avance = Decimal(str(avance.loyer_mensuel or '0'))
+                montant_restant = Decimal(str(avance.montant_restant or '0'))
+                if avance.statut == 'active' and montant_restant >= loyer_avance > 0:
+                    return True, loyer_avance
+
             return False, Decimal('0')
-            
+
         except Exception as e:
+            if settings.DEBUG:
+                print(f"Erreur verifier_avance_pour_mois: {e}")
             return False, Decimal('0')
+
+    @staticmethod
+    def mois_est_couvert_par_avance(contrat, mois):
+        """
+        Indique si un mois donné est couvert par une avance enregistrée,
+        indépendamment du fait que l'avance soit encore consommable.
+
+        RÈGLE : toute avance enregistrée (active ou épuisée) couvre définitivement
+        ses mois. Utilisée par le paiement intelligent pour ne jamais redemander
+        un mois déjà couvert.
+        """
+        try:
+            from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
+            return ServiceLogiqueAvanceUnique._verifier_mois_paye_ou_couvert(
+                contrat, mois.replace(day=1)
+            )
+        except Exception:
+            return False
     
     @staticmethod
     def consommer_avance_pour_mois(contrat, mois):
@@ -754,248 +787,37 @@ class ServiceGestionAvance:
     @staticmethod
     def calculer_prochain_mois_paiement(contrat):
         """
-        Calcule le prochain mois où un paiement sera dû en tenant compte de toutes les avances
-        CORRIGÉ : Utilise le mois_paye si disponible, sinon date_paiement
+        Calcule le prochain mois où un paiement de loyer sera dû.
+
+        *** SOURCE DE VÉRITÉ UNIQUE (V11) ***
+        Cette méthode DÉLÈGUE entièrement à ServiceLogiqueAvanceUnique.
+
+        RÈGLE MÉTIER ABSOLUE :
+        Toute avance enregistrée est prise en compte pour le prochain paiement,
+        quel que soit :
+          - son statut ('active' OU 'epuisee' — seules les 'annulee' sont ignorées) ;
+          - le nombre de mois qu'elle couvre (1 ou N) ;
+          - le fait que sa période de couverture soit passée, présente ou future.
+
+        L'ancienne implémentation filtrait les avances sur
+        `statut='active'` + `montant_restant > 0` + `mois_fin_couverture >= aujourd'hui`,
+        ce qui faisait « oublier » la couverture dès qu'une avance était consommée
+        ou que sa période était échue : le prochain paiement retombait alors sur un
+        mois DÉJÀ couvert par l'avance. C'est ce bug qui est corrigé ici.
+
+        Returns:
+            date: 1er jour du prochain mois à payer
         """
         try:
-            from datetime import datetime
-            import re
-            
-            # Fonction pour convertir mois_paye (ex: "Novembre 2024") en date
-            def convertir_mois_paye_en_date(mois_paye_str):
-                """
-                Convertit 'Novembre 2024' ou 'November 2024' en date.
-                Gère correctement le passage d'année (décembre 2024 -> janvier 2025).
-                """
-                if not mois_paye_str:
-                    return None
-                
-                from datetime import date
-                
-                mois_francais = {
-                    'janvier': 1, 'février': 2, 'mars': 3, 'avril': 4,
-                    'mai': 5, 'juin': 6, 'juillet': 7, 'août': 8,
-                    'septembre': 9, 'octobre': 10, 'novembre': 11, 'décembre': 12
-                }
-                mois_anglais = {
-                    'january': 1, 'february': 2, 'march': 3, 'april': 4,
-                    'may': 5, 'june': 6, 'july': 7, 'august': 8,
-                    'september': 9, 'october': 10, 'november': 11, 'december': 12
-                }
-                
-                # Extraire mois et année
-                mois_paye_lower = mois_paye_str.lower().strip()
-                for mois, num in {**mois_francais, **mois_anglais}.items():
-                    if mois in mois_paye_lower:
-                        # Extraire l'année (chercher un nombre à 4 chiffres)
-                        annee_match = re.search(r'(\d{4})', mois_paye_str)
-                        if annee_match:
-                            annee = int(annee_match.group(1))
-                            # Utiliser date() directement pour éviter les problèmes de replace()
-                            # Cela garantit que décembre 2024 reste décembre 2024, pas décembre de l'année actuelle
-                            return date(annee, num, 1)
-                return None
-            
-            # *** CORRECTION CRITIQUE : Trouver le DERNIER MOIS PAYÉ, pas le dernier paiement en date ***
-            # Si plusieurs paiements ont la même date (ex: décembre et janvier payés le même jour),
-            # on doit prendre le mois le plus récent, pas juste le premier paiement trouvé
-            dernier_mois_paye = None
-            dernier_paiement = None
-            
-            try:
-                from .models import Paiement
-                # Récupérer TOUS les paiements avec mois_paye pour trouver le mois le plus récent
-                paiements_avec_mois = Paiement.objects.select_related(
-                    'contrat', 'contrat__locataire', 'contrat__propriete'
-                ).filter(
-                    contrat=contrat,
-                    statut='valide',
-                    is_deleted=False
-                ).exclude(
-                    mois_paye__isnull=True
-                ).exclude(
-                    mois_paye=''
-                )
-                
-                # Convertir tous les mois_paye en dates et trouver le maximum
-                mois_dates = []
-                for paiement in paiements_avec_mois:
-                    mois_date = convertir_mois_paye_en_date(paiement.mois_paye)
-                    if mois_date:
-                        mois_dates.append((mois_date, paiement))
-                
-                if mois_dates:
-                    # Trouver le mois le plus récent
-                    dernier_mois_paye, dernier_paiement = max(mois_dates, key=lambda x: x[0])
-                
-                # Si aucun paiement avec mois_paye, chercher le dernier paiement de loyer OU d'avance
-                if not dernier_paiement:
-                    dernier_paiement = Paiement.objects.select_related(
-                        'contrat', 'contrat__locataire', 'contrat__propriete'
-                    ).filter(
-                        contrat=contrat,
-                        type_paiement__in=['loyer', 'avance'],
-                        statut='valide',
-                        is_deleted=False
-                    ).order_by('-date_paiement').first()
-                    
-                    # Si c'est une avance sans mois_paye, chercher l'AvanceLoyer correspondante
-                    if dernier_paiement and dernier_paiement.type_paiement == 'avance':
-                        try:
-                            # Trouver l'avance correspondant à ce paiement
-                            avance_liee = AvanceLoyer.objects.select_related(
-                                'contrat', 'paiement'
-                            ).filter(
-                                contrat=contrat,
-                                date_paiement=dernier_paiement.date_paiement
-                            ).order_by('-date_paiement').first()
-                            
-                            if avance_liee and avance_liee.mois_fin_couverture:
-                                # Le dernier mois payé = le dernier mois couvert par l'avance
-                                dernier_mois_paye = avance_liee.mois_fin_couverture
-                        except:
-                            pass
-                    
-                    # Sinon utiliser date_paiement
-                    if dernier_paiement and not dernier_mois_paye:
-                        dernier_mois_paye = dernier_paiement.date_paiement.replace(day=1)
-            except ImportError:
-                dernier_paiement = None
-            
-            # RÈGLE DE BASE : Prochain mois = dernier mois payé + 1 mois
-            if dernier_mois_paye:
-                prochain_mois_base = dernier_mois_paye + relativedelta(months=1)
-            else:
-                # Pas de paiement précédent, prochain paiement = mois actuel (pas le suivant!)
-                # CORRIGÉ: Si aucun paiement, le loyer du mois actuel est dû
-                prochain_mois_base = timezone.now().date().replace(day=1)
-            
-            # Récupérer les avances actives qui ont encore du montant restant
-            # ET dont la date d'expiration n'est pas dépassée
-            from datetime import date
-            aujourd_hui = date.today().replace(day=1)  # Premier du mois actuel
-            
-            # Marquer les avances expirées comme épuisées
-            avances_expirees = AvanceLoyer.objects.filter(
-                contrat=contrat,
-                statut='active',
-                mois_fin_couverture__lt=aujourd_hui
-            )
-            if avances_expirees.exists():
-                if settings.DEBUG:
-                    print(f"🔄 {avances_expirees.count()} avance(s) expirée(s) détectée(s), passage au statut 'epuisee'")
-                avances_expirees.update(statut='epuisee')
-            
-            avances_actives = AvanceLoyer.objects.filter(
-                contrat=contrat,
-                statut='active',
-                montant_restant__gt=0,
-                mois_fin_couverture__gte=aujourd_hui  # Avance non expirée
-            ).select_related('contrat', 'contrat__locataire', 'contrat__propriete', 'paiement')
-            
-            # *** AUTO-CORRECTION : Vérifier et corriger les avances avant le calcul ***
-            for avance in avances_actives:
-                try:
-                    loyer_contrat = contrat.get_loyer_total()
-                    if isinstance(loyer_contrat, str):
-                        loyer_contrat = Decimal(loyer_contrat.replace(',', '').replace(' ', ''))
-                    else:
-                        loyer_contrat = Decimal(str(loyer_contrat))
-                    
-                    # Vérifier l'incohérence
-                    difference_loyer = abs(avance.loyer_mensuel - loyer_contrat)
-                    mois_calcules_contrat = int(avance.montant_avance // loyer_contrat) if loyer_contrat > 0 else 0
-                    
-                    # Correction si nécessaire
-                    if difference_loyer > 100 or mois_calcules_contrat != avance.nombre_mois_couverts:
-                        if abs(avance.montant_avance - loyer_contrat) < 1000 and avance.nombre_mois_couverts > 1:
-                            # Cas avance 1 mois
-                            if settings.DEBUG:
-                                print(f"🔧 AUTO-CORRECTION: Avance {avance.id} - Ajustement à 1 mois")
-                            avance.nombre_mois_couverts = 1
-                            avance.loyer_mensuel = loyer_contrat
-                            avance.mois_fin_couverture = avance.mois_debut_couverture
-                            avance.save()
-                except Exception as e:
-                    if settings.DEBUG:
-                        print(f"⚠️ Erreur auto-correction avance {avance.id}: {e}")
-            
-            # DEBUG : Afficher les informations de calcul (uniquement en mode DEBUG)
-            if settings.DEBUG:
-                print(f"\n🔍 DEBUG calculer_prochain_mois_paiement:")
-                print(f"   Contrat: {contrat}")
-                if dernier_paiement:
-                    print(f"   Dernier paiement trouvé:")
-                    print(f"     - ID: {dernier_paiement.id}")
-                    print(f"     - Type: {dernier_paiement.type_paiement}")
-                    print(f"     - Date: {dernier_paiement.date_paiement}")
-                    print(f"     - Mois payé: {dernier_paiement.mois_paye}")
-                    print(f"     - Montant: {dernier_paiement.montant}")
-                else:
-                    print(f"   Aucun paiement trouvé")
-                print(f"   Dernier mois payé: {dernier_mois_paye}")
-                print(f"   Prochain mois de base: {prochain_mois_base}")
-                print(f"   Avances actives (non expirées): {avances_actives.count()}")
-                print(f"   Date aujourd'hui: {aujourd_hui}")
-            
-            # Si pas d'avances actives, retourner le mois de base
-            if not avances_actives.exists():
-                if settings.DEBUG:
-                    print(f"   ✅ Pas d'avances actives → Retour mois de base: {prochain_mois_base}")
-                return prochain_mois_base
-            
-            # Afficher les détails des avances (uniquement en mode DEBUG)
-            if settings.DEBUG:
-                for i, avance in enumerate(avances_actives, 1):
-                    print(f"   Avance #{i}:")
-                    print(f"     - Montant: {avance.montant_avance} F CFA")
-                    print(f"     - Loyer mensuel: {avance.loyer_mensuel} F CFA")
-                    print(f"     - Mois couverts: {avance.nombre_mois_couverts}")
-                    print(f"     - Montant restant: {avance.montant_restant} F CFA")
-                    print(f"     - Début: {avance.mois_debut_couverture}")
-                    print(f"     - Fin: {avance.mois_fin_couverture}")
-            
-            # Vérifier si le mois de base est couvert par une avance
-            # Si oui, trouver le premier mois non couvert
-            mois_courant = prochain_mois_base
-            mois_max = prochain_mois_base + relativedelta(months=24)  # Limite de sécurité (2 ans)
-            
-            if settings.DEBUG:
-                print(f"   🔍 Recherche du premier mois non couvert à partir de {mois_courant}...")
-            
-            while mois_courant <= mois_max:
-                # Vérifier si ce mois est couvert par une avance active
-                mois_couvert = False
-                avance_couvrant = None
-                for avance in avances_actives:
-                    if avance.mois_debut_couverture and avance.mois_fin_couverture:
-                        if avance.mois_debut_couverture <= mois_courant <= avance.mois_fin_couverture:
-                            mois_couvert = True
-                            avance_couvrant = avance
-                            break
-                
-                if settings.DEBUG:
-                    if mois_couvert:
-                        print(f"   ⏭️  {mois_courant.strftime('%B %Y')}: COUVERT par avance (montant restant: {avance_couvrant.montant_restant} F)")
-                    else:
-                        print(f"   ✅ {mois_courant.strftime('%B %Y')}: NON COUVERT → C'est le prochain paiement !")
-                
-                # Si le mois n'est pas couvert, c'est le mois attendu
-                if not mois_couvert:
-                    return mois_courant
-                
-                # Sinon, passer au mois suivant
-                mois_courant = mois_courant + relativedelta(months=1)
-            
-            # Si tous les mois sont couverts (cas exceptionnel), retourner le mois après le dernier couvert
-            return mois_courant
-            
+            from .services_logique_avance_unique import ServiceLogiqueAvanceUnique
+            return ServiceLogiqueAvanceUnique.get_prochain_mois_a_payer(contrat)
         except Exception as e:
             print(f"Erreur calcul prochain mois: {str(e)}")
             import traceback
             traceback.print_exc()
-            # En cas d'erreur, retourner le mois prochain
+            # Fallback minimal : mois suivant le mois courant
             return timezone.now().date().replace(day=1) + relativedelta(months=1)
+
 
     @staticmethod
     def calculer_mois_couverts_par_avances(contrat):

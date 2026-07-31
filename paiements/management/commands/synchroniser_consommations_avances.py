@@ -7,6 +7,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from paiements.models_avance import AvanceLoyer, ConsommationAvance
 from paiements.models import Paiement
+from paiements.services_paiement_partiel import ServicePaiementPartiel
 from contrats.models import Contrat
 from datetime import date
 from dateutil.relativedelta import relativedelta
@@ -85,7 +86,18 @@ class Command(BaseCommand):
 
                     # Pour chaque paiement de loyer, vérifier s'il doit créer une consommation
                     for paiement in paiements_loyer:
-                        mois_paiement = paiement.date_paiement.replace(day=1)
+                        # *** CORRECTION V11 : se baser sur le mois RÉGLÉ (`mois_paye`)
+                        # et non sur la date d'encaissement (`date_paiement`).
+                        # Un loyer d'août encaissé en juillet était rapproché de juillet :
+                        # la ConsommationAvance était écrite sur le mauvais mois, et ce
+                        # mois erroné servait ensuite de référence au calcul du prochain
+                        # mois à payer. ***
+                        mois_paiement = None
+                        if getattr(paiement, 'mois_paye', None):
+                            mois_paiement = ServicePaiementPartiel.convertir_mois_paye_en_date(paiement.mois_paye)
+                        if not mois_paiement:
+                            mois_paiement = paiement.date_paiement
+                        mois_paiement = mois_paiement.replace(day=1)
 
                         # Vérifier si ce mois est dans la période de couverture de l'avance
                         if (avance.mois_debut_couverture <= mois_paiement <= avance.mois_fin_couverture):

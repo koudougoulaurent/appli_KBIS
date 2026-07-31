@@ -85,10 +85,20 @@ class ServiceSynchronisationAvances:
                 paiement.contrat.save(update_fields=['avance_loyer', 'avance_loyer_payee', 'date_paiement_avance'])
                 
                 return avance
-                
+
+        except ValueError:
+            # *** CORRECTION V11 : ne plus avaler les erreurs métier. ***
+            # AvanceLoyer.save() lève un ValueError explicite quand l'avance
+            # sauterait des mois non payés. L'ancien code renvoyait None : le
+            # paiement d'avance était enregistré mais AUCUNE AvanceLoyer n'était
+            # créée, et l'utilisateur ne voyait qu'un avertissement générique.
+            # On propage désormais le message pour qu'il soit affiché tel quel.
+            raise
         except Exception as e:
             print(f"Erreur synchronisation avance: {str(e)}")
-            return None
+            import traceback
+            traceback.print_exc()
+            raise
     
     @classmethod
     def synchroniser_toutes_avances_contrat(cls, contrat):

@@ -13,18 +13,38 @@ logger = logging.getLogger(__name__)
 @receiver(post_migrate)
 def corriger_avances_automatiquement(sender, **kwargs):
     """
-    Corrige automatiquement les avances mal configurées après les migrations
-    S'exécute une seule fois au démarrage
+    Corrige automatiquement les avances mal configurées après les migrations.
+
+    *** DÉSACTIVÉ PAR DÉFAUT DEPUIS LA V11 ***
+
+    Ce signal réécrivait `nombre_mois_couverts` et `mois_fin_couverture` à chaque
+    `migrate`, avec une règle de calcul DIFFÉRENTE de ServiceLogiqueAvanceUnique
+    (troncature simple, sans le seuil de 50 % du loyer). Comme il ne s'activait
+    qu'avec DEBUG=False, il se déclenchait à chaque déploiement en production et
+    jamais en local : les périodes de couverture des avances « glissaient » d'un
+    mois sans trace, et le prochain mois à payer avec.
+
+    La réparation des avances passe désormais par une commande explicite,
+    exécutable en simulation avant écriture :
+
+        python manage.py reparer_avances_v11              # simulation + rapport
+        python manage.py reparer_avances_v11 --appliquer  # écriture
+
+    Pour réactiver malgré tout ce signal, poser FORCE_CORRECTION_AVANCES = True
+    dans les settings.
     """
     # Ne s'exécute que pour l'app paiements
     if sender.name != 'paiements':
         return
-    
-    # Éviter d'exécuter pendant les tests ou en développement local
-    if settings.DEBUG and not getattr(settings, 'FORCE_CORRECTION_AVANCES', False):
-        logger.info("⏭️  Correction automatique des avances désactivée en mode DEBUG")
+
+    # Désactivé sauf activation explicite (dans TOUS les environnements)
+    if not getattr(settings, 'FORCE_CORRECTION_AVANCES', False):
+        logger.info(
+            "⏭️  Correction automatique des avances désactivée "
+            "(utilisez `manage.py reparer_avances_v11`)"
+        )
         return
-    
+
     try:
         from paiements.models_avance import AvanceLoyer
         from dateutil.relativedelta import relativedelta
