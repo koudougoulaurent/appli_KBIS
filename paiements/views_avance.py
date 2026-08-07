@@ -985,7 +985,8 @@ def historique_paiements_contrat(request, contrat_id):
     # Créer l'historique dynamiquement
     historique = []
     for paiement in paiements_query:
-        mois_paiement = paiement.date_paiement.replace(day=1)
+        # CORRECTION V11 : mois REGLE (mois_paye), pas la date d'encaissement.
+        mois_paiement = paiement.get_mois_regle()
         historique.append({
             'id': paiement.id,
             'contrat': contrat,

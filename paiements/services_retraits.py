@@ -91,7 +91,8 @@ class ServiceCalculRetraits:
             contrat__propriete=propriete,
             date_charge__gte=date_debut,
             date_charge__lt=date_fin,
-            statut='validee',
+            # CORRECTION V11 : ChargeDeductible n'a pas de champ `statut`
+            est_valide=True,
             is_deleted=False
         )
         

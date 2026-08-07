@@ -151,10 +151,17 @@ class ServiceContexteIntelligent:
         """
         Récupère le statut des charges déductibles.
         """
+        # *** CORRECTION V11 : noms de champs alignes sur le modele. ***
+        # ChargeDeductible n'a PAS de `date_creation` (c'est `created_at`), ni
+        # `libelle` / `type_charge` / `statut` (c'est `description` et le booleen
+        # `est_valide`). Chaque appel levait un FieldError, avale par le
+        # try/except de get_contexte_complet_contrat() : l'API du paiement
+        # intelligent repondait 200 avec {'success': False} et le formulaire
+        # restait sans contexte, sans aucune erreur visible.
         charges = ChargeDeductible.objects.filter(
             contrat=contrat,
             is_deleted=False
-        ).order_by('-date_creation')
+        ).order_by('-created_at')
         
         total_charges = charges.aggregate(
             total=Coalesce(Sum('montant'), Decimal('0.00'))
@@ -173,7 +180,7 @@ class ServiceContexteIntelligent:
             'charges_en_attente': charges_en_attente,
             'charges_validees': charges_validees,
             'charges_recentes': list(charges[:5].values(
-                'id', 'montant', 'libelle', 'type_charge', 'statut', 'date_charge'
+                'id', 'montant', 'description', 'est_valide', 'date_charge'
             )),
             'nombre_charges': charges.count()
         }
@@ -193,10 +200,11 @@ class ServiceContexteIntelligent:
         )['total']
         
         # Calcul des charges déductibles validées
+        # CORRECTION V11 : `statut='validee'` n'existe pas -> booleen `est_valide`.
         total_charges_validees = ChargeDeductible.objects.filter(
             contrat=contrat,
             is_deleted=False,
-            statut='validee'
+            est_valide=True
         ).aggregate(
             total=Coalesce(Sum('montant'), Decimal('0.00'))
         )['total']

@@ -81,7 +81,8 @@ class ServiceUnitesLocativesFinancier:
                 contrat=contrat_actif,
                 date_charge__gte=debut_mois,
                 date_charge__lt=fin_mois,
-                statut='validee',
+                # CORRECTION V11 : ChargeDeductible n'a pas de champ `statut`
+                est_valide=True,
                 is_deleted=False
             ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
             
@@ -174,7 +175,8 @@ class ServiceUnitesLocativesFinancier:
                 contrat__est_actif=True,
                 date_charge__gte=debut_mois,
                 date_charge__lt=fin_mois,
-                statut='validee',
+                # CORRECTION V11 : ChargeDeductible n'a pas de champ `statut`
+                est_valide=True,
                 is_deleted=False
             ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
         
@@ -261,7 +263,8 @@ class ServiceUnitesLocativesFinancier:
             charges_periode = ChargeDeductible.objects.filter(
                 contrat__in=contrats_periode,
                 date_charge__range=[periode_debut, periode_fin],
-                statut='validee',
+                # CORRECTION V11 : ChargeDeductible n'a pas de champ `statut`
+                est_valide=True,
                 is_deleted=False
             ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
             

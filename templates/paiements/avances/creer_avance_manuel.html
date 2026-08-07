@@ -357,10 +357,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // *** CORRECTION : lecture pure, AUCUN appel réseau. ***
+    // Cette fonction était appelée par updateMontantRequis() et lançait un fetch
+    // dont la reponse rappelait updateSelectedMonths() -> updateMontantRequis()
+    // -> getLoyerMensuel() -> fetch... soit une boucle infinie qui martelait
+    // /paiements/avances/contrat-details-ajax/ environ une fois par seconde
+    // tant que la page restait ouverte.
     function getLoyerMensuel() {
+        return loyerMensuelGlobal || 0;
+    }
+
+    // Chargement des details du contrat : UNIQUEMENT sur changement de contrat.
+    let chargementDetailsEnCours = false;
+    function chargerDetailsContrat() {
         const contratId = contratSelect.value;
-        if (!contratId) return 0;
-        
+        if (!contratId) return;
+
+        // Garde-fou supplementaire contre les appels concurrents
+        if (chargementDetailsEnCours) return;
+        chargementDetailsEnCours = true;
+
         // Récupérer le loyer mensuel via AJAX
         fetch(`/paiements/avances/contrat-details-ajax/?contrat_id=${contratId}`)
             .then(response => response.json())
@@ -442,9 +458,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     updateCalculsAutomatiques();
                 }
             })
-            .catch(error => console.error('Erreur:', error));
-        
-        return 0; // Valeur par défaut
+            .catch(error => console.error('Erreur:', error))
+            .finally(() => { chargementDetailsEnCours = false; });
     }
     
     function afficherAvertissementAvanceExistante(avancesInfo) {
@@ -509,8 +524,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     anneeSelection.addEventListener('change', updateSelectedMonths);
     contratSelect.addEventListener('change', function() {
-        updateMontantRequis();
-        getLoyerMensuel(); // Récupérer le loyer et déclencher les calculs
+        // Un seul appel réseau, uniquement quand le contrat change.
+        // chargerDetailsContrat() rappelle updateMontantRequis() a la reception.
+        chargerDetailsContrat();
     });
     montantAvance.addEventListener('input', function() {
         updateMontantRequis();
@@ -680,7 +696,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialisation
     toggleModeSelection();
     updateSelectedMonths();
-    
+
+    // Si un contrat est deja selectionne au chargement (retour de formulaire,
+    // valeur initiale...), charger ses details UNE seule fois.
+    if (contratSelect && contratSelect.value) {
+        chargerDetailsContrat();
+    }
+
     // *** Pré-sélection du contrat depuis l'URL (ex: ?contrat_id=12) ***
     // Utilisé quand on arrive depuis "paiement intelligent" ou un lien direct
     (function() {

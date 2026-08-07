@@ -115,13 +115,20 @@ class ServiceValidationPaiements:
         # Grouper par mois/année
         paiements_par_mois = {}
         for paiement in paiements:
-            mois_cle = paiement.date_paiement.replace(day=1)
+            # CORRECTION V11 : mois REGLE (mois_paye), pas la date d'encaissement.
+            mois_cle = paiement.get_mois_regle()
             if mois_cle not in paiements_par_mois:
                 paiements_par_mois[mois_cle] = []
             paiements_par_mois[mois_cle].append(paiement)
-        
+
         # Analyser les avances
-        avances = AvanceLoyer.objects.filter(contrat=contrat, statut='valide')
+        # *** CORRECTION V11 : statut='valide' N'EXISTE PAS sur AvanceLoyer. ***
+        # Les valeurs possibles sont 'active', 'epuisee' et 'annulee' : ce filtre
+        # ne renvoyait donc JAMAIS rien et toute l'analyse des avances qui suit
+        # etait morte, sans la moindre erreur visible.
+        avances = AvanceLoyer.objects.filter(
+            contrat=contrat, statut__in=['active', 'epuisee']
+        )
         
         return {
             'paiements': list(paiements),

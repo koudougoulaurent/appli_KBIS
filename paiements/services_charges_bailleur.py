@@ -309,7 +309,8 @@ class ServiceChargesBailleurIntelligent:
                     contrat=contrat,
                     date_charge__year=mois.year,
                     date_charge__month=mois.month,
-                    statut='validee'
+                    # CORRECTION V11 : ChargeDeductible n'a pas de champ `statut`
+                    est_valide=True
                 ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
                 
                 # Charges bailleur (à déduire du retrait)

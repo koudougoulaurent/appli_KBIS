@@ -2283,7 +2283,8 @@ def detail_retrait(request, pk):
                             contrat=contrat,
                             date_charge__year=mois_retrait.year,
                             date_charge__month=mois_retrait.month,
-                            statut='validee'
+                            # CORRECTION V11 : ChargeDeductible n'a pas de champ `statut`
+                            est_valide=True
                         ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
                         total_charges_deductibles_unites += charges_deductibles_contrat
                 else:
@@ -2331,7 +2332,8 @@ def detail_retrait(request, pk):
                     contrat=contrat_actif,
                     date_charge__year=mois_retrait.year,
                     date_charge__month=mois_retrait.month,
-                    statut='validee'
+                    # CORRECTION V11 : ChargeDeductible n'a pas de champ `statut`
+                    est_valide=True
                 ).aggregate(total=Sum('montant'))['total'] or Decimal('0')
                 
                 # Montant net pour cette propriété
@@ -4037,7 +4039,8 @@ def get_calculation_preview(request):
                     charges_mois = contrat.charges_deductibles.filter(
                         date_charge__year=mois_date.year,
                         date_charge__month=mois_date.month,
-                        statut='validee'
+                        # CORRECTION V11 : ChargeDeductible n'a pas de champ `statut`
+                        est_valide=True
                     )
                     total_charges += sum(charge.montant for charge in charges_mois)
                     

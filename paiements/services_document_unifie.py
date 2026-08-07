@@ -279,7 +279,9 @@ class DocumentUnifieA5Service:
             reste = montant_avance % loyer_mensuel
             
             # Si le reste est significatif (plus de 50% du loyer), compter un mois partiel
-            if reste > (loyer_mensuel * 0.5):
+            # CORRECTION : Decimal * float leve un TypeError
+            from decimal import Decimal as _D
+            if reste > (loyer_mensuel * _D('0.5')):
                 mois_entiers += 1
             
             nombre_mois = max(1, mois_entiers)  # Au minimum 1 mois

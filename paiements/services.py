@@ -338,6 +338,28 @@ class QuittancePDFService:
             alignment=TA_JUSTIFY,
             textColor=colors.black,
             fontName='Helvetica-Bold'
+        ))
+
+    def generate_quittance_pdf(self):
+        """Génère le PDF de la quittance."""
+        # *** CORRECTION V11 : fichier reparé. ***
+        # L'appel ParagraphStyle( ci-dessus n'etait jamais ferme et l'en-tete de
+        # cette methode (signature + buffer/doc/story) avait disparu : le module
+        # entier etait donc syntaxiquement invalide et impossible a importer.
+        # Reconstruit sur le modele de PaiementPDFService.generate_recu_pdf().
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            rightMargin=2*cm,
+            leftMargin=2*cm,
+            topMargin=2*cm,
+            bottomMargin=2*cm
+        )
+
+        # Construction du contenu du PDF
+        story = []
+
         # En-tête avec informations de l'entreprise
         story.extend(self._create_header())
         story.append(Spacer(1, 20))

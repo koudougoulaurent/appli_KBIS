@@ -46,7 +46,8 @@ class ServiceAvanceCorrige:
         reste = montant_avance_float % loyer_mensuel
         
         # Si le reste est significatif (plus de 50% du loyer), compter un mois partiel
-        if reste > (loyer_mensuel * 0.5):
+        # CORRECTION : Decimal * float leve un TypeError
+        if reste > (loyer_mensuel * Decimal('0.5')):
             mois_complets += 1
         
         nombre_mois = max(1, mois_complets)  # Au minimum 1 mois

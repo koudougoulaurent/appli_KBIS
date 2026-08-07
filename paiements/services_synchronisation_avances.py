@@ -171,7 +171,11 @@ class ServiceSynchronisationAvances:
         reste = montant_avance % loyer_mensuel
         
         # Si le reste est significatif (plus de 50% du loyer), compter un mois partiel
-        if reste > (loyer_mensuel * 0.5):
+        # *** CORRECTION : Decimal * float leve
+        # "unsupported operand type(s) for *: 'decimal.Decimal' and 'float'".
+        # L'exception remontait en "Erreur lors de la synchronisation des avances
+        # du contrat X" et interrompait la synchronisation. ***
+        if reste > (loyer_mensuel * Decimal('0.5')):
             mois_entiers += 1
         
         # Au minimum 1 mois

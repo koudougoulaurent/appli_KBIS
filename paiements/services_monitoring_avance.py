@@ -135,7 +135,8 @@ class ServiceMonitoringAvance:
             
             mois_payes = set()
             for paiement in paiements_loyer:
-                mois_payes.add(paiement.date_paiement.replace(day=1))
+                # CORRECTION V11 : mois REGLE (mois_paye), pas la date d'encaissement.
+                mois_payes.add(paiement.get_mois_regle())
             
             # Trouver les avances actives
             avances_actives = AvanceLoyer.objects.filter(

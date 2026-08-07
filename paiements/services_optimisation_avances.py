@@ -94,10 +94,16 @@ class ServiceOptimisationAvances:
             ),
             Prefetch(
                 'contrat__paiements',
+                # *** CORRECTION : pas de slice dans un Prefetch. ***
+                # Django applique ensuite un .filter() sur ce queryset pour le
+                # rattacher a l'objet parent, ce qui leve
+                # "Cannot filter a query once a slice has been taken"
+                # et renvoyait une 500 sur /paiements/avances/detail/<id>/.
+                # La limitation eventuelle se fait cote template/vue.
                 queryset=Paiement.objects.filter(
                     type_paiement='loyer',
                     statut='valide'
-                ).order_by('-date_paiement')[:12]  # Limiter à 12 derniers paiements
+                ).order_by('-date_paiement')
             )
         ).get(id=avance_id)
     

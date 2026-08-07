@@ -620,7 +620,10 @@ class ServiceGestionAvance:
         try:
             with transaction.atomic():
                 contrat = paiement.contrat
-                mois_paiement = paiement.date_paiement.replace(day=1)
+                # CORRECTION V11 : mois REGLE (mois_paye), pas la date d'encaissement.
+                # HistoriquePaiement est unique par (contrat, mois_paiement) : une
+                # mauvaise cle ecrasait ou dupliquait l'historique du mauvais mois.
+                mois_paiement = paiement.get_mois_regle()
                 
                 # Calculer le montant dû et l'avance utilisée
                 montant_du, montant_avance_utilisee = ServiceGestionAvance.calculer_montant_du_mois(

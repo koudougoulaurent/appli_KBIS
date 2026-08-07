@@ -316,8 +316,9 @@ class ServiceConsommationDynamique:
         consommations_ajoutees = 0
         
         for paiement in paiements_loyer:
-            mois_paiement = paiement.date_paiement.replace(day=1)
-            
+            # CORRECTION V11 : mois REGLE (mois_paye), pas la date d'encaissement.
+            mois_paiement = paiement.get_mois_regle()
+
             # Vérifier si ce mois est couvert par l'avance
             if (avance.mois_debut_couverture and 
                 avance.mois_fin_couverture and

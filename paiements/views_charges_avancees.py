@@ -51,7 +51,7 @@ def liste_charges_avancees(request):
     # Base queryset
     charges = ChargeDeductible.objects.select_related(
         'contrat', 'contrat__propriete', 'contrat__propriete__bailleur', 'contrat__locataire'
-    ).order_by('-date_creation')
+    ).order_by('-created_at')  # CORRECTION V11 : `date_creation` n'existe pas
     
     # Appliquer les filtres
     if form_recherche.is_valid():
@@ -59,14 +59,19 @@ def liste_charges_avancees(request):
         if bailleur:
             charges = charges.filter(contrat__propriete__bailleur=bailleur)
         
-        type_charge = form_recherche.cleaned_data.get('type_charge')
-        if type_charge:
-            charges = charges.filter(type_charge=type_charge)
-        
-        statut = form_recherche.cleaned_data.get('statut')
-        if statut:
-            charges = charges.filter(statut=statut)
-        
+        # *** CORRECTION V11 : filtres retires. ***
+        # `type_charge` et `statut` n'existent pas sur ChargeDeductible, et les
+        # champs correspondants du formulaire ont ete vides de leurs choix
+        # ("type_charge supprime" / "statut supprime" dans forms_charges_avancees).
+        # Ces deux branches ne pouvaient donc que lever un FieldError le jour ou
+        # une valeur passait. Filtrage par etat de validation a la place :
+        est_valide = form_recherche.data.get('est_valide')
+        if est_valide in ('0', 'false', 'False'):
+            charges = charges.filter(est_valide=False)
+        elif est_valide in ('1', 'true', 'True'):
+            charges = charges.filter(est_valide=True)
+
+
         date_debut = form_recherche.cleaned_data.get('date_debut')
         if date_debut:
             charges = charges.filter(date_charge__gte=date_debut)
@@ -277,10 +282,15 @@ def dashboard_charges_bailleur(request, bailleur_id):
     stats = {
         'total_charges': charges.count(),
         'total_montant': charges.aggregate(Sum('montant'))['montant__sum'] or 0,
-        'charges_en_attente': charges.filter(statut='en_attente').count(),
-        'charges_validees': charges.filter(statut='validee').count(),
-        'charges_deduites': charges.filter(statut='deduite').count(),
-        'charges_refusees': charges.filter(statut='refusee').count(),
+        # *** CORRECTION V11 : ChargeDeductible n'a pas de champ `statut`. ***
+        # Le modele expose deux booleens : `est_valide` et `est_deductible_loyer`.
+        # Les quatre filtres ci-dessous levaient un FieldError a chaque affichage
+        # de la page des charges avancees.
+        'charges_en_attente': charges.filter(est_valide=False).count(),
+        'charges_validees': charges.filter(est_valide=True).count(),
+        'charges_deduites': charges.filter(est_valide=True, est_deductible_loyer=True).count(),
+        # Aucun etat "refusee" n'existe dans le modele : compteur neutralise.
+        'charges_refusees': 0,
     }
     
     # Charges par propriété

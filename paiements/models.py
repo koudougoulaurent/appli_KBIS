@@ -1273,6 +1273,31 @@ class Paiement(models.Model):
         
         return f"{type_paiement_display} - {locataire_nom} - {self.date_paiement.strftime('%d/%m/%Y')}"
     
+    def get_mois_regle(self):
+        """
+        Retourne le MOIS RÉGLÉ par ce paiement (1er du mois).
+
+        *** RÈGLE UNIQUE (V11) ***
+        Le mois réglé est celui indiqué par `mois_paye`. La date d'encaissement
+        (`date_paiement`) n'est qu'un repli quand `mois_paye` est absent ou
+        illisible : payer en juillet le loyer d'août est parfaitement légitime.
+
+        Confondre les deux faisait imputer les consommations d'avance, les
+        historiques et les contrôles de couverture sur le mauvais mois.
+
+        Returns:
+            date: 1er jour du mois réglé
+        """
+        if getattr(self, 'mois_paye', None):
+            try:
+                from .services_paiement_partiel import ServicePaiementPartiel
+                mois = ServicePaiementPartiel.convertir_mois_paye_en_date(self.mois_paye)
+                if mois:
+                    return mois.replace(day=1)
+            except Exception:
+                pass
+        return self.date_paiement.replace(day=1)
+
     def get_statut_color(self):
         """Retourne la couleur Bootstrap pour le statut"""
         colors = {
@@ -1548,13 +1573,15 @@ class Paiement(models.Model):
             avances = ServiceGestionAvance.get_avances_actives_contrat(self.contrat)
             
             # Calculer le total des mois couverts
+            # CORRECTION V11 : mois REGLE (mois_paye), pas la date d'encaissement.
+            mois_regle = self.get_mois_regle()
             total_mois = 0
             for avance in avances:
-                if avance.est_mois_couvert(self.date_paiement.replace(day=1)):
+                if avance.est_mois_couvert(mois_regle):
                     total_mois += 1
-            
+
             return total_mois
-        except:
+        except Exception:
             return 0
     
     def _generer_recu_kbis_dynamique(self, user=None):
